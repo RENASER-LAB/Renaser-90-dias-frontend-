@@ -84,6 +84,7 @@ import { useRegistroConFoto } from '../features/habits/hooks/useRegistroConFoto'
 import { RegistroConFotoModal } from '../features/habits/components/RegistroConFotoModal';
 import { cifrasDeHabitos } from '../features/home/utils/cifrasDeHabitos';
 import { diasQueQuedanSiSeSabe, lapsoQueQueda } from '../features/home/utils/diasQueQuedan';
+import { diametroDelOrbe } from '../features/home/utils/diametroDelOrbe';
 import { cuandoEsElEvento } from '../features/home/utils/cuandoEsElEvento';
 import { useOcultarBarraAlDesplazar } from '../navigation/barraAlDesplazar/BarraInferior';
 
@@ -425,14 +426,14 @@ export default function HoyScreen() {
   const rocaPrioritaria = rocas.find(r => r.posicion === 1) || rocas[0] || null;
   const evidenciasUltimaPublicacion = ultimaPublicacion?.media ?? [];
 
-  /* Los anillos son decorado: se derivan del hueco REAL que queda, no de medidas fijas.
-     Antes eran [306, 258, 210, 162] pasados por `rs()`, asi que en pantallas anchas crecian
-     por encima de la columna de contenido y en todas se comian mas de un tercio del alto
-     visible, dejando las tarjetas utiles (Mapa, Habitos) por debajo del pliegue.
-     Ahora el anillo mayor nunca excede el ancho de contenido y el hero mide lo que miden
-     los anillos, sin `minHeight` suelto que sobresalga. */
+  /* El fénix del centro. Su diámetro (140 en un teléfono estándar; menor en uno angosto o bajo) sale del
+     ancho de contenido, como siempre (`diametroDelOrbe`).
+     > **Corregido 2026-10-30 (pedido del dueño: «en la parte de arriba mucho espacio, podemos optimizar sin
+     > reducir el tamaño»).** Esa misma cuenta (`heroSize`) era además el ALTO FIJO de la sección: 252 (206 en
+     > pantalla baja) por `rs()`, con ~206 de contenido, y el resto quedaba en blanco repartido arriba y abajo
+     > (23 a 35 px de cada lado, sumados al aire de 28 entre secciones). Ahora la sección mide lo que ocupa. */
   const anchoContenido = (isTablet ? Math.min(560, width) : width) - horizontalPadding * 2;
-  const heroSize = Math.min(anchoContenido, rs(isShort ? 206 : 252));
+  const diametroDelFenix = diametroDelOrbe(anchoContenido, rs, isShort);
 
 
   /* Tipo oración (rediseño de Hoy, 2026-10-05): el nombre de la fase tal como lo escribe el documento
@@ -784,7 +785,7 @@ export default function HoyScreen() {
         </Aparicion>
 
         <Aparicion retardo={140} style={ocultoSiNoEsElPrograma}>
-        <View style={[styles.hero, { height: heroSize }]}>
+        <View style={styles.hero}>
           {/* Sin anillos ni partícula detrás: el fénix es el centro y va sin fondo (pedido del dueño, 2026-10-06). */}
           {/* El centro del hero es el acompañante por voz (pedido del dueño, 2026-09-23). Antes
               decía "TU ÚNICO FOCO / AHORA" (o la roca prioritaria del día) y llevaba a Plan; ese
@@ -797,14 +798,14 @@ export default function HoyScreen() {
             <View style={{ marginTop: isShort ? 10 : 14 }}>
               <OrbeAcompanante
                 fase={voz.fase}
-                diametro={Math.min(140, Math.round(heroSize * 0.58))}
+                diametro={diametroDelFenix}
                 onTocar={tocarOrbe}
                 onMantener={mantenerOrbe}
               />
             </View>
             <Text
               numberOfLines={2}
-              style={[t.small, { color: c.textSoft, marginTop: isShort ? 10 : 14, textAlign: 'center', paddingHorizontal: 24 }]}
+              style={[t.small, { color: c.textSoft, marginTop: isShort ? 10 : 14, textAlign: 'center', paddingHorizontal: 8 }]}
             >
               {!chatDeSer.disponible ? '' : chatDeSer.prendida ? rotuloDelOrbe(voz.fase, voz.disponible, voz.terminar !== undefined) : 'En mantenimiento'}
             </Text>
@@ -1202,10 +1203,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     marginTop: space.gap,
   },
+  /**
+   * La sección del fénix mide lo que ocupa su contenido (rótulo, fénix, rótulo de la fase y, con la voz abierta,
+   * «Terminar»). Sin alto fijo, sin `justifyContent: 'center'` y sin relleno propio: el aire arriba y abajo es el de
+   * siempre entre secciones (`space.gapLg`, 28), igual por los dos lados.
+   *
+   * > **Corregido 2026-10-30 (pedido del dueño, «podemos optimizar sin reducir el tamaño»).** Era
+   * > `height: heroSize` (252, o 206 en pantalla baja, por `rs()`) con `justifyContent: 'center'` y 12 de relleno: sobre
+   * > ~206 de contenido quedaban 23 a 35 px en blanco arriba y otros tantos abajo. El fénix no cambió de tamaño.
+   * >
+   * > **Lo que se decidió no reservar:** el alto de «Terminar» (52). Reservarlo dejaría 52 px en blanco siempre, en
+   * > reposo, que es justo lo que se pidió quitar, y la conversación ya empuja lo de abajo con la caja de «Tú: …» y la
+   * > respuesta. Anclada arriba, el ave y su rótulo NO se mueven cuando aparece «Terminar» o cambia el texto de la fase
+   * > (antes, centrada con alto fijo, el ave subía 26 dp, la mitad de los 52 de «Terminar»); crece solo lo que va debajo.
+   */
   hero: {
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
   },
   ring: {
     position: 'absolute',
@@ -1216,7 +1229,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 14,
     gap: 8,
-    marginTop: 12,
+    marginTop: space.gap,
     width: '100%',
   },
   heroCenter: {
