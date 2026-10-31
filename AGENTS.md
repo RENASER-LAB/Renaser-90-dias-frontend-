@@ -355,6 +355,8 @@ Pedido del dueño: «en Plan replica este formato de acuerdo a lo que tenemos».
   candado si espera a la verde), el título, «Mar 27 oct · 09:00» y su chevron. **Tocar una de hoy lleva a Training con
   `abrirAccionId`** (ahí se sellan, como siempre); **una que viene abre «Agendar»**. Sin acciones: una línea con «Agendar mis
   acciones»; con acciones, «Agendar otro día». Debajo van **los recordatorios de las acciones** (`RecordatorioDeAcciones`, sin cambios).
+  > **Corregido 2026-10-31 (punto 21, ajustes tras el E2E).** Los recordatorios ya no van a la vista debajo de la lista: son la fila «Recordatorios de tus
+  > acciones ›», que abre una hoja con el mismo control. Ver «Ajustes tras el E2E del rediseño», al final de esta entrada.
 * **f. «Tu 80/20»** (ícono nuevo `chartNoAxesColumn`, Lucide): «Prioriza lo que más acerca tu meta.»; abre una hoja con la regla de
   Pareto de siempre —la acción verde va primero, las otras esperan con candado— y las acciones de HOY del eje con su color en
   palabras (Verde / Amarilla / Roja) y su estado (los mismos textos de `textoDelEstado`).
@@ -514,6 +516,48 @@ cambia y nada más:
   `loNoDisponible` e `infoDelChatIntegrantes`. Maestro, escrito y sin correr: `.maestro/diseno-31/06-roles-en-yo.yaml`; los flujos que
   entraban a Administración, «Mis mentores» o «Todos los aprendices» desde Hoy (`regresion/20–24`, `mi-radar/11–12`, `15`, `lider-ve-a-todos/01`)
   y el `abrirAdministracion` de `e2e/admin-alquimista` entran ahora por Yo (sin correr).
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
+
+### Ajustes tras el E2E del rediseño (puntos 17 a 21)
+Cinco arreglos visuales que salieron de las capturas del E2E del 31/10 (`e2e-rediseno/`). Todo es de la app, solo JavaScript, sin backend, sin
+animaciones, íconos ni dependencias nuevas. Cada punto es un commit aparte de la rama `app-31-rediseno-y-moderacion`.
+* **17. Login: «¿Olvidaste tu contraseña?» ya no queda bajo el botón.** La cabecera mide ~54 % de la pantalla y lo de debajo (título, dos campos
+  y el enlace) más el pie fijo (botón, «Solicitar acceso», privacidad) pasaban de lo que se ve en un teléfono de 360 × 780 o en el Pixel 6: el
+  enlace quedaba en el borde de abajo del scroll, tapado por el fundido sobre el pie. Ahora la cabecera **cede alto** lo justo para que el
+  formulario quepa sin desplazar con el teclado cerrado (`topeDeAltoParaElFormulario` en `auth/utils/cabeceraDelIngreso`; `CabeceraDelIngreso`
+  recibe `altoMaximo`): `alto ≤ lo que se ve del scroll − lo que mide el cuerpo − 16 de aire + 36 de solape`, con un mínimo de 176 (cabeza y
+  alas; la cola ya se funde). Se mide lo real (`onLayout` del scroll, el mayor alto visto con el pie y sin teclado, y del cuerpo sin avisos de
+  error), así que también sirve con la letra grande del sistema; el teclado nunca la cambia (con teclado, el campo se lleva a la vista como
+  antes). Sin medidas todavía la cabecera es la de siempre (la primera pasada no se ve: la imagen entra con su fundido). El enlace mide 48 de
+  alto táctil (era 44). **No cambia** el diseño aprobado del 2026-10-05: mismos textos, orden, degradado y animaciones; solo el fénix se ve algo
+  más corto en teléfonos que no entraban (según la cuenta con las medidas de diseño: ~37 dp en el Pixel 6 y ~90 en 360 × 780; a confirmar en pantalla).
+* **18. Training: el título de una línea se centra en la fila.** Quedaba ~7 dp más arriba que la hora y que el botón o el círculo. La cuenta
+  lo explica: el área del nombre mide 48 como mínimo con 6 de relleno (36 útiles) y el texto 22, y (36 − 22) / 2 = 7; con dos líneas (44) no
+  sobraba nada y se veía centrado. La caja del título (`TituloQueSeTacha`) llevaba `flex: 1` dentro de una columna, crecía hacia abajo y dejaba
+  el texto en su borde de arriba. Ahora mide lo que mide el texto (`flexShrink: 1`) y la columna del nombre (`FilaDelDia`) centra lo que tiene. Por
+  qué NO se tocó el `lineHeight` de `theme/fuentes.ts` ni de los tokens: no es la métrica de Inter, y cambiarlo habría movido todas las pantallas.
+  Hallazgo hecho por geometría y pruebas, **sin emulador**: falta confirmarlo en pantalla.
+* **19. Pantallas del líder, una sola cabecera.** «Mentores y reporte del mes», «Todos los aprendices», «Reporte del mes», la ficha del mentor,
+  la lista y la ficha de la persona, y «Semáforo por grupos» llevaban «← VOLVER» en versalitas (`BarraDelLider`, y una copia en
+  `SemaforoGruposScreen`); «Mis mentores» llevaba «‹ Título». Ahora todas usan `CabeceraAdmin` («‹ Título», botón «Volver» de 48, el mismo
+  atrás): `BarraDelLider` es un envoltorio de ella y `SemaforoGruposScreen` la usa directo. El atrás del sistema no cambia.
+* **20. Plan: la línea del objetivo.** «Inicio 10000 · Actual 14000 · Meta 30000 S/» se partía en «Meta / 30000 S/» y la barra quedaba pegada.
+  `lineaDelObjetivo` usa `formatearNumero` (el formato de la app para cifras: miles con espacio duro, «30 000»; la coma y el punto ya significan
+  decimal en el Mapa) y une etiqueta, cifra y unidad con espacios duros («Meta 30 000 S/»): si el renglón se parte, es entre partes, en el « · ».
+  La barra sube a 12 de aire. El texto del objetivo (lo escribe la persona) no se toca.
+* **21. Plan: «Recordatorios de tus acciones ›» es una fila que abre una hoja.** El bloque con la fila de días, el interruptor, «Aviso antes de
+  cada acción» y «Cómo suena» dentro de «Acciones que mueven la meta» empujaba «Tu 80/20» y «Organizar mi semana ›» unas tres pantallas más
+  abajo. Ahora es una fila de 56 con la campana, el título y, en una línea, el estado guardado en este teléfono («Todos los días a las 08:00 ·
+  aviso 10 min antes», «Sin recordatorio diario · avisos 30 y 10 min antes y a la hora», «Apagados en este teléfono», «… según el día» si los
+  días no coinciden; `notificaciones/resumenDelRecordatorio`, puro), que abre una `HojaDesdeAbajo` grande con el MISMO `RecordatorioDeAcciones`
+  de siempre, sin tocar su lógica (`components/RecordatoriosDeLasAcciones`). La fila lee lo guardado al montar y al cerrar la hoja; sin lectura
+  dice «Recordatorio diario y aviso de cada acción». Con la semana sin armar o sin alarmas locales (web, Expo Go), no se dibuja, como antes.
+  **Las alarmas no dependen de la hoja:** el control ponía al día las alarmas de cada acción cuando Plan le pasaba la lista nueva; con él dentro
+  de una hoja cerrada eso habría dejado de correr. Salió a `useAlarmasAlDiaConLasAcciones`, que la fila monta siempre; el control suma la prop
+  `sincronizarConLaLista` (por defecto `true`, así Yo → Alarmas no cambia) y la hoja de Plan lo apaga para no hacerlo dos veces.
+* **Pruebas:** Jest `cabeceraDelIngreso` (el tope por tamaño de pantalla y letra, el mínimo, sin medidas), `loginConCabecera` (48 de alto táctil y
+  el tope tras medir), `alineacionDeLaFila`, `cabeceraDeLasPantallasDelLider`, `planPrincipal` (`lineaDelObjetivo`), `resumenDelRecordatorio`,
+  `recordatoriosDeLasAcciones` (la fila, la hoja con el mismo control, las alarmas con la hoja cerrada) y `planDelEje`.
 * **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
 
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
