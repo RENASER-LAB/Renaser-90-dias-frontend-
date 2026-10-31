@@ -373,6 +373,26 @@ Pedido del dueño: «en Plan replica este formato de acuerdo a lo que tenemos».
   Racha, con su «Todavía no subiste evidencias.» y el «+N»). **«Mis evidencias» sigue en Ajustes → Tu proceso**, sin tocar (su grilla
   con la foto real y el visor en grande). Se borró lo que quedó sin uso: la medida de la miniatura y los estilos `more` y `rowCard`.
 
+### El semáforo pasa de Hoy a Yo (punto 12)
+* **En Yo**, el gráfico de línea «Tu cumplimiento · últimos 7 días» (debajo de la tarjeta de fase) **se quita** (se borró
+  `curvaDeEvolucion`), y en su lugar va **la tarjeta del semáforo tal cual estaba en Hoy** (`TarjetaSemaforoHoy`): «Tu semáforo · últimos 7
+  días», el estado, el %, «5 de 7 días con datos», el mensaje del día con el búho (spec 006) y las siete barras. **En Hoy esa tarjeta
+  desaparece.**
+* **Mismas reglas que tenía en Hoy:** aparece solo si `/home` trae `semaforo` distinto de `null` (y la entrada `semaforo` no está apagada
+  por Soporte TI); sin él no hay tarjeta y el gráfico viejo tampoco vuelve; las barras salen de `semaforo.dias` o de `/me/semaforo`
+  (`useMiSemaforo` + `hayQuePedirMiSemaforo` + `diasParaLaTarjeta`); el mensaje sale como en la spec 006. **Sin pedidos de más:** Yo ya
+  leía `/home` (`useResumenHome`); la lectura de `/me/semaforo` se movió de Hoy a Yo.
+* **Tocarla abre el detalle** (`SemaforoScreen`) a pantalla completa desde Yo, con su flecha de volver y el atrás del sistema de vuelta a
+  Yo (`enSemaforo`, como la Caja).
+* **El aviso del sábado `/semaforo`** (`rutaDeAviso`, sin cambios) lo sigue recibiendo **Hoy**, que siempre está montada, y trae a Yo con
+  el parámetro `abrirSemaforo`; Yo abre el detalle y lo olvida. Se eligió esto por ser lo más simple: Yo no siempre está montada cuando
+  llega el aviso, Hoy sí (es el mismo camino de `abrirCaja` y `abrirMiRadar`).
+* **El fénix de Hoy sigue recibiendo el color del semáforo:** Hoy sigue publicando el color de `/home` (`usePublicarSemaforoDeHoy(…, null)`, sin
+  pedir nada), y Yo publica además el del detalle cuando lo lee. Lo demás del fénix (`useMantenerSemaforoVigente` al volver al frente y
+  tras cumplir un hábito) no cambia.
+* **No cambia** lo del mentor, el líder y Administración en Hoy («Mi grupo», «Mis mentores», el resumen por grupos y sus avisos): esto es solo
+  la tarjeta del semáforo propio del aprendiz.
+
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
 Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel especializado en React Native, Expo y TypeScript. Al crear, refactorizar o modificar cualquier pantalla o componente, debes cumplir OBLIGATORIAMENTE con los siguientes estándares:
@@ -2552,6 +2572,9 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     Autorizada junto con el diseño del semáforo de cumplimiento del aprendiz (D-168; el contrato vive
     en el backend, `docs/arquitectura/SEMAFORO_DEL_APRENDIZ.md`). El alcance es **solo** la tarjeta
     del semáforo, entre *Hábitos de hoy* y *Acciones y objetivos*, y el detalle que abre:
+    > **Corregido 2026-10-31 (pedido del dueño).** La tarjeta del semáforo y su detalle ya no están en Hoy: pasaron a Yo (en el lugar del
+    > gráfico «Tu cumplimiento»), con las mismas reglas. El aviso del sábado entra por Hoy y abre el detalle en Yo (`abrirSemaforo`). Ver
+    > la entrada del 2026-10-31.
     * La tarjeta aparece solo si `GET /api/v1/home` trae `semaforo` distinto de `null`. Para quien no
       se mide, y con un backend que todavía no lo manda, Hoy queda exactamente como estaba.
     * El detalle (`features/semaforo/screens/SemaforoScreen.tsx`) es estado de Hoy, como las vistas

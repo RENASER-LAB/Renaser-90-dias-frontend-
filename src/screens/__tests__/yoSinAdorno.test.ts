@@ -42,8 +42,9 @@ describe('Yo sin adornos', () => {
     expect(codigo).toMatch(/onCompletado: async[\s\S]{0,120}recargarEvidencias\(\)/);
   });
 
-  it('la curva de «Tu Evolución» sale de los días del semáforo', () => {
-    expect(codigo).toContain('curvaDeEvolucion(diasDelSemaforo)');
-    expect(codigo).toMatch(/<Path d=\{curva\.trazo\}/);
+  it('el gráfico de línea «Tu cumplimiento» se quitó (2026-10-31): en su lugar va la tarjeta del semáforo (ver semaforoEnYo.test.ts)', () => {
+    expect(codigo).not.toContain('curvaDeEvolucion');
+    expect(codigo).not.toContain('Tu cumplimiento');
+    expect(codigo).toContain('<TarjetaSemaforoHoy');
   });
 });

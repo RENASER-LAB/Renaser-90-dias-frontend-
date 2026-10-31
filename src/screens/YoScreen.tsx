@@ -12,7 +12,6 @@ import {
 import { Alert } from '../components/Alerta';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BORDES_DE_UNA_PESTANA } from '../navigation/bordesDeUnaPestana';
-import Svg, { Path, Circle } from 'react-native-svg';
 import { useTheme } from '../theme/ThemeContext';
 import { space } from '../theme/tokens';
 import { useResponsive } from '../theme/responsive';
@@ -102,9 +101,10 @@ import { esSoporteTi } from '../features/soporte-ti/utils/rolSoporteTi';
 import { useDisponibilidad } from '../features/plataforma/estado/useFuncionalidad';
 import { CLAVES } from '../features/plataforma/utils/clavesDeLaApp';
 import { useMiSemaforo } from '../features/semaforo/hooks/useMiSemaforo';
-import { hayQuePedirMiSemaforo } from '../features/semaforo/utils/entradasDelSemaforo';
-import { curvaDeEvolucion } from '../features/semaforo/utils/curvaDeEvolucion';
-import { dichoDelDia } from '../features/semaforo/utils/lecturaDelSemaforo';
+import { diasParaLaTarjeta, hayQuePedirMiSemaforo } from '../features/semaforo/utils/entradasDelSemaforo';
+import { TarjetaSemaforoHoy } from '../features/semaforo/components/TarjetaSemaforoHoy';
+import { SemaforoScreen } from '../features/semaforo/screens/SemaforoScreen';
+import { usePublicarSemaforoDeHoy } from '../features/semaforo/estado/useSemaforoVigente';
 import { ElegirHabitoParaFotoModal } from '../features/habits/components/ElegirHabitoParaFotoModal';
 import { RegistroConFotoModal } from '../features/habits/components/RegistroConFotoModal';
 import { useRegistroConFoto } from '../features/habits/hooks/useRegistroConFoto';
@@ -119,7 +119,7 @@ import { useOcultarBarraAlDesplazar } from '../navigation/barraAlDesplazar/Barra
 // =========================================================================
 /* Corregido 2026-09-29 («nada en Yo puede aparentar»): acá vivían `EVOLUCION` y `PATRONES`, las
    coordenadas fijas de la curva de «Tu Evolución» y del gráfico de «Patrones» — la misma subida
-   para cualquiera, desde el día 1. La curva ahora sale del semáforo (`curvaDeEvolucion`) y
+   para cualquiera, desde el día 1. La curva salía del semáforo (`curvaDeEvolucion`, que se borró el 2026-10-31: en su lugar va la tarjeta del semáforo) y
    «Patrones» se quitó: no hay un dato que sea "tus patrones". También se quitaron `LOGROS_DEL_PROGRAMA`
    (metas sin fuente y sin registro de logros detrás) y la sub-vista del video de activación (no hay
    video). */
@@ -278,7 +278,7 @@ export default function YoScreen() {
   const { guardarCapitulo, avanzarEstado, aceptarHito, guardarFirma } = usePersistenciaOnboarding();
   const { rs, isTablet, horizontalPadding, contentMaxWidth } = useResponsive();
   const { user, logout, actualizarPerfil, refrescarPerfil } = useAuth();
-  const { resumen } = useResumenHome();
+  const { resumen, recargar: recargarResumen } = useResumenHome();
   /* La misma cuenta que «Fase actual» y «Arquitectura de tiempo» de Plan (`faseEnCurso`): número, nombre,
      rango y día dentro de la fase salen de un solo lugar, así Yo no puede decir otra cosa que Plan. */
   const faseActual = faseEnCurso(resumen?.fase, resumen?.diaPrograma);
@@ -290,12 +290,15 @@ export default function YoScreen() {
   );
   const animalesConfigurados = useAnimalesDeFase();
 
-  /* «Tu Evolución»: el cumplimiento de cada día de la ventana del semáforo. Mismas fuentes que la
-     tarjeta de Hoy: los días del campo `semaforo` de `/home` y, si un backend viejo no los manda,
-     `GET /me/semaforo`. Sin semáforo (apagado, o quien no se mide) no hay curva. */
-  const miSemaforo = useMiSemaforo(hayQuePedirMiSemaforo(resumen?.semaforo, false));
-  const diasDelSemaforo = resumen?.semaforo?.dias ?? miSemaforo.detalle?.vigente?.dias ?? [];
-  const curva = curvaDeEvolucion(diasDelSemaforo);
+  /* El semáforo propio (2026-10-31, pedido del dueño: la tarjeta pasó de Hoy a Yo, en lugar del gráfico de línea «Tu cumplimiento»).
+     Mismas reglas que tenía en Hoy: aparece solo si `/home` trae `semaforo`; las barras salen de `semaforo.dias` o, si un backend
+     viejo no los manda, de `GET /me/semaforo` (`useMiSemaforo` + `hayQuePedirMiSemaforo`); con el detalle abierto, siempre se lee.
+     Tocarla abre el detalle (`SemaforoScreen`) acá mismo, con su flecha de volver. */
+  const [enSemaforo, setEnSemaforo] = useState(false);
+  const miSemaforo = useMiSemaforo(hayQuePedirMiSemaforo(resumen?.semaforo, enSemaforo));
+  /* El fénix de Hoy toma su ánimo del color del semáforo (`semaforoVigente`): Hoy publica el de `/home`; Yo publica además el del
+     detalle cuando lo lee, sin pedir nada de más. */
+  usePublicarSemaforoDeHoy(resumen?.semaforo, Boolean(resumen), miSemaforo.detalle);
 
   /* Los avisos de éxito (perfil guardado, Pacto sellado…) son una línea bajo la cabecera de la
      vista donde se ve lo hecho, y se van solos (`ConfirmacionEnLinea`). Los errores siguen en
@@ -426,6 +429,13 @@ export default function YoScreen() {
     if (!params?.abrirCaja) return;
     setEnCaja(true);
     (navegacionDeYo as unknown as { setParams: (p: Record<string, unknown>) => void }).setParams({ abrirCaja: undefined });
+  }, [rutaDeYo.params, navegacionDeYo]);
+  /* El aviso del sábado (`/semaforo`, «Tu semana ya cerró») lo recibe Hoy, que siempre está montada, y trae a Yo con `abrirSemaforo`. */
+  useEffect(() => {
+    const params = rutaDeYo.params as { abrirSemaforo?: boolean } | undefined;
+    if (!params?.abrirSemaforo) return;
+    setEnSemaforo(true);
+    (navegacionDeYo as unknown as { setParams: (p: Record<string, unknown>) => void }).setParams({ abrirSemaforo: undefined });
   }, [rutaDeYo.params, navegacionDeYo]);
   useEffect(() => {
     const params = rutaDeYo.params as { abrirMiRadar?: boolean } | undefined;
@@ -617,6 +627,11 @@ export default function YoScreen() {
     return <EliminarMiCuentaScreen onVolver={() => setEliminandoCuenta(false)} onCerrada={logout} />;
   }
 
+  /* El detalle del semáforo, a pantalla completa como la Caja: su flecha de volver y el atrás del sistema regresan a Yo. */
+  if (enSemaforo) {
+    return <SemaforoScreen semaforo={miSemaforo} onVolver={() => setEnSemaforo(false)} onPausaCambiada={() => void recargarResumen()} />;
+  }
+
   if (enCaja && miCaja.visible && miCaja.caja) {
     return <MiCajaScreen caja={miCaja.caja} onVolver={() => setEnCaja(false)} onCambio={miCaja.recargar} />;
   }
@@ -748,21 +763,15 @@ export default function YoScreen() {
                 />
               </View>
             ) : null}
-            {/* La curva era un dibujo fijo (ver `curvaDeEvolucion`). Ahora es el cumplimiento de
-                cada día del semáforo; con menos de dos días medidos no se dibuja. */}
-            {curva ? (
-              <View
-                accessible
-                accessibilityLabel={`Tu cumplimiento de los últimos ${diasDelSemaforo.length} días. ${diasDelSemaforo.map(dichoDelDia).join('. ')}.`}
-                style={{ marginTop: 14, gap: 6 }}
-              >
-                <Svg width="100%" height={78} viewBox="0 0 320 78">
-                  <Path d={curva.trazo} stroke={c.gold} strokeWidth={1.5} strokeLinecap="round" fill="none" />
-                  {curva.puntos.map(p => <Circle key={p.clave} cx={p.x} cy={p.y} r={2.8} fill={c.gold} />)}
-                </Svg>
-                <Text style={[t.small, { color: c.micro }]}>
-                  Tu cumplimiento · últimos {diasDelSemaforo.length} días
-                </Text>
+            {/* Tu semáforo (2026-10-31): la tarjeta de Hoy, tal cual, en el lugar del gráfico «Tu cumplimiento · últimos 7 días». Solo si
+                `/home` trae `semaforo`; sin él no hay tarjeta (y el gráfico viejo no vuelve). */}
+            {resumen?.semaforo && esDisponible(CLAVES.semaforo) ? (
+              <View style={{ marginTop: 14 }}>
+                <TarjetaSemaforoHoy
+                  semaforo={resumen.semaforo}
+                  dias={diasParaLaTarjeta(resumen.semaforo, miSemaforo.detalle)}
+                  onAbrir={() => setEnSemaforo(true)}
+                />
               </View>
             ) : null}
           </View>

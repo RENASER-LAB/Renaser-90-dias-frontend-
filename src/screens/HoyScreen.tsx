@@ -29,21 +29,16 @@ import { LiderMentoresScreen } from '../features/lider-mentores/screens/LiderMen
 import { AprendicesDelLiderScreen } from '../features/lider-mentores/screens/AprendicesDelLiderScreen';
 import { useAprendicesDisponibles } from '../features/lider-mentores/hooks/useAprendicesDisponibles';
 import { alAbrirAviso, consumirRutaPendiente } from '../features/mentor/notificaciones/rutaDeAviso';
-import { TarjetaSemaforoHoy } from '../features/semaforo/components/TarjetaSemaforoHoy';
 import { ControlDePapelDeHoy } from '../features/hoy-por-papel/components/ControlDePapelDeHoy';
 import { MiGrupoEnHoy } from '../features/hoy-por-papel/components/MiGrupoEnHoy';
 import { MisMentoresEnHoy } from '../features/hoy-por-papel/components/MisMentoresEnHoy';
 import { usePapelDeHoy } from '../features/hoy-por-papel/hooks/usePapelDeHoy';
 import { papelesDeHoy } from '../features/hoy-por-papel/utils/papelesDeHoy';
-import { SemaforoScreen } from '../features/semaforo/screens/SemaforoScreen';
-import { useMiSemaforo } from '../features/semaforo/hooks/useMiSemaforo';
 import { usePublicarSemaforoDeHoy } from '../features/semaforo/estado/useSemaforoVigente';
 import { useCelebracionDelDia } from '../features/fenix/hooks/useCelebracionDelDia';
 import { useResumenPorGrupos } from '../features/semaforo/hooks/useLecturaPorSemana';
 import {
   comoAbrirElSemaforoDelGrupo,
-  diasParaLaTarjeta,
-  hayQuePedirMiSemaforo,
   quienAbreElResumenPorGrupos,
 } from '../features/semaforo/utils/entradasDelSemaforo';
 import { AdminScreen, type EntradaDeAdmin } from '../features/admin/screens/AdminScreen';
@@ -175,20 +170,11 @@ export default function HoyScreen() {
   /* Spec 018: la ficha abierta desde la lista de «Mi grupo» de Hoy vuelve a Hoy; la que se abre desde la pantalla del
      grupo (o desde un aviso) vuelve a esa pantalla, como siempre. */
   const [alumnoVieneDeHoy, setAlumnoVieneDeHoy] = useState(false);
-  /* Semaforo de cumplimiento (D-168). Lo que el dueño autorizo agregar a Hoy el 2026-09-25 es esto
-     y nada mas (ver AGENTS.md): la tarjeta del semaforo con el detalle que abre, la tarjeta del lider
-     de mentores (abajo) y las rutas de los avisos del sabado. El detalle es estado de esta pantalla,
-     como las vistas del mentor. UNA lectura de `/me/semaforo`, compartida por la tarjeta (las barras)
-     y el detalle; solo se pide si `/home` dice que la persona se mide o si el detalle se abrio desde
-     el aviso. */
-  const [enSemaforo, setEnSemaforo] = useState(false);
-  /* Si `/home` ya trae los 7 dias (campo aditivo del backend), la tarjeta no necesita
-     `/me/semaforo`: se pide solo con el detalle abierto. Sin ese campo, como antes. */
-  const miSemaforo = useMiSemaforo(hayQuePedirMiSemaforo(resumen?.semaforo, enSemaforo));
-  /* El fénix (2026-10-06): lo ya leído pasa al color vigente compartido con el botón de SER (sin pedir nada más), y
-     los hitos del día que ya trae `/home` (fase nueva, racha de 7 y 30, todos los hábitos) se celebran una vez por día
-     con la pantalla completa que dibuja `AnfitrionDeCelebraciones` (App.tsx, 2026-10-07). */
-  usePublicarSemaforoDeHoy(resumen?.semaforo, Boolean(resumen), miSemaforo.detalle);
+  /* El semáforo propio (D-168) ya no vive en Hoy (2026-10-31, pedido del dueño): su tarjeta y su detalle pasaron a Yo. Lo que Hoy
+     conserva es el ánimo del fénix: el color de `/home` pasa al color vigente compartido con el botón de SER (sin pedir nada más;
+     Yo publica además el del detalle cuando lo lee), y los hitos del día que ya trae `/home` (fase nueva, racha de 7 y 30, todos
+     los hábitos) se celebran una vez por día con la pantalla completa que dibuja `AnfitrionDeCelebraciones` (App.tsx, 2026-10-07). */
+  usePublicarSemaforoDeHoy(resumen?.semaforo, Boolean(resumen), null);
   useCelebracionDelDia(
     user?.id,
     resumen ? { rachaActual: resumen.rachaActual, habitosHoy: resumen.habitosHoy, fase: resumen.fase } : null,
@@ -243,7 +229,6 @@ export default function HoyScreen() {
     if (!aprendizId || cargandoCapacidades) return;
     (navigation as any).setParams({ abrirCajaAprendizId: undefined });
     if (!capacidades.administrar) return;
-    setEnSemaforo(false);
     setAdminAbreEn({ caja: aprendizId });
     setMontajeAdmin(n => n + 1);
     setEnAdministracion(true);
@@ -258,7 +243,6 @@ export default function HoyScreen() {
     if (!persona?.id || cargandoCapacidades) return;
     (navigation as any).setParams({ abrirFichaAprendiz: undefined });
     if (!capacidades.administrar) return;
-    setEnSemaforo(false);
     setAdminAbreEn({ ficha: { id: persona.id, fullName: persona.fullName } });
     setMontajeAdmin(n => n + 1);
     setEnAdministracion(true);
@@ -283,7 +267,6 @@ export default function HoyScreen() {
       /* Solo las rutas de alumno: la del semaforo la atiende su propio efecto, mas abajo. */
       const ruta = consumirRutaPendiente('alumno');
       if (!ruta) return;
-      setEnSemaforo(false);
       const abrirAlumnoDe = (padron: AlumnoConEstado[]) => {
         const alumno = padron.find(a => a.participanteId === ruta.alumnoId);
         if (alumno) {
@@ -307,13 +290,12 @@ export default function HoyScreen() {
   }, [esMentor, celula.vista, elegirGrupo]);
 
   /* El aviso del sabado (`/semaforo`, «Tu semana ya cerro») abre el detalle del semaforo. Para
-     cualquier rol: le llega a toda persona medida, no solo al mentor. Se trae Hoy al frente por si
-     el toque encontro la app en otra pestaña; si no, el detalle quedaria abierto donde no se ve. */
+     cualquier rol: le llega a toda persona medida, no solo al mentor. Desde el 2026-10-31 el semáforo vive en Yo: Hoy, que siempre
+     está montada, es quien recibe el aviso y trae a Yo con `abrirSemaforo` (Yo abre el detalle y lo olvida). */
   useEffect(() => {
     const abrir = () => {
       if (!consumirRutaPendiente('semaforo')) return;
-      setEnSemaforo(true);
-      (navigation as any).navigate('Hoy');
+      (navigation as any).navigate('Yo', { abrirSemaforo: true });
     };
     abrir();
     return alAbrirAviso(abrir);
@@ -329,7 +311,6 @@ export default function HoyScreen() {
       if (!vista) return;
       const ruta = consumirRutaPendiente('semaforoGrupo');
       if (!ruta) return;
-      setEnSemaforo(false);
       const como = comoAbrirElSemaforoDelGrupo(ruta.grupoId, vista.celula.id, vista.grupos.map(g => g.id));
       /* Aviso de otro de sus grupos (D-141): se abre ESE grupo, no el que estaba mirando. */
       if (como === 'cambiar') void elegirGrupo(ruta.grupoId);
@@ -353,7 +334,6 @@ export default function HoyScreen() {
       });
       if (quien === 'esperar' || quien === 'nadie') return;
       if (!consumirRutaPendiente('semaforoGrupos')) return;
-      setEnSemaforo(false);
       if (quien === 'lider') {
         setEnBandejaTickets(false);
         setEnSemaforoGrupos(true);
@@ -391,13 +371,10 @@ export default function HoyScreen() {
     [recargarResumen, recargarHabitoAhora]
   );
 
-  const recargarSemaforo = miSemaforo.recargar;
   const recargarGrupo = celula.recargar;
   const releerGruposDelLider = semaforoGrupos.volverAVigente;
   const recargarTodo = useCallback(async () => {
     setRefreshing(true);
-    // Las barras de la tarjeta del semaforo: sin esto el resumen se refrescaria y ellas no.
-    recargarSemaforo();
     // Spec 018: deslizar con «Mi grupo» o «Mis mentores» a la vista relee ESA lista.
     if (papel === 'grupo') recargarGrupo();
     if (papel === 'mentores') releerGruposDelLider();
@@ -414,7 +391,6 @@ export default function HoyScreen() {
     recargarAcciones,
     recargarUltimaPublicacion,
     recargarHabitoAhora,
-    recargarSemaforo,
     recargarCapacidades,
     papel,
     recargarGrupo,
@@ -559,17 +535,6 @@ export default function HoyScreen() {
   /* Las vistas del mentor toman la pantalla completa, como el Mapa: son otro contexto de
      trabajo, no una tarjeta mas dentro del dia propio. El retroceso del sistema las cierra
      paso a paso (cada una registra su `useSystemBackHandler`). */
-  /* El detalle del semaforo va PRIMERO: el aviso del sabado puede llegar con otra vista abierta
-     (Administracion, el grupo). Al volver, esa vista sigue donde estaba. */
-  if (enSemaforo) {
-    return (
-      <SemaforoScreen
-        semaforo={miSemaforo}
-        onVolver={() => setEnSemaforo(false)}
-        onPausaCambiada={() => void recargarResumen()}
-      />
-    );
-  }
   /* Administracion toma la pantalla completa, como las vistas del mentor y como el Mapa: es otro
      contexto de trabajo, no una tarjeta mas dentro del dia propio. */
   if (enAdministracion && capacidades.administrar) {
@@ -941,17 +906,6 @@ export default function HoyScreen() {
             inscrito={resumen?.inscrito}
             onAbrirMiRadar={() => (navigation as any).navigate('Yo', { abrirMiRadar: true })}
           />
-
-          {/* Semaforo de cumplimiento (D-168). Entre Habitos y Acciones porque junta las dos cosas.
-              Solo si `/home` dice que la persona se mide: con `null` —no se mide, o un backend que
-              todavia no lo manda— Hoy queda exactamente como estaba. */}
-          {resumen?.semaforo && esDisponible(CLAVES.semaforo) ? (
-            <TarjetaSemaforoHoy
-              semaforo={resumen.semaforo}
-              dias={diasParaLaTarjeta(resumen.semaforo, miSemaforo.detalle)}
-              onAbrir={() => setEnSemaforo(true)}
-            />
-          ) : null}
 
           {/* Última evidencia real del Muro: se omiten publicaciones de texto sin evidencia.
               Rediseño de Hoy (2026-10-05): la tarjeta entera responde al dedo (`Presionable`), el
