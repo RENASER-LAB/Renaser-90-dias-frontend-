@@ -3,6 +3,7 @@ import { avisarHabitoCumplido } from '../eventos/habitoCumplido';
 import { apiFetch } from '../../../services/http/apiClient';
 import { validarRespuesta } from './habitsSchemas';
 import { ejecutarEnRegistroVigente } from './registroVigente';
+import { enPasoDelEnvio } from '../utils/enPasoDelEnvio';
 
 /**
  * Camino GENÉRICO de evidencia de hábitos: los que no tienen flujo propio (Clase Diaria, Post
@@ -99,6 +100,46 @@ export function almacenamientoSinConfigurar(uploadUrl: string): boolean {
   return !uploadUrl.startsWith('http://') && !uploadUrl.startsWith('https://');
 }
 
+/** Pausas entre los intentos del PUT a S3 cuando falla la red (ver {@link ponerElArchivoEnS3}). */
+export const ESPERAS_ENTRE_INTENTOS_DEL_PUT_MS: readonly number[] = [500, 1500];
+
+const esperar = (ms: number) => new Promise<void>(resolver => setTimeout(resolver, ms));
+
+/**
+ * El PUT, con hasta {@link ESPERAS_ENTRE_INTENTOS_DEL_PUT_MS}.length reintentos EN EL MISMO ENVÍO. Se repite solo lo que puede
+ * ser pasajero: la red que se cae a mitad (la excepción de `fetch`, una conexión vieja que el teléfono reutiliza después de
+ * perder la señal) y un 5xx de S3. Un 4xx (firma vencida, `Content-Type` distinto) no mejora repitiéndolo y sale de una vez.
+ * Cada intento manda el MISMO cuerpo a la MISMA dirección firmada: un PUT a S3 es idempotente.
+ */
+async function ponerElArchivoEnS3(
+  uploadUrl: string,
+  bytes: ArrayBuffer,
+  mimeType: string,
+  esperasMs: readonly number[],
+): Promise<void> {
+  let ultimoFallo: unknown;
+  for (let intento = 0; intento <= esperasMs.length; intento++) {
+    if (intento > 0) await esperar(esperasMs[intento - 1]);
+    let respuesta: Response;
+    try {
+      respuesta = await fetch(uploadUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': mimeType },
+        body: bytes,
+      });
+    } catch (error) {
+      ultimoFallo = error;
+      if (intento < esperasMs.length) console.warn(`[evidencia] el PUT a S3 falló (intento ${intento + 1}); se repite:`, error);
+      continue;
+    }
+    if (respuesta.ok) return;
+    const rechazo = new Error(`No se pudo subir la evidencia al almacenamiento (S3 respondió ${respuesta.status}).`);
+    if (respuesta.status < 500) throw rechazo;
+    ultimoFallo = rechazo;
+  }
+  throw ultimoFallo;
+}
+
 /**
  * Paso 2 — PUT directo a S3. Deliberadamente NO usa `apiFetch`: ése antepone la BASE_URL del
  * backend y agrega el header de sesión `X-Auth-Token`, y ninguna de las dos cosas corresponde
@@ -109,6 +150,7 @@ export async function subirArchivoAS3(
   uploadUrl: string,
   uri: string,
   mimeType: string,
+  esperasMs: readonly number[] = ESPERAS_ENTRE_INTENTOS_DEL_PUT_MS,
 ): Promise<void> {
   // D-104: `.arrayBuffer()`, nunca `.blob()`. Con un `Blob` de React Native como cuerpo, RN
   // decide el `Content-Type` real a partir del `type` del Blob (a veces vacio, a veces distinto
@@ -116,20 +158,18 @@ export async function subirArchivoAS3(
   // exacto y S3 rechaza con 403 — la subida "fallaba" sin motivo visible. Es el mismo bug que
   // ya se habia encontrado y corregido en la firma del onboarding el 2026-09-03
   // (`subirArchivoOnboardingAS3`); este archivo habia copiado el patron viejo.
-  let bytes: ArrayBuffer;
-  try {
-    bytes = await (await fetch(uri)).arrayBuffer();
-  } catch (error) {
-    throw new Error('No se pudo leer el archivo de la evidencia en el dispositivo.', { cause: error });
-  }
-  const respuesta = await fetch(uploadUrl, {
-    method: 'PUT',
-    headers: { 'Content-Type': mimeType },
-    body: bytes,
+  const bytes = await enPasoDelEnvio('leer el archivo', async () => {
+    try {
+      const leido = await fetch(uri);
+      // Desde Expo 57 el `fetch` global lee `file://` por OkHttp, y un archivo que ya no está NO lanza: responde un 404 con
+      // el texto «File not found». Sin este control esos 14 bytes se subían a S3 como si fueran la foto (#51).
+      if (!leido.ok) throw new Error(`el archivo respondió ${leido.status}`);
+      return await leido.arrayBuffer();
+    } catch (error) {
+      throw new Error('No se pudo leer el archivo de la evidencia en el dispositivo.', { cause: error });
+    }
   });
-  if (!respuesta.ok) {
-    throw new Error(`No se pudo subir la evidencia al almacenamiento (S3 respondió ${respuesta.status}).`);
-  }
+  await enPasoDelEnvio('subir a S3', () => ponerElArchivoEnS3(uploadUrl, bytes, mimeType, esperasMs));
 }
 
 /**
@@ -190,16 +230,20 @@ export async function subirEvidenciaDeArchivo(
   registroId: string,
   archivo: ArchivoParaSubir,
 ): Promise<EvidenciaRegistrada> {
-  const url = await solicitarUrlSubidaEvidencia(registroId, archivo.mimeType);
+  const url = await enPasoDelEnvio('pedir la dirección de subida', () =>
+    solicitarUrlSubidaEvidencia(registroId, archivo.mimeType),
+  );
   if (almacenamientoSinConfigurar(url.uploadUrl)) {
     throw new AlmacenamientoSinConfigurarError();
   }
   await subirArchivoAS3(url.uploadUrl, archivo.uri, archivo.mimeType);
-  return confirmarEvidencia(registroId, {
-    tipo: archivo.tipo,
-    bucket: url.bucket,
-    rutaStorage: url.ruta,
-  });
+  return enPasoDelEnvio('confirmar la evidencia', () =>
+    confirmarEvidencia(registroId, {
+      tipo: archivo.tipo,
+      bucket: url.bucket,
+      rutaStorage: url.ruta,
+    }),
+  );
 }
 
 /**

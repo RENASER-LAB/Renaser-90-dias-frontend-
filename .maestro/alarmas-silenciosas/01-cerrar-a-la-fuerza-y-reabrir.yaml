@@ -1,0 +1,33 @@
+# 01 — Alarmas silenciosas (2026-10-31): cerrar la app a la fuerza y volver a abrirla NO muestra ninguna hoja. Antes salía
+# «Tu teléfono cerró Renaser» con «Arreglarlo» / «Ahora no»; ahora la app vuelve a poner las alarmas sola, sin decir nada.
+# Precondición: una cuenta con hábitos que tengan recordatorio (para que haya alarmas puestas) y permiso de avisos.
+# `correr.sh` entra por primera vez antes de este flujo (esa primera revisión nunca avisaba); la hoja de antes salía en la
+# SEGUNDA apertura, que es la que hace este flujo: por eso falla con la versión anterior y pasa con esta.
+# Que las alarmas sigan puestas se mira con `dumpsys alarm` (Maestro no corre comandos): ver README.md, paso 2.
+# cuenta: aprendiz
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+# Deja pasar la puesta al día de la primera apertura: las alarmas ya están puestas antes de cerrar a la fuerza.
+- waitForAnimationToEnd:
+    timeout: 10000
+# `stopApp` es `am force-stop`: Android borra las alarmas de la app, igual que al quitarla de recientes en Honor.
+- stopApp
+- launchApp
+- runFlow: ../comun/ya-adentro.yaml
+# La hoja de antes llegaba unos segundos después de abrir, cuando terminaba la puesta al día: se le da el tiempo.
+- extendedWaitUntil:
+    visible: "Tu teléfono cerró Renaser"
+    timeout: 20000
+    optional: true
+- assertNotVisible: "Tu teléfono cerró Renaser"
+- assertNotVisible: "Por eso no sonaron tus alarmas.*"
+- assertNotVisible: "Arreglarlo"
+- assertNotVisible: "Ahora no"
+- assertNotVisible: "Un ajuste para tus alarmas"
+- assertNotVisible: "Ajustarlo"
+# La app quedó normal: la barra de pestañas está y se puede navegar.
+- assertVisible: "TRAINING"
+- tapOn: "YO"
+- assertVisible: "Tu evolución"
+- takeScreenshot: 01a-sin-hoja-tras-cerrar-a-la-fuerza

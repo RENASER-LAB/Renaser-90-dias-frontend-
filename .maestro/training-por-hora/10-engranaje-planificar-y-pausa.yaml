@@ -1,5 +1,6 @@
 # T10 — El engranaje es SOLO para planificar (spec 014): «Tus prácticas» trae «Arma tu semana los domingos» y las cinco dimensiones con su
-# avance; cada una abre «Planificar» y sus hábitos (tocar uno abre su editor); NINGUNA fila registra. Al apagar un hábito propio
+# avance; tocar una abre DIRECTO «Planificar <dimensión>» (2026-10-31: ya no hay un detalle en el medio) y tocar un hábito abre
+# su editor; NINGUNA fila registra. Al apagar un hábito propio
 # («Meditar 10 minutos») se elige «Solo hoy» o «Hasta que yo lo reactive»; con «Solo hoy» desaparece de la lista de hoy.
 # Precondición: `reset-hoy.sql` (el hábito propio «Meditar 10 minutos», 20:15, sin pausa).
 # cuenta: aprendiz
@@ -24,17 +25,14 @@ appId: com.renaser.app
 - assertNotVisible: "Subir|Tomar foto|Escuchar|Publicar|Marcar .*"
 - takeScreenshot: T10a-engranaje
 - tapOn: "Mente: .* de .* cumplidos hoy"
-- extendedWaitUntil:
-    visible: "Planificar Mente"
-    timeout: 15000
-- assertNotVisible: "Subir|Tomar foto|Escuchar|Publicar|Marcar .*"
-- assertVisible: "Meditar 10 minutos, 20:15\\. Abrir para planificarlo\\."
-- takeScreenshot: T10b-dimension-mente
-- tapOn: "Planificar Mente"
+# Directo a la hoja de Planificar, con la lista de hábitos y sus interruptores (sin la pantalla del detalle).
 - extendedWaitUntil:
     visible: "Toca uno para cambiarle la hora\\."
     timeout: 15000
-- takeScreenshot: T10c-planificar-mente
+- assertVisible: "Planificar Mente"
+- assertNotVisible: "Tus hábitos \\(.*"
+- assertNotVisible: "Subir|Tomar foto|Escuchar|Publicar|Marcar .*"
+- takeScreenshot: T10b-planificar-mente-directo
 # Tocar un hábito abre su editor (la hora, los días, el recordatorio y «Cómo suena»).
 - tapOn: "Meditar 10 minutos, a las 20:15"
 - extendedWaitUntil:
@@ -58,9 +56,11 @@ appId: com.renaser.app
     visible: ".*Pausado.*"
     timeout: 15000
 - takeScreenshot: T10f-pausado
-# Cerrar todo con el atrás del sistema: la hoja de Planificar, el detalle de la dimensión y «Tus prácticas».
+# Cerrar todo con el atrás del sistema: la hoja de Planificar (vuelve a «Tus prácticas») y «Tus prácticas» (vuelve a Training).
 - back
-- back
+- extendedWaitUntil:
+    visible: "Arma tu semana los domingos|Mente: .* de .* cumplidos hoy"
+    timeout: 15000
 - back
 - extendedWaitUntil:
     visible: "Tus prácticas: planificar"

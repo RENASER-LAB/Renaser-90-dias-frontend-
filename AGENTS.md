@@ -94,6 +94,69 @@ Al cumplir solo se cancelaban las repeticiones +5/+10 (spec 009). Lo que cambia 
   `sellarRocaYRepeticiones.test.ts` (el aviso de la acción sellada).
 * **Hace falta un APK nuevo** (solo JavaScript: no hay código nativo nuevo, pero la app no se actualiza por aire).
 
+## Corrección — 2026-10-31 — un aviso de inicio de hábito ya no se muestra ni se queda en la bandeja después de su hora (issue #40)
+
+El 28/10 llegó a las 8:58 un aviso de GIMNASIO que decía «te toca a las 07:00». **Esa vez la causa fue el push de respaldo del
+servidor** (el dueño nunca configuró un recordatorio para ese hábito, así que el teléfono no tenía ninguna alarma local; el push
+salía sin `expiration` y FCM lo guardó; ya arreglado en el backend, #22/#23). En la app no había una causa de ese caso; lo que sí
+había son dos huecos reales para las alarmas locales atrasadas: `ExpoSchedulingDelegate.triggerNotification` muestra la alarma sin
+mirar qué tan tarde llegó (sin el permiso «Alarmas y recordatorios» es inexacta: el rearmado documenta `window=+1h` y el e2e del
+26/10 midió `+40m59s`), y nada quita de la bandeja un aviso cuya hora ya pasó. Regla (la misma que el dueño aceptó para el
+servidor, FR-015): **un aviso de inicio vale hasta la hora del hábito; después no se muestra.** El hábito se sigue registrando todo
+su día (D-259). Lo que cambia y nada más (ni diseño, ni textos, ni canales, ni sonidos):
+* **Al entregarse (Android, parche de `postinstall`):** `scripts/arreglar-aviso-tardio.js` parcha `triggerNotification`. El aviso
+  de inicio lleva ahora `data.vigenteMin` (su antelación + 2 min de gracia, `vigenciaDelAvisoMin`); si el atraso desde su hora
+  nominal lo pasa, no se muestra, y la alarma diaria o semanal se vuelve a armar igual para mañana. Sin `vigenteMin` (eventos,
+  acciones, Código Renaser, repeticiones, prueba de sonido) todo es como siempre. **El Kotlin no se compiló al escribirlo**: se
+  valida al armar el APK. Convive con el parche de las alarmas tipo despertador (otras líneas, cualquier orden; este va antes en
+  `postinstall` y el otro sigue de último).
+* **Las ya programadas lo reciben solas:** el rearmado que corre al abrir la app (`planDeRearmado`) le pone `vigenteMin` a los
+  avisos de inicio que se programaron antes, sin cambiar su hora, su identificador ni su texto.
+* **Al abrir la app o volver al frente (JavaScript):** `limpiarAvisosVencidos` (en `RearmadorDeAlarmas`, sin el intervalo de 10 min)
+  quita de la bandeja los avisos de inicio cuya hora ya pasó y los de un hábito cumplido ese día (nota de `cumplidoDeHoy`, issue
+  #33). Los reconoce por su cuerpo «Te toca a las HH:mm.» y su ruta `/habitos/…`, así que alcanza también a los que mostró una versión
+  anterior y a los de un grupo de avisos (E-410). Un hábito de después de la medianoche solo se quita al vencer, no por cumplido.
+* **No se tocan:** las repeticiones («Te tocaba a las …»), las acciones de los objetivos, los eventos, los mensajes ni los push del
+  servidor (esos los cubre su `expiration`).
+* **Supuestos a confirmar con el dueño:** la gracia de 2 min (sin ella, el aviso «a la hora» se descartaría por llegar a las 07:00:03;
+  con ella, un Despertar sin el permiso de alarmas exactas que llegue más de 2 min tarde ya no se muestra) y que la regla valga
+  también para Despertar.
+* **Pruebas:** `vigenciaDelAviso`, `vigenciaEnLasAlarmas`, `limpiarAvisosVencidos` y `avisoTardio` (el parche, sobre un paquete falso).
+  Maestro: `.maestro/aviso-tardio/01-limpiar-la-bandeja.yaml`.
+* **Hace falta un APK nuevo** (código nativo parchado). Sin backend nuevo.
+
+## Decisión del dueño — 2026-10-31 — Alarmas silenciosas: se quita la hoja «Tu teléfono cerró Renaser»
+
+Textual, viendo la hoja «Tu teléfono cerró Renaser» («Por eso no sonaron tus alarmas. Ya las volvimos a poner. Para que tus alarmas no se
+borren, en Batería elige «Sin restricciones» y no cierres Renaser a la fuerza.», con «Arreglarlo» y «Ahora no»): «creo que el usuario no debe
+saber esto… no me gusta… ¿no hay otras opciones, como lo hace WhatsApp, Facebook, Instagram, TikTok?». Eligió **«Silencioso, como WhatsApp»**.
+Spec 007 (2026-10-19) corregida; solo la app. Lo que cambia y nada más:
+* **Se quitó la hoja** `AvisoDeAlarmasBorradas` (y su montaje en `App.tsx`), con lo que solo servía para decidir si mostrarla:
+  `detencionForzada.ts`, `alarmasVivas.ts` (la «foto» de si las alarmas siguen vivas), `esperarLaPuestaAlDia` y el paso 0 de
+  `ponerAlDiaLasAlarmas` (`fotoDeLasAlarmas`). Nada le dice a la persona que el teléfono cerró la app.
+* **El rearmado sigue igual y en silencio** (`RearmadorDeAlarmas`, `rearmarAlarmas.ts`, `ponerAlDiaLasAlarmas`): al abrir la app y al volver a
+  primer plano, con su intervalo de 10 min. El push de respaldo del servidor (`habito-{id}-inicio`) cubre el primer aviso de cada hábito
+  mientras tanto. No cambian los canales, las voces, «cómo suena», las repeticiones ni el aviso agrupado.
+* **Se quitó la oferta preventiva** «Un ajuste para tus alarmas» (`guiaPreventiva.ts`, `pedidoDeLaGuia.ts`) al guardar un recordatorio en
+  Training → Planificar (`PlanificarDimensionModal`). El pedido del permiso «Alarmas y recordatorios», cuando hace falta, **sigue igual**.
+* **Yo → Alarmas: la guía de batería queda, en positivo** (`GuiaDeBateria`, `data/guiasPorMarca.ts`): título «Para que tus recordatorios
+  suenen siempre» (19 px, negrita), la línea de la marca del teléfono y el botón **«Revisar»** (52 de alto; era «Abrir ajustes»), que abre lo
+  mismo que antes (la pantalla de la marca, o la lista de batería, o los ajustes de Renaser: `abrirGuiaDeLaMarca`). La línea de una marca
+  desconocida pasó de «Para que tus alarmas no se borren, en Batería elige «Sin restricciones» y no cierres Renaser a la fuerza.» a «En Batería,
+  elige «Sin restricciones» para Renaser.»: sin culpar al teléfono ni pedir «no cierres la app a la fuerza». Las líneas de Honor, Huawei,
+  Xiaomi, Samsung, Oppo y Vivo no cambian. Quieta, sin animación (se ve de vez en cuando y quien llega ahí la está buscando). El aviso de
+  «Alarmas y recordatorios» de arriba no se tocó.
+* **Módulo nativo `renaser-alarmas`: no se tocó** (borrar sus funciones exigiría un APK nativo nuevo). JavaScript ya no llama a
+  `detencionForzadaDesde` ni a `proximaAlarmaPropia` (se quitaron sus envoltorios y `marcaQueDetieneApps`); el Kotlin las conserva sin uso.
+* **Almacenamiento:** nada escribe ya `renaser.alarmas.detencionRevisada.`, `renaser.alarmas.avisoDetencion.` ni
+  `renaser.alarmas.guiaPreventiva.`. Se dejan en la lista de lo que se borra al cerrar sesión (`alarmasDeLaCuenta.ts`) solo para no dejar
+  restos en los teléfonos que ya las tenían; se pueden quitar de esa lista cuando ya no queden versiones anteriores en uso.
+* **Pruebas:** se borraron `avisoDeAlarmasBorradas`, `guiaPreventiva`, `detencionForzada` y `alarmasVivas`; `esperarLaPuestaAlDia.test.ts` pasó a
+  `puestaAlDiaConLaCuentaQueEntra.test.ts` (conserva lo que no era de la hoja); `guiaDeBateria`, `guiasPorMarca`, `moduloNativoDeAlarmas`,
+  `alarmasDeLaCuentaAlSalir` y las de Planificar (`planificarDimension` y tres más) se ajustaron. Maestro, escritos y sin correr:
+  `.maestro/alarmas-silenciosas/` (cerrar a la fuerza y reabrir sin hoja; Yo → Alarmas con el texto nuevo).
+* **Hace falta un APK nuevo** (solo JavaScript: no hay código nativo nuevo, pero la app no se actualiza por aire). Sin backend nuevo.
+
 ## Decisión del dueño — 2026-10-30 — Mentoría del Alquimista solo con semáforo verde (sin cambios en la app)
 
 Textual: «en eventos, si eres aprendiz solo te saldrá la mentoría con alquimista si tienes semáforo verde». El filtro es 100 % del
@@ -101,6 +164,28 @@ servidor (backend spec 020, D-293, cierra D-213): lista, calendario, «Mi agenda
 cambia ni suma textos: un aprendiz sin verde deja de recibir la mentoría en `GET /calendar/events` y en `/home → proximoEvento`; si abre
 su detalle recibe el 403 de siempre («Este evento ya no está disponible…»), y la alarma local de un «Voy» se quita sola en la
 siguiente lectura (`planDeSincronizacion`). No hace falta APK nuevo. Flujos de Maestro: `.maestro/mentoria-semaforo/`.
+
+## Corrección — 2026-10-31 — la guía de arranque de SER ya no se monta sobre el panel de SER (issue #50)
+
+E2E del 29/10: con una cuenta sin el Pacto firmado, la guía de arranque (`SparkieOverlay`, la burbuja «✳ SER») apareció encima
+del panel de SER y su «Ahora no» no respondía (solo el «atrás» la cerraba). Dos causas en el código, ambas arregladas; no cambian
+diseño, textos, ni la secuencia saludo → primer post → Pacto. Lo que cambia y nada más:
+* **La guía espera al panel.** El panel y la guía son dos `Modal` y en Android el que se crea después queda encima. El panel de SER
+  (`RenasiaPanel`, el del botón flotante, el orbe de Hoy y el botón del curso) se anota mientras está a la vista
+  (`renasia/state/panelDeSerAbierto`, un contador como `chatEnPantalla`) y la tarjeta de la guía no se dibuja mientras haya uno:
+  no se minimiza ni se pierde, vuelve al cerrar el chat. Mientras tanto no intercepta el «atrás» (es del panel). Una guía
+  que espera sigue contando como capa obligatoria (D-218): un aviso del teléfono sigue esperándola.
+* **Una guía pospuesta no se reabre sola.** `SparkieOverlay` volvía a abrirla ante CUALQUIER cambio de `estado.paso`, y
+  `useArranqueGuiado` cae en «ninguno» ante cualquier lectura fallida (lo más común al volver de la cámara o de segundo plano) y
+  vuelve a «publicar» en la lectura siguiente. Ahora solo la reabre un avance real («publicar» → «firmar el Pacto»), o entrar con
+  otra cuenta (`sparkie/utils/tarjetaDelArranque`, puro).
+* **Las lecturas del arranque se ordenan.** Si dos quedaban en vuelo (el sondeo de 8 s y el regreso de segundo plano), la que
+  llegaba última pisaba a la más nueva. Ahora solo escribe la más reciente, y firmar el Pacto anula las que ya habían salido.
+* **No comprobado todavía en el emulador:** el toque muerto de «Ahora no» sobre el panel se atribuye a la ventana apilada y deja de
+  poder ocurrir con el panel; con la guía sobre otro `Modal` (no el panel) no se probó. Flujo de Maestro listo:
+  `.maestro/guia-de-ser/01-la-guia-no-tapa-el-panel.yaml`. Pruebas: `guiaYPanelDeSer`, `lecturasDelArranque`, `tarjetaDelArranque`
+  y `panelDeSerAbierto`.
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
 
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
@@ -222,6 +307,10 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       «Solo hoy» / «Hasta que yo lo reactive» y las specs 008 a 011—, la lista de sus hábitos (tocar uno abre su editor
       en Planificar: prop nueva y opcional `abrirEnHabitoId`) y «Cambiar nombre» en las dos bebidas renombrables
       (D-127). Las acciones de los objetivos se siguen planificando en Plan.
+      > **Corregido 2026-10-31 (pedido del dueño).** Lo de «cada una abre su detalle», la lista de sus hábitos, la prop
+      > `abrirEnHabitoId` y «Cambiar nombre» en esa lista **ya no es cierto**: tocar una dimensión abre DIRECTO la hoja
+      > «Planificar <dimensión>» y «Cambiar nombre» pasó al editor de cada bebida. `abrirEnHabitoId` se borró (nadie más la
+      > usaba). Ver «tab `Training` → Tus prácticas: la dimensión abre Planificar directo», al final de esta lista.
     * **No cambia**: cómo se registra cada tipo ni los pedidos al servidor, `habitoCumplido`, la actualización al
       cambiar de día (`useActualizacionDelDia`), abrir desde un aviso, los momentos del check y el «+N pts», las
       confirmaciones en línea, el interruptor `habitos` de Soporte TI, la barra que se esconde al desplazar, la invitación
@@ -266,6 +355,11 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     * **Yo → Alarmas**: la guía de batería dice el camino de la marca del teléfono (Honor/Huawei «Inicio de
       aplicaciones», Xiaomi, Samsung, Oppo/Realme/OnePlus, Vivo) y su botón abre esa pantalla si existe; si no, la
       lista de batería o los ajustes de Renaser. Nunca se pide la excepción directa de batería (política de Play).
+      > **Corregido 2026-10-31 (decisión del dueño, «alarmas silenciosas»).** Ya no es cierto lo de la **hoja al abrir la app**
+      > («Tu teléfono cerró Renaser», `AvisoDeAlarmasBorradas`, con sus dos señales `detencionForzada.ts` y `alarmasVivas.ts`), ni
+      > lo de la **misma hoja antes de que pase** («Un ajuste para tus alarmas», `guiaPreventiva.ts`, `pedidoDeLaGuia.ts`): las
+      > tres cosas se borraron. El rearmado en silencio (`RearmadorDeAlarmas`) sigue. La guía de batería de Yo → Alarmas queda,
+      > con otro texto y otro botón. Ver la entrada «Alarmas silenciosas» de arriba.
     * **No cambian**: el resto de Yo, el resto de Planificar (horas, días, el pedido del permiso de alarmas exactas),
       los interruptores de avisos (`InterruptoresDeAvisos`, spec 005), los demás tabs.
       **Hace falta un APK nuevo** (código nativo) y, para el texto con la hora y el `tag`, el backend de la spec 007.
@@ -2494,6 +2588,32 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       opciones en 360 dp el texto se achica hasta un 85 % en vez de cortarse con «…». Solo el ranking lo usa.
     * **Hace falta un APK nuevo** para la pestaña; el APK publicado ya ve y registra el hábito.
 
+  * **Cambio por pedido del dueño — 2026-10-29 — tabs `Training`, `Yo` y `Hoy` (registro con foto): KILÓMETROS DIARIOS
+    siempre muestra el campo de km y nunca se envía sin el número** (issue #42; autorizado el 2026-10-29). El campo
+    «¿Cuántos km recorriste hoy?» solo salía si el registro fresco (`GET /habit-tracks/today`) decía que el hábito mide
+    algo. El chat y el orbe de SER no traen esa pista, la foto pendiente de Android no la guardaba y, si esa consulta
+    fallaba, la pantalla se abría SIN campo y se enviaba sola: el servidor respondía 400 «Escribe cuántos km recorriste
+    hoy…» y «Reintentar» repetía el mismo envío, en bucle. Lo que cambia y nada más:
+    * **Tres respuestas en vez de dos** (`medicionQueSeSabe`, `habits/utils/registroConFoto`): pide los km (objeto), no
+      pide nada (`null`) o **no se sabe** (`undefined`: no se pudo leer el registro y quien llamó no trae la pista). Training
+      y Yo siempre saben (leen el track: objeto o `null`); el chat y el orbe, no. Antes lo que no se sabía se tomaba por
+      «no pide nada».
+    * **Si no se sabe, no se abre a ciegas**: antes de la cámara, un diálogo «Sin conexión» con el mensaje de siempre
+      («Necesitamos actualizar tus hábitos antes de registrar. Revisa tu conexión e inténtalo de nuevo.»,
+      `MENSAJE_SIN_CONEXION_PARA_REGISTRAR`, el mismo de `ejecutarEnRegistroVigente`) y «Ahora no» / «Reintentar» (repite el
+      toque desde cero). Resultado nuevo de `iniciar`: `'sin-conexion'` (las tarjetas del chat y del orbe lo leen como «sigue
+      pendiente»). En web, que no lee el registro antes de la cámara, el mismo aviso sale tras la foto, sin enviar nada.
+    * **La foto pendiente de Android recuerda los km** (`fotoPendiente.medicion`: objeto, `null` o ausente; un valor roto
+      se lee como «no se sabe»): al recuperarla sin red abre con el campo; sin ninguna pista, avisa (sin «Reintentar»: la
+      foto pendiente se ofrece una sola vez).
+    * **Si el servidor pide los km igual** (400 con «km» en el mensaje, `pideLosKm`) y la pantalla no tenía el campo, se
+      muestra el campo (con el total recorrido si se puede leer el registro) y NO se repite el envío; la evidencia ya subida
+      no se vuelve a subir y los km viajan al registrar. Cualquier otro error sigue siendo el de siempre con «Reintentar».
+    * **No cambian**: ningún texto ni diseño de la pantalla de foto, los demás hábitos con foto (se registran solos como
+      siempre; Training y Yo con pista `null` siguen abriéndose sin red), las acciones del día, el backend (el evento de
+      SER no trae la clave ni la medición: hacerlo es trabajo de backend) ni los tabs.
+    * **Hace falta un APK nuevo** (la app no se actualiza por aire).
+
   * **Cambio por pedido del dueño — 2026-10-13 — los cinco tabs: aviso de mantenimiento cuando una funcionalidad está
     apagada (spec 002)** (interruptores de Soporte TI, fase 1; spec, plan §D8 y contrato en
     `Renaser-90-dias-backend/specs/002-soporte-ti-interruptores/`, aprobados por el dueño el 2026-10-13). Lo que cambia y
@@ -2737,6 +2857,20 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     * **No cambian**: las tablas, el podio animado de la app, el selector, «Tu posición» ni las demás secciones.
     * **Hace falta un APK nuevo y el backend con V110** (la capacidad la publica el backend; contra uno anterior no hay
       botón).
+
+  * **Cambio por pedido del dueño — 2026-10-29 — tab `Comunidad` → Ranking: «TÚ» y «Tu posición» solo por id** (issue #43;
+    autorizado el 2026-10-29). Se buscaba a la persona por id o, si no, por nombre con `includes`: «Ana» o «Luis» están
+    dentro de «Ana María Torres» o «Luis Pérez», que pueden estar más arriba en la tabla, y se marcaba a otra persona como
+    «TÚ» con su posición. Lo que cambia y nada más:
+    * **Solo por id de la cuenta**, en las cuatro tablas (General, Coherencia, Kilómetros y Gimnasio): `participanteId` de
+      cada fila de `GET /ranking` es el `UserId` (`EntradaRankingResponse`) y el de la sesión es `UserResponse.id`: el
+      mismo texto. `esMiEntrada` / `nombreEnElRanking` / `miEntradaEnLaTabla` (`ranking/utils/tablasDeRanking`) lo deciden
+      para las filas de la tabla («TÚ (nombre)» y la fila resaltada), los tres lugares del podio y «Tu posición»;
+      `QuienMira` ya no tiene `name`. **Sin id** (de la sesión, o en una fila) **no se marca a nadie**: no se adivina por
+      nombre.
+    * **No cambian**: los textos, el diseño, las tablas, el podio, «Descargar» (esa imagen usa siempre el nombre que
+      manda el servidor) ni los demás tabs. Sin backend nuevo.
+    * **Hace falta un APK nuevo** (la app no se actualiza por aire).
 
   * **Cambio por pedido del dueño — 2026-10-20 — tab `Training` → Planificar: el recordatorio por día** (spec 008 del
     backend, `specs/008-recordatorio-por-dia/`, D-282 y E-640). Textual, sobre la captura del editor de GIMNASIO: «los
@@ -3104,6 +3238,99 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       lo de arriba (era 12), porque ya no hay blanco propio que la separe.
     * **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). No cambian los otros tabs ni nada más
       de Hoy.
+
+  * **Cambio por pedido del dueño — 2026-10-29 — tabs `Training` y `Yo` (y las tarjetas «Tomar foto» de `Hoy` y del chat
+    de SER): KILÓMETROS DIARIOS deja elegir la captura de la galería** (issue #41; autorizado el 2026-10-29). El hábito
+    dice «Sube la captura de tu app de actividad… y escribe cuántos km recorriste», pero la app solo abría la cámara:
+    una captura de Strava, Google Fit o el reloj no se puede sacar con la cámara del mismo teléfono. Lo que cambia y
+    nada más:
+    * **Solo el registro que pide los km** (`seOfreceGaleria`: lleva `medicion`, que marca el servidor —D-226, hoy solo
+      KILÓMETROS DIARIOS, `DAILY_KM`— y no una lista de claves de este lado; también desde «+ Subir foto» de Yo y desde
+      el chat y el orbe de SER, que leen el registro fresco). Al tocarlo se abre `HojaDeOrigenDeLaFoto`, una
+      `HojaDesdeAbajo` con dos filas de 72: **«Tomar foto»** («Con la cámara del teléfono») y **«Elegir de la galería»**
+      («Para la captura de tu app de actividad»); texto de 17 y 16 px, `Presionable` y `tacto.seleccion()`. Cerrarla (✕,
+      fondo, arrastre, atrás de Android) no saca ninguna foto. Después sigue la MISMA pantalla partida con «¿Cuántos km
+      recorriste hoy?»; en esa pantalla, para km, el botón de la foto dice «Cambiar foto» y vuelve a abrir la hoja.
+    * **La galería** reutiliza `elegirFotoDeGaleria` (el selector y el permiso de galería de siempre) y pasa por el
+      mismo procesamiento que la cámara: JPEG a 1440 px de ancho y calidad 0,8. Una acción del día (`'roca'`) nunca la
+      ofrece: su foto exige el EXIF de una toma de ahora (Ley VI, ±15 min).
+    * **No cambia**: ningún otro hábito con evidencia obligatoria (siguen abriendo la cámara directo, decisión del
+      2026-09-26), los rituales, las acciones del día, el build web (el modal de las cuatro formas ya tenía galería),
+      el backend (acepta cualquier foto) ni los tabs.
+    * **Hace falta un APK nuevo** (la app no se actualiza por aire).
+
+  * **Corrección — 2026-10-31 — registro con foto: la foto no se pierde si Android mata la app con la cámara abierta, y
+    «Reintentar» (issues #49 y #51)**. Solo JavaScript: ni diseño, ni textos, ni tabs, ni código nativo. Lo que cambia y nada más:
+    * **#49, la causa.** `getPendingResultAsync` de `expo-image-picker` (la recuperación que ya existía, `reanudarPendiente`)
+      solo sirve cuando muere la ACTIVIDAD y el proceso sigue (la prueba de la documentación es «No conservar actividades»):
+      Expo guarda ese resultado en una variable en memoria, y el resto de su estado solo lo anota en `onHostDestroy`. Cuando el
+      sistema mata el PROCESO (poca memoria, `adb shell am kill`) no queda nada, y Android le entrega el resultado a la
+      actividad nueva antes de que React esté listo, que lo descarta («Tried to access onActivityResult while context is not
+      ready»). Lo único que sobrevive es el ARCHIVO que la cámara escribió en `cache/ImagePicker/` y la nota
+      `fotoPendiente` (AsyncStorage) que se anota antes de abrir la cámara.
+    * **#49, el arreglo** (`habits/utils/fotoHuerfanaDeLaCamara.ts`, `reanudarPendiente`): si hay nota vigente (30 min) y
+      `getPendingResultAsync` no trae nada, se busca en esa carpeta la foto más nueva que la nota (con contenido, de imagen y
+      escrita después de abrir la cámara), se procesa como cualquier foto de la cámara (JPEG a 1440 px, con la hora del
+      archivo como `tomadaEn`) y vuelve la pantalla partida con ella; la original a resolución completa se borra. El resultado
+      de Expo, cuando existe, sigue mandando. `HoyScreen` también llama a `reanudarPendiente` al montarse, porque al
+      reabrirse la app cae en Hoy y Training no se monta hasta visitarlo (la nota se consume una sola vez: la retoma la
+      primera pantalla que se monte). `fotoHuerfanaDeLaCamara.test.ts` vigila contra el código fuente de `expo-image-picker`
+      que la carpeta sigue siendo `ImagePicker`. **Límites:** una foto de la GALERÍA (kilómetros) no se recupera: el
+      selector del sistema no deja archivo propio hasta que Expo lo exporta en el proceso muerto; y si la persona cierra la
+      cámara sin tomar nada no hay nada que recuperar (el archivo vacío que crea Expo se ignora).
+    * **#51, lo que se pudo establecer.** El hook sí vuelve a subir en cada «Reintentar» (nueva dirección firmada, archivo leído
+      otra vez, mismo PUT: probado con la subida y el hook enteros). El mismo texto para todo —`mensajeDeError` da el genérico
+      a cualquier error que no sea `ApiError`— tapaba en qué paso fallaba, y no queda nada en logcat. **La causa del
+      fallo visto en el emulador (después de quitar y reponer `adb reverse` del almacenamiento) NO se pudo reproducir ni
+      confirmar sin el emulador**: queda por verificar con el E2E (flujo 13 de Maestro y, para el PUT a S3, la prueba manual
+      que su cabecera explica). Leyendo el código de `expo/fetch` en Android no hay estado que se cachee tras un fallo.
+    * **#51, lo que cambia:** (1) cada paso del envío (pedir la dirección de subida, leer el archivo, subir a S3, confirmar,
+      cerrar) deja en el registro de la app `[evidencia] falló el paso «…»` con el error original (`enPasoDelEnvio`; no cambia
+      el tipo del error ni lo que se muestra); (2) el PUT a S3 se repite hasta dos veces dentro del mismo envío (pausas de 0,5 y
+      1,5 s) si la red se cae a mitad o S3 responde 5xx; un 4xx no se repite; (3) un archivo local que ya no existe (el `fetch` de
+      Expo responde 404 «File not found» en vez de lanzar) ya no se sube como si fuera la foto. También vale para las fotos de
+      las acciones del día (`subirArchivoAS3`).
+    * **Pruebas:** `fotoTrasMorirElProceso.test.ts`, `fotoHuerfanaDeLaCamara.test.ts`, `subidaDeEvidencia.test.ts`,
+      `reintentarTrasFalloDeRed.test.ts`; Maestro `regresion/12-foto-tras-matar-la-app.yaml` y `13-reintentar-sube-la-foto.yaml`.
+    * **Hace falta un APK nuevo** (solo JavaScript: no hay código nativo nuevo, pero la app no se actualiza por aire).
+
+  * **Cambio por pedido del dueño — 2026-10-31 — tab `Training` → Tus prácticas: la dimensión abre Planificar directo**
+    (solo visual y de navegación; sin backend). Textual: «más simple, como dijiste: sacar lo de Planificar cuando entres a
+    una categoría; no requiere nada de código backend, solo es visual». Eligió la opción A de la vista «Tus prácticas, sin la
+    lista repetida»: la lista de hábitos salía dos veces (en el detalle de la dimensión y en «Planificar»). Lo que cambia y
+    nada más:
+    * **Tocar una dimensión en «Tus prácticas» abre DIRECTO la hoja «Planificar <dimensión>»** (`PlanificarDimensionModal`,
+      `HojaDesdeAbajo tamano="completa"`, la de siempre: «Sin hora todavía» y «Tu día», interruptores, pausa «Solo hoy» /
+      «Hasta que yo lo reactive», editor y «Crear un hábito»). Se quitó la pantalla del detalle intermedio con la tarjeta
+      «Planificar Cuerpo», «Tus hábitos (N)» y «Aquí solo se planifica. Para registrar, vuelve a Training.». Cerrar la hoja
+      (✕, arrastrar, el atrás del sistema, o guardar) vuelve a «Tus prácticas». La raíz sigue igual: «Arma tu semana los
+      domingos» y las cinco dimensiones con su avance.
+    * **«Cambiar nombre» pasó al editor del hábito**, solo en las dos bebidas renombrables (D-127: Agua tibia con limón y
+      Jugo verde; misma regla `esRenombrable`, misma hoja `RenombrarHabitoModal` y mismo `useRenombreLocal`: guarda en el
+      servidor y después en el teléfono). Va arriba del editor, junto al nombre que lleva el título de la hoja: `pencil` de
+      18, texto de 16 y área de 48; dice «Cambiar o quitar el nombre» si ya tiene uno propio. `PlanificarDimensionModal`
+      recibe `renombre` (prop opcional) y con el nombre propio lo muestra en el título del editor, en la fila de la lista,
+      en «Pausar…» y en los avisos de guardado, sin recargar. Las alarmas siguen con el título del catálogo, como hoy.
+    * **Vida y negocio** también abre la hoja; su aviso «Las acciones de tus objetivos se planifican en Plan, al agendarlas.»
+      (el mismo texto de antes) lo dice ahora la hoja cuando la dimensión no tiene hábitos. Sin hábitos en otra dimensión
+      sigue «Todavía no hay hábitos en esta dimensión.» con «Crear un hábito».
+    * **El atrás del sistema sube un nivel por vez** (AGENTS.md §6): editor → lista de la hoja (la ‹ y el atrás de la hoja)
+      → «Tus prácticas» (se cierra la hoja) → Training. `navegacionDePracticas` pierde el nivel de la dimensión y el de
+      «planificando»: el estado es solo `{ abierta, dimension }`, y `dimension` con valor es la hoja abierta.
+    * **Se borró** (sin uso): del detalle, todo el bloque de `PracticasDeTraining` (tarjeta «Planificar», lista de hábitos,
+      «Cambiar nombre» y el `RenombrarHabitoModal` de ahí); de `PlanificarDimensionModal`, la prop `abrirEnHabitoId` y toda
+      su maquinaria (`soloUnHabito`, `cargaVigente`, `editorDirectoAbierto`, `yaAbrioElHabito`,
+      `habitoDirectoNoEncontrado`, `cerrarElHabitoDirecto` y el «Abriendo…»): solo la usaba «Tus prácticas». El aviso del
+      teléfono que abre un hábito (`aperturaDesdeAviso.habitoAAbrir`) abre su fila en Training, no Planificar: no cambia.
+    * **No cambia**: la hoja de Planificar por dentro (hora, días, «No hacerlo los…», recordatorio, cómo suena, guardar,
+      pausa, crear un hábito: specs 008 a 011), la pantalla principal de Training, Plan, ningún pedido al servidor ni
+      animación nueva (la hoja ya tenía las suyas).
+    * **Pruebas**: `navegacionDePracticas.test.ts`, `practicasSinRegistro.test.ts` (la dimensión abre la hoja, sin detalle),
+      `planificarCambiarNombre.test.ts` («Cambiar nombre» en el editor y el nombre nuevo en la lista) y Maestro
+      `.maestro/training-por-hora/12-practicas-dimension-directo-y-cambiar-nombre.yaml` (se actualizaron también el 10,
+      `regresion/08` y `comun/abrir-cuerpo.yaml`).
+    * **Hace falta un APK nuevo** (solo JavaScript: ni `package.json`, ni `app.json`, ni código nativo; la app no se
+      actualiza por aire). Backend nuevo, ninguno.
 
 ## 2. 📱 RESPONSIVIDAD UNIVERSAL (XIAOMI, ANDROID, IOS Y TABLETS)
 * **Cero Doble Scroll**: NUNCA coloques un contenedor con `maxHeight` fijo o scroll interno dentro de otro `ScrollView`. Toda pantalla debe tener UN ÚNICO contenedor de scroll fluido con `contentContainerStyle={{ flexGrow: 1, paddingBottom: 36 }}`.

@@ -185,6 +185,29 @@ export async function archivoDeResultadoDeCamara(
 }
 
 /**
+ * Una foto que la cámara dejó en la caché cuando Android mató la app con ella abierta (#49; ver
+ * `fotoHuerfanaDeLaCamara`). Pasa por el mismo procesamiento que cualquier foto de la cámara. `tomadaEn` es cuándo la
+ * cámara terminó de escribirla (la hora del archivo), no el instante en que la app volvió a abrirse: una acción del día
+ * compara ese instante con el de la subida (±15 min, Ley VI).
+ *
+ * Mejor esfuerzo y en silencio: a diferencia de {@link archivoDeResultadoDeCamara}, si no se puede procesar no avisa
+ * nada —la persona no pidió nada en este arranque— y devuelve `null`.
+ */
+export async function archivoDeFotoRecuperada(foto: {
+  uri: string;
+  nombre: string;
+  modificadaEnMs: number;
+}): Promise<ArchivoEvidencia | null> {
+  try {
+    const asset = { uri: foto.uri, width: 0, height: 0, fileName: foto.nombre } as ImagePicker.ImagePickerAsset;
+    const cuando = new Date(foto.modificadaEnMs);
+    return await normalizarFoto(asset, Number.isNaN(cuando.getTime()) ? null : cuando.toISOString());
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Galería → video. NO se reencodea: transcodificar video en el teléfono es caro y lento, y
  * `expo-image-manipulator` es solo para imágenes. Se sube tal cual llegó.
  */

@@ -53,7 +53,8 @@ describe('Training: sin emojis ni glifos de texto haciendo de ícono', () => {
     for (const icono of ['spark', 'sparkles', 'heart', 'brain', 'body', 'activity', 'briefcase']) {
       expect({ icono, veces: (TRAINING.match(new RegExp(`['"]${icono}['"]`, 'g')) ?? []).length }).toEqual({ icono, veces: 0 });
     }
-    expect(PRACTICAS).toMatch(/<Icon name="pencil"/);
+    // «Cambiar nombre» pasó del detalle de la dimensión (se quitó) al editor de Planificar: el lápiz vive en la hoja.
+    expect(PLANIFICAR).toMatch(/<Icon name="pencil"/);
   });
 
   it('los íconos nuevos están en su bloque «Training» de Icon.tsx y en una línea propia del tipo', () => {

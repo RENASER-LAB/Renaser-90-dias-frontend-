@@ -75,7 +75,6 @@ jest.mock('../../alarmas/pedirAlarmaExacta', () => ({
   TEXTO_PEDIDO_ALARMA_EXACTA: '',
   LINEA_ALARMA_EXACTA_PENDIENTE: '',
 }));
-jest.mock('../../alarmas/guiaPreventiva', () => ({ ofrecerLaGuiaPreventiva: async () => false }));
 jest.mock('../../habits/api/habitsApi', () => ({
   obtenerPreferencias: () => mockPreferencias(),
   obtenerPlanDesbloqueos: async () => ({ items: [] }),

@@ -2,6 +2,7 @@ import { ApiError } from '../../../services/http/apiClient';
 import type { ArchivoParaSubir } from '../api/evidenciaHabitoApi';
 import type { TrackDelDiaApi } from '../types/habits.types';
 import type { DestinoDeFoto } from './destinoDeFoto';
+import { enPasoDelEnvio } from './enPasoDelEnvio';
 
 /**
  * Reglas puras del REGISTRO CON FOTO (pedido del dueño, 2026-09-26): los hábitos que exigen
@@ -31,6 +32,28 @@ export function preguntaQueSintio(systemKey: string | null | undefined): boolean
  * lista de claves de este lado: así lo pide igual desde Training, Yo, el chat o el orbe.
  */
 export const PREGUNTA_DE_KILOMETROS = '¿Cuántos km recorriste hoy?';
+
+/**
+ * De dónde sale la foto del registro. La cámara es lo de siempre; la galería solo se ofrece en
+ * KILÓMETROS DIARIOS (#41, pedido del dueño, 2026-10-29): el hábito pide «la captura de tu app de
+ * actividad» (Strava, Google Fit, el reloj), y una captura de pantalla del mismo teléfono no se puede
+ * sacar con su cámara.
+ */
+export type OrigenDeLaFoto = 'camara' | 'galeria';
+
+/**
+ * Si, antes de abrir nada, se le pregunta a la persona de dónde sale la foto. **Solo** el registro que
+ * pide los km (`medicion`: lo marca el servidor, hoy únicamente KILÓMETROS DIARIOS) y solo un hábito:
+ * una acción del día (`'roca'`) exige el EXIF de una foto tomada ahora (Ley VI, ±15 min), que una
+ * captura de la galería no trae. Todos los demás hábitos con evidencia obligatoria abren la cámara
+ * directo, como desde el 2026-09-26.
+ */
+export function seOfreceGaleria(
+  medicion: MedicionPedida | null | undefined,
+  destino: DestinoDeFoto = 'habito',
+): boolean {
+  return destino === 'habito' && !!medicion;
+}
 
 /** El mismo tope del servidor (`PoliticaKilometros`, supuesto a confirmar con el dueño). */
 export const TOPE_KM_POR_DIA = 100;
@@ -64,6 +87,38 @@ export function formatoKm(km: number): string {
 /** El total que verá la persona si registra lo que escribió: lo previo más lo de hoy (si es válido). */
 export function totalConHoy(medicion: MedicionPedida, texto: string): number {
   return Math.round((medicion.totalPrevio + (leerKilometros(texto) ?? 0)) * 100) / 100;
+}
+
+/**
+ * Lo que se SABE de si el registro pide los km, y de dónde sale (#42, 2026-10-29). Tres respuestas, y la tercera
+ * es la que faltaba:
+ *
+ * - un objeto: pide los km (hoy solo KILÓMETROS DIARIOS);
+ * - `null`: se sabe que no pide nada;
+ * - `undefined`: NO se sabe. Pasa cuando no se pudo leer el registro del servidor (sin red) y quien llamó no traía
+ *   la pista (el chat y el orbe de SER, cuyo evento no la manda). Antes se tomaba por `null`: el hábito de km se
+ *   abría SIN el campo, se enviaba solo y el servidor respondía 400 una y otra vez.
+ *
+ * `estado.sinLectura`: el registro no se leyó (falló la consulta, o en web no se consulta antes de la cámara) y lo que
+ * trae es la pista de quien llamó. `pista`: lo que quien llamó ya sabía (`undefined` si no sabe nada): Training y Yo
+ * la sacan del track (`null` o un objeto), y una foto pendiente la guarda al abrir la cámara.
+ */
+export function medicionQueSeSabe(
+  estado: { medicion?: MedicionPedida; sinLectura?: boolean },
+  pista: MedicionPedida | null | undefined,
+): MedicionPedida | null | undefined {
+  if (estado.medicion) return estado.medicion;
+  if (pista) return pista;
+  return estado.sinLectura ? pista : null;
+}
+
+/**
+ * Si el rechazo del servidor es el 400 de «escribe cuántos km recorriste» (`PoliticaKilometros`: «Escribe cuántos km
+ * recorriste hoy para registrar este hábito…»). No hay un código estable en la respuesta, así que se reconoce por
+ * el estado y por la palabra «km» del mensaje; quien lo usa solo actúa si el campo todavía no estaba a la vista.
+ */
+export function pideLosKm(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 400 && /\bkm\b|kil[oó]metros/i.test(error.message);
 }
 
 /** Un registro terminal ya no acepta evidencia ni cierre: el backend los rechaza. */
@@ -112,9 +167,11 @@ export function avisoDeHabitoCerrado(
 export type EstadoParaFoto =
   /**
    * Se puede registrar. `evidenciaYaSubida`: un intento anterior ya dejó la evidencia. `medicion`
-   * (D-226): el registro pide un número; ausente si no lo pide o si no se sabe (web sin consultar).
+   * (D-226): el registro pide un número; ausente si no lo pide o si no se sabe. `sinLectura` (#42): este estado NO
+   * salió del servidor (falló la consulta, o en web no se consulta antes de la cámara): la ausencia de `medicion`
+   * no quiere decir «no pide nada» (ver {@link medicionQueSeSabe}).
    */
-  | { tipo: 'disponible'; evidenciaYaSubida: boolean; medicion?: MedicionPedida }
+  | { tipo: 'disponible'; evidenciaYaSubida: boolean; medicion?: MedicionPedida; sinLectura?: boolean }
   | { tipo: 'completado' }
   /** Su día ya cerró (`EXPIRADO`) o su sesión se rompió (`FALLIDO`): ya no se registra. */
   | { tipo: 'vencido'; estado?: string; fechaEjecucion?: string }
@@ -264,7 +321,9 @@ export async function registrarConFoto(
     alConfirmarEvidencia();
   }
   try {
-    const registro = await deps.completar(entrada.registroId, respuesta, valorMedido);
+    const registro = await enPasoDelEnvio('cerrar el registro', () =>
+      deps.completar(entrada.registroId, respuesta, valorMedido),
+    );
     return { puntosOtorgados: registro.puntosOtorgados, yaEstabaCompletado: false };
   } catch (error) {
     const yaCompletado = esRechazoDelServidor(error) && (await figuraCompletado(entrada.registroId, deps));

@@ -9,6 +9,8 @@ local (nunca contra producción).
   cuenta que pide el flujo (`# cuenta: aprendiz|admin`, arriba del archivo).
 - `comun/`: subflujos (`ya-adentro`, despejar capas, abrir Cuerpo, tomar una foto con la cámara del emulador).
 - `regresion/`: un flujo por caso, ordenados por número. Cada uno dice arriba qué prueba y su precondición.
+- `guia-de-ser/` (issue #50): la guía de arranque de SER no se monta sobre el panel de SER y «Ahora no» responde. Pide una
+  cuenta de aprendiz con el Día 1 elegido y sin el Pacto firmado; ver su `README.md`.
 - `interruptores/` (spec 002): el aviso de mantenimiento en Tribu, el Muro, Training y SER. **No corren solos**: cada uno
   necesita que antes se apague una funcionalidad por la consola Soporte TI (lo dice arriba de cada archivo) y que después
   se vuelva a prender. Se corren de a uno, `.maestro/correr.sh .maestro/interruptores/<flujo>.yaml`, con la precondición
@@ -52,5 +54,11 @@ un grupo con mentor y una persona con evidencias en los últimos 7 días (23), o
 `E2E_GRUPO=<parte del nombre del grupo>` el 23 abre ese grupo en vez del primero con mentor. Ejemplo:
 `E2E_PERSONA=APRENDIZ1 E2E_GRUPO="Hábitos por rol"`. Lo que cada uno necesita está arriba de su archivo.
 
-Los flujos que registran algo (01, 03, 10) necesitan que el hábito o la publicación estén pendientes ese día; si ya se
+Los flujos que registran algo (01, 03, 10, 12 y 13) necesitan que el hábito o la publicación estén pendientes ese día; si ya se
 hicieron, se usa otra cuenta o una base recién clonada.
+
+Los flujos 12 y 13 (el registro con foto cuando algo sale mal, #49 y #51) usan comandos de Maestro que simulan lo que le pasa
+a un teléfono de verdad: `killApp` (`adb shell am kill`, la muerte de proceso que provoca el sistema con poca memoria; solo
+mata la app si está en segundo plano, y lo está porque la cámara está al frente) y `setAirplaneMode` (se corta la red del
+emulador, no `adb reverse`). El 12 deja la pantalla partida de kilómetros a medias y el 13 el error con «REINTENTAR»: si un
+paso falla, mira `adb logcat -s ReactNativeJS` (las líneas `[evidencia] falló el paso …` dicen cuál fue).

@@ -1,0 +1,81 @@
+# 13 — #51: en el registro con foto, «Reintentar» sube la foto cuando vuelve la conexión.
+# GIMNASIO (foto y nada más: la app registra sola al aceptar la foto) → con la cámara abierta se APAGA la red (modo avión) →
+# se acepta la foto → sale el error con «REINTENTAR», la foto sigue a la vista → se ENCIENDE la red → «REINTENTAR» → queda hecho.
+# Precondición: el aprendiz tiene GIMNASIO en su día de hoy y sin registrar; fotos en local (fotos-local + adb reverse).
+# Ojo con el modo avión: `adb reverse` va por adb y no se corta; lo que se corta es la red del emulador (10.0.2.2), o sea el
+# backend. Por eso el primer error es el de «Necesitamos actualizar tus hábitos…» (el paso de pedir la dirección de subida).
+# El caso del #51 en el PUT a S3 (el almacenamiento local) se prueba a mano con: `adb reverse --remove tcp:9002` antes de
+# aceptar la foto y `adb reverse tcp:9002 tcp:9002` antes de tocar «REINTENTAR»; el paso que falla queda en `adb logcat`
+# (ReactNativeJS, «[evidencia] falló el paso …»).
+# cuenta: aprendiz
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- runFlow: ../comun/abrir-training.yaml
+- scrollUntilVisible:
+    element: ".*GIMNASIO.*"
+    direction: DOWN
+    centerElement: true
+    timeout: 30000
+- tapOn: ".*GIMNASIO.*"
+- runFlow:
+    when:
+      visible: "Tomar foto"
+    commands:
+      - tapOn: "Tomar foto"
+- runFlow:
+    when:
+      visible: "While using the app"
+    commands:
+      - tapOn: "While using the app"
+- extendedWaitUntil:
+    visible:
+      id: "com.android.camera2:id/shutter_button"
+    timeout: 40000
+- tapOn:
+    id: "com.android.camera2:id/shutter_button"
+- extendedWaitUntil:
+    visible:
+      id: "com.android.camera2:id/done_button"
+    timeout: 15000
+# Sin red justo antes de aceptar la foto: es cuando la app empieza a registrar.
+- setAirplaneMode: enabled
+- tapOn:
+    id: "com.android.camera2:id/done_button"
+- extendedWaitUntil:
+    visible: "REINTENTAR"
+    timeout: 60000
+- takeScreenshot: 13a-sin-red-reintentar
+# La pantalla sigue abierta con la foto: nada se perdió.
+- assertVisible: "No se pudo registrar tu foto."
+- setAirplaneMode: disabled
+# Hasta que la red del emulador vuelve, «REINTENTAR» puede fallar; se insiste unas veces, como lo haría la persona.
+- repeat:
+    while:
+      visible: "REINTENTAR"
+    times: 6
+    commands:
+      - waitForAnimationToEnd:
+          timeout: 5000
+      - tapOn: "REINTENTAR"
+      - extendedWaitUntil:
+          notVisible: "REINTENTAR"
+          timeout: 8000
+          optional: true
+- extendedWaitUntil:
+    notVisible: "REINTENTAR"
+    timeout: 30000
+- runFlow: ../comun/cerrar-aviso-dev.yaml
+- extendedWaitUntil:
+    notVisible: "[0-9:]+, GIMNASIO(, Te toca ahora|, Lo que sigue)?"
+    timeout: 30000
+- scrollUntilVisible:
+    element: ".* hechos? hoy"
+    direction: DOWN
+    timeout: 30000
+- tapOn: ".* hechos? hoy"
+- scrollUntilVisible:
+    element: ".*GIMNASIO, hecho"
+    direction: DOWN
+    timeout: 20000
+- takeScreenshot: 13b-gimnasio-cumplido

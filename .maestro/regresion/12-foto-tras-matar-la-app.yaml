@@ -1,0 +1,71 @@
+# 12 — #49: Android mata la app (el proceso) con la cámara abierta y la foto no se pierde.
+# KILÓMETROS DIARIOS → («Tomar foto» si el hábito trae guía) → hoja «Tomar foto / Elegir de la galería» → «Tomar foto» → con la
+# cámara abierta, `killApp` (`adb shell am kill`, la muerte de proceso que provoca el sistema con poca memoria) → se toma y
+# acepta la foto → Android abre la app de nuevo → la pantalla partida «¿Cuántos km recorriste hoy?» vuelve SOLA con la foto
+# (se retoma en Hoy, que es donde cae la app al reabrirse) → 3,5 → queda en «N hechos hoy».
+# Precondición: la del 01 (el aprendiz tiene el hábito en su día de hoy y sin registrar; fotos en local: fotos-local + adb reverse).
+# Antes de #49 la pantalla partida no volvía: el resultado de la cámara se descartaba («Tried to access onActivityResult while
+# context is not ready» en logcat) y el hábito seguía pendiente. Sirve también para otro hábito con foto: cambia el nombre.
+# cuenta: aprendiz
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- runFlow: ../comun/abrir-training.yaml
+# Centrada: abajo a la derecha, la fila queda debajo del botón flotante de SER y el toque abre su chat.
+- scrollUntilVisible:
+    element: ".*KILÓMETROS DIARIOS.*"
+    direction: DOWN
+    centerElement: true
+    timeout: 30000
+- tapOn: ".*KILÓMETROS DIARIOS.*"
+- runFlow:
+    when:
+      visible: "Tomar foto"
+    commands:
+      - tapOn: "Tomar foto"
+- extendedWaitUntil:
+    visible: "Elegir de la galería.*"
+    timeout: 15000
+- tapOn: "Tomar foto.*"
+- runFlow:
+    when:
+      visible: "While using the app"
+    commands:
+      - tapOn: "While using the app"
+- extendedWaitUntil:
+    visible:
+      id: "com.android.camera2:id/shutter_button"
+    timeout: 40000
+- takeScreenshot: 12a-camara-abierta
+# El sistema mata el proceso de la app mientras la cámara está al frente.
+- killApp
+- tapOn:
+    id: "com.android.camera2:id/shutter_button"
+- extendedWaitUntil:
+    visible:
+      id: "com.android.camera2:id/done_button"
+    timeout: 15000
+- tapOn:
+    id: "com.android.camera2:id/done_button"
+# Android vuelve a abrir la app (en la build de desarrollo tarda en bajar el bundle de Metro).
+- extendedWaitUntil:
+    visible: "¿Cuántos km recorriste hoy?"
+    timeout: 90000
+- takeScreenshot: 12b-foto-recuperada
+- tapOn: "¿Cuántos km recorriste hoy?"
+- inputText: "3,5"
+- hideKeyboard
+- tapOn: "REGISTRAR"
+- runFlow: ../comun/cerrar-aviso-dev.yaml
+- runFlow: ../comun/ya-adentro.yaml
+- runFlow: ../comun/abrir-training.yaml
+- scrollUntilVisible:
+    element: ".* hechos? hoy"
+    direction: DOWN
+    timeout: 30000
+- tapOn: ".* hechos? hoy"
+- scrollUntilVisible:
+    element: ".*KILÓMETROS DIARIOS, hecho"
+    direction: DOWN
+    timeout: 20000
+- takeScreenshot: 12c-kilometros-cumplido

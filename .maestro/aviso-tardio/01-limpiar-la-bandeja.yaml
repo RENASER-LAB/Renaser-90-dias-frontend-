@@ -1,0 +1,29 @@
+# 01 — Un aviso de inicio de hábito cuya hora ya pasó se quita de la bandeja al volver a la app (issue #40).
+# Precondición: un hábito (GIMNASIO) con aviso 30 min antes cuya hora ya pasó, y el aviso «En 30 min: GIMNASIO» /
+# «Te toca a las HH:mm.» todavía en la bandeja. Se arma con el reloj del emulador (adelantarlo pasada la hora del hábito
+# antes de que suene no sirve: lo que se prueba es lo que YA estaba en la bandeja) o dejando que suene y esperando a que
+# pase la hora más 2 minutos de gracia. Cuenta: aprendiz.
+# cuenta: aprendiz
+#
+# A mano (lo nativo no se ve con Maestro): con el emulador en Doze (`adb shell dumpsys deviceidle force-idle`) y sin el permiso
+# «Alarmas y recordatorios», la alarma que Android entrega después de la hora del hábito NO debe aparecer, y `adb shell dumpsys
+# alarm | grep renaser` debe seguir mostrando la de mañana. Requiere el APK armado con `scripts/arreglar-aviso-tardio.js`.
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+# Salir de la app y volver: la limpieza corre al volver al frente.
+- pressKey: home
+- launchApp:
+    appId: com.renaser.app
+    stopApp: false
+- waitForAnimationToEnd:
+    timeout: 6000
+# Se abre la bandeja del sistema y el aviso vencido ya no está.
+- swipe:
+    start: "50%,0%"
+    end: "50%,80%"
+- waitForAnimationToEnd:
+    timeout: 3000
+- assertNotVisible: "Te toca a las.*"
+- takeScreenshot: 01a-bandeja-sin-avisos-vencidos
+- pressKey: back

@@ -3,6 +3,13 @@ import { obtenerTracksDeHoy } from './habitsApi';
 import type { TrackDelDiaApi } from '../types/habits.types';
 import { avisarDiaDeHabitosCambiado } from '../eventos/diaDeHabitosCambiado';
 
+/**
+ * Lo que se le dice a la persona cuando no se pudo leer el registro del día (sin red). Es el mismo texto que el
+ * error de `ejecutarEnRegistroVigente` y el aviso de «sin conexión» del registro con foto (#42).
+ */
+export const MENSAJE_SIN_CONEXION_PARA_REGISTRAR =
+  'Necesitamos actualizar tus hábitos antes de registrar. Revisa tu conexión e inténtalo de nuevo.';
+
 export class DiaDeHabitosCambiadoError extends Error {
   constructor() {
     super('Tu día cambió. Este registro era de otro día. Actualiza tus hábitos y elige el de hoy.');
@@ -36,7 +43,7 @@ export async function ejecutarEnRegistroVigente<T>(
     tracks = await obtenerTracksDeHoy();
   } catch (error) {
     if (error instanceof ApiError && (error.status === 401 || error.status === 403)) throw error;
-    throw new Error('Necesitamos actualizar tus hábitos antes de registrar. Revisa tu conexión e inténtalo de nuevo.');
+    throw new Error(MENSAJE_SIN_CONEXION_PARA_REGISTRAR);
   }
   const track = tracks.find(actual => actual.id === registroId);
   if (!track || track.estado === 'EXPIRADO') rechazarDiaAnterior();

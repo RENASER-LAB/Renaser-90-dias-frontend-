@@ -145,6 +145,13 @@ export default function HoyScreen() {
     // D-178: el acompañante también pide la foto de una acción del día; sube a los endpoints de rocas.
     destinos: { roca: REGLAS_DE_ACCION },
   });
+  /* #49: si Android mató la app con la cámara abierta, al volver la pestaña de inicio es Hoy y Training no se monta hasta
+     que se la visita: la foto se retoma acá igual que en Training. La nota de la foto pendiente se consume una sola vez,
+     así que la retoma la primera pantalla que se monte. */
+  const { reanudarPendiente } = registroConFoto;
+  useEffect(() => {
+    void reanudarPendiente();
+  }, [reanudarPendiente]);
   const tomarFotoDelOrbe = async (pedido: PedidoDeFotoUI) => {
     if (estadoVisibleDelPedido(pedido, Date.now()) !== 'pendiente') return;
     // La cámara no convive con el micrófono abierto ni con el orbe hablando: se lo calla antes.

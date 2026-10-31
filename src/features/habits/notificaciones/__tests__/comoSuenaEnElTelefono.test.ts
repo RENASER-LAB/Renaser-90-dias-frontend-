@@ -116,15 +116,16 @@ beforeEach(async () => {
 });
 
 describe('el esquema diario: la combinación elige el canal y nada más cambia', () => {
-  it('lo de siempre (sin combinación) queda IDÉNTICO —mismo identificador, mismo contenido— y sale por el canal que vibra (E-641)', async () => {
+  it('lo de siempre (sin combinación) queda IDÉNTICO —mismo identificador, mismo contenido más `vigenteMin` (issue #40)— y sale por el canal que vibra (E-641)', async () => {
     await recordatorios.programar(USUARIO, GYM, TITULO, '07:00', [30, 10], { dimension: 'CUERPO' });
     expect([...mockLista.keys()].sort()).toEqual(['habito-h-gym-inicio', 'uuid-001']);
     for (const a of mockLista.values()) {
       expect((a.trigger as { type: string }).type).toBe('daily');
       // E-641: el canal base de hábitos no vibra; la vibración encendida (lo de siempre) va por `-vib`, creado a propósito.
       expect((a.trigger as { channelId: string }).channelId).toBe('recordatorios-habitos-vib');
-      // Sin `alarma`: el contenido es el de la 007 y la 008.
-      expect(a.content.data).toEqual({ route: '/habitos/h-gym?dimension=BODY' });
+      // Sin `alarma`: el contenido es el de la 007 y la 008. Issue #40: y hasta cuándo vale el aviso (su antelación + la gracia).
+      const vigenteMin = a.content.title?.startsWith('En 30 min:') ? 32 : 12;
+      expect(a.content.data).toEqual({ route: '/habitos/h-gym?dimension=BODY', vigenteMin });
     }
     // La combinación de siempre tampoco se recuerda: no hay nada que conservar.
     expect((await AsyncStorage.getAllKeys()).some(k => k.startsWith('renaser.habitos.combinacion.'))).toBe(false);
@@ -136,7 +137,7 @@ describe('el esquema diario: la combinación elige el canal y nada más cambia',
     const creado = mockCanales.find(x => x.id === 'recordatorios-habitos-sinvib')!;
     expect(creado.enableVibrate).toBe(false);
     // El aviso lleva su combinación, para que el cambio de sonido y el aviso agrupado no la pierdan.
-    expect(mockLista.get('habito-h-gym-inicio')!.content.data).toEqual({ route: '/habitos/h-gym', alarma: c(true, false) });
+    expect(mockLista.get('habito-h-gym-inicio')!.content.data).toEqual({ route: '/habitos/h-gym', alarma: c(true, false), vigenteMin: 12 });
   });
 
   it('con un tono propio de Yo → Alarmas, el sin vibración es ESE canal más «-sinvib»', async () => {
@@ -175,7 +176,7 @@ describe('el esquema diario: la combinación elige el canal y nada más cambia',
     // Y con `alarma: null` se vuelve a lo de siempre.
     await recordatorios.programar(USUARIO, GYM, TITULO, '08:00', [10], { alarma: null });
     expect(canalDe('habito-h-gym-inicio')).toBe('recordatorios-habitos-vib');
-    expect(mockLista.get('habito-h-gym-inicio')!.content.data).toEqual({ route: '/habitos/h-gym' });
+    expect(mockLista.get('habito-h-gym-inicio')!.content.data).toEqual({ route: '/habitos/h-gym', vigenteMin: 12 });
   });
 
   it('el cambio de hora que rige desde mañana (D-91) también respeta la combinación', async () => {
@@ -194,7 +195,7 @@ describe('el esquema por día: cada día suena a su manera', () => {
     for (const iso of [1, 2, 3, 4, 5, 7]) expect(canalDe(`habito-h-gym-d${iso}-0`)).toBe('recordatorios-habitos-vib');
     // Solo el día propio lleva su combinación en el aviso.
     expect(mockLista.get('habito-h-gym-d6-0')!.content.data?.alarma).toEqual(c(false, true));
-    expect(mockLista.get('habito-h-gym-d1-0')!.content.data).toEqual({ route: '/habitos/h-gym' });
+    expect(mockLista.get('habito-h-gym-d1-0')!.content.data).toEqual({ route: '/habitos/h-gym', vigenteMin: 12 });
     // Los canales que hacen falta existen: el de siempre y el de solo vibrar.
     expect(canalesCreados()).toEqual(expect.arrayContaining(['recordatorios-habitos-vib', 'recordatorios-habitos-vibrar-vib']));
   });

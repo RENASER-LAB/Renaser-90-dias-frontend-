@@ -22,7 +22,10 @@ process.env.TZ = 'America/Lima';
 module.exports = {
   preset: 'jest-expo',
   testMatch: ['<rootDir>/src/**/__tests__/**/*.test.ts', '<rootDir>/src/**/*.test.ts'],
-  testPathIgnorePatterns: ['/node_modules/', '/e2e/', '/.claude/'],
+  // `<rootDir>/.claude/` y no `/.claude/`: el checkout principal no corre las pruebas de los worktrees que tiene
+  // adentro, pero un worktree (que vive en `.claude/worktrees/…`) sí corre las suyas. Con `/.claude/` a secas la
+  // ruta del propio worktree coincidía y Jest decía «No tests found» (issue #47).
+  testPathIgnorePatterns: ['/node_modules/', '/e2e/', '<rootDir>/.claude/'],
   // Los worktrees de trabajo tienen su propio `package.json` con el mismo `name`, y el mapa de
   // módulos de React Native (Haste) los ve como una colisión de nombres. No rompe, pero ensucia
   // cada corrida con un aviso que no dice nada útil.

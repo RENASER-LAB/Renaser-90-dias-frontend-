@@ -7,8 +7,10 @@ import { describe, expect, it } from '@jest/globals';
 import type { RankingAgregadoDto } from '../../api/rankingApi';
 import {
   entradasDeLaTabla,
+  esMiEntrada,
   invitacionSinPosiciones,
   miEntradaEnLaTabla,
+  nombreEnElRanking,
   TABLAS_DE_RANKING,
   textoDeMiPuntaje,
   textoDelPuntaje,
@@ -74,7 +76,7 @@ describe('«Tu posición» al ir y volver de Kilómetros', () => {
     general: [entrada('ana', 1, 90), entrada('beto', 2, 70), entrada('yo', 3, 55)],
     kilometros: [entrada('ana', 1, 12.5), entrada('yo', 2, 0)],
   };
-  const yo = { id: 'yo', name: 'Nadie Más' };
+  const yo = { id: 'yo' };
 
   it('sale de la tabla que se mira, la misma del podio', () => {
     const recorrido = (['general', 'kilometros', 'general'] as const).map(clave => {
@@ -88,9 +90,78 @@ describe('«Tu posición» al ir y volver de Kilómetros', () => {
     ]);
   });
 
-  it('por nombre como respaldo, y sin nombre no encuentra a cualquiera', () => {
+  it('sin id de la sesión no encuentra a nadie', () => {
     const filas = entradasDeLaTabla(datos, 'general');
-    expect(miEntradaEnLaTabla(filas, { id: 'otro', name: 'BETO' })?.posicion).toBe(2);
-    expect(miEntradaEnLaTabla(filas, { id: null, name: '' })).toBeNull();
+    expect(miEntradaEnLaTabla(filas, { id: null })).toBeNull();
+    expect(miEntradaEnLaTabla(filas, { id: undefined })).toBeNull();
+    expect(miEntradaEnLaTabla(filas, { id: '' })).toBeNull();
+  });
+});
+
+/**
+ * #43: «TÚ» y «Tu posición» buscaban a la persona por id o, si no, por nombre con `includes`. «Ana» o «Luis» están
+ * dentro de «Ana María Torres» o «Luis Pérez», que pueden estar MÁS ARRIBA en la tabla: se marcaba a otra persona
+ * como «TÚ» y se mostraba su posición. Ahora se decide solo por el id de la cuenta; sin id, no se marca.
+ * Estas pruebas fallan contra el código de antes.
+ */
+describe('«TÚ» y «Tu posición» se deciden solo por el id (#43)', () => {
+  const fila = (id: string, fullName: string, posicion: number, puntaje: number) => ({
+    participanteId: id,
+    fullName,
+    posicion,
+    puntaje,
+  });
+  // «Ana María Torres» está ARRIBA de «Ana»: el `includes` por nombre se quedaba con la primera.
+  const arriba = fila('u-ana-maria', 'Ana María Torres', 1, 90);
+  const yoAna = fila('u-ana', 'Ana', 2, 80);
+  const otro = fila('u-luis', 'Luis Pérez', 3, 70);
+  const FILAS = [arriba, yoAna, otro];
+  const DATOS_HOMONIMOS: RankingAgregadoDto = {
+    fecha: '2026-10-29',
+    celula: null,
+    liga: [],
+    coherenciaIndividual: FILAS,
+    general: FILAS,
+    kilometros: FILAS,
+    gimnasio: FILAS,
+  };
+
+  it('un nombre corto no marca a otra persona que lo contiene y está más arriba', () => {
+    expect(miEntradaEnLaTabla(FILAS, { id: 'u-ana' })?.posicion).toBe(2);
+    expect(esMiEntrada(arriba, { id: 'u-ana' })).toBe(false);
+    expect(esMiEntrada(yoAna, { id: 'u-ana' })).toBe(true);
+  });
+
+  it('vale en las cuatro tablas (General, Coherencia, Kilómetros y Gimnasio)', () => {
+    for (const { clave } of TABLAS_DE_RANKING) {
+      const filas = entradasDeLaTabla(DATOS_HOMONIMOS, clave);
+      expect(miEntradaEnLaTabla(filas, { id: 'u-ana' })?.participanteId).toBe('u-ana');
+      expect(miEntradaEnLaTabla(filas, { id: 'u-luis' })?.posicion).toBe(3);
+    }
+  });
+
+  it('con un id que no está en la tabla («Tu posición» vacía) no adivina por el nombre', () => {
+    // Otra cuenta que también se llama «Ana», pero que no figura: antes se quedaba con «Ana María Torres».
+    expect(miEntradaEnLaTabla(FILAS, { id: 'u-otra-ana' })).toBeNull();
+  });
+
+  it('sin id de la sesión, o en una fila sin id, no se marca a nadie', () => {
+    for (const quien of [{ id: null }, { id: undefined }, { id: '' }, {}]) {
+      expect(FILAS.some(f => esMiEntrada(f, quien))).toBe(false);
+      expect(miEntradaEnLaTabla(FILAS, quien)).toBeNull();
+    }
+    // Una fila que llegó sin id (dato roto) tampoco coincide con una sesión sin id.
+    expect(esMiEntrada({ participanteId: '' }, { id: '' })).toBe(false);
+    expect(esMiEntrada({ participanteId: undefined as unknown as string }, { id: undefined })).toBe(false);
+    expect(miEntradaEnLaTabla([fila('', 'Ana', 1, 5)], { id: 'u-ana' })).toBeNull();
+  });
+
+  it('«TÚ (…)» solo en la fila de la cuenta; las demás llevan el nombre que manda el servidor', () => {
+    const yo = { id: 'u-ana' };
+    expect(nombreEnElRanking(yoAna, yo, 'Ana')).toBe('TÚ (Ana)');
+    expect(nombreEnElRanking(arriba, yo, 'Ana')).toBe('Ana María Torres');
+    expect(nombreEnElRanking(otro, yo, 'Ana')).toBe('Luis Pérez');
+    // Sin id de la sesión nadie es «TÚ», ni siquiera quien se llama igual.
+    expect(nombreEnElRanking(yoAna, { id: null }, 'Ana')).toBe('Ana');
   });
 });
