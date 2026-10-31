@@ -231,6 +231,40 @@ Hasta hoy el líder llegaba a una persona solo por Hoy → «Mis mentores» → 
 * **Hace falta un APK nuevo** (solo JavaScript: ni `package.json`, ni `app.json`, ni código nativo; la app no se actualiza por aire) y
   **el backend con `/leadership/people` antes**: contra uno anterior la fila no se dibuja y Hoy queda como estaba.
 
+## Cambio por pedido del dueño — 2026-10-31 — diseño de Hoy, Plan y Training, y la fuente Inter en toda la app
+
+Pedidos del dueño del 31/10 con capturas; **todo es de la app, sin backend**. Cada punto es un commit aparte de la rama
+`diseno-31-inter`. Lo que cambia y nada más:
+
+### Hoy: sin la frase del día ni Coherencia / Racha, y la tarjeta de acciones arriba (puntos 1 a 3)
+* **Se quita la frase del día** (la frase en serif bajo la cabecera). La cabecera queda: fase, «Día N de 90», los puntos y **la raya
+  dorada corta** (el dueño: «la cabecera queda: fase, día, puntos y la raya»), que ahora es de la pantalla y no de la frase. Lo de
+  abajo sube. `TarjetaConfrontacion` ya no se monta; su contenido (`confrontacion/data`, `fraseDelDia`) queda en el repo, sin uso.
+* **Se quita el bloque Coherencia / Racha** («Coherencia 0 %», «Consistencia del día», «Racha 2 días», «Récord histórico»): **Yo ya
+  los muestra** (Coherencia con su %, Puntos de liga y Racha con «días»). Comprobado en `YoScreen`. Lo único que Hoy mostraba y Yo no
+  es el «Récord histórico» (`rachaMaxima`) y las dos líneas de apoyo («Consistencia del día», «Nivel de excelencia»): se van con el
+  bloque, sin pasarlas a Yo.
+* **En su lugar, la tarjeta de «Acciones y objetivos»**, antes de «Tu acompañante» (`home/components/TarjetaAccionDeHoy`), con el
+  diseño de la referencia del dueño y nuestras palabras: tarjeta con el fondo y el borde del tema; arriba el ícono `calendar` de 16 y
+  la hora de la acción («09:00 – 09:45» con inicio y fin; «09:00» con solo inicio; «Sin hora»); el título en negrita (18); «Meta: …»
+  (el objetivo de la semana de esa acción o, sin semana, la primera cláusula del de 90 días; sin meta la línea no se dibuja,
+  `objetivos/utils/metaDeLaAccion`); y un botón dorado de 52 a todo el ancho, «**Empezar ahora** ›», que lleva a Training con
+  `abrirAccionId` (lo mismo que «Registrar en Training» de Plan). Sin los «…» de la referencia (no harían nada) y sin «Iniciar
+  enfoque» (el dueño: «mismo diseño, no las mismas palabras»).
+* **Qué acción muestra:** la que sigue hoy con la regla de `objetivos/utils/accionesDeHoy` (`accionQueSigueHoy`: la primera sin
+  cumplir en orden de hora, sin contar las que esperan a la verde). Usa la lectura de `/rocks/today` que Hoy ya hacía
+  (`useAccionesDeHoy`, una vez por foco: **sin pedidos nuevos** para las acciones). **La meta sí lee:** `GET /rocks/weekly` y, solo si
+  la semana no la resuelve, `GET /rocks/master`, **una vez por acción y por sesión** (`useMetaDeLaAccion` guarda lo leído en
+  memoria; un fallo no se guarda). La tarjeta espera a saber la meta para dibujarse una sola vez, ya completa.
+* **Estados**, mismo esqueleto (`home/utils/vistaDeLaAccionDeHoy`, pura): sin Mapa activo → «Tu objetivo de 90 días nace de tu Mapa
+  de Renacimiento.» con «Hacer mi Mapa ›» (solo con el estado del Mapa **confirmado**: `useLecturaDelEstadoDelMapa`, un teléfono
+  nuevo dice «no iniciado» de quien ya lo hizo); sin acciones hoy → «Hoy no tienes acciones agendadas» con «Agendar en Plan ›»; todo
+  cumplido → «Cumpliste tus acciones de hoy» (sin botón); mientras carga, nada (sin parpadeo). Con acciones por hacer, la acción
+  manda sobre el Mapa. **Se quitó la tarjeta vieja de abajo** (no se duplica).
+* **No cambian** el resto de Hoy, los papeles del líder, el orbe ni los demás tabs. Sin animaciones nuevas.
+* **Pruebas:** Jest `vistaDeLaAccionDeHoy`, `tarjetaAccionDeHoy`, `metaDeLaAccion`, `useMetaDeLaAccion`,
+  `useLecturaDelEstadoDelMapa` y `accionesDeHoy` (la que sigue y la hora); se ajustaron las que leían el código de Hoy.
+
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
 Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel especializado en React Native, Expo y TypeScript. Al crear, refactorizar o modificar cualquier pantalla o componente, debes cumplir OBLIGATORIAMENTE con los siguientes estándares:
@@ -787,6 +821,8 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     * **«Mi programa»** es el Hoy de siempre. Con otro papel a la vista, lo del programa propio (la frase del día,
       coherencia y racha, el orbe y todas sus tarjetas) queda **oculto pero montado** (`display: 'none'`): volver es
       instantáneo y no pierde la conversación del orbe. La línea de fase, día y puntos queda siempre.
+      > **Corregido 2026-10-31 (pedido del dueño).** Ya no hay frase del día ni Coherencia / Racha en Hoy (están en Yo); lo del
+      > programa que se oculta es la raya dorada, la tarjeta de acciones, el orbe y las demás tarjetas. Ver la entrada del 2026-10-31.
     * **«Mi grupo»** (`MiGrupoEnHoy`): el rótulo «Grupo Octubre · 6 aprendices» (abre el grupo entero, `MiCelulaScreen`) y una
       fila por aprendiz con su foto, su punto de color y su % del semáforo del grupo (`GET /mentor/groups/{g}/semaforo`, en el
       orden del servidor; sin número dice «—», nunca un 0 %). Tocar a uno abre su ficha de siempre (`AlumnoScreen`) y **volver
@@ -984,6 +1020,8 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       20. La propuesta flotante de SER, la cabecera y el vacío de su chat llevan `OrbeQuieto` (eran `spark` y el
       globo `chat`); el chat de Sparkie conservaba el globo (Sparkie se retiró el 2026-10-06, D-255). El Código Renaser conserva `target` hasta que entre
       `compass` del rediseño de Plan.
+      > **Corregido 2026-10-31.** Coherencia (`gauge`) y la racha (`flame`) ya no se dibujan en Hoy: el dueño quitó el bloque
+      > porque está en Yo. Los íconos siguen en `Icon.tsx` y Yo los usa.
     * **Tipo oración** en lugar de versales: fase, «Día 15 de 90», «Coherencia», «Racha», «días», «Tu
       acompañante», «Ver en el chat» (14 con chevron de 16), los estados del Código Renaser («En espera»,
       «Registrado», «Innegociable», «Abierto»), «Cancelar»/«Confirmar»/«Tomar foto» de la propuesta (también en
@@ -1305,6 +1343,8 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     * **Hoy no inventa datos**: sin `/home` (o sin el dato) los puntos dicen «— pts» (era `?? 100`: «100 pts»), la
       racha «—» y el récord «—» (eran `?? 0`), y la tarjeta del Mapa «lo que queda del programa» (con `diaConocido ??
       0` decía «los próximos 90 días»). Con el Mapa activo dice «para los próximos N días» (decía «para los N días»).
+      > **Corregido 2026-10-31.** Hoy solo dice ahora los puntos («— pts» sin dato); la racha y el récord se fueron con el bloque
+      > Coherencia / Racha.
     * **Área táctil del botón de la cabecera** (`ScreenHeader`, el engranaje de Yo y el de tu grupo en Comunidad):
       caja de 44 × 44 (era 38) con márgenes de −3, así que el ícono (24) y la altura de la cabecera (46) no cambian.
     * No se tocaron Plan, Training, la vista del Pacto firmado, las miniaturas de evidencias ni los íconos del Mapa.
@@ -3237,6 +3277,9 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       15–20 min.» (era «Convierte lo aprendido en un plan claro para …») y la línea de «Acciones y objetivos» sin objetivo
       dice «Tu objetivo de 90 días nace de tu Mapa de Renacimiento.» (era «Define tu objetivo en Plan para sostener la
       dirección.», que mandaba a un lugar donde ya no se puede).
+      > **Corregido 2026-10-31.** La línea de «Acciones y objetivos» ya no existe: la tarjeta de abajo (con «Prioridad #1 del día» y
+      > «Define tu objetivo en Plan…») se reemplazó por `TarjetaAccionDeHoy`, arriba, que sin Mapa activo dice «Tu objetivo de 90
+      > días nace de tu Mapa de Renacimiento.» con «Hacer mi Mapa». Ver la entrada del 2026-10-31.
     * **Rechazo del servidor, tolerante**: `PUT /api/v1/rocks/master/{eje}` puede responder `MAPA_PENDIENTE` (código
       tentativo, 409 o 403; el backend lo decide). `useRocasMaestras.definir` devuelve `mapaPendiente: true` con el
       mensaje del servidor (`objetivos/utils/mapaPendiente`) y Plan lo muestra con «Ahora no» / **«Hacer mi Mapa»**; el

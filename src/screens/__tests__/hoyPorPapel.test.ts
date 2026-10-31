@@ -58,11 +58,12 @@ describe('Hoy por papel: el cableado', () => {
   it('lo del programa propio se OCULTA pero queda montado (volver es instantáneo y no pierde la conversación del orbe)', () => {
     expect(HOY).toContain('const ocultoSiNoEsElPrograma = mostrarPrograma ? null : styles.oculto;');
     expect(HOY).toMatch(/oculto: \{ display: 'none' \}/);
-    // Las métricas, el orbe y las tarjetas del programa.
+    // La tarjeta de acciones, el orbe y las tarjetas del programa.
     expect(HOY.match(/style=\{ocultoSiNoEsElPrograma\}/g)).toHaveLength(2);
     expect(HOY).toContain('<View style={[{ gap: space.gap }, ocultoSiNoEsElPrograma]}>');
-    // La frase del día es del programa.
-    expect(HOY).toContain('{mostrarPrograma ? <TarjetaConfrontacion diaPrograma={diaConocido} /> : null}');
+    // La raya dorada que quedó bajo la cabecera (la frase del día se quitó el 2026-10-31) es del programa.
+    expect(HOY).toMatch(/\{mostrarPrograma \? \(\s*<View\s+style=\{\[styles\.raya,/);
+    expect(HOY).not.toContain('TarjetaConfrontacion');
   });
 
   it('cada papel pone su lista: «Mi grupo» con `papel === grupo` y «Mis mentores» solo para el líder', () => {

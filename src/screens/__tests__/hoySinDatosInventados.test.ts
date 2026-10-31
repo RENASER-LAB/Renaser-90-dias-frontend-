@@ -28,15 +28,16 @@ describe('Hoy sin datos inventados', () => {
     },
   );
 
-  it('sin dato, los puntos, la racha y el récord dicen «—»', () => {
+  it('sin dato, los puntos dicen «—»', () => {
     expect(HOY).toMatch(/const puntosLiga = typeof resumen\?\.puntosLiga === 'number' \? resumen\.puntosLiga : null;/);
-    expect(HOY).toMatch(/const rachaActual = typeof resumen\?\.rachaActual === 'number' \? resumen\.rachaActual : null;/);
-    expect(HOY).toMatch(/const rachaMaxima = typeof resumen\?\.rachaMaxima === 'number' \? resumen\.rachaMaxima : null;/);
     expect(HOY).toContain("{puntosLiga ?? '—'} pts");
-    expect(HOY).toContain("{rachaActual ?? '—'}");
-    expect(HOY).toContain("Récord histórico: {rachaMaxima === null ? '—' : `${rachaMaxima} d`}");
-    // «días» solo acompaña a una cifra.
-    expect(HOY).toMatch(/\{rachaActual !== null && \(\s*<Text[^>]*>\{rachaActual === 1 \? 'día' : 'días'\}<\/Text>/);
+  });
+
+  it('Coherencia y racha ya no están en Hoy (2026-10-31): viven en Yo, que no inventa datos', () => {
+    expect(HOY).not.toContain('Coherencia');
+    expect(HOY).not.toContain('Récord histórico');
+    expect(HOY).not.toContain('rachaMaxima');
+    expect(HOY).not.toContain('coherenciaScore');
   });
 
   it('sin fase, el nombre de la fase dice «—» y no «Programa activo»', () => {

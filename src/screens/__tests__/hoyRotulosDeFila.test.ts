@@ -42,9 +42,10 @@ describe('Hoy: los rótulos que comparten fila no se cortan', () => {
     expect(sueltos).toEqual([]);
   });
 
-  it('los dos rótulos con algo a la derecha van en el contenedor que crece', () => {
-    // «Hábitos de hoy» ya no está acá: desde la spec 016 vive en `TarjetaHabitoYRadar` (ver la prueba de abajo).
-    for (const texto of ['Acciones y objetivos', 'Última evidencia del muro']) {
+  it('el rótulo con algo a la derecha va en el contenedor que crece', () => {
+    // «Hábitos de hoy» ya no está acá: desde la spec 016 vive en `TarjetaHabitoYRadar` (ver la prueba de abajo). «Acciones y
+    // objetivos» tampoco: desde el 2026-10-31 su tarjeta es `TarjetaAccionDeHoy`, sin rótulo ni cifra a la derecha.
+    for (const texto of ['Última evidencia del muro']) {
       const envuelto = new RegExp(`<View style=\\{styles\\.rotuloDeLaFila\\}>\\s*<MicroLabel>${texto}</MicroLabel>`);
       expect({ texto, envuelto: envuelto.test(HOY) }).toEqual({ texto, envuelto: true });
     }

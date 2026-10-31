@@ -73,10 +73,13 @@ describe('Hoy: lo dice desde el inicio, solo con texto', () => {
     expect(HOY).toContain('`Tu plan para ${lapsoDelMapa} empieza aquí: de este Mapa nacen tus objetivos. 15–20 min.`');
   });
 
-  it('«Acciones y objetivos» no manda a definirlo en Plan si el Mapa no está activo', () => {
-    expect(HOY).toMatch(
-      /mostrarMapa && estadoMapa !== null && estadoMapa !== 'activo'\s*\? 'Tu objetivo de 90 días nace de tu Mapa de Renacimiento\.'\s*: 'Define tu objetivo en Plan para sostener la dirección\.'/,
-    );
+  it('la tarjeta de acciones no manda a definirlo en Plan si el Mapa no está activo: dice que nace del Mapa y abre el Mapa', () => {
+    // Desde el 2026-10-31 la tarjeta es `TarjetaAccionDeHoy` y qué muestra lo decide `vistaDeLaAccionDeHoy` (probada aparte).
+    const TARJETA = sinComentarios(leer('features/home/components/TarjetaAccionDeHoy.tsx'));
+    expect(TARJETA).toContain("titulo = 'Tu objetivo de 90 días nace de tu Mapa de Renacimiento.';");
+    expect(TARJETA).toContain("texto: 'Hacer mi Mapa'");
+    expect(HOY).not.toContain('Define tu objetivo en Plan para sostener la dirección.');
+    expect(HOY).toMatch(/alHacerElMapa=\{abrirMapa\}/);
   });
 
   it('el Mapa sigue opcional en Hoy: la tarjeta no se vuelve obligatoria ni tapa nada', () => {

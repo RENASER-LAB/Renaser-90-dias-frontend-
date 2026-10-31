@@ -7,6 +7,8 @@ import { describe, expect, it } from '@jest/globals';
 
 import type { EjeObjetivo, RocaDiariaApi } from '../../types/objetivos.types';
 import {
+  accionQueSigueHoy,
+  rangoDeHoraDeLaAccion,
   estadoDeLaAccion,
   etiquetaDeLaFila,
   filasPorEje,
@@ -203,5 +205,52 @@ describe('los textos', () => {
   it('la etiqueta de la fila para el lector de pantalla', () => {
     const [negocio] = filasPorEje(DEL_EJEMPLO, EJES, min(15, 40));
     expect(etiquetaDeLaFila(negocio)).toBe('Negocio, 1 de 3 cumplidas. Sigue: Enviar 3 propuestas · 16:00. Abre sus acciones');
+  });
+});
+
+describe('la acción que sigue hoy, de todas (tarjeta de Hoy, 2026-10-31)', () => {
+  it('es la primera sin cumplir en orden de hora, de cualquier eje', () => {
+    const sigue = accionQueSigueHoy(DEL_EJEMPLO, min(15, 40));
+    // 2 cumplidas (08:30 y 10:00); la que sigue es la de las 13:00, a la que ya se le pasó la hora.
+    expect(sigue?.accion.titulo).toBe('Llamar a mi hijo');
+    expect(sigue?.estado).toBe('sePaso');
+  });
+
+  it('salta lo cumplido y no se queda con una que espera a la verde', () => {
+    const rocas = [
+      roca('A', 'CUERPO', '07:00', { completada: true }),
+      roca('B', 'CUERPO', '08:00', { bloqueada: true, posicion: 2 }),
+      roca('C', 'TRABAJO', '09:00'),
+    ];
+    expect(accionQueSigueHoy(rocas, min(6))?.accion.titulo).toBe('C');
+  });
+
+  it('una acción sin hora va después de las que tienen hora; una a la que se le pasó la hora sigue siendo «la que sigue» si no hay otra', () => {
+    const rocas = [roca('Sin hora', 'CUERPO', null), roca('Con hora', 'TRABAJO', '10:00')];
+    expect(accionQueSigueHoy(rocas, min(8))?.accion.titulo).toBe('Con hora');
+    const pasada = [roca('Pasó', 'CUERPO', '06:00')];
+    expect(accionQueSigueHoy(pasada, min(12))).toMatchObject({ estado: 'sePaso' });
+  });
+
+  it('con todo cumplido, o sin acciones, no hay ninguna', () => {
+    expect(accionQueSigueHoy([roca('A', 'CUERPO', '07:00', { completada: true })], min(9))).toBeNull();
+    expect(accionQueSigueHoy([], min(9))).toBeNull();
+  });
+});
+
+describe('la hora de la acción en la tarjeta de Hoy', () => {
+  it('«09:00 – 09:45» con inicio y fin', () => {
+    expect(rangoDeHoraDeLaAccion(roca('A', 'CUERPO', '09:00', { horaFin: '09:45:00' }))).toBe('09:00 – 09:45');
+  });
+  it('«09:00» si solo hay inicio', () => {
+    expect(rangoDeHoraDeLaAccion(roca('A', 'CUERPO', '09:00'))).toBe('09:00');
+  });
+  it('«Sin hora» si no se agendó a una hora', () => {
+    expect(rangoDeHoraDeLaAccion(roca('A', 'CUERPO', null))).toBe('Sin hora');
+    expect(rangoDeHoraDeLaAccion(roca('A', 'CUERPO', null, { horaFin: '10:00:00' }))).toBe('Sin hora');
+  });
+  it('un fin que no es posterior al inicio no se dibuja', () => {
+    expect(rangoDeHoraDeLaAccion(roca('A', 'CUERPO', '09:00', { horaFin: '09:00:00' }))).toBe('09:00');
+    expect(rangoDeHoraDeLaAccion(roca('A', 'CUERPO', '09:00', { horaFin: '08:00:00' }))).toBe('09:00');
   });
 });

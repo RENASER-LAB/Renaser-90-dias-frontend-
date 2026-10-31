@@ -48,7 +48,6 @@ import {
 } from '../features/semaforo/utils/entradasDelSemaforo';
 import { AdminScreen, type EntradaDeAdmin } from '../features/admin/screens/AdminScreen';
 import { TarjetaAdminHoy } from '../features/admin/components/TarjetaAdminHoy';
-import { TarjetaConfrontacion } from '../features/confrontacion/components/TarjetaConfrontacion';
 import { useCapacidades } from '../features/admin/hooks/useCapacidades';
 import { MiCelulaScreen } from '../features/mentor/screens/MiCelulaScreen';
 import { AlumnoScreen } from '../features/mentor/screens/AlumnoScreen';
@@ -60,14 +59,17 @@ import {
 } from '../features/home/hooks/useResumenHome';
 import { useHabitoDelMomento } from '../features/habits/hooks/useHabitoDelMomento';
 import { TarjetaHabitoYRadar } from '../features/home/components/TarjetaHabitoYRadar';
-import { obtenerRocasDeHoy } from '../features/training/api/trainingApi';
 import { useUltimaPublicacionMuro } from '../features/community/hooks/useUltimaPublicacionMuro';
 import { tiempoRelativo } from '../features/community/utils/tiempoRelativo';
 import { useAuth } from '../context/AuthContext';
 import { useMapaRenacimientoAbierto } from '../features/mapa-renacimiento/MapaRenacimientoContext';
-import { useEstadoMapa } from '../features/mapa-renacimiento/hooks/useEstadoMapa';
+import { useLecturaDelEstadoDelMapa } from '../features/mapa-renacimiento/hooks/useEstadoMapa';
 import { mapaHabilitado } from '../features/mapa-renacimiento/utils/mapaHabilitado';
-import type { RocaDiariaApi } from '../features/training/types/training.types';
+import { useAccionesDeHoy } from '../features/objetivos/hooks/useAccionesDeHoy';
+import { useMetaDeLaAccion } from '../features/objetivos/hooks/useMetaDeLaAccion';
+import { TarjetaAccionDeHoy } from '../features/home/components/TarjetaAccionDeHoy';
+import { vistaDeLaAccionDeHoy } from '../features/home/utils/vistaDeLaAccionDeHoy';
+import { minutosDeAhora } from '../features/training/utils/listaDelDia';
 import { ESPACIO_PARA_LANZADOR } from '../features/renasia/components/RenasiaLauncher';
 import { OrbeAcompanante } from '../features/renasia/components/OrbeAcompanante';
 import { AccionDelAcompanante } from '../features/renasia/components/AccionDelAcompanante';
@@ -366,35 +368,18 @@ export default function HoyScreen() {
     return alAbrirAviso(abrir);
   }, [esLider, capacidades.administrar, cargandoCapacidades, navigation]);
   const { abrir: abrirMapa, abierto: mapaAbierto } = useMapaRenacimientoAbierto();
-  const estadoMapa = useEstadoMapa(user?.id ?? null, mapaAbierto);
+  const { estado: estadoMapa, confirmado: estadoMapaConfirmado } = useLecturaDelEstadoDelMapa(user?.id ?? null, mapaAbierto);
   const {
     publicacion: ultimaPublicacion,
     cargando: cargandoUltimaPublicacion,
     recargar: recargarUltimaPublicacion,
   } = useUltimaPublicacionMuro();
 
-  const [rocas, setRocas] = useState<RocaDiariaApi[]>([]);
-  const [cargandoRocas, setCargandoRocas] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
-  const cargarRocas = useCallback(async () => {
-    setCargandoRocas(true);
-    try {
-      const data = await obtenerRocasDeHoy();
-      setRocas(data);
-    } catch {
-      // Degrada amigablemente si aún no hay rocas planificadas
-      setRocas([]);
-    } finally {
-      setCargandoRocas(false);
-    }
-  }, []);
-
-  useFocusEffect(
-    useCallback(() => {
-      cargarRocas();
-    }, [cargarRocas])
-  );
+  /* Las acciones de HOY (`GET /rocks/today`), una vez cada vez que Hoy vuelve al foco: la misma lectura de siempre, ahora con el
+     hook de Plan (`useAccionesDeHoy`). Alimenta la tarjeta de acciones de arriba (2026-10-31). */
+  const { rocas: accionesDeHoy, recargar: recargarAcciones } = useAccionesDeHoy();
 
   // D-229: una propuesta de SER confirmada (un hábito nuevo, uno marcado o pausado) cambia lo de hoy.
   useEffect(
@@ -418,7 +403,7 @@ export default function HoyScreen() {
     if (papel === 'mentores') releerGruposDelLider();
     await Promise.all([
       recargarResumen(),
-      cargarRocas(),
+      recargarAcciones(),
       recargarUltimaPublicacion(),
       recargarHabitoAhora(),
       recargarCapacidades(),
@@ -426,7 +411,7 @@ export default function HoyScreen() {
     setRefreshing(false);
   }, [
     recargarResumen,
-    cargarRocas,
+    recargarAcciones,
     recargarUltimaPublicacion,
     recargarHabitoAhora,
     recargarSemaforo,
@@ -436,8 +421,6 @@ export default function HoyScreen() {
     releerGruposDelLider,
   ]);
 
-  // Roca Prioritaria de Hoy: Posición 1 (Pareto Verde) o la primera disponible
-  const rocaPrioritaria = rocas.find(r => r.posicion === 1) || rocas[0] || null;
   const evidenciasUltimaPublicacion = ultimaPublicacion?.media ?? [];
 
   /* El fénix del centro. Su diámetro (140 en un teléfono estándar; menor en uno angosto o bajo) sale del
@@ -502,6 +485,18 @@ export default function HoyScreen() {
     diasQueQuedanSiSeSabe({ diaPrograma: resumen?.diaPrograma, inscrito: resumen?.inscrito, cargando: false }),
   );
   const mostrarMapa = MAPA_DIA7_HABILITADO && !!user;
+  /* La tarjeta de acciones de arriba (2026-10-31): qué muestra lo decide `vistaDeLaAccionDeHoy`, con las acciones de hoy que
+     esta pantalla ya lee y el Mapa que ya lee la tarjeta del Mapa; la meta de la acción que sigue, `useMetaDeLaAccion`. */
+  const vistaDeLaAccion = useMemo(
+    () =>
+      vistaDeLaAccionDeHoy({
+        rocas: accionesDeHoy,
+        mapa: { habilitado: MAPA_DIA7_HABILITADO && !!user, estado: estadoMapa, confirmado: estadoMapaConfirmado },
+        ahoraMin: minutosDeAhora(Date.now()),
+      }),
+    [accionesDeHoy, MAPA_DIA7_HABILITADO, user, estadoMapa, estadoMapaConfirmado],
+  );
+  const metaDeLaAccion = useMetaDeLaAccion(vistaDeLaAccion?.tipo === 'accion' ? vistaDeLaAccion.accion : null);
   const tituloMapa = estadoMapa === 'activo'
     ? 'Tu mapa está activo'
     : estadoMapa === 'en_progreso' || estadoMapa === 'listo_para_revision' ? 'Continúa tu mapa' : 'Diseña tu mapa';
@@ -535,20 +530,11 @@ export default function HoyScreen() {
       : 'Todo lo demás se alinea cuando cumples tu disciplina.';
   }, [habitoAhora, resumen]);
 
-  // `null` = todavía no planificó ninguna acción diaria esta semana, y eso NO es un 100 (D-128).
-  // Hasta el 2026-09-15 acá había `?? 100`: con el backend caído, sin datos, o sin haber hecho
-  // nada, la pantalla decía "100 % · Nivel de excelencia". Ahora dice "—".
-  const coherenciaScore =
-    resumen?.coherencia === null || resumen?.coherencia === undefined
-      ? null
-      : Math.round(resumen.coherencia);
   /* `null` = no se sabe (`/home` falló, todavía carga o no trajo el dato): la pantalla dice «—».
-     > **Corregido 2026-10-05.** Acá había `?? 100`, `?? 0` y `?? 0`: con `/home` caído Hoy decía
-     > «100 pts», «0 días» y «Récord histórico: 0 d», tres datos inventados (el mismo error que el
-     > «DÍA 1 DE 90» del 2026-09-07 y el «100 %» de coherencia del 2026-09-15). Yo ya decía «—». */
+     > **Corregido 2026-10-05.** Acá había `?? 100`: con `/home` caído Hoy decía «100 pts», un dato inventado (el mismo error
+     > que el «DÍA 1 DE 90» del 2026-09-07). Yo ya decía «—».
+     > **Corregido 2026-10-31.** Coherencia y racha se fueron de Hoy (pedido del dueño: ya están en Yo); quedan los puntos. */
   const puntosLiga = typeof resumen?.puntosLiga === 'number' ? resumen.puntosLiga : null;
-  const rachaActual = typeof resumen?.rachaActual === 'number' ? resumen.rachaActual : null;
-  const rachaMaxima = typeof resumen?.rachaMaxima === 'number' ? resumen.rachaMaxima : null;
 
   /* El orbe responde también al tacto (rediseño de Hoy, 2026-10-05): un «tic» cuando el toque
      EMPIEZA a escuchar y el «toc» del sistema cuando mantenerlo presionado cierra la conversación.
@@ -725,69 +711,34 @@ export default function HoyScreen() {
           </View>
         ) : null}
 
-        {/* La frase de confrontación del día. Va acá —pegada a "DÍA n DE 90" y ANTES de las
-            métricas— porque la guía del cliente es explícita sobre para qué sirve: revelar, no
-            informar. Debajo de los números ya sería un dato más. */}
-        {mostrarPrograma ? <TarjetaConfrontacion diaPrograma={diaConocido} /> : null}
+        {/* La raya dorada corta que iba sobre la frase del día se queda bajo la cabecera (pedido del dueño, 2026-10-31: «la
+            cabecera queda: fase, día, puntos y la raya»). Es solo adorno: el lector de pantalla no la lee. */}
+        {mostrarPrograma ? (
+          <View
+            style={[styles.raya, { backgroundColor: c.gold }]}
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+          />
+        ) : null}
 
         {/* ========================================================================= */}
-        {/* 2. MÉTRICAS CLAVE REALES: COHERENCIA Y RACHA                              */}
+        {/* 2. LA ACCIÓN QUE SIGUE HOY (2026-10-31)                                   */}
         {/* ========================================================================= */}
         </Aparicion>
 
         <Aparicion retardo={70} style={ocultoSiNoEsElPrograma}>
-        {/* Eran dos tarjetas con borde y fondo, una dorada y la otra gris sin motivo. Ahora son
-            dos columnas de texto sobre el fondo de la pantalla, separadas por UNA línea de pelo:
-            el único borde que queda es el que de verdad hace falta, porque sin él las dos cifras
-            se leerían como una sola frase. El icono ya no se va al margen derecho — acompaña al
-            rótulo, y todo el bloque se lee de izquierda a derecha. */}
-        <View style={styles.metricsRow}>
-          {/* Coherencia real */}
-          <View style={styles.metricBloque}>
-            <View style={styles.metricEncabezado}>
-              {/* Un medidor y no la diana: la diana era la misma del Código Renaser y de Acciones. */}
-              <Text style={[t.small, { color: c.textSoft, fontFamily: 'Jost_700Bold' }]}>Coherencia</Text>
-              <Icon name="gauge" size={TAMANO_ICONO.chico} color={c.goldInk} />
-            </View>
-            <View style={styles.metricCifra}>
-              <Text style={[t.metric, { color: c.goldInk }]}>
-                {coherenciaScore ?? '—'}
-              </Text>
-              {coherenciaScore !== null && (
-                <Text style={{ fontFamily: 'Jost_500Medium', fontSize: 15, color: c.goldInk }}>%</Text>
-              )}
-            </View>
-            <Text style={[t.small, { color: c.micro, fontSize: 12, marginTop: 4 }]}>
-              {coherenciaScore === null
-                ? 'Planifica tu semana para verla'
-                : coherenciaScore >= 80
-                  ? 'Nivel de excelencia'
-                  : 'Consistencia del día'}
-            </Text>
-          </View>
-
-          <View style={[styles.metricSeparador, { backgroundColor: c.divider }]} />
-
-          {/* Racha real */}
-          <View style={styles.metricBloque}>
-            <View style={styles.metricEncabezado}>
-              {/* La llama de Lucide a 16: la de antes, a 14, se leía como una gota. Gris en 0. */}
-              <Text style={[t.small, { color: c.textSoft, fontFamily: 'Jost_700Bold' }]}>Racha</Text>
-              <Icon name="flame" size={TAMANO_ICONO.chico} color={rachaActual ? c.goldInk : c.chevron} />
-            </View>
-            <View style={styles.metricCifra}>
-              <Text style={[t.metric, { color: c.textStrong }]}>
-                {rachaActual ?? '—'}
-              </Text>
-              {rachaActual !== null && (
-                <Text style={[t.small, { color: c.textSoft }]}>{rachaActual === 1 ? 'día' : 'días'}</Text>
-              )}
-            </View>
-            <Text style={[t.small, { color: c.micro, fontSize: 12, marginTop: 4 }]}>
-              Récord histórico: {rachaMaxima === null ? '—' : `${rachaMaxima} d`}
-            </Text>
-          </View>
-        </View>
+        {/* Pedido del dueño, 2026-10-31: se quitaron la frase del día y Coherencia / Racha (ya están en Yo) y, en su lugar y antes
+            de «Tu acompañante», va la tarjeta de «Acciones y objetivos» con el diseño nuevo: la que sigue hoy, su meta y un
+            botón que lleva a Training. Mientras no se sabe qué mostrar no se dibuja nada (sin parpadeo). */}
+        {vistaDeLaAccion && metaDeLaAccion.lista ? (
+          <TarjetaAccionDeHoy
+            vista={vistaDeLaAccion}
+            meta={metaDeLaAccion.meta}
+            alEmpezar={accionId => (navigation as any).navigate('Training', { abrirAccionId: accionId })}
+            alHacerElMapa={abrirMapa}
+            alAgendar={() => (navigation as any).navigate('Plan')}
+          />
+        ) : null}
 
         {errorResumen && (
           <View style={[styles.errorBox, { backgroundColor: c.dangerWash, borderLeftColor: c.danger }]}>
@@ -1002,39 +953,6 @@ export default function HoyScreen() {
             />
           ) : null}
 
-          {/* Tarjeta Rocas y Objetivos */}
-          <Presionable onPress={() => (navigation as any).navigate('Plan')} accessibilityRole="button">
-          <Card>
-            <View style={styles.between}>
-              <View style={{ flex: 1 }}>
-                <View style={styles.encabezadoTarjeta}>
-                  <View style={styles.rotuloDeLaFila}>
-                    <MicroLabel>Acciones y objetivos</MicroLabel>
-                  </View>
-                  <Text style={[t.small, styles.cifras, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
-                    {resumen?.rocasHoy ? `${resumen.rocasHoy.completados}/${resumen.rocasHoy.total}` : 'Pareto 80/20'}
-                  </Text>
-                </View>
-                {/* Era 13.5: el mismo papel que el título de las otras tarjetas, dos puntos y
-                    medio más chico. Ahora todas usan `t.cardTitle` sin retoque. */}
-                <Text style={[t.cardTitle, { color: c.text, marginTop: 12 }]}>
-                  {resumen?.rocasHoy && resumen.rocasHoy.completados > 0
-                    ? `${resumen.rocasHoy.completados} de ${resumen.rocasHoy.total} acciones selladas hoy.`
-                    : 'Prioridad #1 del día'}
-                </Text>
-                <Text style={[t.small, { color: c.textSoft, marginTop: 5 }]}>
-                  {rocaPrioritaria
-                    ? `Foco: "${rocaPrioritaria.titulo}"`
-                    : mostrarMapa && estadoMapa !== null && estadoMapa !== 'activo'
-                      ? 'Tu objetivo de 90 días nace de tu Mapa de Renacimiento.'
-                      : 'Define tu objetivo en Plan para sostener la dirección.'}
-                </Text>
-              </View>
-              <Icon name="chevron" size={TAMANO_ICONO.chico} color={c.chevron} />
-            </View>
-          </Card>
-          </Presionable>
-
           {/* Última evidencia real del Muro: se omiten publicaciones de texto sin evidencia.
               Rediseño de Hoy (2026-10-05): la tarjeta entera responde al dedo (`Presionable`), el
               autor se ve con su foto o sus iniciales (`AvatarPersona`, como en Comunidad) en vez del
@@ -1184,35 +1102,12 @@ const styles = StyleSheet.create({
   controlDePapel: { marginTop: 14, marginBottom: 4 },
   /* Lo del programa propio cuando se mira otro papel: oculto y montado (volver es instantáneo, sin releer). */
   oculto: { display: 'none' },
+  raya: { width: 34, height: 2, borderRadius: 1, marginTop: 20 },
   programStatusBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginTop: 4,
-  },
-  metricsRow: {
-    flexDirection: 'row',
-    alignItems: 'stretch',
-    gap: space.gap,
-  },
-  metricBloque: {
-    flex: 1,
-  },
-  metricEncabezado: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
-  },
-  metricCifra: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: 3,
-    marginTop: 6,
-  },
-  /** El único borde que sobrevive en este bloque, y sólo porque separa dos cifras contiguas. */
-  metricSeparador: {
-    width: 1,
-    alignSelf: 'stretch',
   },
   /* Regla lateral en vez de recuadro completo: el mismo gesto que usa la frase del día, y no
      mete otra caja con borde en una pantalla que acaba de perder tres. */
