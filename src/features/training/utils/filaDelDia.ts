@@ -48,6 +48,19 @@ export function esOpcionalConEvidencia(item: Pick<ItemDelDia, 'tipo' | 'habit'>)
   return h.evidenceRequirement !== 'REQUIRED';
 }
 
+/**
+ * La plantilla de catálogo de «Última comida del día» (`habitos.id`, el mismo en todos los entornos: los ids de producción se
+ * preservaron en V4). Es opcional y el dueño la quiere con el círculo (2026-10-31), no con «Subir»: se reconoce por su id de
+ * plantilla, **nunca por el título** (no tiene `clave_sistema`, y el título se muestra en tipo oración y el aprendiz lo puede
+ * cambiar). En otro entorno donde el id no coincida la fila simplemente queda con «Subir», como los demás opcionales.
+ */
+export const ID_DE_LA_PLANTILLA_ULTIMA_COMIDA = '3a8a82a0-787d-46bc-a69e-b29c110a37bc';
+
+/** ¿Es la «Última comida del día»? Por el id de su plantilla de catálogo. */
+export function esUltimaComidaDelDia(item: Pick<ItemDelDia, 'tipo' | 'habit'>): boolean {
+  return item.tipo === 'habito' && item.habit?.habitoId === ID_DE_LA_PLANTILLA_ULTIMA_COMIDA;
+}
+
 export type ControlDeLaFila =
   /** El ✓ de la derecha: marca sin abrir nada (Despertar y Dormir, que registran la hora). */
   | 'check'
@@ -56,6 +69,8 @@ export type ControlDeLaFila =
    * formas (foto, texto, audio o video). Tocar el nombre abre la hoja con «Subir evidencia» y «Marcar como hecho».
    * > Corregido 2026-10-30 (el dueño eligió «Solo «Subir»»: el círculo al lado le quitaba lo simple). Antes era
    * > `check-y-accion`: la píldora y el ✓ en la misma fila.
+   * > Corregido 2026-10-31: «Última comida del día» (`esUltimaComidaDelDia`) vuelve a llevar el círculo (`check`) en lugar de
+   * > «Subir»; los demás opcionales siguen con «Subir».
    */
   | 'subir'
   /** La píldora con lo que pasa al tocar la fila («Tomar foto»…): no es un botón aparte, la fila entera lo es. */
@@ -74,7 +89,9 @@ export function controlDeLaFila(item: ItemDelDia, modo: ModoDeLaFila, esHoy = tr
   if (!esHoy) return 'nada';
   if (item.tipo === 'evento') return 'evento';
   if (item.cerrado) return 'candado';
-  if (esOpcionalConEvidencia(item)) return 'subir';
+  /* «Última comida del día» es opcional pero se marca con el círculo, como Despertar y Dormir (2026-10-31, pedido del dueño):
+     es la corrección del ajuste del 30/10, que dejó solo «Subir» en la evidencia opcional; solo para esta. */
+  if (esOpcionalConEvidencia(item)) return esUltimaComidaDelDia(item) ? 'check' : 'subir';
   return seCierraConElCheck(item) ? 'check' : 'accion';
 }
 

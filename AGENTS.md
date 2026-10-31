@@ -315,6 +315,17 @@ Pedidos del dueño del 31/10 con capturas; **todo es de la app, sin backend**. C
   foto de un ritual y se registra con el camino de la foto y «¿Qué sentiste?» (`preguntaQueSintio`); Yo → «+ Subir foto» ya no
   ofrece los rituales (`habitosParaFotoDeHoy`, porque `seRegistraConFoto` es falso para ellos).
 
+### Training: «Última comida del día» vuelve a llevar el círculo (punto 8)
+* **Es opcional y se marca con el círculo**, como Despertar y Dormir: su fila lleva el ✓ para marcarla hecha de un toque
+  (`completarHabitoSimple`, el mismo cierre sin evidencia) en lugar de «Subir». Es la corrección del ajuste del 2026-10-30 («en la
+  evidencia opcional la fila lleva solo «Subir»») **solo para esta**: los demás opcionales (Día sin celular, Meditar, Escritura
+  libre…) siguen con «Subir».
+* **Se reconoce por el id de su plantilla de catálogo** (`ID_DE_LA_PLANTILLA_ULTIMA_COMIDA` = `3a8a82a0-787d-46bc-a69e-b29c110a37bc`,
+  el `habitos.id` de producción, igual en todos los entornos), **nunca por el título**: no tiene `clave_sistema` y su título se
+  muestra en tipo oración y se puede cambiar. En un entorno donde el id no coincida, queda con «Subir» (lo seguro). Si en algún
+  entorno su evidencia fuera obligatoria, no se cierra con el círculo: pide su registro.
+* La hoja del hábito no cambia: sigue con «Subir evidencia» y «Marcar como hecho». Lo hecho, lo cerrado y los otros días, igual.
+
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
 Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel especializado en React Native, Expo y TypeScript. Al crear, refactorizar o modificar cualquier pantalla o componente, debes cumplir OBLIGATORIAMENTE con los siguientes estándares:
@@ -459,6 +470,7 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       fila lleva **solo «Subir»**, como botón aparte que abre las cuatro formas; ya no lleva el círculo, que «le quitaba lo
       simple». Tocar el nombre abre la hoja con «Subir evidencia» y «Marcar como hecho» (`ControlDeLaFila` `subir`). Un día
       anterior que no se pudo cargar dice una sola línea, «No pudimos cargar este día.», con «Reintentar».
+      > **Corregido 2026-10-31.** «Última comida del día» ya no lleva «Subir» sino el círculo; los demás opcionales siguen igual.
   * **Cambio por pedido del dueño — 2026-10-19 — alarmas como el despertador, aviso cuando el teléfono las
     borra y guía por marca (tab `Yo` → Alarmas, una hoja global y, en Training → Planificar, una oferta única de la
     guía)** (spec 007 del backend, `specs/007-alarmas-confiables/`; pedido: «los usuarios dicen que sus alarmas no
