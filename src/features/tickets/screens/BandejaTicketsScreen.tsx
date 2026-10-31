@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -58,7 +59,7 @@ export function BandejaTicketsScreen({ onVolver }: { onVolver: () => void }) {
           style={estilos.volver}
         >
           <Icon name="arrowLeft" size={15} color={c.goldInk} />
-          <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1 }]}>
+          <Text style={[t.micro, { color: c.goldInk, fontFamily: fuentes.negrita, letterSpacing: 1 }]}>
             VOLVER
           </Text>
         </Pressable>
@@ -156,7 +157,7 @@ function FilaDeTicket({ ticket }: { ticket: WireTicketMentor }) {
           <Text
             style={[
               t.micro,
-              { color: espera ? c.goldInk : c.textSoft, fontFamily: 'Jost_500Medium', fontSize: 10.5 },
+              { color: espera ? c.goldInk : c.textSoft, fontFamily: fuentes.media, fontSize: 10.5 },
             ]}
           >
             {etiquetaDeEstadoDeTicket(ticket.status).toUpperCase()}

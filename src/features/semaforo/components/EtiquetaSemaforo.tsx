@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -51,7 +52,7 @@ export function EtiquetaSemaforo({ color, etiqueta, tamano = 'normal', atenuada 
       <Text
         style={{
           color: atenuada ? c.textSoft : tinta,
-          fontFamily: grande ? 'Jost_700Bold' : atenuada ? 'Jost_400Regular' : 'Jost_500Medium',
+          fontFamily: grande ? fuentes.negrita : atenuada ? fuentes.regular : fuentes.media,
           fontSize: grande ? 20 : 16,
           lineHeight: grande ? 26 : 22,
           flexShrink: 1,

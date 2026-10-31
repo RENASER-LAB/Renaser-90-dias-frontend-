@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useEffect, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -175,7 +176,7 @@ export function FuncionalidadConsolaScreen({
   const estado = estadoEnLaConsola(f, todas);
   const roles = Object.keys(formulario.porRol);
   const ayuda = [t.body, { color: c.textSoft, fontSize: 16, lineHeight: 22 }];
-  const fuerte = [t.body, { color: c.textStrong, fontSize: 16, fontFamily: 'Jost_500Medium' }];
+  const fuerte = [t.body, { color: c.textStrong, fontSize: 16, fontFamily: fuentes.media }];
   const quien = f.actualizadoPor?.nombre?.trim();
 
   return (

@@ -1,3 +1,4 @@
+import { fuentes } from '../../theme/fuentes';
 import React from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { useTheme } from '../../theme/ThemeContext';
@@ -75,7 +76,7 @@ const styles = StyleSheet.create({
   campo: {
     flex: 1,
     height: '100%',
-    fontFamily: 'Jost_400Regular',
+    fontFamily: fuentes.regular,
     fontSize: 16,
   },
   borrar: {

@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -103,7 +104,7 @@ function Fallo({ fallo, alReintentar }: { fallo: FalloDeCierres; alReintentar: (
         accessibilityLabel="Reintentar"
         style={({ pressed }) => [estilos.reintentar, { borderColor: c.border, backgroundColor: pressed ? c.goldWash : 'transparent' }]}
       >
-        <Text style={[t.body, { color: c.goldInk, fontSize: 16, fontFamily: 'Jost_500Medium' }]}>Reintentar</Text>
+        <Text style={[t.body, { color: c.goldInk, fontSize: 16, fontFamily: fuentes.media }]}>Reintentar</Text>
       </Pressable>
     </View>
   );
@@ -178,7 +179,7 @@ function Pendiente({ accion }: { accion: AccionDelCierre }) {
   const respuesta = accion.cierre ? respuestaEnPalabras(accion.cierre) : null;
   return (
     <View style={estilos.pendiente}>
-      <Text style={[t.body, { color: c.text, fontSize: 16, lineHeight: 22, fontFamily: 'Jost_500Medium' }]}>
+      <Text style={[t.body, { color: c.text, fontSize: 16, lineHeight: 22, fontFamily: fuentes.media }]}>
         «{accion.titulo}» quedó pendiente
       </Text>
       {respuesta ? <Text style={[t.body, { color: c.textStrong, fontSize: 16, lineHeight: 22 }]}>{respuesta}</Text> : null}
@@ -195,7 +196,7 @@ const estilos = StyleSheet.create({
   centro: { flex: 1, minWidth: 0, alignItems: 'center', gap: 2 },
   cuerpo: { marginTop: 16, gap: 14 },
   bloque: { gap: 3 },
-  rotulo: { letterSpacing: 0, fontFamily: 'Jost_700Bold', marginTop: 6 },
+  rotulo: { letterSpacing: 0, fontFamily: fuentes.negrita, marginTop: 6 },
   dias: { gap: 0 },
   dia: { paddingVertical: 10, gap: 3 },
   pendiente: { gap: 1, paddingLeft: 12, marginTop: 4 },

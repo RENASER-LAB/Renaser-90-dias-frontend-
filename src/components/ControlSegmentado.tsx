@@ -1,3 +1,4 @@
+import { fuentes } from '../theme/fuentes';
 import React, { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
 import Animated, { ReduceMotion, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
@@ -126,13 +127,13 @@ export function ControlSegmentado<T extends string>({
           <Text
             numberOfLines={1}
             adjustsFontSizeToFit={achicarTexto}
-            minimumFontScale={achicarTexto ? 0.85 : undefined}
+            minimumFontScale={achicarTexto ? 0.8 : undefined}
             style={[
               t.body,
               styles.etiqueta,
               {
                 color: elegida ? c.textStrong : c.textSoft,
-                fontFamily: elegida ? 'Jost_500Medium' : 'Jost_400Regular',
+                fontFamily: elegida ? fuentes.media : fuentes.regular,
               },
             ]}
           >
@@ -151,7 +152,7 @@ export function ControlSegmentado<T extends string>({
               onCambiar(opcion.valor);
             }}
             pressRetentionOffset={16}
-            style={styles.segmento}
+            style={[styles.segmento, achicarTexto ? styles.segmentoApretado : null]}
           >
             {opcion.icono ? (
               <View style={styles.conIcono} importantForAccessibility="no-hide-descendants">
@@ -198,6 +199,11 @@ const styles = StyleSheet.create({
   },
   /** Ícono + etiqueta en una fila, centrados en el segmento. La etiqueta se achica antes que desbordar. */
   conIcono: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, flexShrink: 1, maxWidth: '100%' },
+  /**
+   * Con `achicarTexto` (cuatro opciones, o ícono más etiqueta) el segmento pierde la mitad de su relleno lateral: Inter es 6 a 14 %
+   * más ancha que la fuente anterior y «Coherencia» o «Relaciones» ya no entraban ni al 85 % de su tamaño en un teléfono de 360.
+   */
+  segmentoApretado: { paddingHorizontal: 4 },
   etiqueta: {
     flexShrink: 1,
     fontSize: 14.5,

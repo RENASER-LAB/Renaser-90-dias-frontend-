@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -26,7 +27,7 @@ export function TarjetaFotoDeHabito({ pedido, onTomarFoto }: Props) {
 
   return (
     <View style={[styles.tarjeta, { borderColor: c.borderStrong, backgroundColor: c.cardBgAlt }]}>
-      <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
+      <Text style={[t.micro, { color: c.goldInk, fontFamily: fuentes.negrita }]}>
         {pedido.destino === 'roca' ? 'EVIDENCIA DE TU ACCIÓN' : 'EVIDENCIA DE TU HÁBITO'}
       </Text>
       <Text style={[t.body, { color: c.text, fontSize: 14.5 }]}>{pedido.titulo}</Text>

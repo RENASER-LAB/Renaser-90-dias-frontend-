@@ -406,6 +406,36 @@ Textual del dueño: «desaparece la información no relevante en Hábitos de hoy
 * **La lectura de pantalla queda con lo que se ve:** `etiquetaDeLaMitad` dice el rótulo, la hora, el estado y el título («Código Renaser
   13:00, Registrado»). Pruebas: `mitadDelRadar` y `tarjetaHabitoYRadar` (que el detalle no aparece ni en pantalla ni en voz).
 
+### La fuente de toda la app: Inter, en un solo archivo (punto 9)
+Pedido del dueño: SF Pro. **Su licencia no permite usarla en Android, así que el dueño eligió Inter.** Y una regla de él: la fuente tiene que
+ser **global, como un CSS global**.
+* **Inter reemplaza a Jost (texto) y a Fraunces (display) en toda la app.** Paquete: `@expo-google-fonts/inter@0.4.2` (se fue
+  `@expo-google-fonts/jost` y `@expo-google-fonts/fraunces`). **Revisado antes de instalar** (`npm view` y el tarball, sin instalarlo):
+  autor `Expo Team <team@expo.io>`; repositorio `github.com/expo/google-fonts` (`font-packages/inter`); mantenedores `brentvatne`,
+  `ccheever`, `kadikraman`, `jake7`; licencia MIT y OFL-1.1; **sin `preinstall`, `install` ni `postinstall`** (el `package.json` solo tiene
+  `name`, `version`, `main`, `repository`, `author`, `license`); **sin dependencias**; el código son 18 `index.js` de una línea cada uno (un
+  `require` del `.ttf`) y `useFonts.js` (un `loadAsync` de `expo-font`); ningún `fetch`, `eval`, `child_process`, `process.env`, `atob` ni red;
+  el `integrity` del `package-lock.json` coincide con el del tarball revisado. Se instaló con `--ignore-scripts`.
+* **Qué trae y qué no:** las 9 pesas estáticas con el corte óptico de texto; **no trae «Inter Display»** (el corte óptico grande). Por eso
+  los títulos grandes (`t.hero`, `t.screenTitle`) usan la **Bold** y ganan el aire de display con el espaciado negativo que ya tenían. Si
+  algún día se suma un corte Display, es cambiar un nombre en `fuentes.ts`. Se cargan cuatro pesas (400, 500, 600 y 700), no las 18.
+* **Un solo archivo: `src/theme/fuentes.ts`.** Exporta **roles**, no nombres de archivo: `fuentes.regular` (400), `fuentes.media` (500),
+  `fuentes.seminegrita` (600), `fuentes.negrita` (700) y `fuentes.display` (hoy la 700), y `FUENTES_A_CARGAR` (los cuatro `.ttf` que
+  `App.tsx` le pasa a `useFonts`). **Ningún otro archivo de `src/` escribe un nombre de fuente**: piden el rol o usan los tokens `t.*`
+  (`hero` y `screenTitle` → `display`; `cardTitle` → `seminegrita`; `body` y `small` → `regular`; `micro`, `metric`, `tab` → `media`).
+  `src/theme/__tests__/fuenteUnica.test.ts` falla si un archivo de `src/` o `App.tsx` escribe `Inter_…`, `Jost_…` o `Fraunces_…`, o un
+  `fontFamily` con un texto. **Cambiar la fuente de toda la app es tocar ese archivo.** Equivalencias para leer lo anterior: donde este
+  documento dice `Jost_400Regular`, `Jost_500Medium` o `Jost_700Bold`, hoy es `fuentes.regular`, `.media` o `.negrita`; donde dice
+  `Fraunces_600SemiBold` o `Fraunces_700Bold`, `fuentes.display`.
+* **Más ancha que Jost:** Inter mide 6 a 14 % más en texto corrido (medido con las pesas reales: «Comunidad» 1,08×, «Relaciones» 1,11×,
+  títulos de hábito 1,11×); las cifras, ±2 % (siguen tabulares). Los títulos display miden lo mismo que con Fraunces (±5 %). Se revisaron los
+  lugares con ancho justo: la barra de pestañas (cabe: «Comunidad» a 11 px mide ~60 en un cuarto de 72), los chips de los días (la hora
+  mide igual), la columna de la hora de Training (46), la tarjeta de fase de Yo (`medidasDeLaTarjetaDeFase` reserva por ancho, no por
+  fuente; el nombre de fase mide igual que con Fraunces) y los segmentados: `ControlSegmentado` con `achicarTexto` (el de cuatro
+  opciones del Ranking y el selector de eje de Plan, que lleva ícono) pasa a relleno lateral de 4 y a achicarse hasta el 80 % en vez del 85 %.
+  **Sin emulador en esta corrida:** el aspecto en pantalla se confirma con las capturas en claro y oscuro.
+* **No se tocó** `public/privacidad` ni `public/eliminar-cuenta` (páginas web estáticas con su propia fuente de Google Fonts, no son la app).
+
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
 Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel especializado en React Native, Expo y TypeScript. Al crear, refactorizar o modificar cualquier pantalla o componente, debes cumplir OBLIGATORIAMENTE con los siguientes estándares:
@@ -3619,7 +3649,11 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
 
 ## 4. 👁️ TIPOGRAFÍA, CONTRASTE Y ACCESIBILIDAD (UX/IA)
 * **Grosor y Claridad**: Prohibido usar fuentes ultrafinas (`300Light` o `200ExtraLight`) para lectura prolongada. Usar siempre **`Jost_400Regular`**, **`Jost_500Medium`** y **`Jost_700Bold`**.
+  > **Corregido 2026-10-31 (pedido del dueño).** La fuente de la app es **Inter**, no Jost: usa siempre los roles de `src/theme/fuentes.ts`
+  > (`fuentes.regular`, `.media`, `.seminegrita`, `.negrita`), nunca un nombre de archivo. Las pesas ultrafinas siguen prohibidas (ni se cargan).
 * **Serif editorial, SOLO en display** *(agregado 2026-09-14)*: **`Fraunces_600SemiBold`** y **`Fraunces_700Bold`** se usan únicamente en los tokens `t.hero` y `t.screenTitle` (≥ 24 px). **Nada que se lea en párrafo la toca**: texto corrido, inputs, cláusulas y etiquetas siguen en Jost, que es lo que esta regla protege. Entró porque la jerarquía estaba construida sobre `letterSpacing` (el `hero` llegaba a 8) en vez de sobre familia y peso, y eso hacía que cada pantalla se leyera como plantilla. Si alguna vez se quiere volver atrás, es un valor en `theme/tokens.ts` y dos imports en `App.tsx`.
+  > **Corregido 2026-10-31 (pedido del dueño).** Ya no hay serif: el display también es Inter (`fuentes.display`, hoy la Bold, porque el paquete no trae el corte Display); la regla de que **nada que se lea en párrafo usa el display** sigue. Fraunces se fue del proyecto.
+* **La fuente es una regla global, en un solo archivo** *(agregado 2026-10-31, pedido del dueño: «como un CSS global»)*: el nombre de la fuente se escribe **solo** en `src/theme/fuentes.ts`, que exporta **roles** (`fuentes.regular`, `.media`, `.seminegrita`, `.negrita`, `.display`). Ningún otro archivo de `src/` (ni `App.tsx`) escribe `Inter_…`, `Jost_…` ni `Fraunces_…`, ni un `fontFamily` con un texto: pide el rol o usa los tokens `t.*`. `theme/__tests__/fuenteUnica.test.ts` lo vigila. Cambiar la fuente de toda la app es tocar ese archivo.
 * **El espaciado de letras no es jerarquía** *(agregado 2026-09-14)*: un titular grande lleva tracking **negativo** (junta, pesa); sólo los rótulos chicos en versales (`micro`, `sectionTitle`) llevan tracking positivo, y por debajo de 1.5. Estirar un texto para que parezca importante es el gesto que hay que evitar.
   > **Corregido 2026-10-05 (decisión del dueño).** Un rótulo en **tipo oración** no lleva espaciado: `MicroLabel` (el rótulo de sección de toda la app) pasó a 13 px, `Jost_700Bold` y `letterSpacing: 0`; con el 1,1 de `t.micro` se leía «H á b i t o s». El tracking positivo queda solo para lo que todavía va en versales.
 * **Cifras que cambian, tabulares**: todo número que se actualiza en pantalla (día de programa, puntos, racha) va con `fontVariant: ['tabular-nums']` — ya está en el token `t.metric`. Sin eso, pasar de 9 a 10 corre de lugar todo lo que tenga al lado.

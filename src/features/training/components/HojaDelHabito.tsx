@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
@@ -92,7 +93,7 @@ export function HojaDelHabito({
                 style={[estilos.secundario, { borderColor: c.border }]}
               >
                 <Icon name={secundaria.icono} size={TAMANO_ICONO.chico} color={c.goldInk} />
-                <Text style={[t.body, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 16 }]}>{secundaria.etiqueta}</Text>
+                <Text style={[t.body, { color: c.goldInk, fontFamily: fuentes.negrita, fontSize: 16 }]}>{secundaria.etiqueta}</Text>
               </Presionable>
             ) : null}
           </View>
@@ -107,7 +108,7 @@ export function HojaDelHabito({
       >
         {modo === 'atrasado' && !item.hecho ? (
           <Text style={[t.body, { color: c.textSoft }]}>
-            <Text style={{ color: c.textStrong, fontFamily: 'Jost_700Bold' }}>Se te pasó la hora: </Text>
+            <Text style={{ color: c.textStrong, fontFamily: fuentes.negrita }}>Se te pasó la hora: </Text>
             {(avisoDeLaHora ?? 'Todavía puedes cumplir tu compromiso hoy').replace(/^T/, 't')}.
           </Text>
         ) : null}
@@ -116,7 +117,7 @@ export function HojaDelHabito({
           <View style={{ gap: 6 }}>
             <View style={estilos.lineaDelEstado}>
               <Icon name="checkCircle" size={TAMANO_ICONO.chico} color={c.success} />
-              <Text style={[t.small, { color: c.success, fontFamily: 'Jost_500Medium', flexShrink: 1 }]}>
+              <Text style={[t.small, { color: c.success, fontFamily: fuentes.media, flexShrink: 1 }]}>
                 {lineaDelCumplido(item.cumplido)}
               </Text>
             </View>
@@ -133,7 +134,7 @@ export function HojaDelHabito({
               accessibilityLabel="Guía de esta práctica"
               style={estilos.cabeceraDeLaGuia}
             >
-              <Text style={[t.cardTitle, { color: c.textStrong, fontFamily: 'Jost_700Bold', fontSize: 16 }]}>
+              <Text style={[t.cardTitle, { color: c.textStrong, fontFamily: fuentes.negrita, fontSize: 16 }]}>
                 Guía de esta práctica
               </Text>
               <View style={{ transform: [{ rotate: guiaAbierta ? '90deg' : '0deg' }] }}>
@@ -144,7 +145,7 @@ export function HojaDelHabito({
               <View style={{ gap: 12, paddingBottom: 4 }}>
                 {item.guia.secciones.map(seccion => (
                   <View key={seccion.titulo} style={{ gap: 4 }}>
-                    <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>{seccion.titulo}</Text>
+                    <Text style={[t.small, { color: c.goldInk, fontFamily: fuentes.negrita }]}>{seccion.titulo}</Text>
                     <Text style={[t.body, { color: c.text, lineHeight: 22 }]}>{seccion.texto}</Text>
                   </View>
                 ))}

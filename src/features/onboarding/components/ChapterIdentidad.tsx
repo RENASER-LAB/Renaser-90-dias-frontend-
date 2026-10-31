@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TextInput } from 'react-native';
 import { useTheme } from '../../../theme/ThemeContext';
@@ -402,7 +403,7 @@ const styles = StyleSheet.create({
   counterText: {
     alignSelf: 'flex-end',
     fontSize: 10.5,
-    fontFamily: 'Jost_700Bold',
+    fontFamily: fuentes.negrita,
     marginTop: 4,
     marginRight: 2,
   },

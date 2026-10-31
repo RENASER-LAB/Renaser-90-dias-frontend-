@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useEffect, useRef, useState } from 'react';
 import { NativeScrollEvent, NativeSyntheticEvent, ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -128,7 +129,7 @@ export function Rueda({ etiqueta, valores, valorInicial, onCambiar }: RuedaProps
                 fontSize: v === seleccionado ? 30 : 20,
                 color: v === seleccionado ? c.goldInk : c.textSoft,
                 opacity: v === seleccionado ? 1 : 0.5,
-                fontFamily: v === seleccionado ? 'Jost_700Bold' : 'Jost_400Regular',
+                fontFamily: v === seleccionado ? fuentes.negrita : fuentes.regular,
               },
             ]}
           >

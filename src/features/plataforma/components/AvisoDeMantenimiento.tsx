@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useEffect } from 'react';
 import { AccessibilityInfo, StyleSheet, Text, View } from 'react-native';
 import Animated, { ReduceMotion, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
@@ -69,5 +70,5 @@ const estilos = StyleSheet.create({
   caja: { width: '100%', borderWidth: 1, borderRadius: 16, padding: 16, gap: 14 },
   fila: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
   baldosa: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  texto: { flex: 1, flexShrink: 1, fontSize: 16, lineHeight: 23, fontFamily: 'Jost_400Regular', paddingTop: 8 },
+  texto: { flex: 1, flexShrink: 1, fontSize: 16, lineHeight: 23, fontFamily: fuentes.regular, paddingTop: 8 },
 });

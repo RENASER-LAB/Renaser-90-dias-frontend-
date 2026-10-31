@@ -1,3 +1,4 @@
+import { fuentes } from '../../../../theme/fuentes';
 import React, { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -141,15 +142,15 @@ function Cifra({ numero, de, texto }: { numero: string; de?: string; texto: stri
 }
 
 const estilos = StyleSheet.create({
-  titulo: { fontFamily: 'Jost_500Medium', fontSize: LETRA.grande + 2, lineHeight: 30 },
-  sub: { fontFamily: 'Jost_400Regular', fontSize: 17, lineHeight: 23 },
+  titulo: { fontFamily: fuentes.media, fontSize: LETRA.grande + 2, lineHeight: 30 },
+  sub: { fontFamily: fuentes.regular, fontSize: 17, lineHeight: 23 },
   estado: { flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' },
   resumen: { flexDirection: 'row', alignItems: 'stretch', borderWidth: 1, borderRadius: 18, paddingVertical: 16, paddingHorizontal: 12 },
   separador: { width: StyleSheet.hairlineWidth, marginHorizontal: 8 },
   cifra: { flex: 1, gap: 2, paddingHorizontal: 4 },
-  numero: { fontFamily: 'Jost_500Medium', fontSize: 30, lineHeight: 36 },
-  de: { fontFamily: 'Jost_400Regular', fontSize: 18 },
-  cifraTexto: { fontFamily: 'Jost_400Regular', fontSize: 15, lineHeight: 20 },
+  numero: { fontFamily: fuentes.media, fontSize: 30, lineHeight: 36 },
+  de: { fontFamily: fuentes.regular, fontSize: 18 },
+  cifraTexto: { fontFamily: fuentes.regular, fontSize: 15, lineHeight: 20 },
   pie: { flexDirection: 'row', gap: 10 },
   mitad: { flex: 1 },
 });

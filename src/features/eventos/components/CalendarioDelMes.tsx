@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -181,7 +182,7 @@ function Celda({
           elegida ? { backgroundColor: c.gold } : hoy ? { borderWidth: 1.5, borderColor: c.gold } : null,
         ]}
       >
-        <Text style={[estilos.numero, { color: colorDelNumero, fontFamily: hoy || elegida ? 'Jost_700Bold' : 'Jost_500Medium' }]}>
+        <Text style={[estilos.numero, { color: colorDelNumero, fontFamily: hoy || elegida ? fuentes.negrita : fuentes.media }]}>
           {celda.dia}
         </Text>
       </View>
@@ -229,20 +230,20 @@ function TarjetaDelDia({ oc, zona, onPress }: { oc: Ocurrencia; zona: string; on
 
 const estilos = StyleSheet.create({
   cabecera: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  mes: { fontFamily: 'Fraunces_600SemiBold', fontSize: 24, letterSpacing: -0.4, lineHeight: 29 },
-  anio: { fontFamily: 'Jost_500Medium', fontSize: LETRA.cuerpo },
+  mes: { fontFamily: fuentes.display, fontSize: 24, letterSpacing: -0.4, lineHeight: 29 },
+  anio: { fontFamily: fuentes.media, fontSize: LETRA.cuerpo },
   botonHoy: { minWidth: 64, paddingHorizontal: 12 },
   flecha: { width: 48, paddingHorizontal: 0 },
   grilla: { borderWidth: 1, paddingVertical: 8, paddingHorizontal: 4 },
   semana: { flexDirection: 'row' },
-  inicial: { flex: 1, textAlign: 'center', fontFamily: 'Jost_700Bold', fontSize: LETRA.cuerpo, paddingVertical: 6 },
+  inicial: { flex: 1, textAlign: 'center', fontFamily: fuentes.negrita, fontSize: LETRA.cuerpo, paddingVertical: 6 },
   celda: { flex: 1, height: 56, alignItems: 'center', justifyContent: 'center', gap: 3 },
   circulo: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   numero: { fontSize: 17 },
   punto: { width: 7, height: 7, borderRadius: 3.5 },
   leyenda: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 4 },
-  leyendaTexto: { fontFamily: 'Jost_400Regular', fontSize: LETRA.cuerpo },
-  tituloDelDia: { fontFamily: 'Jost_500Medium', fontSize: LETRA.titulo + 1, lineHeight: 26, marginTop: 4 },
+  leyendaTexto: { fontFamily: fuentes.regular, fontSize: LETRA.cuerpo },
+  tituloDelDia: { fontFamily: fuentes.media, fontSize: LETRA.titulo + 1, lineHeight: 26, marginTop: 4 },
   tarjeta: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -253,8 +254,8 @@ const estilos = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 14,
   },
-  hora: { fontFamily: 'Jost_700Bold', fontSize: 20, width: 62, fontVariant: ['tabular-nums'] },
-  tituloTarjeta: { fontFamily: 'Jost_500Medium', fontSize: LETRA.titulo, lineHeight: 24 },
+  hora: { fontFamily: fuentes.negrita, fontSize: 20, width: 62, fontVariant: ['tabular-nums'] },
+  tituloTarjeta: { fontFamily: fuentes.media, fontSize: LETRA.titulo, lineHeight: 24 },
   dondeFila: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  donde: { flexShrink: 1, fontFamily: 'Jost_400Regular', fontSize: LETRA.cuerpo, lineHeight: 22 },
+  donde: { flexShrink: 1, fontFamily: fuentes.regular, fontSize: LETRA.cuerpo, lineHeight: 22 },
 });

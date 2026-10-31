@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -147,7 +148,7 @@ export function AlumnoScreen({
           style={estilos.volver}
         >
           <Icon name="arrowLeft" size={15} color={c.goldInk} />
-          <Text style={[t.body, { color: c.goldInk, fontFamily: 'Jost_500Medium', fontSize: 16 }]}>
+          <Text style={[t.body, { color: c.goldInk, fontFamily: fuentes.media, fontSize: 16 }]}>
             Mi grupo
           </Text>
         </Pressable>
@@ -283,7 +284,7 @@ export function AlumnoScreen({
                               {
                                 color: activo ? c.goldInk : c.textSoft,
                                 fontSize: 16,
-                                fontFamily: activo ? 'Jost_700Bold' : 'Jost_400Regular',
+                                fontFamily: activo ? fuentes.negrita : fuentes.regular,
                               },
                             ]}
                           >
@@ -296,7 +297,7 @@ export function AlumnoScreen({
 
                   {detalleDelDia ? (
                     <View style={estilos.detalleDia}>
-                      <Text style={[t.body, { color: c.text, fontSize: 17, fontFamily: 'Jost_500Medium' }]}>
+                      <Text style={[t.body, { color: c.text, fontSize: 17, fontFamily: fuentes.media }]}>
                         {diaLargo(detalleDelDia.fecha)}
                       </Text>
                       {detalleDelDia.obligaciones.length === 0 ? (
@@ -314,7 +315,7 @@ export function AlumnoScreen({
                                 style={[
                                   t.body,
                                   { color: colorDeEstado(o.estadoHabito, c), fontSize: 16,
-                                    fontFamily: 'Jost_500Medium' },
+                                    fontFamily: fuentes.media },
                                 ]}
                               >
                                 {etiquetaDeEstado(o.estadoHabito)}

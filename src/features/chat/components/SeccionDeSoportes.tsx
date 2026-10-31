@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
@@ -142,7 +143,7 @@ const estilos = StyleSheet.create({
     justifyContent: 'center',
   },
   contadorTexto: {
-    fontFamily: 'Jost_700Bold',
+    fontFamily: fuentes.negrita,
     fontSize: 13,
     fontVariant: ['tabular-nums'],
   },

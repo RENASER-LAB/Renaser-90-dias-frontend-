@@ -1,3 +1,4 @@
+import { fuentes } from '../../../../theme/fuentes';
 import React, { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, { ReduceMotion, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
@@ -135,16 +136,16 @@ function BotonDeLaLista({ momento, onPasarLista }: { momento: MomentoDeLaLista; 
 
 const estilos = StyleSheet.create({
   cabecera: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  subtitulo: { fontFamily: 'Jost_500Medium', fontSize: LETRA.titulo, lineHeight: 24 },
+  subtitulo: { fontFamily: fuentes.media, fontSize: LETRA.titulo, lineHeight: 24 },
   tarjeta: { borderWidth: 1, borderRadius: 18, padding: 18, gap: 16 },
   fila: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  numero: { fontFamily: 'Jost_500Medium', fontSize: 34, lineHeight: 40 },
-  unidad: { fontFamily: 'Jost_400Regular', fontSize: 18 },
+  numero: { fontFamily: fuentes.media, fontSize: 34, lineHeight: 40 },
+  unidad: { fontFamily: fuentes.regular, fontSize: 18 },
   caras: { flexDirection: 'row', alignItems: 'center' },
   mas: { width: 36, height: 36, borderRadius: 18, borderWidth: 2, marginLeft: -10, alignItems: 'center', justifyContent: 'center' },
-  masTexto: { fontFamily: 'Jost_700Bold', fontSize: 13 },
+  masTexto: { fontFamily: fuentes.negrita, fontSize: 13 },
   barra: { height: 8, borderRadius: 4, overflow: 'hidden', flexDirection: 'row' },
   ver: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 44 },
-  verTexto: { fontFamily: 'Jost_500Medium', fontSize: 17 },
-  nota: { fontFamily: 'Jost_400Regular', fontSize: 15, lineHeight: 21 },
+  verTexto: { fontFamily: fuentes.media, fontSize: 17 },
+  nota: { fontFamily: fuentes.regular, fontSize: 15, lineHeight: 21 },
 });

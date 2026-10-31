@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -66,6 +67,6 @@ export function FilaDeSemana({
 const estilos = StyleSheet.create({
   fila: { flexDirection: 'row', gap: 4, marginTop: 12 },
   pastilla: { minHeight: 54, borderRadius: 14, alignItems: 'center', justifyContent: 'center', gap: 3 },
-  letra: { fontFamily: 'Jost_500Medium', fontSize: 13 },
-  numero: { fontFamily: 'Jost_700Bold', fontSize: 15, lineHeight: 20, fontVariant: ['tabular-nums'] },
+  letra: { fontFamily: fuentes.media, fontSize: 13 },
+  numero: { fontFamily: fuentes.negrita, fontSize: 15, lineHeight: 20, fontVariant: ['tabular-nums'] },
 });

@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -64,7 +65,7 @@ export function TarjetaMentorHoy({
       <View style={{ flex: 1 }}>
         {/* Rótulo de la tarjeta, a 14 px (A-1). Tipo oración, en negrita y sin espaciar desde el
             2026-10-05 (pedido del dueño): decía «MI GRUPO» en versales espaciadas. */}
-        <Text style={[t.small, { color: c.micro, fontSize: 14 /* metadato */, fontFamily: 'Jost_700Bold' }]}>Mi grupo</Text>
+        <Text style={[t.small, { color: c.micro, fontSize: 14 /* metadato */, fontFamily: fuentes.negrita }]}>Mi grupo</Text>
         <Text style={[t.cardTitle, { color: c.textStrong, marginTop: 5 }]} numberOfLines={1}>
           {vista?.celula.nombre ?? 'Acompañamiento'}
         </Text>
@@ -75,7 +76,7 @@ export function TarjetaMentorHoy({
       <View style={estilos.derecha}>
         {!sinDatos && ayuda !== null && ayuda > 0 ? (
           <View style={[estilos.contador, { backgroundColor: c.dangerWash }]}>
-            <Text style={[t.micro, { color: c.danger, fontFamily: 'Jost_700Bold', fontSize: 16 }]}>
+            <Text style={[t.micro, { color: c.danger, fontFamily: fuentes.negrita, fontSize: 16 }]}>
               {ayuda}
             </Text>
           </View>

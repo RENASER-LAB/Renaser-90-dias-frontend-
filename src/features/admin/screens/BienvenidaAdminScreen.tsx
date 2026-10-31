@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -131,6 +132,6 @@ export function BienvenidaAdminScreen({ onVolver }: { onVolver: () => void }) {
 
 const estilos = StyleSheet.create({
   aviso: { borderWidth: 1, borderRadius: 14, padding: 14 },
-  rotulo: { fontFamily: 'Jost_500Medium', fontSize: 18, lineHeight: 24 },
+  rotulo: { fontFamily: fuentes.media, fontSize: 18, lineHeight: 24 },
   campo: { borderWidth: 1, borderRadius: 14, paddingHorizontal: 14, minHeight: 56 },
 });

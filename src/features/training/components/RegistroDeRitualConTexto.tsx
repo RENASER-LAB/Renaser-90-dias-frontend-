@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useEffect, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
@@ -173,7 +174,7 @@ export function RegistroDeRitualConTexto({
 
 const estilos = StyleSheet.create({
   cuerpo: { gap: 12, paddingHorizontal: 20, paddingTop: 4, paddingBottom: 8 },
-  pregunta: { fontSize: 18, lineHeight: 25, fontFamily: 'Jost_700Bold' },
+  pregunta: { fontSize: 18, lineHeight: 25, fontFamily: fuentes.negrita },
   campo: {
     minHeight: 132,
     borderWidth: 1,
@@ -181,7 +182,7 @@ const estilos = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 16,
-    fontFamily: 'Jost_400Regular',
+    fontFamily: fuentes.regular,
     textAlignVertical: 'top',
   },
   contador: { textAlign: 'right', fontVariant: ['tabular-nums'] },

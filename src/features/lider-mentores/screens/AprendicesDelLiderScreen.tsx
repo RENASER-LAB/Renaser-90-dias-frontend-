@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -198,7 +199,7 @@ function PieDeLaLista({ lista }: { lista: ReturnType<typeof useAprendicesDelLide
         accessibilityLabel="No pudimos cargar más aprendices. Reintentar"
         style={[estilos.reintentar, { borderColor: c.borderStrong }]}
       >
-        <Text style={[t.body, { fontSize: 16, color: c.textStrong, fontFamily: 'Jost_700Bold' }]}>
+        <Text style={[t.body, { fontSize: 16, color: c.textStrong, fontFamily: fuentes.negrita }]}>
           No pudimos cargar más. Reintentar
         </Text>
       </Pressable>

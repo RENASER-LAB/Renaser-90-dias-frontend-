@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
@@ -37,7 +38,7 @@ export function DestinoDeLaCaja({ destino }: { destino: DestinoDeCaja | null | u
               <Text
                 style={[
                   t.body,
-                  { color: linea.destacada ? c.goldInk : c.textStrong, fontSize: 16, fontFamily: linea.destacada ? 'Jost_700Bold' : 'Jost_400Regular' },
+                  { color: linea.destacada ? c.goldInk : c.textStrong, fontSize: 16, fontFamily: linea.destacada ? fuentes.negrita : fuentes.regular },
                 ]}
               >
                 {linea.valor}
@@ -109,7 +110,7 @@ export function FormularioDelEnvio({
   const { c, t } = useTheme();
   const campo = (clave: keyof FormularioDeEnvio, rotulo: string, extra?: { teclado?: 'decimal-pad'; ejemplo?: string }) => (
     <View style={{ gap: 6 }}>
-      <Text style={[t.body, { color: c.textStrong, fontSize: 16, fontFamily: 'Jost_500Medium' }]}>{rotulo}</Text>
+      <Text style={[t.body, { color: c.textStrong, fontSize: 16, fontFamily: fuentes.media }]}>{rotulo}</Text>
       <TextInput
         value={valor[clave]}
         onChangeText={texto => onCambio({ ...valor, [clave]: texto })}
@@ -196,7 +197,7 @@ export function HistorialDeLaCaja({ historial }: { historial: PasoDelHistorial[]
 }
 
 const estilos = StyleSheet.create({
-  titulo: { fontFamily: 'Jost_500Medium', fontSize: 18, lineHeight: 24 },
+  titulo: { fontFamily: fuentes.media, fontSize: 18, lineHeight: 24 },
   tarjeta: { borderWidth: 1, borderRadius: 14, padding: 14, gap: 8 },
   linea: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
   rotulo: { fontSize: 15, width: 104 },

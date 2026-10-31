@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -57,7 +58,7 @@ export function FalloDeLectura({
           accessibilityRole="button"
           style={({ pressed }) => [estilos.boton, { borderColor: c.borderStrong, opacity: pressed ? 0.7 : 1 }]}
         >
-          <Text style={[t.body, { fontSize: 16, color: c.textStrong, fontFamily: 'Jost_700Bold' }]}>Reintentar</Text>
+          <Text style={[t.body, { fontSize: 16, color: c.textStrong, fontFamily: fuentes.negrita }]}>Reintentar</Text>
         </Pressable>
       ) : null}
     </View>

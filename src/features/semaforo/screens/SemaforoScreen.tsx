@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -272,7 +273,7 @@ function ComoSeCalcula() {
         <View style={{ flex: 1 }}>
           <MicroLabel>Cómo se calcula</MicroLabel>
         </View>
-        <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 14 }]}>
+        <Text style={[t.small, { color: c.goldInk, fontFamily: fuentes.negrita, fontSize: 14 }]}>
           {abierto ? 'Ver menos' : 'Más detalles'}
         </Text>
       </Pressable>
@@ -332,7 +333,7 @@ function Fallo({ semaforo }: { semaforo: EstadoMiSemaforo }) {
           accessibilityRole="button"
           style={({ pressed }) => [estilos.reintentar, { borderColor: c.borderStrong, opacity: pressed ? 0.7 : 1 }]}
         >
-          <Text style={[t.body, { fontSize: 16, color: c.textStrong, fontFamily: 'Jost_700Bold' }]}>Reintentar</Text>
+          <Text style={[t.body, { fontSize: 16, color: c.textStrong, fontFamily: fuentes.negrita }]}>Reintentar</Text>
         </Pressable>
       )}
     </View>

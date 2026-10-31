@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Alert } from '../../../components/Alerta';
@@ -160,7 +161,7 @@ export function TerminosScreen({
         <View style={[styles.termsCard, { backgroundColor: c.cardBg, borderColor: c.border }]}>
           <View style={[styles.preambleBox, { backgroundColor: c.goldWash, borderColor: c.borderStrong }]}>
             <Icon name="diamond" size={16} color={c.goldInk} />
-            <Text style={[t.body, { color: c.textStrong, fontFamily: 'Jost_500Medium', flex: 1, fontSize: 14, lineHeight: 21 }]}>
+            <Text style={[t.body, { color: c.textStrong, fontFamily: fuentes.media, flex: 1, fontSize: 14, lineHeight: 21 }]}>
               Al inscribirme en el programa Renaser, declaro que lo hago de manera libre y voluntaria, y acepto íntegramente los siguientes términos:
             </Text>
           </View>
@@ -169,7 +170,7 @@ export function TerminosScreen({
             {TERMINOS_CLAUSULAS.map(item => (
               <View key={item.num} style={styles.clauseRow}>
                 <View style={[styles.numBadge, { borderColor: c.borderStrong, backgroundColor: c.cardBgAlt }]}>
-                  <Text style={[t.micro, { color: c.goldInk, fontSize: 10, fontFamily: 'Jost_700Bold' }]}>
+                  <Text style={[t.micro, { color: c.goldInk, fontSize: 10, fontFamily: fuentes.negrita }]}>
                     {item.num < 10 ? `0${item.num}` : item.num}
                   </Text>
                 </View>

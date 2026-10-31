@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -56,7 +57,7 @@ export function HabitosDelAlumno({ grupoId, alumnoId }: { grupoId: string | null
           </Text>
         ) : habitos ? (
           <>
-            <Text style={[t.body, { color: c.text, fontSize: 16, fontFamily: 'Jost_500Medium' }]}>
+            <Text style={[t.body, { color: c.text, fontSize: 16, fontFamily: fuentes.media }]}>
               {habitos.programDay > 0 ? `Día ${habitos.programDay} de 90` : 'Todavía no arrancó su programa'}
             </Text>
             {/* De quién es el reloj con el que se leen las horas de abajo. Sin esto, un mentor

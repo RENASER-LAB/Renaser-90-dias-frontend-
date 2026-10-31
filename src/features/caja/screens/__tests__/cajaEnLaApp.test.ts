@@ -44,6 +44,6 @@ describe('la Caja Renaser en la app', () => {
   it('Hoy abre Administración en la caja del aviso solo si la cuenta administra', () => {
     const hoy = leer('screens/HoyScreen.tsx');
     expect(hoy).toMatch(/abrirCajaAprendizId/);
-    expect(hoy).toMatch(/if \(!capacidades\.administrar\) return;\s*setEnSemaforo\(false\);\s*setAdminAbreEn\(\{ caja: aprendizId \}\)/);
+    expect(hoy).toMatch(/if \(!capacidades\.administrar\) return;\s*setAdminAbreEn\(\{ caja: aprendizId \}\)/);
   });
 });

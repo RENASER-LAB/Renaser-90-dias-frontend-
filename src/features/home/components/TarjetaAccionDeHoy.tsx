@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -96,8 +97,8 @@ const estilos = StyleSheet.create({
   tarjeta: { borderWidth: 1, borderRadius: 16, padding: 17 },
   fila: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   /** Cifras que cambian: ancho de dígito fijo (AGENTS.md §4). */
-  hora: { fontSize: 16, lineHeight: 22, fontFamily: 'Jost_700Bold', fontVariant: ['tabular-nums'], flexShrink: 1 },
-  titulo: { fontSize: 18, lineHeight: 25, fontFamily: 'Jost_700Bold', marginTop: 10 },
+  hora: { fontSize: 16, lineHeight: 22, fontFamily: fuentes.negrita, fontVariant: ['tabular-nums'], flexShrink: 1 },
+  titulo: { fontSize: 18, lineHeight: 25, fontFamily: fuentes.negrita, marginTop: 10 },
   meta: { fontSize: 16, lineHeight: 22, marginTop: 6 },
   boton: { marginTop: 16, alignSelf: 'stretch' },
   /** El botón de siempre trae versalitas espaciadas de 11 px: acá es una frase en tipo oración de 16. */

@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -25,7 +26,7 @@ export function TarjetaAdminHoy({ onAbrir }: { onAbrir: () => void }) {
       <View style={{ flex: 1, flexShrink: 1 }}>
         {/* Rótulo de la tarjeta, a 14 px (A-1). Tipo oración, en negrita y sin espaciar desde el
             2026-10-05 (pedido del dueño): decía «OPERACIÓN» en versales espaciadas. */}
-        <Text style={[t.small, { color: c.micro, fontSize: 14 /* metadato */, fontFamily: 'Jost_700Bold' }]}>Operación</Text>
+        <Text style={[t.small, { color: c.micro, fontSize: 14 /* metadato */, fontFamily: fuentes.negrita }]}>Operación</Text>
         <Text style={[t.cardTitle, { color: c.textStrong, marginTop: 6 }]}>Administración</Text>
         {/* Dice SOLO lo que hay detrás. Decía «…solicitudes y evidencias» y no existe ninguna
             pantalla de evidencias: la bandeja está construida en el backend

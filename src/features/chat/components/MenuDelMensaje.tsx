@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -110,7 +111,7 @@ const styles = StyleSheet.create({
   etiqueta: {
     flex: 1,
     fontSize: 17,
-    fontFamily: 'Jost_500Medium',
+    fontFamily: fuentes.media,
   },
   divisor: {
     position: 'absolute',

@@ -1,3 +1,4 @@
+import { fuentes } from '../../../../theme/fuentes';
 import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
 import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
@@ -103,7 +104,7 @@ const estilos = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     elevation: 6,
   },
-  texto: { flex: 1, fontFamily: 'Jost_400Regular', fontSize: 16 },
+  texto: { flex: 1, fontFamily: fuentes.regular, fontSize: 16 },
   boton: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44, paddingHorizontal: 10 },
-  deshacer: { fontFamily: 'Jost_700Bold', fontSize: 16 },
+  deshacer: { fontFamily: fuentes.negrita, fontSize: 16 },
 });

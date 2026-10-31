@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View, type GestureResponderEvent, type LayoutChangeEvent } from 'react-native';
 import Svg, { Circle, Line, Path, Text as TextoSvg } from 'react-native-svg';
@@ -78,7 +79,7 @@ export function GraficoDeHoras({
 
   return (
     <View style={[estilos.tarjeta, { backgroundColor: c.cardBg, borderColor: c.border }]}>
-      <Text accessibilityRole="header" style={[t.body, { color: c.textStrong, fontSize: 16, fontFamily: 'Jost_500Medium' }]}>
+      <Text accessibilityRole="header" style={[t.body, { color: c.textStrong, fontSize: 16, fontFamily: fuentes.media }]}>
         {titulo}
       </Text>
       <View style={estilos.leyenda}>
@@ -105,10 +106,10 @@ export function GraficoDeHoras({
               <Svg width={ancho} height={ALTO}>
                 <Line x1={MARGEN_IZQUIERDO} x2={ancho - MARGEN_DERECHO} y1={y(0)} y2={y(0)} stroke={c.border} strokeWidth={1} />
                 <Line x1={MARGEN_IZQUIERDO} x2={ancho - MARGEN_DERECHO} y1={y(tope)} y2={y(tope)} stroke={c.divider} strokeWidth={1} />
-                <TextoSvg x={MARGEN_IZQUIERDO - 6} y={y(tope) + 4} fontSize={12} fontFamily="Jost_400Regular" fill={c.textSoft} textAnchor="end">
+                <TextoSvg x={MARGEN_IZQUIERDO - 6} y={y(tope) + 4} fontSize={12} fontFamily={fuentes.regular} fill={c.textSoft} textAnchor="end">
                   {cifra(tope)}
                 </TextoSvg>
-                <TextoSvg x={MARGEN_IZQUIERDO - 6} y={y(0) + 4} fontSize={12} fontFamily="Jost_400Regular" fill={c.textSoft} textAnchor="end">
+                <TextoSvg x={MARGEN_IZQUIERDO - 6} y={y(0) + 4} fontSize={12} fontFamily={fuentes.regular} fill={c.textSoft} textAnchor="end">
                   0
                 </TextoSvg>
                 {elegida !== null ? (

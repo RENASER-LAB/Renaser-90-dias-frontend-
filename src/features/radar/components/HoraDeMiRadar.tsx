@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -40,7 +41,7 @@ export function HoraDeMiRadar({ hora }: { hora: HoraDeLosDias }) {
         </View>
       ) : (
         <View style={[estilos.tarjeta, { backgroundColor: c.goldWash, borderColor: c.border }]}>
-          <Text style={[t.body, { color: c.text, fontSize: 16, lineHeight: 22, fontFamily: 'Jost_700Bold' }]}>
+          <Text style={[t.body, { color: c.text, fontSize: 16, lineHeight: 22, fontFamily: fuentes.negrita }]}>
             {hora.tipo === 'distintas' ? 'Estos días tienen horas distintas' : textoDeLaFalta(hora.motivo)}
           </Text>
         </View>
@@ -53,8 +54,8 @@ const estilos = StyleSheet.create({
   rueda: { flexDirection: 'row', alignItems: 'center', marginTop: 8 },
   columna: { flex: 1, alignItems: 'center', gap: 6 },
   centro: { alignSelf: 'stretch', alignItems: 'center', borderTopWidth: 1.5, borderBottomWidth: 1.5, paddingVertical: 8 },
-  cifra: { fontFamily: 'Jost_700Bold', fontSize: 30, lineHeight: 36, fontVariant: ['tabular-nums'] },
-  separador: { fontFamily: 'Jost_700Bold', fontSize: 22, paddingHorizontal: 10, marginTop: -8 },
-  etiqueta: { fontFamily: 'Jost_400Regular', fontSize: 13, lineHeight: 18 },
+  cifra: { fontFamily: fuentes.negrita, fontSize: 30, lineHeight: 36, fontVariant: ['tabular-nums'] },
+  separador: { fontFamily: fuentes.negrita, fontSize: 22, paddingHorizontal: 10, marginTop: -8 },
+  etiqueta: { fontFamily: fuentes.regular, fontSize: 13, lineHeight: 18 },
   tarjeta: { marginTop: 8, minHeight: 52, borderRadius: 16, borderWidth: 1, paddingHorizontal: 16, justifyContent: 'center' },
 });

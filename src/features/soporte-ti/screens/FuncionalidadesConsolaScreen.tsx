@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useMemo, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -180,7 +181,7 @@ function FilaDeFuncionalidad({
     >
       <View style={{ flex: 1, flexShrink: 1, gap: 2 }}>
         <View style={estilos.titulo}>
-          <Text style={[t.body, { color: c.textStrong, fontSize: 16, fontFamily: 'Jost_500Medium', flexShrink: 1 }]}>
+          <Text style={[t.body, { color: c.textStrong, fontSize: 16, fontFamily: fuentes.media, flexShrink: 1 }]}>
             {nombreDe(funcionalidad)}
           </Text>
           {funcionalidad.critica ? <Insignia texto="Crítica" /> : null}
@@ -205,7 +206,7 @@ function FilaDeHerramienta({ titulo, detalle, onPress }: { titulo: string; detal
       style={[estilos.fila, { backgroundColor: c.cardBg, borderColor: c.border }]}
     >
       <View style={{ flex: 1, flexShrink: 1, gap: 2 }}>
-        <Text style={[t.body, { color: c.textStrong, fontSize: 16, fontFamily: 'Jost_500Medium' }]}>{titulo}</Text>
+        <Text style={[t.body, { color: c.textStrong, fontSize: 16, fontFamily: fuentes.media }]}>{titulo}</Text>
         <Text style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 22 }]}>{detalle}</Text>
       </View>
       <Icon name="chevron" size={16} color={c.chevron} />
@@ -217,7 +218,7 @@ export function Insignia({ texto }: { texto: string }) {
   const { c } = useTheme();
   return (
     <View style={[estilos.insignia, { borderColor: c.gold, backgroundColor: c.goldWash }]}>
-      <Text style={{ color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11.5 }}>{texto}</Text>
+      <Text style={{ color: c.goldInk, fontFamily: fuentes.negrita, fontSize: 11.5 }}>{texto}</Text>
     </View>
   );
 }
@@ -227,7 +228,7 @@ function TarjetaDelCircuito({ partes }: { partes: readonly ParteDelCircuito[] })
   const { c, t } = useTheme();
   return (
     <View style={[estilos.tarjeta, { backgroundColor: c.cardBg, borderColor: c.border }]}>
-      <Text accessibilityRole="header" style={[t.body, { color: c.textStrong, fontSize: 16, fontFamily: 'Jost_500Medium' }]}>
+      <Text accessibilityRole="header" style={[t.body, { color: c.textStrong, fontSize: 16, fontFamily: fuentes.media }]}>
         SER · apagado automático
       </Text>
       {partes.map(p => {

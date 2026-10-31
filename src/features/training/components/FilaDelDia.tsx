@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Animated, { FadeOut, LinearTransition, ReduceMotion } from 'react-native-reanimated';
@@ -102,7 +103,7 @@ export function FilaDelDia({
           {
             fontSize: 16,
             color: hecha || modo === 'cerrado' ? c.textSoft : c.textStrong,
-            fontFamily: 'Jost_500Medium',
+            fontFamily: fuentes.media,
           },
         ]}
       />
@@ -117,7 +118,7 @@ export function FilaDelDia({
           <View style={estilos.hecho} accessibilityLabel="Hecho">
             <Icon name="check" size={TAMANO_ICONO.chico} color={c.goldInk} />
             {item.cumplido?.hora ? (
-              <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_500Medium', fontVariant: ['tabular-nums'] }]}>
+              <Text style={[t.small, { color: c.goldInk, fontFamily: fuentes.media, fontVariant: ['tabular-nums'] }]}>
                 {item.cumplido.hora}
               </Text>
             ) : null}
@@ -131,7 +132,7 @@ export function FilaDelDia({
         return accion ? (
           <View style={[estilos.pildora, { backgroundColor: c.goldWash }]} accessible={false} importantForAccessibility="no-hide-descendants">
             <Icon name={accion.icono} size={TAMANO_ICONO.chico} color={c.goldInk} />
-            <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_500Medium' }]}>{accion.etiqueta}</Text>
+            <Text style={[t.small, { color: c.goldInk, fontFamily: fuentes.media }]}>{accion.etiqueta}</Text>
           </View>
         ) : null;
       default:
@@ -171,7 +172,7 @@ export function FilaDelDia({
           style={[estilos.pildora, { backgroundColor: c.goldWash }]}
         >
           <Icon name={accion.icono} size={TAMANO_ICONO.chico} color={c.goldInk} />
-          <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_500Medium' }]}>{accion.etiqueta}</Text>
+          <Text style={[t.small, { color: c.goldInk, fontFamily: fuentes.media }]}>{accion.etiqueta}</Text>
         </Presionable>
       ) : null}
       {control === 'check' ? (
@@ -216,7 +217,7 @@ const estilos = StyleSheet.create({
     paddingVertical: 6,
   },
   // La hora, a ancho fijo: las filas quedan alineadas aunque una diga «—».
-  hora: { fontFamily: 'Jost_700Bold', fontSize: 14, fontVariant: ['tabular-nums'] },
+  hora: { fontFamily: fuentes.negrita, fontSize: 14, fontVariant: ['tabular-nums'] },
   areaDelTexto: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 48, paddingVertical: 6 },
   texto: { flex: 1, minWidth: 0, gap: 2 },
   hecho: { flexDirection: 'row', alignItems: 'center', gap: 4 },

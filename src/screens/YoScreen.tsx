@@ -1,3 +1,4 @@
+import { fuentes } from '../theme/fuentes';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Image,
@@ -796,7 +797,7 @@ export default function YoScreen() {
                   {resumen?.coherencia == null ? '—' : Math.round(resumen.coherencia)}
                 </Text>
                 {resumen?.coherencia == null ? null : (
-                  <Text style={{ fontFamily: 'Jost_500Medium', fontSize: 15, color: c.goldInk }}>%</Text>
+                  <Text style={{ fontFamily: fuentes.media, fontSize: 15, color: c.goldInk }}>%</Text>
                 )}
               </View>
             </View>
@@ -933,7 +934,7 @@ export default function YoScreen() {
               {profileAvatar ? (
                 <Image source={{ uri: profileAvatar }} style={styles.avatarImageLarge} accessibilityLabel="Foto de perfil" />
               ) : (
-                <Text style={{ color: c.goldInk, fontSize: 18, fontFamily: 'Jost_700Bold' }}>{profileInitials}</Text>
+                <Text style={{ color: c.goldInk, fontSize: 18, fontFamily: fuentes.negrita }}>{profileInitials}</Text>
               )}
             </View>
             <View style={{ flex: 1, gap: 3 }}>
@@ -1251,7 +1252,7 @@ export default function YoScreen() {
                           styles.cifras,
                           {
                             color: enProgreso ? c.onGold : c.goldInk,
-                            fontFamily: 'Jost_700Bold',
+                            fontFamily: fuentes.negrita,
                             fontSize: 14,
                           },
                         ]}
@@ -1320,18 +1321,18 @@ export default function YoScreen() {
               un compromiso en letra de nota al pie. Todo pasa a `t.body` (15/22). */}
           <View style={[styles.pactoDocumentCard, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
             <View style={{ borderBottomWidth: 1, borderBottomColor: c.divider, paddingBottom: 12 }}>
-              <Text style={{ fontFamily: 'Jost_700Bold', color: c.goldInk, fontSize: 16, fontStyle: 'italic' }}>
+              <Text style={{ fontFamily: fuentes.negrita, color: c.goldInk, fontSize: 16, fontStyle: 'italic' }}>
                 Pacto de Renacimiento
               </Text>
               <Text style={[t.small, { color: c.textSoft, marginTop: 4 }]}>Acto fundacional</Text>
             </View>
 
             <Text style={[t.body, { color: c.text }]}>
-              Yo, <Text style={{ color: c.goldInk, fontFamily: 'Jost_700Bold' }}>{profileName}</Text>, en pleno uso de mi consciencia, declaro este pacto conmigo mismo en presencia del sistema RENASER y de la versión más alta de mí.
+              Yo, <Text style={{ color: c.goldInk, fontFamily: fuentes.negrita }}>{profileName}</Text>, en pleno uso de mi consciencia, declaro este pacto conmigo mismo en presencia del sistema RENASER y de la versión más alta de mí.
             </Text>
 
             <Text style={[t.body, { color: c.text }]}>
-              <Text style={{ fontFamily: 'Jost_700Bold', color: c.textStrong }}>Renuncio a la mediocridad.</Text> Renuncio al desdén con que he tratado mi cuerpo, mi mente, mis emociones y mi tiempo.
+              <Text style={{ fontFamily: fuentes.negrita, color: c.textStrong }}>Renuncio a la mediocridad.</Text> Renuncio al desdén con que he tratado mi cuerpo, mi mente, mis emociones y mi tiempo.
             </Text>
 
             <View style={{ gap: 10, marginVertical: 4 }}>
@@ -1342,7 +1343,7 @@ export default function YoScreen() {
               ))}
             </View>
 
-            <Text style={[t.body, { color: c.goldInk, fontFamily: 'Jost_700Bold', borderTopWidth: 1, borderTopColor: c.divider, paddingTop: 12 }]}>
+            <Text style={[t.body, { color: c.goldInk, fontFamily: fuentes.negrita, borderTopWidth: 1, borderTopColor: c.divider, paddingTop: 12 }]}>
               Si lo cumplo, gano una identidad nueva. Si lo abandono, pierdo la versión de mí que ya estaba esperando del otro lado.
             </Text>
           </View>
@@ -1366,7 +1367,7 @@ export default function YoScreen() {
                   Android no le robe el gesto al dedo, y en modo dual, porque el nombre caligráfico
                   que se veía antes era —sin serlo— la firma electrónica que §3 pide ofrecer. */}
               <View style={styles.signatureBox}>
-                <Text style={{ fontFamily: 'Jost_700Bold', color: c.goldInk, fontSize: 15, fontStyle: 'italic' }}>
+                <Text style={{ fontFamily: fuentes.negrita, color: c.goldInk, fontSize: 15, fontStyle: 'italic' }}>
                   Firma con tu dedo
                 </Text>
 
@@ -1446,7 +1447,7 @@ export default function YoScreen() {
                 accessibilityLabel="Subir la foto de un hábito de hoy"
                 style={[styles.createHabitBtn, { backgroundColor: c.gold }]}
               >
-                <Text style={[t.small, { color: c.onGold, fontFamily: 'Jost_700Bold' }]}>+ Subir Foto</Text>
+                <Text style={[t.small, { color: c.onGold, fontFamily: fuentes.negrita }]}>+ Subir Foto</Text>
               </Pressable>
             ) : null}
           </View>
@@ -1582,14 +1583,14 @@ export default function YoScreen() {
                 {profileAvatar ? (
                   <Image source={{ uri: profileAvatar }} style={styles.avatarImageLarge} accessibilityLabel="Foto de perfil" />
                 ) : (
-                  <Text style={{ color: c.goldInk, fontSize: 24, fontFamily: 'Jost_700Bold' }}>{profileInitials}</Text>
+                  <Text style={{ color: c.goldInk, fontSize: 24, fontFamily: fuentes.negrita }}>{profileInitials}</Text>
                 )}
               </View>
               <View style={[styles.insigniaCamara, { backgroundColor: c.gold, borderColor: c.bg }]}>
                 <Icon name="camera" size={TAMANO_ICONO.chico} color={c.onGold} />
               </View>
             </View>
-            <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_500Medium', fontSize: 15 }]}>
+            <Text style={[t.small, { color: c.goldInk, fontFamily: fuentes.media, fontSize: 15 }]}>
               {subiendoAvatar ? 'Subiendo…' : 'Cambiar foto'}
             </Text>
           </Presionable>
@@ -1871,10 +1872,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   /** El nombre de un campo, en tipo oración (eran versales doradas con dos puntos: «NOMBRE COMPLETO:»). */
-  rotuloCampo: { fontFamily: 'Jost_500Medium', fontSize: 15, lineHeight: 20 },
+  rotuloCampo: { fontFamily: fuentes.media, fontSize: 15, lineHeight: 20 },
   avatarImage: { width: '100%', height: '100%', borderRadius: 22 },
   avatarImageLarge: { width: '100%', height: '100%', borderRadius: 35 },
-  avatarInitials: { fontSize: 15, fontFamily: 'Jost_700Bold' },
+  avatarInitials: { fontSize: 15, fontFamily: fuentes.negrita },
   /* Era una tarjeta con borde dorado de 1.5 que contenía otro disco con borde: dos rectángulos
      para presentar a una persona. Ahora es una fila de encabezado sobre el fondo de la pantalla,
      igual que la barra de estado de Hoy. */
@@ -1885,7 +1886,7 @@ const styles = StyleSheet.create({
   statBloque: { flex: 1 },
   /* Rótulo de bloque en tipo oración: 13 px en negrita y sin espaciar, el de «Coherencia» y «Racha»
      de Hoy (2026-10-05). Reemplaza las versales de `t.micro` con su `letterSpacing: 1.1`. */
-  rotulo: { fontFamily: 'Jost_700Bold', letterSpacing: 0 },
+  rotulo: { fontFamily: fuentes.negrita, letterSpacing: 0 },
   statCifra: { flexDirection: 'row', alignItems: 'baseline', gap: 2, marginTop: 6 },
   statSeparador: { width: 1, alignSelf: 'stretch' },
   /* Una barra de 6 px de alto no necesita contorno; el contraste lo da el color del riel. */

@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useState, useMemo, useRef } from 'react';
 import {
   View,
@@ -155,7 +156,7 @@ function SleepQualitySlider({
         <Text
           style={[
             t.screenTitle,
-            { color: c.textStrong, fontSize: 20, fontFamily: 'Jost_700Bold', width: 28, textAlign: 'right' },
+            { color: c.textStrong, fontSize: 20, fontFamily: fuentes.negrita, width: 28, textAlign: 'right' },
           ]}
         >
           {currentVal}
@@ -195,11 +196,11 @@ export function PasoDescanso({ data, onChange }: PasoSaludProps) {
       {/* Campo 1: Horas promedio de sueño */}
       <View style={styles.fieldBlock}>
         <View style={styles.labelRow}>
-          <Text style={[t.body, { color: c.textStrong, fontSize: 15, fontFamily: 'Jost_500Medium' }]}>
+          <Text style={[t.body, { color: c.textStrong, fontSize: 15, fontFamily: fuentes.media }]}>
             Horas promedio de sueño
           </Text>
           {isValidHoras && (
-            <Text style={{ color: c.success, fontSize: 14, fontFamily: 'Jost_700Bold' }}>✓</Text>
+            <Text style={{ color: c.success, fontSize: 14, fontFamily: fuentes.negrita }}>✓</Text>
           )}
         </View>
 
@@ -222,7 +223,7 @@ export function PasoDescanso({ data, onChange }: PasoSaludProps) {
             keyboardType="decimal-pad"
             returnKeyType="done"
             maxLength={4}
-            style={[styles.textInput, { color: c.textStrong, fontFamily: 'Jost_400Regular' }]}
+            style={[styles.textInput, { color: c.textStrong, fontFamily: fuentes.regular }]}
           />
         </View>
         <Text style={[t.micro, { color: c.textSoft, fontSize: 12 }]}>Entre 0 y 24.</Text>
@@ -231,7 +232,7 @@ export function PasoDescanso({ data, onChange }: PasoSaludProps) {
       {/* Campo 2: Calidad de tu sueño (Opcional) */}
       <View style={styles.fieldBlock}>
         <View style={styles.labelRow}>
-          <Text style={[t.body, { color: c.textStrong, fontSize: 15, fontFamily: 'Jost_500Medium' }]}>
+          <Text style={[t.body, { color: c.textStrong, fontSize: 15, fontFamily: fuentes.media }]}>
             Calidad de tu sueño
           </Text>
           <Text style={[t.micro, { color: c.tabInactive, fontSize: 12 }]}>Opcional</Text>
@@ -283,7 +284,7 @@ export function PasoMedicacion({ data, onChange }: PasoSaludProps) {
       {/* Campo 4: Especifica tu medicación (SOLO VISIBLE CUANDO ES "SÍ") */}
       {data.tomaMedicacionRegular === true && (
         <View style={styles.fieldBlock}>
-          <Text style={[t.body, { color: c.textStrong, fontSize: 15, fontFamily: 'Jost_500Medium' }]}>
+          <Text style={[t.body, { color: c.textStrong, fontSize: 15, fontFamily: fuentes.media }]}>
             Especifica tu medicación y motivo de la toma
           </Text>
 
@@ -302,7 +303,7 @@ export function PasoMedicacion({ data, onChange }: PasoSaludProps) {
               autoCapitalize="sentences"
               multiline
               numberOfLines={4}
-              style={[styles.textareaInput, { color: c.textStrong, fontFamily: 'Jost_400Regular' }]}
+              style={[styles.textareaInput, { color: c.textStrong, fontFamily: fuentes.regular }]}
             />
           </View>
           <Text style={[t.micro, { color: c.textSoft, fontSize: 12 }]}>

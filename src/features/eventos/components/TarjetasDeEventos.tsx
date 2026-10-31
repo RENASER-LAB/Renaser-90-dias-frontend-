@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -131,19 +132,19 @@ function TarjetaComoCurso({
 }
 
 const estilos = StyleSheet.create({
-  mes: { fontFamily: 'Fraunces_600SemiBold', fontSize: 24, letterSpacing: -0.4, lineHeight: 29 },
+  mes: { fontFamily: fuentes.display, fontSize: 24, letterSpacing: -0.4, lineHeight: 29 },
   tarjeta: { borderWidth: 1, overflow: 'hidden' },
   // Mismo alto y padding que `courseCoverHeader` de Classroom.
   portada: { height: 185, padding: 14, justifyContent: 'space-between' },
   rotulo: { alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 6 },
-  rotuloTexto: { fontFamily: 'Jost_700Bold', fontSize: 14, letterSpacing: 1.4 },
+  rotuloTexto: { fontFamily: fuentes.negrita, fontSize: 14, letterSpacing: 1.4 },
   titulo: { color: '#FFFFFF', fontSize: 24, lineHeight: 29 },
-  dia: { fontFamily: 'Jost_500Medium', fontSize: 20, lineHeight: 26 },
-  hora: { fontFamily: 'Jost_700Bold', fontSize: 26, lineHeight: 32, fontVariant: ['tabular-nums'] },
-  duracion: { fontFamily: 'Jost_400Regular', fontSize: LETRA.cuerpo },
+  dia: { fontFamily: fuentes.media, fontSize: 20, lineHeight: 26 },
+  hora: { fontFamily: fuentes.negrita, fontSize: 26, lineHeight: 32, fontVariant: ['tabular-nums'] },
+  duracion: { fontFamily: fuentes.regular, fontSize: LETRA.cuerpo },
   donde: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  dondeTexto: { flex: 1, fontFamily: 'Jost_400Regular', fontSize: LETRA.cuerpo + 1, lineHeight: 23 },
+  dondeTexto: { flex: 1, fontFamily: fuentes.regular, fontSize: LETRA.cuerpo + 1, lineHeight: 23 },
   // Mismo que `exploreBtn` de Classroom, con 52 px de alto en vez de 48.
   boton: { borderWidth: 1, minHeight: 52, alignItems: 'center', justifyContent: 'center', marginTop: 4 },
-  botonTexto: { fontFamily: 'Jost_700Bold', fontSize: LETRA.cuerpo, letterSpacing: 0.5 },
+  botonTexto: { fontFamily: fuentes.negrita, fontSize: LETRA.cuerpo, letterSpacing: 0.5 },
 });

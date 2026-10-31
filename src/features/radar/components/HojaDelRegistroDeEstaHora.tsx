@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
@@ -73,7 +74,7 @@ export function HojaDelRegistroDeEstaHora({
             </View>
             {PREGUNTAS_RADAR.map(pregunta => (
               <View key={pregunta.campo} style={{ gap: 2 }}>
-                <Text style={[t.small, estilos.texto, { color: c.textSoft, fontFamily: 'Jost_700Bold' }]}>{pregunta.titulo}</Text>
+                <Text style={[t.small, estilos.texto, { color: c.textSoft, fontFamily: fuentes.negrita }]}>{pregunta.titulo}</Text>
                 <Text style={[t.body, estilos.texto, { color: c.text }]}>{registro[pregunta.campo]?.trim() || '—'}</Text>
               </View>
             ))}

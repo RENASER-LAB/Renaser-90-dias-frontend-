@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
@@ -226,7 +227,7 @@ function Mitad({
         {onPress ? <Icon name="chevron" size={TAMANO_ICONO.chico} color={c.chevron} /> : null}
       </View>
       {estado ? (
-        <Text style={[t.small, estilos.texto, estilos.cifras, { color: colorDelEstado, fontFamily: 'Jost_700Bold' }]}>{estado}</Text>
+        <Text style={[t.small, estilos.texto, estilos.cifras, { color: colorDelEstado, fontFamily: fuentes.negrita }]}>{estado}</Text>
       ) : null}
       {titulo ? (
         <Text style={[t.cardTitle, estilos.texto, { color: c.text, lineHeight: 21 }]} numberOfLines={3}>

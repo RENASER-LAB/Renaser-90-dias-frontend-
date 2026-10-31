@@ -1,3 +1,4 @@
+import { fuentes } from '../../theme/fuentes';
 import { describe, expect, it } from '@jest/globals';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -60,7 +61,7 @@ describe('Yo sin versales espaciadas', () => {
     for (const rotulo of ['Tu evolución', 'Coherencia', 'Puntos de liga', 'Racha']) {
       expect(yo).toMatch(new RegExp(`<Text style=\\{\\[t\\.small, styles\\.rotulo, [^\\]]*\\]\\}>${rotulo}</Text>`));
     }
-    expect(yo).toMatch(/rotulo: \{ fontFamily: 'Jost_700Bold', letterSpacing: 0 \}/);
+    expect(yo).toMatch(/rotulo: \{ fontFamily: fuentes.negrita, letterSpacing: 0 \}/);
     // Cambió el 2026-10-06 (tarjeta de fase «B», D-258): el día del programa y el rótulo de la fase ya no son
     // texto suelto de Yo. Los dice `TarjetaDeFase` («FASE N DE 4», «Día N de 90 en total») con la misma fase
     // y el mismo día del resumen, que Yo le pasa por props.

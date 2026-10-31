@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -72,7 +73,7 @@ export function ListaDeOtroDia({
       {nota ? <Text style={[t.small, estilos.nota, { color: c.textSoft }]}>{nota}</Text> : null}
       {accion ? (
         <Presionable onPress={accion.onPress} accessibilityRole="button" style={estilos.accion}>
-          <Text style={[t.body, { color: c.goldInk, fontFamily: 'Jost_500Medium' }]}>{accion.etiqueta}</Text>
+          <Text style={[t.body, { color: c.goldInk, fontFamily: fuentes.media }]}>{accion.etiqueta}</Text>
         </Presionable>
       ) : null}
     </View>

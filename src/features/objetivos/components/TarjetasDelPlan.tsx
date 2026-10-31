@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -104,7 +105,7 @@ export function TarjetaDelObjetivo({
           style={estilos.esteMes}
         >
           <Text style={[t.small, estilos.cifras, { color: c.textSoft, fontSize: 15, flexShrink: 1 }]}>
-            Este mes: <Text style={{ color: c.goldInk, fontFamily: 'Jost_700Bold' }}>{cifraDelMes}</Text>
+            Este mes: <Text style={{ color: c.goldInk, fontFamily: fuentes.negrita }}>{cifraDelMes}</Text>
           </Text>
           <Icon name="pencil" size={TAMANO_ICONO.chico} color={c.textSoft} />
         </Presionable>
@@ -214,7 +215,7 @@ export function TarjetaEstaSemana({
             <Text style={[t.small, estilos.revisada, { color: c.success }]}>Revisada · te pusiste {revisada} de 10</Text>
           ) : (
             <Presionable onPress={alRevisar} accessibilityRole="button" style={estilos.enlace}>
-              <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 15 }]}>Cerrar este objetivo con mi revisión</Text>
+              <Text style={[t.small, { color: c.goldInk, fontFamily: fuentes.negrita, fontSize: 15 }]}>Cerrar este objetivo con mi revisión</Text>
             </Presionable>
           )}
         </>
@@ -232,7 +233,7 @@ export function TarjetaEstaSemana({
             <>
               <Text style={[t.body, { color: c.textSoft, marginTop: 4 }]}>Hoy se arma. Las acciones del lunes salen de su objetivo.</Text>
               <Presionable onPress={alArmarLaQueEmpieza} accessibilityRole="button" style={estilos.enlace}>
-                <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 15 }]}>Armar la semana que empieza</Text>
+                <Text style={[t.small, { color: c.goldInk, fontFamily: fuentes.negrita, fontSize: 15 }]}>Armar la semana que empieza</Text>
               </Presionable>
             </>
           )}
@@ -325,7 +326,7 @@ export function AccionesQueMuevenLaMeta({
           })}
           {puedeAgendar ? (
             <Presionable onPress={alAgendar} accessibilityRole="button" style={estilos.enlace}>
-              <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 15 }]}>Agendar otro día</Text>
+              <Text style={[t.small, { color: c.goldInk, fontFamily: fuentes.negrita, fontSize: 15 }]}>Agendar otro día</Text>
             </Presionable>
           ) : null}
         </View>
@@ -425,24 +426,24 @@ const estilos = StyleSheet.create({
   tarjeta: { borderWidth: 1, borderRadius: 16, padding: 17 },
   filaAncha: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   fila: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 28 },
-  rotulo: { fontFamily: 'Jost_500Medium', fontSize: 15, lineHeight: 21, letterSpacing: 0 },
+  rotulo: { fontFamily: fuentes.media, fontSize: 15, lineHeight: 21, letterSpacing: 0 },
   suave: { marginTop: 8 },
   cifras: { fontVariant: ['tabular-nums'] },
-  objetivo: { fontSize: 18, lineHeight: 25, fontFamily: 'Jost_700Bold', marginTop: 8 },
+  objetivo: { fontSize: 18, lineHeight: 25, fontFamily: fuentes.negrita, marginTop: 8 },
   filaDeCifras: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 8 },
   linea: { flex: 1, fontSize: 15 },
-  porcentaje: { fontSize: 18, fontFamily: 'Jost_700Bold' },
+  porcentaje: { fontSize: 18, fontFamily: fuentes.negrita },
   barra: { height: 8, borderRadius: 4, overflow: 'hidden', marginTop: 8 },
   relleno: { height: '100%', borderRadius: 4 },
   puntos: { width: 48, height: 48, marginRight: -12, marginVertical: -10, alignItems: 'center', justifyContent: 'center' },
   esteMes: { minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 4 },
   bloque: { gap: 12, marginTop: 8 },
   enlace: { minHeight: 48, justifyContent: 'center', alignSelf: 'flex-start' },
-  revisada: { marginTop: 8, fontFamily: 'Jost_700Bold', fontSize: 15 },
+  revisada: { marginTop: 8, fontFamily: fuentes.negrita, fontSize: 15 },
   subtarjeta: { borderWidth: 1, borderRadius: 12, padding: 14, marginTop: 12 },
   lista: { gap: 10, marginTop: 10 },
   accion: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderRadius: 12, padding: 14, minHeight: 60 },
-  tituloDeLaAccion: { fontSize: 16, lineHeight: 22, fontFamily: 'Jost_500Medium' },
+  tituloDeLaAccion: { fontSize: 16, lineHeight: 22, fontFamily: fuentes.media },
   marca: { width: 6, height: 34, borderRadius: 3 },
   medallon: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   cuerpoDeLaHoja: { gap: 14, paddingHorizontal: 20, paddingTop: 4, paddingBottom: 20 },

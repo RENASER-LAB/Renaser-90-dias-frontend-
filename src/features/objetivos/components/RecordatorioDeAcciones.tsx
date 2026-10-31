@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -482,12 +483,12 @@ export function RecordatorioDeAcciones({
 }
 
 const estilos = StyleSheet.create({
-  cuerpo: { fontFamily: 'Jost_400Regular', fontSize: 16, lineHeight: 23 },
-  nombre: { fontFamily: 'Jost_500Medium', fontSize: 17, lineHeight: 22 },
-  etiqueta: { fontFamily: 'Jost_500Medium', fontSize: 16, lineHeight: 22 },
-  ayuda: { fontFamily: 'Jost_400Regular', fontSize: 16, lineHeight: 22, marginTop: 6 },
+  cuerpo: { fontFamily: fuentes.regular, fontSize: 16, lineHeight: 23 },
+  nombre: { fontFamily: fuentes.media, fontSize: 17, lineHeight: 22 },
+  etiqueta: { fontFamily: fuentes.media, fontSize: 16, lineHeight: 22 },
+  ayuda: { fontFamily: fuentes.regular, fontSize: 16, lineHeight: 22, marginTop: 6 },
   // «Estos días tienen avisos distintos»: a 15 px y con el color del texto, nunca el gris tenue.
-  lineaDeAvisosDistintos: { fontFamily: 'Jost_500Medium', fontSize: 15, lineHeight: 21 },
+  lineaDeAvisosDistintos: { fontFamily: fuentes.media, fontSize: 15, lineHeight: 21 },
   caja: { borderWidth: 1, borderRadius: 16, paddingHorizontal: 14 },
   fila: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 72, paddingVertical: 12 },
   filaPastillas: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
@@ -496,5 +497,5 @@ const estilos = StyleSheet.create({
   rotuloDeLosDias: { flexShrink: 1, minHeight: 24, justifyContent: 'center' },
   enlaceTodos: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44, paddingHorizontal: 8 },
   enlaceQuitar: { minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start' },
-  textoDelEnlace: { fontFamily: 'Jost_500Medium', fontSize: 16, lineHeight: 22 },
+  textoDelEnlace: { fontFamily: fuentes.media, fontSize: 16, lineHeight: 22 },
 });

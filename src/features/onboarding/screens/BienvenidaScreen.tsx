@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -99,10 +100,10 @@ export function BienvenidaScreen({ onContinue }: BienvenidaScreenProps) {
                 <View style={[styles.stageIconWrap, { borderColor: c.gold }]}>
                   <Icon name={stage.icon} size={16} color={c.goldInk} />
                 </View>
-                <Text style={[t.micro, { color: c.goldInk, letterSpacing: 1.2, marginTop: 8, fontSize: 10.5, fontFamily: 'Jost_700Bold' }]}>
+                <Text style={[t.micro, { color: c.goldInk, letterSpacing: 1.2, marginTop: 8, fontSize: 10.5, fontFamily: fuentes.negrita }]}>
                   {stage.day}
                 </Text>
-                <Text style={[t.body, { color: c.textStrong, fontFamily: 'Jost_700Bold', marginTop: 2, fontSize: 13.5 }]}>
+                <Text style={[t.body, { color: c.textStrong, fontFamily: fuentes.negrita, marginTop: 2, fontSize: 13.5 }]}>
                   {stage.title}
                 </Text>
                 <Text style={[t.small, { color: c.textSoft, fontSize: 10.5, textAlign: 'center', marginTop: 2 }]}>

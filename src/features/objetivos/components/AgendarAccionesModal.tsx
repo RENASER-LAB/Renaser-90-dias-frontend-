@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
@@ -293,7 +294,7 @@ export function AgendarAccionesModal({
           <View style={{ gap: 4 }}>
             <GoldButton label="Listo" onPress={confirmarHora} textStyle={TEXTO_DE_BOTON} />
             <Presionable onPress={() => setEligiendoHoraDe(null)} accessibilityRole="button" style={estilos.enlacePie}>
-              <Text style={[t.small, { color: c.textSoft, fontFamily: 'Jost_500Medium', fontSize: 14 }]}>Cancelar</Text>
+              <Text style={[t.small, { color: c.textSoft, fontFamily: fuentes.media, fontSize: 14 }]}>Cancelar</Text>
             </Presionable>
           </View>
         ) : (
@@ -399,7 +400,7 @@ export function AgendarAccionesModal({
                         onPress={() => abrirRueda(clave, hora)}
                         style={[estilos.botonHora, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
                       >
-                        <Text style={[t.body, { color: hora ? c.goldInk : c.textSoft, fontSize: 15, fontFamily: 'Jost_700Bold' }]}>
+                        <Text style={[t.body, { color: hora ? c.goldInk : c.textSoft, fontSize: 15, fontFamily: fuentes.negrita }]}>
                           {hora ? `A las ${hora}` : 'Ponerle hora (opcional)'}
                         </Text>
                       </Pressable>
@@ -430,7 +431,7 @@ export function AgendarAccionesModal({
                         ))}
                         {pasos.length < MAXIMO_PASOS && (
                           <Pressable onPress={() => agregarPaso(clave)} hitSlop={10}>
-                            <Text style={[t.small, { color: c.goldInk, fontSize: 14, fontFamily: 'Jost_700Bold' }]}>
+                            <Text style={[t.small, { color: c.goldInk, fontSize: 14, fontFamily: fuentes.negrita }]}>
                               {pasos.length === 0 ? '+ Desglosarla en pasos (opcional)' : '+ Otro paso'}
                             </Text>
                           </Pressable>
@@ -461,7 +462,7 @@ export function AgendarAccionesModal({
                     ]}
                   />
                   <Pressable onPress={() => agregarPropia(eje)} hitSlop={10}>
-                    <Text style={[t.small, { color: c.goldInk, fontSize: 15, fontFamily: 'Jost_700Bold' }]}>
+                    <Text style={[t.small, { color: c.goldInk, fontSize: 15, fontFamily: fuentes.negrita }]}>
                       Agregar
                     </Text>
                   </Pressable>
@@ -481,7 +482,7 @@ const TEXTO_DE_BOTON = { fontSize: 15, letterSpacing: 0 } as const;
 
 const estilos = StyleSheet.create({
   cuerpo: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12, gap: 18 },
-  etiqueta: { fontFamily: 'Jost_500Medium', fontSize: 14, letterSpacing: 0 },
+  etiqueta: { fontFamily: fuentes.media, fontSize: 14, letterSpacing: 0 },
   enlacePie: { minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   opcion: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderRadius: 12, padding: 14, minHeight: 56 },
   casilla: { width: 26, height: 26, borderRadius: 6, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },

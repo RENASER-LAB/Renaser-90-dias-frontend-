@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -246,7 +247,7 @@ export function FichaAprendizScreen({
         {/* D-243: cerró su cuenta y se borra en esa fecha. Se puede recuperar antes. */}
         {avisoDeCierre ? (
           <View style={[estilos.tarjeta, { backgroundColor: c.cardBg, borderColor: c.danger, gap: 10 }]}>
-            <Text style={[t.body, { color: c.danger, fontSize: 16, fontFamily: 'Jost_500Medium' }]}>{avisoDeCierre}</Text>
+            <Text style={[t.body, { color: c.danger, fontSize: 16, fontFamily: fuentes.media }]}>{avisoDeCierre}</Text>
             <BotonSecundario etiqueta="Recuperar cuenta" onPress={() => void recuperarCuenta()} cargando={recuperando} />
           </View>
         ) : null}
@@ -374,7 +375,7 @@ export function FichaAprendizScreen({
 
             {semana && !sinDatos && semana.dias.some(d => d.obligaciones.length > 0) ? (
               <View style={{ gap: 8 }}>
-                <Text style={[t.body, { color: c.textStrong, fontSize: 16, fontFamily: 'Jost_500Medium' }]}>
+                <Text style={[t.body, { color: c.textStrong, fontSize: 16, fontFamily: fuentes.media }]}>
                   Elige un día
                 </Text>
                 <View style={estilos.dias}>
@@ -409,7 +410,7 @@ export function FichaAprendizScreen({
 
             {detalle && detalle.obligaciones.length > 0 ? (
               <View style={{ gap: 10 }}>
-                <Text style={[t.body, { color: c.textStrong, fontSize: 16, fontFamily: 'Jost_500Medium' }]}>
+                <Text style={[t.body, { color: c.textStrong, fontSize: 16, fontFamily: fuentes.media }]}>
                   Detalle del {fechaCorta(detalle.fecha)}
                 </Text>
                 {detalle.obligaciones.map(o => (

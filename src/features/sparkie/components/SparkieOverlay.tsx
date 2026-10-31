@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -143,7 +144,7 @@ export function SparkieOverlay() {
           ]}
         >
           <Icon name="spark" size={18} color={c.goldInk} />
-          <Text style={[t.micro, { color: c.textStrong, fontSize: 11.5, fontFamily: 'Jost_700Bold' }]}>
+          <Text style={[t.micro, { color: c.textStrong, fontSize: 11.5, fontFamily: fuentes.negrita }]}>
             {NOMBRE_ASISTENTE.toUpperCase()}
           </Text>
         </Pressable>
@@ -188,7 +189,7 @@ export function SparkieOverlay() {
                 <View style={[styles.medalla, { borderColor: c.gold, backgroundColor: c.cardBg }]}>
                   <Icon name="spark" size={22} color={c.goldInk} />
                 </View>
-                <Text style={[t.micro, { color: c.micro, fontSize: 11, letterSpacing: 1.5, fontFamily: 'Jost_700Bold' }]}>
+                <Text style={[t.micro, { color: c.micro, fontSize: 11, letterSpacing: 1.5, fontFamily: fuentes.negrita }]}>
                   {NOMBRE_ASISTENTE.toUpperCase()}
                 </Text>
               </View>
@@ -201,7 +202,7 @@ export function SparkieOverlay() {
                   {saludo.parrafos.map((parrafo, indice) => (
                     <Text key={parrafo} style={[t.body, styles.parrafo, {
                       color: indice === 0 ? c.text : c.textSoft,
-                      fontFamily: indice === 0 ? 'Jost_500Medium' : 'Jost_400Regular',
+                      fontFamily: indice === 0 ? fuentes.media : fuentes.regular,
                     }]}>
                       {parrafo}
                     </Text>
@@ -209,7 +210,7 @@ export function SparkieOverlay() {
 
                   <View style={[styles.separador, { backgroundColor: c.gold }]} />
 
-                  <Text style={[t.sectionTitle, { color: c.goldInk, fontSize: 12.5, textAlign: 'center', fontFamily: 'Jost_700Bold' }]}>
+                  <Text style={[t.sectionTitle, { color: c.goldInk, fontSize: 12.5, textAlign: 'center', fontFamily: fuentes.negrita }]}>
                     {GUIA_PRIMER_POST.titulo.toUpperCase()}
                   </Text>
                   {GUIA_PRIMER_POST.parrafos.map(parrafo => (

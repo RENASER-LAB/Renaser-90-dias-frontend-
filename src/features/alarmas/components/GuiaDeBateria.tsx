@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useMemo } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 
@@ -46,6 +47,6 @@ export function GuiaDeBateria() {
 
 const estilos = StyleSheet.create({
   caja: { borderWidth: 1, borderRadius: 16, padding: 14, gap: 8 },
-  titulo: { fontFamily: 'Jost_700Bold', fontSize: 19, lineHeight: 25 },
-  cuerpo: { fontFamily: 'Jost_400Regular', fontSize: 17, lineHeight: 24 },
+  titulo: { fontFamily: fuentes.negrita, fontSize: 19, lineHeight: 25 },
+  cuerpo: { fontFamily: fuentes.regular, fontSize: 17, lineHeight: 24 },
 });

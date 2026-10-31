@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native';
 
@@ -75,18 +76,18 @@ export function EtiquetaAsistencia({ oc }: { oc: Ocurrencia }) {
 }
 
 const estilos = StyleSheet.create({
-  parrafo: { fontFamily: 'Jost_400Regular', fontSize: LETRA.cuerpo, lineHeight: 23 },
-  rotulo: { fontFamily: 'Jost_500Medium', fontSize: 17, lineHeight: 22 },
+  parrafo: { fontFamily: fuentes.regular, fontSize: LETRA.cuerpo, lineHeight: 23 },
+  rotulo: { fontFamily: fuentes.media, fontSize: 17, lineHeight: 22 },
   volver: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 48, alignSelf: 'flex-start' },
-  volverTexto: { fontFamily: 'Jost_500Medium', fontSize: LETRA.cuerpo },
+  volverTexto: { fontFamily: fuentes.media, fontSize: LETRA.cuerpo },
   entrada: {
     minHeight: 52,
     borderWidth: 1.5,
     borderRadius: 14,
     paddingHorizontal: 14,
-    fontFamily: 'Jost_400Regular',
+    fontFamily: fuentes.regular,
     fontSize: 17,
   },
   etiqueta: { alignSelf: 'flex-start', borderRadius: 999, paddingHorizontal: 12, paddingVertical: 4, marginTop: 2 },
-  etiquetaTexto: { fontFamily: 'Jost_700Bold', fontSize: 16 },
+  etiquetaTexto: { fontFamily: fuentes.negrita, fontSize: 16 },
 });

@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useEffect, useRef } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -75,7 +76,7 @@ export function SemaforoGruposScreen({
           style={estilos.volver}
         >
           <Icon name="arrowLeft" size={15} color={c.goldInk} />
-          <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1 }]}>VOLVER</Text>
+          <Text style={[t.micro, { color: c.goldInk, fontFamily: fuentes.negrita, letterSpacing: 1 }]}>VOLVER</Text>
         </Pressable>
         <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 18, flex: 1 }]} numberOfLines={1}>
           Semáforo por grupos

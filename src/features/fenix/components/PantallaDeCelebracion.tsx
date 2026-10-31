@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, BackHandler, Image as ImagenRN, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
@@ -106,7 +107,7 @@ export function PantallaDeCelebracion({
           <Text style={[t.screenTitle, estilos.titulo, { color: c.textStrong }]}>{textos.titulo}</Text>
           {textos.bajada ? <Text style={[t.body, estilos.centrado, { color: c.textSoft, fontSize: 17 }]}>{textos.bajada}</Text> : null}
           {textos.lineas.map(linea => (
-            <Text key={linea} style={[t.body, estilos.centrado, { color: c.goldInk, fontFamily: 'Jost_500Medium' }]}>
+            <Text key={linea} style={[t.body, estilos.centrado, { color: c.goldInk, fontFamily: fuentes.media }]}>
               {linea}
             </Text>
           ))}
@@ -235,11 +236,11 @@ const estilos = StyleSheet.create({
   halo: { position: 'absolute', width: 260, height: 260, borderRadius: 130 },
   fila: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center' },
   textos: { alignSelf: 'stretch', alignItems: 'stretch', gap: 8 },
-  numeroGrande: { fontFamily: 'Fraunces_700Bold', fontSize: 88, lineHeight: 96, letterSpacing: -2, textAlign: 'center' },
+  numeroGrande: { fontFamily: fuentes.display, fontSize: 88, lineHeight: 96, letterSpacing: -2, textAlign: 'center' },
   titulo: { textAlign: 'center', fontSize: 30, lineHeight: 36 },
   centrado: { textAlign: 'center' },
   contadores: { flexDirection: 'row', justifyContent: 'center', gap: 12, marginTop: 10 },
   contador: { alignItems: 'center', minWidth: 112, paddingVertical: 12, paddingHorizontal: 16, borderRadius: 18, borderWidth: 1 },
-  cifra: { fontFamily: 'Jost_700Bold', fontSize: 28, lineHeight: 34, textAlign: 'center' },
+  cifra: { fontFamily: fuentes.negrita, fontSize: 28, lineHeight: 34, textAlign: 'center' },
   boton: { alignSelf: 'stretch', maxWidth: 420, marginTop: 8 },
 });

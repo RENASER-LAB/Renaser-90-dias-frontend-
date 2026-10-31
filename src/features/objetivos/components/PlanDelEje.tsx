@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -211,7 +212,7 @@ function estaArmada(semanal: ReturnType<typeof useRocasSemanales>): boolean {
 const estilos = StyleSheet.create({
   columna: { gap: 14 },
   recordatorios: { marginTop: 16, gap: 8 },
-  rotulo: { fontFamily: 'Jost_500Medium', fontSize: 15, lineHeight: 21, letterSpacing: 0 },
+  rotulo: { fontFamily: fuentes.media, fontSize: 15, lineHeight: 21, letterSpacing: 0 },
   /** El botón de siempre trae versalitas espaciadas de 11 px: acá es una frase en tipo oración de 16. */
   textoDelBoton: { fontSize: 16, letterSpacing: 0 },
 });

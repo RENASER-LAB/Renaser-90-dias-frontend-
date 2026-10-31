@@ -1,3 +1,4 @@
+import { fuentes } from '../theme/fuentes';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
@@ -629,7 +630,7 @@ export default function HoyScreen() {
         <View style={styles.programStatusBar}>
           <View style={{ flex: 1 }}>
             <Text
-              style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}
+              style={[t.small, { color: c.goldInk, fontFamily: fuentes.negrita }]}
               accessibilityLabel={`Fase del programa: ${faseNombre ?? 'sin datos'}`}
             >
               {faseNombre ?? '—'}
@@ -642,7 +643,7 @@ export default function HoyScreen() {
           {/* La cifra sola, como en Ranking (rediseño de Hoy, 2026-10-05). Llevaba un rayo, que en
               Plan es «Tu semana», dentro de una píldora en versales. */}
           <Text
-            style={[t.small, styles.cifras, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 14 }]}
+            style={[t.small, styles.cifras, { color: c.goldInk, fontFamily: fuentes.negrita, fontSize: 14 }]}
             accessibilityLabel={puntosLiga === null ? 'Puntos de la liga: sin datos' : `${puntosLiga} puntos de la liga`}
           >
             {puntosLiga ?? '—'} pts
@@ -708,7 +709,7 @@ export default function HoyScreen() {
               dato se le pregunta ahora al propio acompañante ("¿cuál es mi foco de hoy?"), que lo
               lee con consultar_rocas. Tocar el orbe: escucha, piensa y responde en voz alta. */}
           <View style={styles.heroCenter}>
-            <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_500Medium', textAlign: 'center' }]}>
+            <Text style={[t.small, { color: c.goldInk, fontFamily: fuentes.media, textAlign: 'center' }]}>
               Tu acompañante
             </Text>
             <View style={{ marginTop: isShort ? 10 : 14 }}>
@@ -753,7 +754,7 @@ export default function HoyScreen() {
               hitSlop={8}
               style={({ pressed }) => [styles.definirRocaEnlace, { opacity: pressed ? 0.6 : 1 }]}
             >
-              <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 14 }]}>Ver en el chat</Text>
+              <Text style={[t.small, { color: c.goldInk, fontFamily: fuentes.negrita, fontSize: 14 }]}>Ver en el chat</Text>
               <Icon name="chevron" size={TAMANO_ICONO.chico} color={c.goldInk} />
             </Pressable>
           </View>
@@ -912,7 +913,7 @@ export default function HoyScreen() {
                       <View style={styles.rotuloDeLaFila}>
                         <MicroLabel>Última evidencia del muro</MicroLabel>
                       </View>
-                      <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
+                      <Text style={[t.small, { color: c.goldInk, fontFamily: fuentes.negrita }]}>
                         {tiempoRelativo(ultimaPublicacion.createdAt)}
                       </Text>
                     </View>
@@ -946,7 +947,7 @@ export default function HoyScreen() {
                         {evidenciasUltimaPublicacion.length > 0 && (
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 }}>
                             <Icon name="image" size={TAMANO_ICONO.chico} color={c.goldInk} />
-                            <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_500Medium' }]}>
+                            <Text style={[t.small, { color: c.goldInk, fontFamily: fuentes.media }]}>
                               {evidenciasUltimaPublicacion.length}
                               {evidenciasUltimaPublicacion.length === 1 ? ' foto' : ' fotos'}
                             </Text>
@@ -994,7 +995,7 @@ export default function HoyScreen() {
                     </Text>
                     {/* «Hoy · 20:00» o «mar 6 oct · 20:00» (rediseño de Hoy, 2026-10-05): decía
                         «5/10/26, 20:00», que se lee mayo u octubre según quién. */}
-                    <Text style={[t.small, styles.cifras, { color: c.goldInk, fontFamily: 'Jost_700Bold', marginTop: 3 }]}>
+                    <Text style={[t.small, styles.cifras, { color: c.goldInk, fontFamily: fuentes.negrita, marginTop: 3 }]}>
                       {cuandoEsElEvento(resumen.proximoEvento.iniciaEn)}
                     </Text>
                   </View>

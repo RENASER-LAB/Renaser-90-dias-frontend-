@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useState } from 'react';
 import { Platform, StyleSheet, Text, View, type AccessibilityActionEvent, type LayoutChangeEvent } from 'react-native';
 import Animated, {
@@ -213,9 +214,9 @@ const estilos = StyleSheet.create({
   pagina: { borderWidth: 1, borderRadius: space.radius, padding: space.cardPad, gap: 13 },
   cabecera: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   disco: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
-  rotulo: { fontFamily: 'Jost_500Medium', fontSize: 14 },
+  rotulo: { fontFamily: fuentes.media, fontSize: 14 },
   tituloFase: { fontSize: 19, lineHeight: 25 },
-  frase: { fontFamily: 'Jost_400Regular', fontSize: 15, lineHeight: 22, fontStyle: 'italic' },
+  frase: { fontFamily: fuentes.regular, fontSize: 15, lineHeight: 22, fontStyle: 'italic' },
   punto: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   vineta: { width: 6, height: 6, borderRadius: 3, marginTop: 8 },
   puntos: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, minHeight: 24 },
@@ -231,5 +232,5 @@ const estilos = StyleSheet.create({
     gap: 8,
   },
   // `flexShrink`: en un teléfono angosto, con el botón más corto, el texto baja de línea en vez de salirse.
-  siguienteTexto: { fontFamily: 'Jost_500Medium', fontSize: 16, flexShrink: 1, textAlign: 'center' },
+  siguienteTexto: { fontFamily: fuentes.media, fontSize: 16, flexShrink: 1, textAlign: 'center' },
 });

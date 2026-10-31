@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -105,7 +106,7 @@ export function HabitosProgramaAdminScreen({
           <>
             {roles.length > 0 ? (
               <View style={{ gap: 8 }}>
-                <Text style={[t.body, { color: c.textStrong, fontSize: 16, fontFamily: 'Jost_500Medium' }]}>
+                <Text style={[t.body, { color: c.textStrong, fontSize: 16, fontFamily: fuentes.media }]}>
                   Ver los de
                 </Text>
                 <View style={estilos.chips} accessibilityRole="radiogroup">
@@ -173,14 +174,14 @@ function FilaDeHabito({
         <Icon name={iconoDelHabito(habito.category)} size={20} color={c.gold} />
       </View>
       <View style={{ flex: 1, flexShrink: 1, gap: 2 }}>
-        <Text numberOfLines={2} style={[t.body, { color: c.textStrong, fontSize: 16, fontFamily: 'Jost_500Medium' }]}>
+        <Text numberOfLines={2} style={[t.body, { color: c.textStrong, fontSize: 16, fontFamily: fuentes.media }]}>
           {habito.title}
         </Text>
         <Text numberOfLines={2} style={[t.body, { color: c.textSoft, fontSize: 16 }]}>
           {audiencia}
         </Text>
         {pendiente ? (
-          <Text style={[t.body, { color: c.gold, fontSize: 16, fontFamily: 'Jost_500Medium' }]}>Rige desde mañana</Text>
+          <Text style={[t.body, { color: c.gold, fontSize: 16, fontFamily: fuentes.media }]}>Rige desde mañana</Text>
         ) : null}
       </View>
       <Icon name="chevron" size={16} color={c.chevron} />

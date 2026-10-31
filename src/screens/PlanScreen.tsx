@@ -1,3 +1,4 @@
+import { fuentes } from '../theme/fuentes';
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput } from 'react-native';
 import { Alert } from '../components/Alerta';
@@ -644,7 +645,7 @@ const styles = StyleSheet.create({
   /** El eje elegido, su objetivo y lo de la semana: tarjetas una debajo de otra, con aire entre ellas. */
   pantalla: { gap: 14, paddingTop: 12, paddingBottom: 28 },
   etiquetaDeCampo: {
-    fontFamily: 'Jost_500Medium',
+    fontFamily: fuentes.media,
     fontSize: 14,
   },
   celdaDeCampo: {

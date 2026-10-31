@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
@@ -298,7 +299,7 @@ export function PlanSemanalModal({
         <View style={estilos.pie}>
           {paso > 0 && (
             <Presionable onPress={() => setPaso(p => p - 1)} accessibilityRole="button" style={estilos.botonAtras}>
-              <Text style={[t.body, { color: c.textSoft, fontFamily: 'Jost_500Medium', fontSize: 15 }]}>Atrás</Text>
+              <Text style={[t.body, { color: c.textSoft, fontFamily: fuentes.media, fontSize: 15 }]}>Atrás</Text>
             </Presionable>
           )}
           <View style={{ flex: 1, gap: 4 }}>
@@ -323,7 +324,7 @@ export function PlanSemanalModal({
             )}
             {!esResumen && puedeGuardarYa && (
               <Presionable onPress={() => setPaso(p => p + 1)} accessibilityRole="button" style={estilos.enlaceOpcional}>
-                <Text style={[t.small, { color: c.textSoft, fontFamily: 'Jost_500Medium', fontSize: 14 }]}>
+                <Text style={[t.small, { color: c.textSoft, fontFamily: fuentes.media, fontSize: 14 }]}>
                   {paso + 1 < ejesOrdenados.length ? 'Agregar otro eje (opcional)' : 'Ver el resumen'}
                 </Text>
               </Presionable>
@@ -349,7 +350,7 @@ export function PlanSemanalModal({
                       accessibilityRole="button"
                       style={estilos.enlaceCompletar}
                     >
-                      <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 15 }]}>
+                      <Text style={[t.small, { color: c.goldInk, fontFamily: fuentes.negrita, fontSize: 15 }]}>
                         Le {loQueFalta(b)} · toca para volver
                       </Text>
                     </Presionable>
@@ -409,7 +410,7 @@ export function PlanSemanalModal({
                       <Text
                         style={[
                           t.body,
-                          { color: elegido ? c.onGold : c.textSoft, fontFamily: 'Jost_700Bold', fontSize: 15 },
+                          { color: elegido ? c.onGold : c.textSoft, fontFamily: fuentes.negrita, fontSize: 15 },
                         ]}
                       >
                         {valor}
@@ -431,7 +432,7 @@ const TEXTO_DE_BOTON = { fontSize: 15, letterSpacing: 0 } as const;
 
 const estilos = StyleSheet.create({
   cuerpo: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12, gap: 18 },
-  etiqueta: { fontFamily: 'Jost_500Medium', fontSize: 14, letterSpacing: 0 },
+  etiqueta: { fontFamily: fuentes.media, fontSize: 14, letterSpacing: 0 },
   puntos: { flexDirection: 'row', gap: 6 },
   punto: { flex: 1, height: 4, borderRadius: 2 },
   entrada: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 16, minHeight: 52 },

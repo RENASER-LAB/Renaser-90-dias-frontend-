@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -75,12 +76,12 @@ export function EliminarCuentaAdminScreen({
           gap: 16,
         }}
       >
-        <Text style={[t.body, { color: c.danger, fontSize: 17, fontFamily: 'Jost_500Medium' }]}>
+        <Text style={[t.body, { color: c.danger, fontSize: 17, fontFamily: fuentes.media }]}>
           Se borra ahora y para siempre. No se puede deshacer.
         </Text>
         <View style={{ gap: 6 }}>
           <Text style={[t.body, { color: c.textStrong, fontSize: 16 }]}>
-            Escribe su correo para confirmar: <Text style={{ fontFamily: 'Jost_700Bold' }}>{correo}</Text>
+            Escribe su correo para confirmar: <Text style={{ fontFamily: fuentes.negrita }}>{correo}</Text>
           </Text>
           <TextInput
             value={escrito}

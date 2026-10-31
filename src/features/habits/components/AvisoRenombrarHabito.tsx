@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -87,7 +88,7 @@ export function AvisoRenombrarHabito({
 
           <View style={styles.fila}>
             <View style={styles.texto}>
-              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]} numberOfLines={1}>
+              <Text style={[t.micro, { color: c.goldInk, fontFamily: fuentes.negrita }]} numberOfLines={1}>
                 {tituloHabito}
               </Text>
               <Text style={[t.small, { color: c.text, marginTop: 3 }]}>
@@ -114,7 +115,7 @@ export function AvisoRenombrarHabito({
               accessibilityLabel={`Cambiarle el nombre a ${tituloHabito}`}
               style={[styles.accion, { backgroundColor: c.gold }]}
             >
-              <Text style={[t.micro, { color: c.onGold, fontFamily: 'Jost_700Bold' }]}>
+              <Text style={[t.micro, { color: c.onGold, fontFamily: fuentes.negrita }]}>
                 CAMBIARLE EL NOMBRE
               </Text>
             </Pressable>
@@ -124,7 +125,7 @@ export function AvisoRenombrarHabito({
               accessibilityLabel="Dejarlo como está"
               style={[styles.accion, { borderColor: c.border, borderWidth: 1 }]}
             >
-              <Text style={[t.micro, { color: c.textSoft, fontFamily: 'Jost_500Medium' }]}>
+              <Text style={[t.micro, { color: c.textSoft, fontFamily: fuentes.media }]}>
                 ASÍ ESTÁ BIEN
               </Text>
             </Pressable>

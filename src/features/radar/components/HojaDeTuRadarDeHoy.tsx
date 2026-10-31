@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
@@ -69,7 +70,7 @@ export function HojaDeTuRadarDeHoy({
             accessibilityLabel="Abrir Mi Radar"
             style={estilos.enlace}
           >
-            <Text style={[t.body, estilos.texto, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 16 }]}>
+            <Text style={[t.body, estilos.texto, { color: c.goldInk, fontFamily: fuentes.negrita, fontSize: 16 }]}>
               Abrir Mi Radar
             </Text>
             <Icon name="chevron" size={TAMANO_ICONO.chico} color={c.goldInk} />
@@ -116,7 +117,7 @@ const estilos = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
   },
   /* Ancho de dígito fijo (AGENTS.md §4): las horas se alinean en columna. */
-  etiqueta: { width: 56, fontFamily: 'Jost_700Bold', fontVariant: ['tabular-nums'] },
+  etiqueta: { width: 56, fontFamily: fuentes.negrita, fontVariant: ['tabular-nums'] },
   /** El círculo vacío del estado pendiente, del tamaño del ✓ (24) para que las filas no cambien de alto. */
   circulo: { width: 22, height: 22, borderRadius: 11, borderWidth: 1.75, marginHorizontal: 1 },
   enlace: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 48, alignSelf: 'flex-start' },

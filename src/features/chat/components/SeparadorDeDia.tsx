@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -26,7 +27,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   texto: {
-    fontFamily: 'Jost_500Medium',
+    fontFamily: fuentes.media,
     fontSize: 14,
   },
 });

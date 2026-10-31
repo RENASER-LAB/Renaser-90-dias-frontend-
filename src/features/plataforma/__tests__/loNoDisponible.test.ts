@@ -316,8 +316,10 @@ describe('las pantallas esconden lo no disponible (código)', () => {
     expect(leer('src/screens/TrainingScreen.tsx')).toMatch(/if \(!habitosPrendidos\.disponible\) \{\s*return \([\s\S]*?<SeccionNoDisponible/);
     const hoy = leer('src/screens/HoyScreen.tsx');
     expect(hoy).toMatch(/resumen\?\.proximoEvento && esDisponible\(CLAVES\.eventos\)/);
-    expect(hoy).toMatch(/resumen\?\.semaforo && esDisponible\(CLAVES\.semaforo\)/);
+    // La tarjeta del semáforo pasó de Hoy a Yo (2026-10-31): la entrada apagada o no disponible se esconde allá.
+    expect(hoy).not.toMatch(/esDisponible\(CLAVES\.semaforo\)\) \? \(\s*<TarjetaSemaforoHoy/);
     const yo = leer('src/screens/YoScreen.tsx');
+    expect(yo).toMatch(/resumen\?\.semaforo && esDisponible\(CLAVES\.semaforo\)/);
     for (const clave of ['caja', 'admin', 'emergencia', 'evidencias', 'notificaciones', 'perfil', 'cuentaEliminar']) {
       expect(yo).toMatch(new RegExp(`esDisponible\\(CLAVES\\.${clave}\\)`));
     }

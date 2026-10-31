@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useCallback, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -109,7 +110,7 @@ function Ficha({ ficha, onObservar }: { ficha: FichaApi; onObservar: (tipo: Tipo
         ) : (
           ficha.recentObservations.map(o => (
             <Text key={o.id} style={[estilos.observacion, { color: c.textSoft }]}>
-              <Text style={{ color: c.textStrong, fontFamily: 'Jost_500Medium' }}>
+              <Text style={{ color: c.textStrong, fontFamily: fuentes.media }}>
                 {encabezadoDeLaObservacion(o)}
               </Text>
               {`\n${o.text}`}
@@ -140,7 +141,7 @@ function subtitulo(ficha: FichaApi): string {
 const estilos = StyleSheet.create({
   seccion: { gap: 6 },
   grupo: { borderTopWidth: 1, paddingTop: 8, gap: 4 },
-  observacion: { fontFamily: 'Jost_400Regular', fontSize: 16, lineHeight: 23 },
+  observacion: { fontFamily: fuentes.regular, fontSize: 16, lineHeight: 23 },
   acciones: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   // 150 y no 100: a 360 dp «Reconocer» no entraba y se partía en «Reconoce r». Así van dos por fila y el tercero ocupa la suya.
   accion: { flexGrow: 1, flexBasis: 150 },

@@ -1,3 +1,4 @@
+import { fuentes } from '../../../../theme/fuentes';
 import React, { useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -157,12 +158,12 @@ export function PasarLista({
 
 const estilos = StyleSheet.create({
   arriba: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' },
-  titulo: { fontFamily: 'Jost_500Medium', fontSize: LETRA.grande + 2, lineHeight: 30 },
-  sub: { fontFamily: 'Jost_400Regular', fontSize: 17, lineHeight: 23 },
+  titulo: { fontFamily: fuentes.media, fontSize: LETRA.grande + 2, lineHeight: 30 },
+  sub: { fontFamily: fuentes.regular, fontSize: 17, lineHeight: 23 },
   resumen: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderRadius: 18, padding: 18 },
-  numero: { fontFamily: 'Jost_500Medium', fontSize: 34, lineHeight: 40 },
-  unidad: { fontFamily: 'Jost_400Regular', fontSize: 18 },
-  detalle: { fontFamily: 'Jost_400Regular', fontSize: LETRA.cuerpo, lineHeight: 22 },
+  numero: { fontFamily: fuentes.media, fontSize: 34, lineHeight: 40 },
+  unidad: { fontFamily: fuentes.regular, fontSize: 18 },
+  detalle: { fontFamily: fuentes.regular, fontSize: LETRA.cuerpo, lineHeight: 22 },
   sello: { width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center' },
-  ayuda: { fontFamily: 'Jost_400Regular', fontSize: 15, lineHeight: 21 },
+  ayuda: { fontFamily: fuentes.regular, fontSize: 15, lineHeight: 21 },
 });

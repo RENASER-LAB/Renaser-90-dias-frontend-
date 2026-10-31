@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { StyleSheet, Text } from 'react-native';
 
@@ -26,7 +27,7 @@ export function BotonDeEvidencia({
       style={[estilos.boton, { borderColor: c.goldInk }]}
     >
       <Icon name={icono} size={16} color={c.goldInk} />
-      <Text style={[t.body, { color: c.goldInk, fontSize: 16, fontFamily: 'Jost_500Medium' }]}>{etiqueta}</Text>
+      <Text style={[t.body, { color: c.goldInk, fontSize: 16, fontFamily: fuentes.media }]}>{etiqueta}</Text>
     </Presionable>
   );
 }

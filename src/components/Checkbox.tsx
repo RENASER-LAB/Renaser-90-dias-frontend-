@@ -1,3 +1,4 @@
+import { fuentes } from '../theme/fuentes';
 import React from 'react';
 import { Pressable, View, Text, StyleSheet, ViewStyle } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
@@ -43,7 +44,7 @@ export function Checkbox({ checked, onToggle, title, subtitle, style }: Checkbox
       </View>
 
       <View style={{ flex: 1 }}>
-        <Text style={[t.body, { color: c.textStrong, fontFamily: checked ? 'Jost_700Bold' : 'Jost_500Medium', fontSize: 15.5 }]}>
+        <Text style={[t.body, { color: c.textStrong, fontFamily: checked ? fuentes.negrita : fuentes.media, fontSize: 15.5 }]}>
           {title}
         </Text>
         {subtitle && (

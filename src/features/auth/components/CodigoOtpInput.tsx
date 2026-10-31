@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
@@ -58,7 +59,7 @@ export function CodigoOtpInput({
               <Text
                 style={{
                   fontSize: 22,
-                  fontFamily: 'Jost_500Medium',
+                  fontFamily: fuentes.media,
                   color: tieneDigito ? c.textStrong : c.tabInactive,
                 }}
               >
@@ -82,7 +83,7 @@ export function CodigoOtpInput({
       <View style={styles.reenvio}>
         {puedeReenviar ? (
           <Pressable onPress={onReenviar} disabled={deshabilitado} hitSlop={10}>
-            <Text style={[t.micro, { color: c.goldInk, letterSpacing: 1.2, fontFamily: 'Jost_500Medium' }]}>
+            <Text style={[t.micro, { color: c.goldInk, letterSpacing: 1.2, fontFamily: fuentes.media }]}>
               ¿NO RECIBISTE EL CÓDIGO? REENVIAR
             </Text>
           </Pressable>

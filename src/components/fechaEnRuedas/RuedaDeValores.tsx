@@ -1,3 +1,4 @@
+import { fuentes } from '../../theme/fuentes';
 import React, { useEffect, useRef } from 'react';
 import { Platform, Pressable, StyleSheet, View, type AccessibilityActionEvent } from 'react-native';
 import Animated, {
@@ -235,7 +236,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   texto: {
-    fontFamily: 'Jost_500Medium',
+    fontFamily: fuentes.media,
     fontSize: 19,
     lineHeight: 24,
     fontVariant: ['tabular-nums'],

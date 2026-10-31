@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
@@ -19,7 +20,7 @@ export const LADO_DEL_STICKER = 56;
  * le hable a la persona» y «un sticker del búho para que se sienta humano»).
  *
  * - **El texto es del servidor y no se toca**: ya viene redactado, con el nombre y los datos puestos, sin
- *   llaves y en tuteo. La app solo lo pinta (Jost 15, tamaño de lectura, color de texto del tema: contraste
+ *   llaves y en tuteo. La app solo lo pinta (fuente regular 15, tamaño de lectura, color de texto del tema: contraste
  *   de los dos modos). Va en una burbuja de lavado dorado, a la derecha del sticker.
  * - **Sticker desconocido, vacío o que no carga → solo el texto** (la burbuja ocupa todo el ancho). Una app
  *   vieja ante un sticker nuevo del servidor nunca deja un hueco ni se rompe.
@@ -83,5 +84,5 @@ const estilos = StyleSheet.create({
   },
   /** Con el búho al lado, la burbuja no baja del alto del sticker: sticker y texto se leen como una pieza. */
   burbujaConSticker: { minHeight: LADO_DEL_STICKER - 8 },
-  texto: { fontFamily: 'Jost_400Regular', fontSize: 15, lineHeight: 21, flexShrink: 1 },
+  texto: { fontFamily: fuentes.regular, fontSize: 15, lineHeight: 21, flexShrink: 1 },
 });

@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useEffect } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -59,5 +60,5 @@ const estilos = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     elevation: 6,
   },
-  texto: { flex: 1, fontFamily: 'Jost_400Regular', fontSize: 16, lineHeight: 23 },
+  texto: { flex: 1, fontFamily: fuentes.regular, fontSize: 16, lineHeight: 23 },
 });

@@ -1,3 +1,4 @@
+import { fuentes } from '../theme/fuentes';
 import React, { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View, type ViewStyle } from 'react-native';
 
@@ -155,8 +156,8 @@ function BotonBase({
 const PADDING_QUE_PISA_EL_RECICLADO = { paddingHorizontal: 1 } as const;
 
 const estilos = StyleSheet.create({
-  titulo: { fontFamily: 'Jost_500Medium', fontSize: 18, lineHeight: 24, ...PADDING_QUE_PISA_EL_RECICLADO },
-  detalle: { fontFamily: 'Jost_400Regular', fontSize: 16, lineHeight: 23, marginTop: 2, ...PADDING_QUE_PISA_EL_RECICLADO },
+  titulo: { fontFamily: fuentes.media, fontSize: 18, lineHeight: 24, ...PADDING_QUE_PISA_EL_RECICLADO },
+  detalle: { fontFamily: fuentes.regular, fontSize: 16, lineHeight: 23, marginTop: 2, ...PADDING_QUE_PISA_EL_RECICLADO },
   boton: {
     minHeight: 52,
     borderRadius: 14,
@@ -172,7 +173,7 @@ const estilos = StyleSheet.create({
   cabeceraPlegable: { minHeight: 56, flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 12 },
   cuerpoPlegable: { paddingHorizontal: 16, paddingBottom: 16 },
   etiqueta: {
-    fontFamily: 'Jost_500Medium',
+    fontFamily: fuentes.media,
     fontSize: 17,
     lineHeight: 22,
     textAlign: 'center',

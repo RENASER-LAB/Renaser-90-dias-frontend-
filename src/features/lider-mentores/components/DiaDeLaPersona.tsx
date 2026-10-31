@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -123,7 +124,7 @@ function CuerpoDelDia({ dia }: { dia: DiaDeLaPersonaDatos }) {
         <View style={{ marginTop: dia.obligaciones.length > 0 ? 8 : 0 }}>
           <Text
             accessibilityRole="header"
-            style={[t.body, { color: c.textStrong, fontSize: 16, fontFamily: 'Jost_700Bold', paddingTop: 12 }]}
+            style={[t.body, { color: c.textStrong, fontSize: 16, fontFamily: fuentes.negrita, paddingTop: 12 }]}
           >
             Acciones de los objetivos
           </Text>
@@ -147,7 +148,7 @@ function FilaDeObligacion({ obligacion, primera }: { obligacion: ObligacionDeLaP
       <MarcaDelEstado estado={obligacion.estado} />
       <View style={{ flex: 1, minWidth: 0, gap: 6 }}>
         <View accessible accessibilityLabel={dichoDeLaObligacion(obligacion)} style={{ gap: 2 }}>
-          <Text style={[t.body, { color: c.textStrong, fontSize: 16, lineHeight: 22, fontFamily: 'Jost_500Medium' }]}>
+          <Text style={[t.body, { color: c.textStrong, fontSize: 16, lineHeight: 22, fontFamily: fuentes.media }]}>
             {obligacion.titulo}
           </Text>
           <Text style={[t.body, { color: colorDelEstado(obligacion.estado, c), fontSize: 16, lineHeight: 22 }]}>{estado}</Text>
@@ -178,7 +179,7 @@ function FilaDeAccion({ accion, primera }: { accion: AccionDeLaPersona; primera:
       <MarcaDelEstado estado={cumplida ? 'COMPLETADO' : 'PENDIENTE'} />
       <View style={{ flex: 1, minWidth: 0, gap: 6 }}>
         <View accessible accessibilityLabel={estado ? `${accion.titulo}. ${estado}.` : `${accion.titulo}.`} style={{ gap: 2 }}>
-          <Text style={[t.body, { color: c.textStrong, fontSize: 16, lineHeight: 22, fontFamily: 'Jost_500Medium' }]}>
+          <Text style={[t.body, { color: c.textStrong, fontSize: 16, lineHeight: 22, fontFamily: fuentes.media }]}>
             {accion.titulo}
           </Text>
           {estado ? (

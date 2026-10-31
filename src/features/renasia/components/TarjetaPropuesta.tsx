@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
@@ -60,7 +61,7 @@ export function TarjetaPropuesta({ propuesta, onConfirmar, onCancelar }: Props) 
     <View style={[styles.tarjeta, { borderColor: c.borderStrong, backgroundColor: c.cardBgAlt }]}>
       {/* Tipo oración y botones como la hoja de Hoy (rediseño del 2026-10-05): la misma propuesta se
           decide en los dos lugares y tiene que leerse igual. */}
-      <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>Propuesta de tu acompañante</Text>
+      <Text style={[t.small, { color: c.goldInk, fontFamily: fuentes.negrita }]}>Propuesta de tu acompañante</Text>
       <Text style={[t.body, { color: c.text, fontSize: rs(14.5), lineHeight: rs(21) }]}>
         {propuesta.resumen}
       </Text>
