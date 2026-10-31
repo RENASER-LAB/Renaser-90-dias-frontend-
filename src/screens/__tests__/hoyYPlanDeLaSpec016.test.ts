@@ -55,36 +55,21 @@ describe('Hoy: hábitos y Radar en una tarjeta', () => {
   });
 });
 
-describe('Plan: las acciones de hoy por eje', () => {
+describe('Plan: las acciones de hoy por eje (spec 016) se integraron al formato nuevo de Plan (2026-10-31)', () => {
   const PLAN = leer('screens/PlanScreen.tsx');
 
-  it('ya no está el arco; en su lugar, la tarjeta por eje con los ejes en el orden de las prioridades', () => {
+  it('ya no está la tarjeta aparte «Tus acciones de hoy · por eje» ni el arco; las acciones del eje salen en «Acciones que mueven la meta»', () => {
     expect(PLAN).not.toContain('ArcoDelDia');
-    expect(PLAN).not.toContain('gaugeW');
-    expect(PLAN).toMatch(/<TarjetaAccionesDeHoyPorEje diaPrograma=\{diaConocido\} ejesEnOrden=\{ejesOrdenados\} \/>/);
+    expect(PLAN).not.toContain('TarjetaAccionesDeHoyPorEje');
+    expect(fs.existsSync(path.join(RAIZ, 'features/objetivos/components/TarjetaAccionesDeHoyPorEje.tsx'))).toBe(false);
     expect(fs.existsSync(path.join(RAIZ, 'features/programa/components/ArcoDelDia.tsx'))).toBe(false);
+    expect(PLAN).toContain('<PlanDelEje');
   });
 
-  it('va arriba, antes de «Fase actual»; Fase actual y Prioridades clave quedan igual (Arquitectura de tiempo se quitó el 2026-10-31)', () => {
-    const tarjeta = PLAN.indexOf('<TarjetaAccionesDeHoyPorEje');
-    const fase = PLAN.indexOf('<MicroLabel>Fase actual</MicroLabel>');
-    expect(tarjeta).toBeGreaterThan(0);
-    expect(tarjeta).toBeLessThan(fase);
-    expect(PLAN).toContain('<MicroLabel>Prioridades clave</MicroLabel>');
-    expect(PLAN).not.toContain('<MicroLabel>Arquitectura de tiempo</MicroLabel>');
-  });
-
-  it('solo está en la vista principal: Objetivos no la monta (y no pide nada de más)', () => {
-    const principal = PLAN.slice(0, PLAN.indexOf("activeSubView === 'objetivos' && ("));
-    expect(principal).toContain('<TarjetaAccionesDeHoyPorEje');
-    expect(PLAN.slice(principal.length)).not.toContain('<TarjetaAccionesDeHoyPorEje');
-  });
-
-  it('Plan solo muestra: registrar es en Training, que abre la acción por abrirAccionId', () => {
-    const tarjeta = leer('features/objetivos/components/TarjetaAccionesDeHoyPorEje.tsx');
-    expect(tarjeta).toContain("'Training'");
-    expect(tarjeta).toContain('abrirAccionId');
-    expect(tarjeta).not.toMatch(/sellarRocaDiaria|completarRegistro|confirmarEvidencia/);
+  it('Plan solo muestra: tocar una acción de hoy lleva a Training con abrirAccionId (spec 016), y Training lo consume', () => {
+    const eje = leer('features/objetivos/components/PlanDelEje.tsx');
+    expect(eje).toContain("'Training', { abrirAccionId: accion.id }");
+    expect(eje).not.toMatch(/sellarRocaDiaria|completarRegistro|confirmarEvidencia/);
     const training = leer('screens/TrainingScreen.tsx');
     expect(training).toMatch(/abrirAccionId\?: string/);
     expect(training).toMatch(/h\.id === accionPedida && h\.tieneTrackHoy/);

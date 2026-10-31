@@ -9,38 +9,29 @@ import { space } from '../theme/tokens';
 import { useResponsive } from '../theme/responsive';
 import { useAuth } from '../context/AuthContext';
 import { useSystemBackHandler } from '../hooks/useSystemBackHandler';
-import { MicroLabel, Row, RowBetween, ScreenHeader } from '../components/ui';
-import { Icon, TAMANO_ICONO } from '../components/Icon';
+import { ScreenHeader } from '../components/ui';
 import { GoldButton } from '../components/GoldButton';
-import { Presionable } from '../components/Presionable';
 import { ControlSegmentado } from '../components/ControlSegmentado';
 import { ConfirmacionEnLinea } from '../components/ConfirmacionEnLinea';
 import { HojaDesdeAbajo } from '../components/hojaDesdeAbajo/HojaDesdeAbajo';
 import { tacto } from '../utils/tacto';
 import { useResumenHome } from '../features/home/hooks/useResumenHome';
-import { faseEnCurso } from '../features/home/utils/faseEnCurso';
 import type { DiaDelPlan } from '../features/habits/utils/semanaDelPlan';
 import { useMapaRenacimientoAbierto } from '../features/mapa-renacimiento/MapaRenacimientoContext';
 import { cifraEscrita } from '../features/objetivos/api/planMensualApi';
 import { EditarObjetivoDelMesModal } from '../features/objetivos/components/EditarObjetivoDelMesModal';
 import { usePlanMensual } from '../features/objetivos/hooks/usePlanMensual';
-import { NivelesDelPlan } from '../features/objetivos/components/NivelesDelPlan';
-import { TarjetaAccionesDeHoyPorEje } from '../features/objetivos/components/TarjetaAccionesDeHoyPorEje';
+import { PlanDelEje } from '../features/objetivos/components/PlanDelEje';
+import { TarjetaDelObjetivo } from '../features/objetivos/components/TarjetasDelPlan';
 import { PuertaDelMapa } from '../features/objetivos/components/PuertaDelMapa';
 import { usePuertaDeObjetivos } from '../features/objetivos/hooks/usePuertaDeObjetivos';
 import { useRocasMaestras } from '../features/objetivos/hooks/useRocasMaestras';
 import type { EjeObjetivo, RocaMaestraApi } from '../features/objetivos/types/objetivos.types';
 import { EJES, ETIQUETA_CORTA_EJE, ETIQUETA_EJE } from '../features/objetivos/types/objetivos.types';
 import { conPrincipalPrimero, usePrioridadPrincipal } from '../features/objetivos/hooks/usePrioridadPrincipal';
-import { cifraDeEscala, cifraDelObjetivo, primeraClausula } from '../features/objetivos/utils/cifraDelObjetivo';
 import { definicionConAvance, LINEA_OBJETIVO_FIJO } from '../features/objetivos/utils/objetivoFijo';
 import { iconoDelEje } from '../features/objetivos/utils/iconoDelEje';
-import {
-  SEMANAS_DEL_PROGRAMA,
-  etiquetaDelMes,
-  mesDe,
-  semanaDe,
-} from '../features/objetivos/utils/periodoDelPrograma';
+import { semanaDe } from '../features/objetivos/utils/periodoDelPrograma';
 import { ESPACIO_PARA_LANZADOR } from '../features/renasia/components/RenasiaLauncher';
 import { useOcultarBarraAlDesplazar } from '../navigation/barraAlDesplazar/BarraInferior';
 
@@ -130,9 +121,8 @@ export default function PlanScreen() {
   // =========================================================================
   // ESTADOS DE NAVEGACIÓN
   // =========================================================================
-  const [activeSubView, setActiveSubView] = useState<'main' | 'objetivos'>('main');
-  /* Al cambiar de sub-vista la barra de pestañas vuelve a la vista (ver `navigation/barraAlDesplazar`). */
-  const barraAlDesplazar = useOcultarBarraAlDesplazar({ vista: activeSubView });
+  /* Plan es una sola pantalla desde el 2026-10-31: la sub-vista «Objetivos» (con su flecha de volver) se integró aquí. */
+  const barraAlDesplazar = useOcultarBarraAlDesplazar();
 
   /**
    * Día real del programa y fase: antes el 37, el arco y la fase estaban escritos a mano.
@@ -143,11 +133,8 @@ export default function PlanScreen() {
    * > de ayer: en el paso del 34 al 35, Yo decía «Fase 3 · El Maestro Interno» y Plan seguía en «02 ·
    * > El Ciclo Alquímico». Ahora las dos pestañas leen el mismo hook y la misma cuenta (`faseEnCurso`).
    */
-  const { resumen, cargando } = useResumenHome();
+  const { resumen } = useResumenHome();
   const diaPrograma = resumen?.diaPrograma ?? 0;
-  const fase = resumen?.fase ?? null;
-  /* Solo la primera carga es «cargando»: al volver al foco se relee sin vaciar el arco ni los tramos. */
-  const cargandoDiaPrograma = resumen === null && cargando;
 
   /**
    * La fase del aprendiz, **la que dice el backend**, no una calculada acá.
@@ -161,8 +148,6 @@ export default function PlanScreen() {
    */
   /* `null` mientras la carga no termina o el programa no arranco (dia 0): la arquitectura de
      tiempo no debe mostrar avance inventado, igual que Hoy no muestra un dia que no sabe. */
-  const diaConocido = cargandoDiaPrograma || diaPrograma <= 0 ? null : diaPrograma;
-  const faseActual = faseEnCurso(fase, diaConocido);
   // Modal / hoja del objetivo de 90 días
   const [editGoalModalVisible, setEditGoalModalVisible] = useState(false);
 
@@ -212,7 +197,7 @@ export default function PlanScreen() {
   const { user } = useAuth();
   const { puerta, reintentar: reintentarPuerta } = usePuertaDeObjetivos(
     user?.id ?? null,
-    `${mapaAbierto}:${activeSubView}`,
+    mapaAbierto,
   );
   /** El eje que se está mirando. */
   const [ejeAbierto, setEjeAbierto] = useState<EjeObjetivo>(EJE_POR_DEFECTO);
@@ -222,7 +207,6 @@ export default function PlanScreen() {
    * Arranca cerrada (2026-09-21, pedido del dueño): lo primero que tiene que verse al entrar es el
    * objetivo y su avance, no cómo funciona el sistema. La explicación no se borró — está a un toque.
    */
-  const [explicacionNivelesAbierta, setExplicacionNivelesAbierta] = useState(false);
   const rocaDeEje = (eje: EjeObjetivo) => objetivos.deEje(eje);
   const rocaAbierta = objetivos.deEje(ejeAbierto);
   /**
@@ -260,13 +244,6 @@ export default function PlanScreen() {
       : null;
   const ejesOrdenados = useMemo(() => conPrincipalPrimero(EJES, ejePrincipal), [ejePrincipal]);
 
-  /** Abre la vista de Objetivos en el eje pedido. Un solo camino para las tres tarjetas. */
-  const abrirObjetivoDe = (eje: EjeObjetivo) => {
-    setEjeAbierto(eje);
-    setConfirmacion(null);
-    setActiveSubView('objetivos');
-  };
-
   /**
    * Cambiar de eje sin salir de Objetivos (2026-10-05, decisión del dueño). Antes, para pasar de
    * Cuerpo a Negocio había que volver a Plan y tocar la otra tarjeta. La confirmación de un guardado
@@ -288,7 +265,6 @@ export default function PlanScreen() {
     const params = route.params as { abrirObjetivosFecha?: string; abrirObjetivosEje?: EjeObjetivo | null } | undefined;
     if (!params?.abrirObjetivosFecha) return;
     if (params.abrirObjetivosEje) setEjeAbierto(params.abrirObjetivosEje);
-    setActiveSubView('objetivos');
     (navigation as unknown as { setParams: (p: Record<string, unknown>) => void })
       .setParams({ abrirObjetivosFecha: undefined, abrirObjetivosEje: undefined });
   }, [route.params, navigation]);
@@ -301,12 +277,8 @@ export default function PlanScreen() {
       setEditGoalModalVisible(false);
       return true;
     }
-    if (activeSubView !== 'main') {
-      setActiveSubView('main');
-      return true;
-    }
     return false;
-  }, activeSubView !== 'main' || editGoalModalVisible);
+  }, editGoalModalVisible);
 
   // =========================================================================
   // HANDLERS
@@ -474,385 +446,66 @@ export default function PlanScreen() {
 
   return (
     <SafeAreaView edges={BORDES_DE_UNA_PESTANA} style={{ flex: 1, backgroundColor: c.bg }}>
-      <ScreenHeader title="PLAN" />
+      {/* Cabecera (2026-10-31, pedido del dueño: «en Plan replica este formato»): «Plan» grande y debajo, en dorado, la dirección
+          de los 90 días. La maqueta traía una diana arriba a la derecha: no se dibuja, no tiene una acción clara. */}
+      <ScreenHeader title="Plan" />
+      <Text style={[t.body, { color: c.goldInk, paddingHorizontal: horizontalPadding, marginTop: -2 }]}>Tu dirección en 90 días</Text>
 
-      {/* ========================================================================= */}
-      {/* VISTA 1: PANTALLA PRINCIPAL DE PLAN                                       */}
-      {/* ========================================================================= */}
-      {activeSubView === 'main' && (
-        <ScrollView
-          {...barraAlDesplazar}
-          keyboardShouldPersistTaps="handled"
-          contentContainerStyle={estiloDelContenido}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Una línea y en tipo oración (2026-10-05, decisión del dueño: acortar textos). Debajo
-              iba además el lema «Enfocado. Estratégico. Real.», que no decía nada de la persona. */}
-          <Text style={[t.body, { color: c.textSoft, paddingTop: 6 }]}>Tu mapa de los próximos 90 días</Text>
-
-          {/* TUS ACCIONES DE HOY, POR EJE (spec 016, 2026-10-29, pedido del dueño). Ocupa el lugar del arco «Día 20 de 90»
-              (`ArcoDelDia`, que se quitó de Plan): el día del programa ahora va en el subtítulo de la tarjeta. Plan solo
-              muestra; registrar sigue siendo en Training. */}
-          <TarjetaAccionesDeHoyPorEje diaPrograma={diaConocido} ejesEnOrden={ejesOrdenados} />
-
-          {/* FASE ACTUAL — la que dice el backend. Apilado: los nombres de fase son largos
-              («Sistema de Alto Rendimiento») y en una fila se espachurraban. */}
-          <View style={styles.section}>
-            <MicroLabel>Fase actual</MicroLabel>
-            {faseActual ? (
-              <View style={{ marginTop: 12, gap: 4 }}>
-                <Row gap={10} align="baseline">
-                  <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
-                    {String(faseActual.numero).padStart(2, '0')}
-                  </Text>
-                  <Text style={[t.small, { color: c.micro }]}>{faseActual.rango}</Text>
-                </Row>
-                <Text style={[t.cardTitle, { color: c.text, fontSize: 20, lineHeight: 27 }]}>
-                  {faseActual.nombre}
-                </Text>
-              </View>
-            ) : (
-              <Text style={[t.body, { color: c.textSoft, marginTop: 12 }]}>
-                {cargandoDiaPrograma ? 'Cargando tu fase…' : 'Tu fase aparece cuando arranque tu programa.'}
-              </Text>
-            )}
+      <ScrollView
+        {...barraAlDesplazar}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={estiloDelContenido}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Sin Mapa activo no hay nada que armar (issue #37, 2026-10-27): en lugar de todo lo del eje, «Primero tu Mapa de
+            Renacimiento» con «Hacer mi Mapa» —o la comprobación, si todavía no se sabe—. */}
+        {puerta !== 'abierta' ? (
+          <View style={{ marginTop: space.gap, paddingBottom: 28 }}>
+            <PuertaDelMapa puerta={puerta} onHacerMapa={abrirMapa} onReintentar={reintentarPuerta} />
           </View>
+        ) : (
+          <View style={styles.pantalla}>
+            {/* El eje elegido manda sobre todo lo de abajo. Mismo orden que las prioridades del Mapa: el principal primero. */}
+            <ControlSegmentado
+              opciones={ejesOrdenados.map(eje => ({
+                valor: eje,
+                etiqueta: ETIQUETA_CORTA_EJE[eje],
+                accessibilityLabel: ETIQUETA_EJE[eje],
+                icono: iconoDelEje(eje),
+              }))}
+              valor={ejeAbierto}
+              onCambiar={cambiarEje}
+              achicarTexto
+              accessibilityLabel="Eje de tu plan"
+            />
 
-          {/* PRIORIDADES CLAVE */}
-          <View style={[styles.section, { paddingBottom: 24 }]}>
-            <MicroLabel>Prioridades clave</MicroLabel>
-            {EJES.some(eje => !rocaDeEje(eje)?.objetivo?.trim()) && puerta === 'abierta' && (
-              <Text style={[t.small, { color: c.textSoft, marginTop: 6 }]}>
-                Toca cada una para escribir tu objetivo.
-              </Text>
+            {/* c. El objetivo de 90 días. Los «…» abren la hoja de siempre: escribir el objetivo (si falta) o anotar el avance
+                (si ya nació del Mapa, que lo deja fijo, D-234). Sin avance que anotar no se dibujan. */}
+            <TarjetaDelObjetivo
+              roca={rocaAbierta}
+              cargando={objetivos.cargando}
+              error={objetivos.error}
+              cifraDelMes={cifraDelMesAbierto}
+              alAbrirOpciones={sinAvanceQueAnotar ? undefined : openEditGoalModal}
+              alCambiarElMes={() => setEditandoMes(true)}
+            />
+
+            {confirmacion && (
+              <ConfirmacionEnLinea key={confirmacion.clave} texto={confirmacion.texto} onTerminar={() => setConfirmacion(null)} />
             )}
-            {/* Sin Mapa activo no se escribe nada acá (issue #37): se dice de dónde sale el objetivo, desde el
-                primer vistazo. Mientras se comprueba o si no se pudo, no se promete nada. */}
-            {EJES.some(eje => !rocaDeEje(eje)?.objetivo?.trim()) && puerta === 'espera-al-mapa' && (
-              <Text style={[t.small, { color: c.textSoft, marginTop: 6 }]}>
-                Tus objetivos nacen de tu Mapa de Renacimiento.
-              </Text>
-            )}
-            <View style={{ marginTop: 12, gap: 10 }}>
-              {/* **Lo que se lee es el objetivo del aprendiz, no un título de catálogo** (D-120).
-                  Cada eje con su ícono (2026-10-05): antes «01 / 02 / 03», un número que no decía
-                  de qué era la tarjeta y que además cambiaba con la prioridad principal. */}
-              {ejesOrdenados.map(eje => {
-                const roca = rocaDeEje(eje);
-                const definido = Boolean(roca?.objetivo?.trim());
-                const esPrincipal = eje === ejePrincipal;
-                /* Relaciones no tiene meta cuantitativa en su Roca —su escala 1-10 no es una
-                   unidad de negocio— asi que su cifra sale de las respuestas del Mapa. */
-                const cifra =
-                  eje === 'RELACIONES' ? cifraDeEscala(relacionesBase, relacionesMeta) : cifraDelObjetivo(roca);
-                const avance = roca?.porcentaje ?? null;
-                return (
-                  <Presionable
-                    key={eje}
-                    onPress={() => abrirObjetivoDe(eje)}
-                    accessibilityRole="button"
-                    accessibilityLabel={`${ETIQUETA_EJE[eje]}${esPrincipal ? ', tu prioridad principal' : ''}. ${
-                      definido ? cifra ?? roca!.objetivo : 'Todavía sin definir'
-                    }`}
-                    style={[
-                      styles.priorityCard,
-                      {
-                        // Lo que distingue a la principal es el color del contorno y su distintivo.
-                        borderColor: esPrincipal ? c.gold : c.border,
-                        backgroundColor: esPrincipal ? c.cardBgAlt : c.cardBg,
-                      },
-                    ]}
-                  >
-                    <Icon name={iconoDelEje(eje)} size={TAMANO_ICONO.normal} color={c.goldInk} />
-                    <View style={{ flex: 1, gap: 3 }}>
-                      <Row gap={8}>
-                        <Text style={[t.small, styles.rotulo, { color: c.goldInk }]}>{ETIQUETA_EJE[eje]}</Text>
-                        {esPrincipal && (
-                          <View style={[styles.insigniaPrincipal, { backgroundColor: c.goldWash }]}>
-                            <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_500Medium', fontSize: 12, lineHeight: 16 }]}>
-                              Principal
-                            </Text>
-                          </View>
-                        )}
-                      </Row>
 
-                      {!definido ? (
-                        <Text style={[t.body, { color: c.textSoft }]}>Todavía sin definir</Text>
-                      ) : cifra ? (
-                        /* Con meta medible manda el NÚMERO: de dónde partió y a dónde va. `flexShrink`
-                           + dos líneas: una cifra grande con unidad larga no se corta justo en el dato. */
-                        <Row gap={8} style={{ alignItems: 'baseline' }}>
-                          <Text
-                            style={[
-                              t.metric,
-                              { color: c.textStrong, fontSize: 19, fontFamily: 'Jost_700Bold', flexShrink: 1 },
-                            ]}
-                            numberOfLines={2}
-                          >
-                            {cifra}
-                          </Text>
-                          {avance !== null && (
-                            <Text
-                              style={[
-                                t.metric,
-                                { color: c.goldInk, fontSize: 12, fontFamily: 'Jost_500Medium', flexShrink: 0 },
-                              ]}
-                            >
-                              {avance}%
-                            </Text>
-                          )}
-                        </Row>
-                      ) : (
-                        /* Sin números (Relaciones): el objetivo en dos líneas, antes que inventar una
-                           barra de avance sin con qué medirla (decisión del dueño, 2026-09-14). */
-                        <Text style={[t.body, { color: c.textStrong }]} numberOfLines={2}>
-                          {primeraClausula(roca!.objetivo)}
-                        </Text>
-                      )}
-
-                      {cifra && avance !== null && (
-                        <View style={[styles.barraObjetivo, { backgroundColor: c.border }]}>
-                          <View
-                            style={[
-                              styles.barraObjetivoRelleno,
-                              { backgroundColor: c.gold, width: `${Math.max(0, Math.min(100, avance))}%` },
-                            ]}
-                          />
-                        </View>
-                      )}
-                    </View>
-                    <Icon name="chevron" size={TAMANO_ICONO.chico} color={c.chevron} />
-                  </Presionable>
-                );
-              })}
-            </View>
+            {/* d a g: «Esta semana», «Acciones que mueven la meta», «Tu 80/20» y «Organizar mi semana ›». */}
+            <PlanDelEje
+              maestras={objetivos.rocas}
+              numeroSemana={semanaDe(diaPrograma)}
+              diaPrograma={diaPrograma}
+              ejeAbierto={ejeAbierto}
+              objetivoSugeridoDe={planMensual.objetivoSugeridoDe}
+              onIrAlMapa={abrirMapa}
+            />
           </View>
-        </ScrollView>
-      )}
-
-      {/* ========================================================================= */}
-      {/* VISTA 2: OBJETIVOS (TRES NIVELES) DE UN EJE                               */}
-      {/* ========================================================================= */}
-      {activeSubView === 'objetivos' && (
-        <ScrollView
-          {...barraAlDesplazar}
-          keyboardShouldPersistTaps="handled"
-          contentContainerStyle={estiloDelContenido}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Volver con la flecha de 24 en 48 y el título «Objetivos» (2026-10-05). Antes: «← VOLVER A
-              PLAN» en versales y la píldora «02. OBJETIVOS (3 NIVELES)», migas de una sub-vista
-              «01» que ya no se puede abrir.
-              > **Corregido el mismo día.** El título era el nombre del eje («← Cuerpo»), que el
-              > segmentado de abajo repetía; el dueño eligió «Objetivos» para no decirlo dos veces. */}
-          <View style={styles.encabezadoObjetivos}>
-            <Presionable
-              onPress={() => setActiveSubView('main')}
-              accessibilityRole="button"
-              accessibilityLabel="Volver a Plan"
-              style={styles.botonVolver}
-            >
-              <Icon name="arrowLeft" size={TAMANO_ICONO.grande} color={c.goldInk} />
-            </Presionable>
-            <Text
-              accessibilityRole="header"
-              style={[t.cardTitle, { color: c.textStrong, fontSize: 22, lineHeight: 28, flex: 1 }]}
-              numberOfLines={1}
-            >
-              Objetivos
-            </Text>
-          </View>
-
-          {/* Sin Mapa activo no hay objetivos que editar (issue #37, 2026-10-27): en su lugar, «Primero tu Mapa de
-              Renacimiento» con «Hacer mi Mapa» —o la comprobación, si todavía no se sabe—. Ni el selector de eje, ni
-              «Editar», ni el mes, la semana o las acciones: todos cuelgan del objetivo de 90 días. */}
-          {puerta !== 'abierta' ? (
-            <View style={{ marginTop: space.gap, paddingBottom: 28 }}>
-              <PuertaDelMapa puerta={puerta} onHacerMapa={abrirMapa} onReintentar={reintentarPuerta} />
-            </View>
-          ) : (
-            <>
-              {/* Cambiar de eje acá mismo (decisión del dueño, 2026-10-05). Mismo orden que las
-                  tarjetas de Plan: el principal primero. */}
-              <View style={{ marginTop: 8 }}>
-                <ControlSegmentado
-                  opciones={ejesOrdenados.map(eje => ({
-                    valor: eje,
-                    etiqueta: ETIQUETA_CORTA_EJE[eje],
-                    accessibilityLabel: ETIQUETA_EJE[eje],
-                  }))}
-                  valor={ejeAbierto}
-                  onCambiar={cambiarEje}
-                  accessibilityLabel="Eje de tus objetivos"
-                />
-              </View>
-
-              {/* Introducción corta y el detalle detrás de «Más detalles» (2026-09-21, pedido del dueño):
-                  quien entra acá viene a ver su objetivo y su avance. */}
-              <View style={{ marginTop: space.gap, gap: 6 }}>
-                <Row align="flex-start" gap={12}>
-                  <Text style={[t.body, { color: c.textSoft, flex: 1, paddingTop: 10 }]}>
-                    De los 90 días a lo que haces hoy
-                  </Text>
-                  <Presionable
-                    onPress={() => setExplicacionNivelesAbierta(abierta => !abierta)}
-                    style={styles.verDetallesBtn}
-                    accessibilityRole="button"
-                    accessibilityLabel={
-                      explicacionNivelesAbierta
-                        ? 'Ocultar cómo funcionan los tres niveles'
-                        : 'Ver cómo funcionan los tres niveles'
-                    }
-                  >
-                    <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_500Medium', fontSize: 14 }]}>
-                      {explicacionNivelesAbierta ? 'Ver menos' : 'Más detalles'}
-                    </Text>
-                  </Presionable>
-                </Row>
-                {explicacionNivelesAbierta && (
-                  <Text style={[t.body, { color: c.textSoft }]}>
-                    Tres niveles encadenados: el objetivo de 90 días manda sobre la semana, y la semana
-                    sobre lo que haces hoy.
-                  </Text>
-                )}
-              </View>
-
-              <View style={{ gap: space.gap, marginTop: space.gap, paddingBottom: 28 }}>
-                {/* 1. EL OBJETIVO DE 90 DÍAS — `flag` (la meta), no `trophy`, que es Ranking. */}
-                <View style={[styles.goalCard, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
-                  <RowBetween style={{ gap: 8 }}>
-                    <Row gap={8} style={{ flex: 1 }}>
-                      <Icon name="flag" size={TAMANO_ICONO.normal} color={c.goldInk} />
-                      <Text style={[t.small, styles.rotulo, { color: c.goldInk, flexShrink: 1 }]}>Tu objetivo de 90 días</Text>
-                    </Row>
-                    {!sinAvanceQueAnotar && (
-                      <Presionable
-                        onPress={openEditGoalModal}
-                        accessibilityRole="button"
-                        accessibilityLabel={objetivoFijo ? 'Anotar tu avance' : 'Escribir tu objetivo de 90 días'}
-                        style={[styles.editGoalBtn, { backgroundColor: c.goldWash }]}
-                      >
-                        <Icon name="pencil" size={TAMANO_ICONO.chico} color={c.goldInk} />
-                        <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_500Medium', fontSize: 14 }]}>
-                          {objetivoFijo ? 'Avance' : 'Editar'}
-                        </Text>
-                      </Presionable>
-                    )}
-                  </RowBetween>
-
-                  {objetivos.cargando && !rocaAbierta ? (
-                    <Text style={[t.small, { color: c.textSoft, fontSize: 15, marginTop: 8 }]}>Cargando tu objetivo…</Text>
-                  ) : objetivos.error && !rocaAbierta ? (
-                    <Text style={[t.small, { color: c.danger, fontSize: 15, marginTop: 8 }]}>{objetivos.error}</Text>
-                  ) : !rocaAbierta ? (
-                    // Estado vacío real, en dos renglones (antes cuatro). Nunca un objetivo inventado.
-                    <Text style={[t.body, { color: c.textSoft, marginTop: 8 }]}>
-                      Todavía no lo definiste. Toca Editar y escribe a dónde quieres llegar.
-                    </Text>
-                  ) : (
-                    <>
-                      {/* Solo la primera cláusula (2026-09-22, pedido del dueño: "quiero poco texto"). */}
-                      <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 17, marginTop: 6, lineHeight: 24 }]}>
-                        {primeraClausula(rocaAbierta.objetivo)}
-                      </Text>
-
-                      {/* La barra solo aparece si el objetivo tiene meta medible. */}
-                      {rocaAbierta.porcentaje != null && (
-                        <View style={{ gap: 4, marginTop: 8 }}>
-                          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                            <Text style={[t.small, { color: c.textSoft, fontSize: 14 }]}>Avance</Text>
-                            <Text style={[t.small, styles.cifras, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 15 }]}>
-                              {rocaAbierta.porcentaje}% cumplido
-                            </Text>
-                          </View>
-                          <View style={[styles.progressBarBg, { backgroundColor: c.border }]}>
-                            <View style={[styles.progressBarFill, { width: `${rocaAbierta.porcentaje}%`, backgroundColor: c.gold }]} />
-                          </View>
-                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 2 }}>
-                            <Text style={[t.small, styles.cifras, { color: c.textSoft, fontSize: 14 }]}>
-                              Vas en: <Text style={{ color: c.goldInk, fontFamily: 'Jost_700Bold' }}>{rocaAbierta.avance} {rocaAbierta.unidad}</Text>
-                            </Text>
-                            <Text style={[t.small, styles.cifras, { color: c.textSoft, fontSize: 14 }]}>
-                              Meta: {rocaAbierta.meta} {rocaAbierta.unidad}
-                            </Text>
-                          </View>
-                          {/* Sin el punto de partida el porcentaje no se entiende ("¿0 % de qué?"). */}
-                          {rocaAbierta.lineaBase != null && (
-                            <Text style={[t.small, { color: c.micro, fontSize: 13, marginTop: 2 }]}>
-                              Partiste de {rocaAbierta.lineaBase} {rocaAbierta.unidad}
-                            </Text>
-                          )}
-                        </View>
-                      )}
-                    </>
-                  )}
-                </View>
-
-                {confirmacion && (
-                  <ConfirmacionEnLinea
-                    key={confirmacion.clave}
-                    texto={confirmacion.texto}
-                    onTerminar={() => setConfirmacion(null)}
-                  />
-                )}
-
-                {/* Dónde está parado dentro del programa. La semana es la del servidor (D-203); el
-                    "mes" es un bloque de 4 semanas contado desde que arrancó. Ver `periodoDelPrograma`. */}
-                <View style={[styles.goalCard, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}>
-                  <Row gap={8}>
-                    <Icon name="calendar" size={TAMANO_ICONO.chico} color={c.goldInk} />
-                    <Text style={[t.small, styles.rotulo, { color: c.goldInk }]}>
-                      {etiquetaDelMes(mesDe(diaPrograma))}
-                    </Text>
-                  </Row>
-                  <Text style={[t.body, styles.cifras, { color: c.textSoft, marginTop: 6 }]}>
-                    Vas por la semana {semanaDe(diaPrograma)} de {SEMANAS_DEL_PROGRAMA} · día {diaPrograma} de 90
-                  </Text>
-
-                  {/* LA CIFRA DEL MES (2026-09-22, autorizada por el dueño). La calcula el servidor;
-                      tocarla la corrige a mano. El lápiz, en un área de 44 (antes ✏️ de 12 sin área). */}
-                  {cifraDelMesAbierto && (
-                    <Presionable
-                      onPress={() => setEditandoMes(true)}
-                      accessibilityRole="button"
-                      accessibilityLabel="Cambiar el objetivo de este mes"
-                      style={styles.filaEsteMes}
-                    >
-                      <Text style={[t.body, styles.cifras, { color: c.textSoft, flexShrink: 1 }]}>
-                        Este mes:{' '}
-                        <Text style={{ color: c.goldInk, fontFamily: 'Jost_700Bold' }}>{cifraDelMesAbierto}</Text>
-                      </Text>
-                      <View style={styles.areaDelLapiz}>
-                        <Icon name="pencil" size={TAMANO_ICONO.chico} color={c.textSoft} />
-                      </View>
-                    </Presionable>
-                  )}
-
-                  {/* LA CIFRA DE LA SEMANA, más chica: no compite con el mes, lo aterriza. Sin lápiz a
-                      propósito: se corrige en "Armar mi semana", donde se escribe. */}
-                  {cifraDeLaSemanaAbierta && (
-                    <Text style={[t.small, styles.cifras, { color: c.micro, fontSize: 13.5, marginTop: 2 }]}>
-                      Esta semana: <Text style={{ color: c.textSoft }}>{cifraDeLaSemanaAbierta}</Text>
-                    </Text>
-                  )}
-                </View>
-
-                {/* 2 y 3: la semana y el día, en `features/objetivos/components` (ciclo con estados
-                    propios y formularios de varios pasos). Solo se piden cuando esta vista está abierta. */}
-                <NivelesDelPlan
-                  maestras={objetivos.rocas}
-                  numeroSemana={semanaDe(diaPrograma)}
-                  diaPrograma={diaPrograma}
-                  ejeAbierto={ejeAbierto}
-                  ejePrincipal={ejePrincipal}
-                  objetivoSugeridoDe={planMensual.objetivoSugeridoDe}
-                  onIrAlMapa={abrirMapa}
-                />
-              </View>
-            </>
-          )}
-        </ScrollView>
-      )}
+        )}
+      </ScrollView>
 
       {/* ========================================================================= */}
       {/* HOJA: EL OBJETIVO DE 90 DÍAS (DEFINIRLO O ANOTAR EL AVANCE)               */}
@@ -988,103 +641,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.screenX,
     paddingBottom: ESPACIO_PARA_LANZADOR,
   },
-  /** Cifras que cambian en pantalla: ancho de dígito fijo para que nada salte (AGENTS.md §4). */
-  cifras: {
-    fontVariant: ['tabular-nums'],
-  },
-  /** Lo que separa un bloque del siguiente es el aire (`space.gapLg`), no un filete. */
-  section: {
-    marginTop: space.gapLg,
-  },
-  /**
-   * Rótulo de tarjeta en tipo oración (2026-10-05). Reemplaza a los rótulos en versales espaciadas
-   * («1. OBJETIVO PRINCIPAL (90 DÍAS)», «CUERPO»), que se leen como el encabezado de una web.
-   */
-  rotulo: {
-    fontFamily: 'Jost_500Medium',
-    fontSize: 14,
-    lineHeight: 20,
-    letterSpacing: 0,
-  },
-  priorityCard: {
-    borderWidth: 1,
-    borderRadius: space.radius,
-    padding: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  /** El distintivo del eje principal: relleno tenue y sin contorno. */
-  insigniaPrincipal: {
-    borderRadius: space.radiusSm,
-    paddingHorizontal: 7,
-    paddingVertical: 1,
-  },
-  barraObjetivo: {
-    height: 6,
-    borderRadius: 3,
-    overflow: 'hidden',
-    marginTop: 5,
-  },
-  barraObjetivoRelleno: {
-    height: '100%',
-    borderRadius: 3,
-  },
-  encabezadoObjetivos: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingTop: 2,
-  },
-  /** La flecha de volver: 24 en un área de 48 (AGENTS.md §1), corrida para alinearse con el texto. */
-  botonVolver: {
-    width: 48,
-    height: 48,
-    marginLeft: -12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  goalCard: {
-    borderWidth: 1,
-    borderRadius: space.radius,
-    padding: space.cardPad,
-  },
-  /* «Más detalles»: acción de texto al lado de la introducción, sin caja, con 44 de alto. */
-  verDetallesBtn: {
-    minHeight: 44,
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  editGoalBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    borderRadius: space.radiusSm,
-    paddingHorizontal: 14,
-    minHeight: 44,
-  },
-  /** «Este mes: …» con su lápiz: toda la fila es el botón, de 44 de alto. */
-  filaEsteMes: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    minHeight: 44,
-    marginTop: 2,
-  },
-  areaDelLapiz: {
-    width: 44,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  progressBarBg: {
-    height: 8,
-    borderRadius: 4,
-    overflow: 'hidden',
-  },
-  progressBarFill: {
-    height: '100%',
-    borderRadius: 4,
-  },
+  /** El eje elegido, su objetivo y lo de la semana: tarjetas una debajo de otra, con aire entre ellas. */
+  pantalla: { gap: 14, paddingTop: 12, paddingBottom: 28 },
   etiquetaDeCampo: {
     fontFamily: 'Jost_500Medium',
     fontSize: 14,

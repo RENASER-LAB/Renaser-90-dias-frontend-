@@ -326,6 +326,48 @@ Pedidos del dueño del 31/10 con capturas; **todo es de la app, sin backend**. C
   entorno su evidencia fuera obligatoria, no se cierra con el círculo: pide su registro.
 * La hoja del hábito no cambia: sigue con «Subir evidencia» y «Marcar como hecho». Lo hecho, lo cerrado y los otros días, igual.
 
+### Plan: la pantalla principal con el formato de la referencia (punto 10)
+Pedido del dueño: «en Plan replica este formato de acuerdo a lo que tenemos». La maqueta se tradujo con **nuestros datos y nombres**
+(sin sus textos de ejemplo). Plan pasa a ser **una sola pantalla**, de arriba abajo:
+* **a. Cabecera:** «Plan» grande y, debajo y en dorado, «Tu dirección en 90 días». La diana de la maqueta no se dibuja (no tiene acción).
+* **b. Selector de eje:** el `ControlSegmentado` de Objetivos, con el principal primero y el ícono de cada eje (`iconoDelEje`):
+  **Cuerpo**, **Negocio**, **Relaciones**. `ControlSegmentado` suma la opción `icono` (16, opcional; sin ella no cambia nada). Todo lo de
+  abajo es del eje elegido.
+* **c. Tarjeta del objetivo de 90 días** (`TarjetaDelObjetivo`): el objetivo en negrita; «Inicio 82 · Actual 81 · Meta 80 kg» (la
+  línea base, el avance y la meta, que ya teníamos: `lineaDelObjetivo`); el % a la derecha en dorado; la barra; y, si existe, «Este mes:
+  81.6 kg» como una línea chica (tocarla la corrige, como antes). Los **tres puntos** de la derecha abren la hoja de siempre
+  —**escribir el objetivo** si falta, o **anotar el avance** si ya nació del Mapa y quedó fijo (D-234)—: «Editar» y «Anotar avance»
+  son la misma hoja, porque el objetivo fijo solo admite el avance. Sin avance que anotar (Relaciones fijo, sin meta) no se dibujan.
+* **d. «Esta semana»** (`TarjetaEstaSemana`): el ícono `calendar`, el objetivo semanal del eje, «2 de 6» a la derecha y la barra.
+  **Honestidad del dato:** el servidor no manda los días que ya pasaron (`/rocks/today` y `/rocks/upcoming` van de hoy hacia
+  adelante), así que la cuenta es de hoy a fin de semana y la tarjeta lo dice («acciones cumplidas, de hoy a fin de semana»). Sin
+  semana armada: «Todavía no armaste esta semana» con **«Arma tu semana ›»**. Conserva «Cerrar este objetivo con mi revisión»
+  (`RevisionSemanalModal`), «Ir al Mapa» si faltan los tres objetivos y, el domingo, «La que empieza el lunes» con «Armar la semana
+  que empieza» (D-203).
+* **e. «Acciones que mueven la meta»** (`AccionesQueMuevenLaMeta`): las agendadas del eje, de hoy y las que vienen (`today`, `tomorrow`
+  y `upcoming`, una vez por foco, ahora con `useRocasDiarias`); cada fila con su ícono (el del eje, el ✓ de línea si está cumplida, el
+  candado si espera a la verde), el título, «Mar 27 oct · 09:00» y su chevron. **Tocar una de hoy lleva a Training con
+  `abrirAccionId`** (ahí se sellan, como siempre); **una que viene abre «Agendar»**. Sin acciones: una línea con «Agendar mis
+  acciones»; con acciones, «Agendar otro día». Debajo van **los recordatorios de las acciones** (`RecordatorioDeAcciones`, sin cambios).
+* **f. «Tu 80/20»** (ícono nuevo `chartNoAxesColumn`, Lucide): «Prioriza lo que más acerca tu meta.»; abre una hoja con la regla de
+  Pareto de siempre —la acción verde va primero, las otras esperan con candado— y las acciones de HOY del eje con su color en
+  palabras (Verde / Amarilla / Roja) y su estado (los mismos textos de `textoDelEstado`).
+* **g. «Organizar mi semana ›»**, botón dorado a todo el ancho: abre el **asistente de la semana** (`PlanSemanalModal`) si el eje no tiene
+  objetivo semanal (o el domingo, si falta el de la que empieza) y, con el eje ya armado, **«Agendar»**: organizar la semana es repartir
+  sus acciones. Bloqueada, lleva al Mapa.
+* **Sin Mapa activo:** `PuertaDelMapa` («Primero tu Mapa de Renacimiento») en lugar de todo lo del eje, como desde el 2026-10-27.
+* **Lo que salió de la pantalla** (se integró arriba o se quitó): «Fase actual» (ya está en Yo), «Arquitectura de tiempo» (punto 4),
+  las **«Prioridades clave»** en lista (las reemplaza el selector de eje), **«Tus acciones de hoy · por eje»** de la spec 016 (la
+  reemplaza «Acciones que mueven la meta») y **la sub-vista de Objetivos con su flecha de volver** (`activeSubView`). Se borraron
+  `NivelesDelPlan`, `TarjetaPlanSemanal`, `TarjetaAccionesDelDia` y `TarjetaAccionesDeHoyPorEje`, que `PlanDelEje` y `TarjetasDelPlan`
+  reemplazan sin perder funciones: editar el objetivo, anotar el avance, la cifra del mes, armar la semana, agendar, revisar la
+  semana, los recordatorios y el sellado de acciones (en Training, desde la fila) siguen teniendo entrada. La alarma de una acción
+  con hora (`abrirObjetivosEje`) abre Plan en ese eje.
+* **No cambian:** la barra de pestañas, los asistentes y hojas (`PlanSemanalModal`, `RevisionSemanalModal`, `AgendarAccionesModal`,
+  `EditarObjetivoDelMesModal`), las reglas del servidor ni los demás tabs. Sin animaciones nuevas (`Presionable` en filas y tarjetas).
+* **Pruebas:** `planDelEje` (con todo, sin semana, sin acciones, el domingo, bloqueada y errores), `planPrincipal` (la lógica pura),
+  `controlSegmentadoConIcono`, `planRediseno` y `planEsperaAlMapa` (el Mapa y el selector) reescritas.
+
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
 Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel especializado en React Native, Expo y TypeScript. Al crear, refactorizar o modificar cualquier pantalla o componente, debes cumplir OBLIGATORIAMENTE con los siguientes estándares:
@@ -737,6 +779,8 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       cuando llega la hora del siguiente ítem del día, hábitos incluidos, y Plan no lee los hábitos); la que sigue es la primera
       sin cumplir en orden de hora, sin contar las que esperan a la verde. Sin acciones hoy: «Hoy no tienes acciones agendadas.
       Agéndalas desde tus objetivos: toca una prioridad clave y elige «Agendar mis acciones».».
+      > **Corregido 2026-10-31.** Esta tarjeta ya no existe: las acciones del eje elegido salen en «Acciones que mueven la meta» (hoy y
+      > las que vienen), y tocar una de hoy sigue llevando a Training con `abrirAccionId`. Ver la entrada del 2026-10-31.
     * **La hoja de un eje** (`HojaDesdeAbajo`): sus acciones de hoy con hora, nombre, estado en palabras («Cumplida 10:14»,
       «Pendiente», «Se te pasó la hora · todavía puedes registrarla hoy», «Se abre al completar la primera») y su símbolo, y
       fijo abajo «Registrar en Training». **Plan solo muestra:** el botón no registra nada, lleva a Training con
@@ -1050,6 +1094,8 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     * **Objetivos**: volver es la flecha de 24 en 48 con el nombre del eje (eran «← VOLVER A PLAN» y la píldora
       «02. OBJETIVOS (3 NIVELES)»), y debajo un `ControlSegmentado` Cuerpo / Negocio / Relaciones para cambiar de
       eje sin volver a Plan, en el orden de las tarjetas (el principal primero).
+      > **Corregido 2026-10-31 (pedido del dueño, «en Plan replica este formato»).** La sub-vista Objetivos, su flecha de volver y las
+      > «Prioridades clave» en lista ya no existen: Plan es una sola pantalla con el selector de eje arriba. Ver la entrada del 2026-10-31.
     * **«Arquitectura de tiempo»** dibuja las cuatro fases del programa con su largo (1–7, 8–34, 35–64, 65–90) y
       su nombre, y marca la que dice el backend; antes eran tres tramos de 30 días que contradecían la «Fase
       actual» de arriba. Los días salen de `FASES_EN_ORDEN` (`home/hooks/useResumenHome`, que ahora trae
@@ -3332,6 +3378,8 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       Hoy (`abrirMapa` de `MapaRenacimientoContext`: el Mapa reemplaza a las pestañas). Texto de 16, botón de 52, sin
       animación (se ve de vez en cuando y no reemplaza nada que se esté usando). **Con el Mapa activo, Plan es
       exactamente el de siempre.**
+      > **Corregido 2026-10-31.** Objetivos dejó de ser una sub-vista: `PuertaDelMapa` se dibuja en la pantalla principal de Plan, en lugar
+      > del selector de eje y de todo lo del eje, con la misma regla.
     * **Cómo se sabe si el Mapa está activo** (`objetivos/hooks/usePuertaDeObjetivos`, decisión pura en
       `objetivos/utils/puertaDeObjetivos`): lo mismo que lee la tarjeta de Hoy —«activo» en el borrador del teléfono o
       `GET /api/v1/mapa-renacimiento` con `stageCompleted`, que solo puede confirmar—. A diferencia de Hoy, Plan no

@@ -84,7 +84,8 @@ describe('Hoy: la cifra de la cabecera de cada tarjeta va con la letra del rótu
     .replace(/\/\*[\s\S]*?\*\//g, '')
     .replace(/(^|[^:])\/\/.*$/gm, '$1');
 
-  it.each(['Acciones y objetivos', 'Última evidencia del muro'])('«%s»', rotulo => {
+  // «Acciones y objetivos» se fue de este grupo el 2026-10-31: su tarjeta (`TarjetaAccionDeHoy`) no lleva rótulo ni cifra.
+  it.each(['Última evidencia del muro'])('«%s»', rotulo => {
     const desde = HOY.indexOf(`<MicroLabel>${rotulo}</MicroLabel>`);
     expect(desde).toBeGreaterThan(-1);
     const cabecera = HOY.slice(desde, HOY.indexOf('</Text>', desde));

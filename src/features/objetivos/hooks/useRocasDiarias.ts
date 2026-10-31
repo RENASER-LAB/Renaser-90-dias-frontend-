@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 
 import { ApiError, mensajeDeError } from '../../../services/http/apiClient';
 import * as objetivosApi from '../api/objetivosApi';
@@ -23,21 +24,34 @@ import { fechaAPlanificar, mensajeSinPlanSemanal } from '../utils/ventanasDePlan
 export function useRocasDiarias() {
   const [hoy, setHoy] = useState<RocaDiariaApi[]>([]);
   const [manana, setManana] = useState<RocaDiariaApi[]>([]);
+  /**
+   * Todo lo agendado desde hoy hasta el último día que se puede agendar (`GET /rocks/upcoming`, la misma lectura que usan las
+   * alarmas de las acciones) y el día de hoy según el servidor (`desde`). Plan lista con esto «Acciones que mueven la meta»
+   * (2026-10-31). Si esa lectura falla, Plan sigue con hoy y mañana.
+   */
+  const [agendadas, setAgendadas] = useState<RocaDiariaApi[]>([]);
+  const [hoyDelServidor, setHoyDelServidor] = useState<string | null>(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
+  /** Solo la primera lectura es «cargando»: al volver al foco se relee sin vaciar lo que ya se ve. */
+  const yaLeyo = useRef(false);
 
   const cargar = useCallback(async () => {
-    setCargando(true);
+    if (!yaLeyo.current) setCargando(true);
     setError(null);
     try {
-      // En paralelo: son dos lecturas independientes y en serie se nota en una conexión mala.
-      const [deHoy, deManana] = await Promise.all([
+      // En paralelo: son lecturas independientes y en serie se nota en una conexión mala.
+      const [deHoy, deManana, deLaSemana] = await Promise.all([
         objetivosApi.obtenerRocasDeHoy(),
         objetivosApi.obtenerRocasDeManana(),
+        objetivosApi.obtenerRocasAgendadas().catch(() => null),
       ]);
       setHoy(deHoy);
       setManana(deManana);
+      setAgendadas(deLaSemana?.rocas ?? []);
+      setHoyDelServidor(deLaSemana?.desde ?? deHoy[0]?.fecha ?? null);
+      yaLeyo.current = true;
     } catch (e) {
       setError(mensajeDeError(e, 'No pudimos cargar tus acciones del día.'));
     } finally {
@@ -45,9 +59,12 @@ export function useRocasDiarias() {
     }
   }, []);
 
-  useEffect(() => {
-    void cargar();
-  }, [cargar]);
+  // Al abrir Plan y cada vez que vuelve al foco (lo registrado en Training se ve al volver).
+  useFocusEffect(
+    useCallback(() => {
+      void cargar();
+    }, [cargar]),
+  );
 
   /**
    * Qué fecha se propone. **Es una propuesta del dispositivo, no la verdad.**
@@ -121,7 +138,7 @@ export function useRocasDiarias() {
     }
   }, [cargar]);
 
-  return { hoy, manana, objetivo, cargando, error, guardando, planificar, recargar: cargar };
+  return { hoy, manana, agendadas, hoyDelServidor, objetivo, cargando, error, guardando, planificar, recargar: cargar };
 }
 
 /**
