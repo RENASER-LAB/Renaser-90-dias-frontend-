@@ -3030,6 +3030,30 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       actualiza por aire). **Compatibilidad**: contra un backend anterior la app se comporta igual (la puerta sale del
       Mapa que ya existe, no de un campo nuevo). No cambian los cinco tabs en nada más, ni el Mapa, ni los hábitos.
 
+  * **Cambio por pedido del dueño — 2026-10-30 — tab `Hoy`: la sección del fénix sin el vacío de arriba y de abajo**
+    (textual, sobre una captura: «acá podemos optimizar esta parte, en la parte de arriba mucho espacio, podemos
+    optimizar sin reducir el tamaño»). Lo que cambia y nada más:
+    * **La sección mide lo que ocupa** (`styles.hero` de `HoyScreen`): tenía alto fijo (`rs(252)`, o `rs(206)` en pantalla
+      baja) con el contenido centrado y 12 de relleno, y sobre ~206 de contenido quedaban entre 23 y 35 dp en blanco
+      arriba y otros tantos abajo, además de los 28 de siempre entre secciones. Ahora no tiene alto, ni centrado, ni
+      relleno: el aire por arriba y por abajo es el de siempre entre secciones, igual por los dos lados. Medido en el
+      emulador a 411 dp (de la letra del texto a la del vecino): arriba de «Tu acompañante» de 73 a 38 dp y debajo de
+      «Toca y háblame» de 65 a 30 dp (70 dp menos en total).
+    * **El fénix no cambia de tamaño** en ninguna pantalla: el diámetro (140; menor en un teléfono angosto o bajo, como ya
+      era) sale de la misma cuenta, ahora en `home/utils/diametroDelOrbe` y fijada contra la fórmula anterior por
+      `hoyEspacioDelFenix.test.ts`. No se tocaron `OrbeAcompanante`, el `.riv`, el área de toque, la etiqueta accesible ni
+      el aire entre el rótulo, el ave y el rótulo de la fase (10 o 14: el ave se dibuja 14 px fuera de su área de toque y
+      ese aire le deja sitio).
+    * **«Terminar» no reserva su alto** (52 px): reservarlo dejaría en blanco, en reposo, justo lo que se pidió quitar. Con
+      la sección anclada arriba, el ave y su rótulo no se mueven cuando aparece «Terminar» o cambia la fase (antes,
+      centrada con alto fijo, el ave subía 26 dp, la mitad de los 52 de «Terminar»); lo que crece es lo de abajo (la tarjeta
+      del Mapa baja 52 dp), como ya lo hace la caja de «Tú: …» y la respuesta.
+    * **Dos retoques por lo mismo**: el rótulo de la fase deja más ancho (relleno lateral de 24 a 8) para no pasar de una a
+      dos líneas con letra grande a mitad de la conversación, y la caja de la conversación (`conversacionVoz`) queda a 16 de
+      lo de arriba (era 12), porque ya no hay blanco propio que la separe.
+    * **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). No cambian los otros tabs ni nada más
+      de Hoy.
+
 ## 2. 📱 RESPONSIVIDAD UNIVERSAL (XIAOMI, ANDROID, IOS Y TABLETS)
 * **Cero Doble Scroll**: NUNCA coloques un contenedor con `maxHeight` fijo o scroll interno dentro de otro `ScrollView`. Toda pantalla debe tener UN ÚNICO contenedor de scroll fluido con `contentContainerStyle={{ flexGrow: 1, paddingBottom: 36 }}`.
 * **Adaptabilidad a Xiaomi y Pantallas Altas (20:9 / 19.5:9)**:
