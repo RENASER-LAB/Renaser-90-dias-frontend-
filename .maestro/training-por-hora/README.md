@@ -14,7 +14,8 @@ de aprendiz; ver `../README.md`):
 - **01** lista por hora · **02** hábito con guía + foto + «¿Qué sentiste?» · **03** hábito sin guía (cámara directa) ·
   **04** ✓ de Despertar y Dormir · **05** Pastilla · **06** Clase diaria · **07** acción del día · **08** evento ·
   **09** días anteriores (✓ y candado) y que vienen · **10** engranaje, Planificar y pausa «Solo hoy» ·
-  **11** hábito de evidencia opcional: «Subir» (cuatro formas, con Texto) y ✓.
+  **11** hábito de evidencia opcional: «Subir» (cuatro formas, con Texto) y ✓ · **12** «Tus prácticas»: la dimensión abre
+  «Planificar» directo, «Cambiar nombre» en el editor de Jugo verde y el atrás sube un nivel por vez (2026-10-31).
 - Los flujos **no** dependen de la hora del día: el primero de la lista dice «Te toca ahora» o «Lo que sigue» según el reloj.
 - Los de `regresion/` que pasaban por las dimensiones de Training (01, 08, 10) y `comun/abrir-cuerpo.yaml` ya usan la lista
   nueva y el engranaje.

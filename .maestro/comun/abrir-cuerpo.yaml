@@ -1,5 +1,6 @@
 # Training → engranaje («Tus prácticas», solo para planificar) → Cuerpo. Spec 014: las cinco dimensiones ya no se ven
-# afuera, en la lista por hora; viven dentro del engranaje.
+# afuera, en la lista por hora; viven dentro del engranaje. Desde el 2026-10-31 tocar Cuerpo abre DIRECTO la hoja
+# «Planificar Cuerpo» (ya no hay una pantalla de detalle en el medio).
 appId: com.renaser.app
 ---
 - tapOn: "TRAINING"

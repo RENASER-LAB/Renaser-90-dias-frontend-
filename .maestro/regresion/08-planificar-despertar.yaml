@@ -3,10 +3,10 @@
 appId: com.renaser.app
 ---
 - runFlow: ../comun/ya-adentro.yaml
+# `abrir-cuerpo` ya deja abierta la hoja «Planificar Cuerpo» (la dimensión la abre directo, 2026-10-31).
 - runFlow: ../comun/abrir-cuerpo.yaml
-- tapOn: "Planificar Cuerpo"
 - extendedWaitUntil:
-    visible: "Planificar Cuerpo"
+    visible: "Toca uno para cambiarle la hora\\."
     timeout: 10000
 # La fila se anuncia «DESPERTAR, sin hora» o «DESPERTAR, a las 22:00». Con «DESPERTAR» a secas se tocaba el
 # interruptor, que se llama igual y abre «Pausar».

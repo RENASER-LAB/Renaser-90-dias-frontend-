@@ -1,7 +1,8 @@
 /**
  * «Tus prácticas» (el engranaje de Training, spec 014) es SOLO para planificar: ninguna fila registra. Se prueba mirando
- * lo que importa el archivo (nada de registro) y montándolo con sus datos: cada dimensión abre su detalle, «Planificar» y
- * cada hábito abren la hoja de Planificar —este último, directo en su editor—, y no hay ✓, cámara ni «Subir».
+ * lo que importa el archivo (nada de registro) y montándolo con sus datos: tocar una dimensión abre DIRECTO la hoja
+ * «Planificar <dimensión>» (2026-10-31: ya no hay un detalle en el medio que repita la lista de hábitos), cerrarla
+ * vuelve a «Tus prácticas», y no hay ✓, cámara ni «Subir».
  */
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import fs from 'fs';
@@ -20,9 +21,18 @@ jest.mock('../../../../theme/ThemeContext', () => {
 jest.mock('../../../../theme/responsive', () => ({ useResponsive: () => ({ horizontalPadding: 18 }) }));
 jest.mock('../../../../utils/tacto', () => ({ tacto: { seleccion: () => undefined, error: () => undefined, logro: () => undefined } }));
 /** La hoja de Planificar es otra pieza (specs 008 a 011): acá solo importa cuándo se abre y en qué hábito. */
-const mockHoja: { props: { visible: boolean; abrirEnHabitoId?: string | null; dimension: string } | null } = { props: null };
+type PropsDeLaHoja = {
+  visible: boolean;
+  dimension: string;
+  nombreDimension?: string;
+  habits: HabitItem[];
+  renombre?: unknown;
+  onCerrar: () => void;
+  onGuardado: (texto?: string) => void;
+};
+const mockHoja: { props: PropsDeLaHoja | null } = { props: null };
 jest.mock('../PlanificarDimensionModal', () => ({
-  PlanificarDimensionModal: (props: { visible: boolean; abrirEnHabitoId?: string | null; dimension: string }) => {
+  PlanificarDimensionModal: (props: PropsDeLaHoja) => {
     mockHoja.props = props;
     return null;
   },
@@ -119,6 +129,13 @@ describe('«Tus prácticas»: solo planificar', () => {
     }
   });
 
+  it('ya no tiene el detalle intermedio: ni su tarjeta «Planificar», ni su lista de hábitos, ni «Cambiar nombre» ni la hoja de renombre', () => {
+    const fuente = fs.readFileSync(path.resolve(__dirname, '..', 'PracticasDeTraining.tsx'), 'utf-8').replace(/\/\*[\s\S]*?\*\//g, '');
+    for (const resto of ['RenombrarHabitoModal', 'esRenombrable', 'tituloVisible', 'abrirEnHabitoId', 'planificando', 'habitoId: ', 'Tus hábitos', 'Cambiar nombre', 'Aquí solo se planifica']) {
+      expect({ resto, aparece: fuente.includes(resto) }).toEqual({ resto, aparece: false });
+    }
+  });
+
   it('«Arma tu semana los domingos» vive acá, con el mismo interruptor de siempre', async () => {
     mockTieneRepaso.mockResolvedValueOnce(false);
     montar(PRACTICAS_ABIERTAS);
@@ -139,61 +156,59 @@ describe('«Tus prácticas»: solo planificar', () => {
     for (const palabra of ['Subir', 'Tomar foto', 'Escuchar', 'Marcar', 'Registrar']) expect(t).not.toContain(palabra);
   });
 
-  it('tocar una dimensión abre su detalle', () => {
+  it('tocar una dimensión abre DIRECTO su hoja «Planificar» (sin un detalle en el medio)', () => {
     montar(PRACTICAS_ABIERTAS);
-    act(() => conEtiqueta('Cuerpo:').props.onPress());
-    expect(onEstado).toHaveBeenCalledWith({ ...PRACTICAS_ABIERTAS, dimension: 'CUERPO' });
-  });
-
-  it('el detalle: «Planificar Cuerpo», los hábitos de la dimensión y ningún botón de registrar', () => {
-    montar({ ...PRACTICAS_ABIERTAS, dimension: 'CUERPO' });
-    const t = textos(raiz!);
-    expect(t).toContain('Planificar Cuerpo');
-    expect(t).toContain('Tus hábitos (2)');
-    expect(t).toContain('Hábito a');
-    expect(t).toContain('Hábito b');
-    expect(t).not.toContain('Hábito mente');
-    expect(t).toContain('Aquí solo se planifica. Para registrar, vuelve a Training.');
-    expect(raiz!.root.findAll(n => n.props.accessibilityRole === 'checkbox')).toHaveLength(0);
-    for (const palabra of ['Subir', 'Tomar foto', 'Escuchar', 'Marcar']) expect(t).not.toContain(palabra);
-  });
-
-  it('«Planificar Cuerpo» abre la hoja de siempre, en su lista', () => {
-    montar({ ...PRACTICAS_ABIERTAS, dimension: 'CUERPO' });
-    act(() => conEtiqueta('Planificar Cuerpo').props.onPress());
-    expect(onEstado).toHaveBeenCalledWith({ ...PRACTICAS_ABIERTAS, dimension: 'CUERPO', planificando: true, habitoId: null });
-  });
-
-  it('tocar un hábito abre su editor en Planificar', () => {
-    montar({ ...PRACTICAS_ABIERTAS, dimension: 'CUERPO' });
-    act(() => conEtiqueta('Hábito b, 06:00').props.onPress());
-    expect(onEstado).toHaveBeenCalledWith({ ...PRACTICAS_ABIERTAS, dimension: 'CUERPO', planificando: true, habitoId: 'h-b' });
-  });
-
-  it('la hoja recibe la dimensión, sus hábitos y el hábito a abrir; cerrada, no está visible', () => {
-    montar({ ...PRACTICAS_ABIERTAS, dimension: 'CUERPO' });
     expect(mockHoja.props?.visible).toBe(false);
-    act(() => raiz!.update(React.createElement(PracticasDeTraining, {
-      ...(raiz!.root.props as object),
-      estado: { ...PRACTICAS_ABIERTAS, dimension: 'CUERPO', planificando: true, habitoId: 'h-b' },
-    } as never)));
-    expect(mockHoja.props).toMatchObject({ visible: true, abrirEnHabitoId: 'h-b', dimension: 'CUERPO' });
+    act(() => conEtiqueta('Cuerpo:').props.onPress());
+    expect(onEstado).toHaveBeenCalledTimes(1);
+    expect(onEstado).toHaveBeenCalledWith({ abierta: true, dimension: 'CUERPO' });
   });
 
-  it('la flecha vuelve un nivel: de una dimensión a la lista, de la lista a Training', () => {
+  it('con una dimensión elegida la hoja está abierta, con SUS hábitos y el renombre, y atrás sigue «Tus prácticas» (no un detalle)', () => {
     montar({ ...PRACTICAS_ABIERTAS, dimension: 'CUERPO' });
-    act(() => conEtiqueta('Volver').props.onPress());
-    expect(onEstado).toHaveBeenLastCalledWith(PRACTICAS_ABIERTAS);
-    act(() => raiz!.unmount());
+    expect(mockHoja.props).toMatchObject({ visible: true, dimension: 'CUERPO', nombreDimension: 'Cuerpo' });
+    expect(mockHoja.props?.habits.map(h => h.id)).toEqual(['a', 'b']); // no entra «mente»
+    expect(mockHoja.props?.renombre).toBeDefined();
+    // La pantalla de fondo es la misma «Tus prácticas»: sigue la lista de dimensiones y no hay detalle.
+    const t = textos(raiz!);
+    expect(t).toContain('Tus prácticas');
+    for (const nombre of ['Cuerpo', 'Mente', 'Emociones', 'Espíritu', 'Vida y negocio']) expect(t).toContain(nombre);
+    for (const sobrante of ['Planificar Cuerpo', 'Tus hábitos (2)', 'Cambiar nombre', 'Aquí solo se planifica']) expect(t).not.toContain(sobrante);
+    expect(botones(raiz!).filter(n => String(n.props.accessibilityLabel).includes('Abrir para planificarlo'))).toHaveLength(0);
+  });
+
+  it('cerrada la hoja (✕, arrastrar, atrás), vuelve a «Tus prácticas» sin tocar nada más', () => {
+    montar({ ...PRACTICAS_ABIERTAS, dimension: 'MENTE' });
+    act(() => mockHoja.props!.onCerrar());
+    expect(onEstado).toHaveBeenLastCalledWith({ abierta: true, dimension: null });
+    expect(onGuardado).not.toHaveBeenCalled();
+  });
+
+  it('guardar en la hoja vuelve a «Tus prácticas» y avisa a Training (que recarga y confirma en línea)', () => {
+    montar({ ...PRACTICAS_ABIERTAS, dimension: 'CUERPO' });
+    act(() => mockHoja.props!.onGuardado('«Caminar» creado'));
+    expect(onEstado).toHaveBeenLastCalledWith({ abierta: true, dimension: null });
+    expect(onGuardado).toHaveBeenCalledWith('«Caminar» creado');
+  });
+
+  it('sin dimensión elegida la hoja no está abierta', () => {
+    montar(PRACTICAS_ABIERTAS);
+    expect(mockHoja.props?.visible).toBe(false);
+  });
+
+  it('la flecha de «Tus prácticas» vuelve a Training (la hoja tiene su propio atrás)', () => {
     montar(PRACTICAS_ABIERTAS);
     act(() => conEtiqueta('Volver').props.onPress());
     expect(onEstado.mock.lastCall?.[0]).toMatchObject({ abierta: false });
   });
 
-  it('Vida y negocio: sin hábitos de catálogo, no ofrece planificar y manda a Plan', () => {
+  it('Vida y negocio también abre su hoja; el mensaje de que se planifica en Plan lo dice la hoja', () => {
+    montar(PRACTICAS_ABIERTAS);
+    act(() => conEtiqueta('Vida y negocio:').props.onPress());
+    expect(onEstado).toHaveBeenCalledWith({ abierta: true, dimension: 'VIDA Y NEGOCIO' });
+    act(() => raiz!.unmount());
     montar({ ...PRACTICAS_ABIERTAS, dimension: 'VIDA Y NEGOCIO' });
-    const t = textos(raiz!);
-    expect(t).toContain('Las acciones de tus objetivos se planifican en Plan');
-    expect(t).not.toContain('Planificar Vida y negocio');
+    expect(mockHoja.props).toMatchObject({ visible: true, dimension: 'VIDA Y NEGOCIO' });
+    expect(mockHoja.props?.habits).toEqual([]);
   });
 });
