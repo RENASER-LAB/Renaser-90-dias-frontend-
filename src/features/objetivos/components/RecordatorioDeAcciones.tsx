@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -28,6 +29,7 @@ import {
   resumenDeLaCombinacion,
 } from '../../training/utils/comoSuena';
 import * as objetivosApi from '../api/objetivosApi';
+import { useAlarmasAlDiaConLasAcciones } from '../hooks/useAlarmasAlDiaConLasAcciones';
 import { huellaDelDiario, planDelRecordatorioDiario } from '../notificaciones/planDelDiario';
 import {
   FILAS_DE_COMO_SUENA_DE_LAS_ACCIONES,
@@ -102,9 +104,15 @@ export function RecordatorioDeAcciones({
   userId,
   rocas,
   tonoDeYo: tonoQueLlega,
+  sincronizarConLaLista = true,
 }: {
   userId: string;
   rocas?: RocaDiariaApi[];
+  /**
+   * Con `rocas`, poner al día las alarmas de cada acción cuando la lista cambia (por defecto, sí). Plan lo apaga: lo hace
+   * `useAlarmasAlDiaConLasAcciones` en la pantalla, que siempre está, y no cuando la hoja con este control se abre.
+   */
+  sincronizarConLaLista?: boolean;
   /**
    * El tono de Yo → Alarmas, si la pantalla ya lo tiene (Yo lo tiene y lo cambia en la misma pantalla). Sin él, se lee al
    * abrir. Decide qué avisa «Cómo suena»: con el tono «Voz» la voz ya habla; con «Solo vibrar» el sonido no suena.
@@ -131,16 +139,9 @@ export function RecordatorioDeAcciones({
     void preferenciasDeAlarmas(userId).then(p => setTonoLeido(p.sonido)).catch(() => undefined);
   }, [userId]);
 
-  // Qué de la lista le importa a las alarmas: si esto no cambia, no se toca nada.
-  const huella = useMemo(
-    () => (rocas ?? []).map(r => `${r.id}|${r.fecha}|${r.horaInicio ?? ''}|${r.completada}`).join(','),
-    [rocas],
-  );
-  useEffect(() => {
-    if (!HAY_RECORDATORIOS_LOCALES || !rocas) return;
-    void sincronizarAlarmasDeAcciones(userId, rocas).catch(() => {});
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, huella]);
+  // Poner al día las alarmas de cada acción cuando la lista cambia. Plan lo hace por fuera (la fila «Recordatorios de tus
+  // acciones» abre este control en una hoja, y con la hoja cerrada no está dibujado): ahí va `sincronizarConLaLista={false}`.
+  useAlarmasAlDiaConLasAcciones(userId, sincronizarConLaLista ? rocas : undefined);
 
   const marcados = useMemo(() => diasEnEdicion.map(isoDelDia), [diasEnEdicion]);
   const enModoDias = marcados.length > 0;
@@ -482,12 +483,12 @@ export function RecordatorioDeAcciones({
 }
 
 const estilos = StyleSheet.create({
-  cuerpo: { fontFamily: 'Jost_400Regular', fontSize: 16, lineHeight: 23 },
-  nombre: { fontFamily: 'Jost_500Medium', fontSize: 17, lineHeight: 22 },
-  etiqueta: { fontFamily: 'Jost_500Medium', fontSize: 16, lineHeight: 22 },
-  ayuda: { fontFamily: 'Jost_400Regular', fontSize: 16, lineHeight: 22, marginTop: 6 },
+  cuerpo: { fontFamily: fuentes.regular, fontSize: 16, lineHeight: 23 },
+  nombre: { fontFamily: fuentes.media, fontSize: 17, lineHeight: 22 },
+  etiqueta: { fontFamily: fuentes.media, fontSize: 16, lineHeight: 22 },
+  ayuda: { fontFamily: fuentes.regular, fontSize: 16, lineHeight: 22, marginTop: 6 },
   // «Estos días tienen avisos distintos»: a 15 px y con el color del texto, nunca el gris tenue.
-  lineaDeAvisosDistintos: { fontFamily: 'Jost_500Medium', fontSize: 15, lineHeight: 21 },
+  lineaDeAvisosDistintos: { fontFamily: fuentes.media, fontSize: 15, lineHeight: 21 },
   caja: { borderWidth: 1, borderRadius: 16, paddingHorizontal: 14 },
   fila: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 72, paddingVertical: 12 },
   filaPastillas: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
@@ -496,5 +497,5 @@ const estilos = StyleSheet.create({
   rotuloDeLosDias: { flexShrink: 1, minHeight: 24, justifyContent: 'center' },
   enlaceTodos: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44, paddingHorizontal: 8 },
   enlaceQuitar: { minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start' },
-  textoDelEnlace: { fontFamily: 'Jost_500Medium', fontSize: 16, lineHeight: 22 },
+  textoDelEnlace: { fontFamily: fuentes.media, fontSize: 16, lineHeight: 22 },
 });

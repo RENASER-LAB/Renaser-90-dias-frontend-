@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useState } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 
@@ -116,7 +117,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   texto: {
-    fontFamily: 'Jost_400Regular',
+    fontFamily: fuentes.regular,
     fontSize: 16,
     lineHeight: 23,
     textAlign: 'center',

@@ -10,6 +10,7 @@ import {
   inicioDelDegradado,
   paradasDelDegradado,
   solapeDelTitulo,
+  topeDeAltoParaElFormulario,
 } from '../cabeceraDelIngreso';
 
 /**
@@ -146,5 +147,66 @@ describe('curvaDeNivel', () => {
     expect(camino.startsWith('M')).toBe(true);
     expect(camino.endsWith('Z')).toBe(true);
     expect(camino.split('L')).toHaveLength(13);
+  });
+});
+
+describe('topeDeAltoParaElFormulario (el enlace «¿Olvidaste…?» no queda bajo el botón)', () => {
+  /** Lo que mide el cuerpo del login sin avisos: título, subrayado, dos campos y el enlace (≈ 306). */
+  const CUERPO = 306;
+  const AIRE = 16;
+  /** Lo que se ve del scroll: la pantalla menos el pie fijo (botón, «Solicitar acceso», privacidad y el borde seguro). */
+  const pie = 150 + 16;
+  const solape = solapeDelTitulo('alta');
+
+  /** El alto del contenido del scroll con una cabecera de `alto`: lo que sobra de `altoLibre` es lo que se desplaza. */
+  const sobra = (alto: number, altoLibre: number) => alto - solape + CUERPO + AIRE - altoLibre;
+
+  it.each([
+    { nombre: 'teléfono de 360 × 780', ventana: 780 },
+    { nombre: 'Pixel 6 (412 × 915)', ventana: 915 },
+    { nombre: 'teléfono alto de 20:9 (360 × 800)', ventana: 800 },
+  ])('$nombre: con el tope el formulario cabe sin desplazar', ({ ventana }) => {
+    const altoLibre = ventana - pie;
+    const tope = topeDeAltoParaElFormulario({ variante: 'alta', altoLibre, altoDelCuerpo: CUERPO, aireDeAbajo: AIRE });
+    const alto = Math.min(altoDeLaCabecera(ventana, 'alta'), tope ?? Infinity);
+    expect(tope).toBeDefined();
+    expect(sobra(alto, altoLibre)).toBeLessThanOrEqual(0);
+  });
+
+  it('en el teléfono de 360 × 780 la cabecera baja de 421 a lo que deja ver el enlace', () => {
+    const altoLibre = 780 - pie;
+    expect(sobra(altoDeLaCabecera(780, 'alta'), altoLibre)).toBeGreaterThan(48);
+    expect(topeDeAltoParaElFormulario({ variante: 'alta', altoLibre, altoDelCuerpo: CUERPO, aireDeAbajo: AIRE })).toBe(
+      Math.floor(altoLibre - CUERPO - AIRE + solape),
+    );
+  });
+
+  it('si ya cabe, no la achica: el tope es mayor que su alto de siempre', () => {
+    const altoLibre = 1200 - pie;
+    const tope = topeDeAltoParaElFormulario({ variante: 'alta', altoLibre, altoDelCuerpo: CUERPO, aireDeAbajo: AIRE });
+    expect(tope).toBeGreaterThanOrEqual(altoDeLaCabecera(1200, 'alta'));
+  });
+
+  it('la letra grande del sistema (cuerpo más alto) baja la cabecera, y nunca pasa de su mínimo', () => {
+    const altoLibre = 780 - pie;
+    const normal = topeDeAltoParaElFormulario({ variante: 'alta', altoLibre, altoDelCuerpo: CUERPO, aireDeAbajo: AIRE });
+    const grande = topeDeAltoParaElFormulario({ variante: 'alta', altoLibre, altoDelCuerpo: CUERPO * 1.3, aireDeAbajo: AIRE });
+    const enorme = topeDeAltoParaElFormulario({ variante: 'alta', altoLibre, altoDelCuerpo: CUERPO * 3, aireDeAbajo: AIRE });
+    expect(grande!).toBeLessThan(normal!);
+    expect(enorme).toBe(176);
+  });
+
+  it('con el tope mínimo la cabeza del fénix sigue a la vista bajo la barra de estado', () => {
+    const ancho = 360;
+    const alto = 176;
+    const corrimiento = corrimientoDeLaImagen({ ancho, alto, margenSuperior: 24, variante: 'alta' });
+    const cabeza = CABEZA_EN_LA_IMAGEN * ancho * PROPORCION_DE_LA_IMAGEN - corrimiento;
+    expect(cabeza).toBeGreaterThan(24 + 40);
+    expect(cabeza).toBeLessThan(inicioDelDegradado(alto, 'alta'));
+  });
+
+  it('sin medidas todavía no limita nada', () => {
+    expect(topeDeAltoParaElFormulario({ variante: 'alta', altoLibre: 0, altoDelCuerpo: CUERPO, aireDeAbajo: AIRE })).toBeUndefined();
+    expect(topeDeAltoParaElFormulario({ variante: 'alta', altoLibre: 600, altoDelCuerpo: 0, aireDeAbajo: AIRE })).toBeUndefined();
   });
 });

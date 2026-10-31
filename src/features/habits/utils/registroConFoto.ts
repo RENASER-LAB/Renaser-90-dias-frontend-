@@ -26,6 +26,29 @@ export function preguntaQueSintio(systemKey: string | null | undefined): boolean
 }
 
 /**
+ * Los rituales de Training piden SOLO TEXTO (2026-10-31, pedido del dueño): sin cámara. En la hoja el botón es «Escribir cómo me
+ * siento» y abre un campo con esta pregunta, obligatoria. Se registra como evidencia de TEXTO y se cierra con la respuesta
+ * (`respuestaTexto`), por los mismos pasos de siempre (`confirmarEvidencia` y `completarRegistro`). Se decide por la clave de
+ * sistema, nunca por el título. > Corregido 2026-10-31: hasta hoy los rituales abrían la cámara y después «¿Qué sentiste?»; ese
+ * camino (`preguntaQueSintio`) sigue siendo el de la foto que pide SER desde el orbe o el chat.
+ */
+export const PREGUNTA_DEL_RITUAL = '¿Cómo te sientes después de realizar el ritual?';
+
+/** El botón de la hoja y de la fila de un ritual. */
+export const ETIQUETA_DEL_BOTON_DEL_RITUAL = 'Escribir cómo me siento';
+
+/**
+ * Hasta cuánto se puede escribir. «¿Qué sentiste?» no pone tope en la app; lo pone el servidor: `respuestaTexto` de
+ * `CompletarRegistroRequest` es `@Size(max = 4000)`. Es el mismo límite y la misma validación.
+ */
+export const MAXIMO_RESPUESTA_DEL_REGISTRO = 4000;
+
+/** ¿Este hábito (por su clave de sistema) se registra escribiendo, sin foto? Los tres rituales. */
+export function seRegistraConTexto(systemKey: string | null | undefined): boolean {
+  return preguntaQueSintio(systemKey);
+}
+
+/**
  * KILÓMETROS DIARIOS (D-226 del backend, decisión del dueño 2026-09-29): igual que los rituales,
  * cámara y después la pantalla partida, pero en vez de "¿Qué sentiste?" pide los km del día y
  * muestra el total recorrido. Qué registro lo pide lo dice el SERVIDOR (`medicion` del track), no una
@@ -332,13 +355,49 @@ export async function registrarConFoto(
   }
 }
 
+/** Lo que el registro con texto necesita del backend. Se inyecta para poder probar el orden y los reintentos. */
+export type DependenciasDelRegistroConTexto = {
+  subirTexto: (registroId: string, texto: string) => Promise<unknown>;
+  completar: (registroId: string, respuesta: string) => Promise<{ puntosOtorgados: number }>;
+  tracksDeHoy: () => Promise<TrackDelDiaApi[]>;
+};
+
+/**
+ * El registro de un ritual: la respuesta como evidencia de TEXTO (paso 3) y el cierre con esa misma respuesta (paso 4). Sin foto,
+ * así que no hay subida a S3. Mismo orden, mismo aviso de «la evidencia ya quedó» y mismo trato del rechazo que
+ * {@link registrarConFoto}.
+ */
+export async function registrarConTexto(
+  entrada: { registroId: string; respuesta: string; evidenciaYaSubida: boolean },
+  alConfirmarEvidencia: () => void,
+  deps: DependenciasDelRegistroConTexto,
+): Promise<ResultadoDelRegistro> {
+  const respuesta = entrada.respuesta.trim();
+  if (!respuesta) throw new Error('Cuéntanos cómo te sientes antes de terminar.');
+  if (respuesta.length > MAXIMO_RESPUESTA_DEL_REGISTRO) {
+    throw new Error(`Tu respuesta pasa de ${MAXIMO_RESPUESTA_DEL_REGISTRO} caracteres. Acórtala un poco.`);
+  }
+  if (!entrada.evidenciaYaSubida) {
+    await enPasoDelEnvio('guardar tu respuesta', () => deps.subirTexto(entrada.registroId, respuesta));
+    alConfirmarEvidencia();
+  }
+  try {
+    const registro = await enPasoDelEnvio('cerrar el registro', () => deps.completar(entrada.registroId, respuesta));
+    return { puntosOtorgados: registro.puntosOtorgados, yaEstabaCompletado: false };
+  } catch (error) {
+    const yaCompletado = esRechazoDelServidor(error) && (await figuraCompletado(entrada.registroId, deps));
+    if (yaCompletado) return { puntosOtorgados: yaCompletado.puntosOtorgados, yaEstabaCompletado: true };
+    throw error;
+  }
+}
+
 function esRechazoDelServidor(error: unknown): boolean {
   return error instanceof ApiError && error.status >= 400 && error.status < 500 && !error.esNoAutenticado;
 }
 
 async function figuraCompletado(
   registroId: string,
-  deps: DependenciasDelRegistro,
+  deps: Pick<DependenciasDelRegistro, 'tracksDeHoy'>,
 ): Promise<TrackDelDiaApi | null> {
   try {
     const track = (await deps.tracksDeHoy()).find(t => t.id === registroId);

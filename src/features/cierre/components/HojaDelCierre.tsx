@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useEffect } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated, { ReduceMotion, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
@@ -116,7 +117,7 @@ export function HojaDelCierre({
       <View style={{ gap: 8 }}>
         {puedeVerManana ? (
           <Presionable onPress={onVerManana} accessibilityRole="button" accessibilityLabel="Ver mañana en Training" style={estilos.enlace}>
-            <Text style={[t.body, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 16 }]}>Ver mañana en Training</Text>
+            <Text style={[t.body, { color: c.goldInk, fontFamily: fuentes.negrita, fontSize: 16 }]}>Ver mañana en Training</Text>
             <Icon name="chevron" size={TAMANO_ICONO.chico} color={c.goldInk} />
           </Presionable>
         ) : null}
@@ -157,7 +158,7 @@ export function HojaDelCierre({
         <View style={estilos.estado}>
           <Text style={[t.body, { color: c.textSoft }]}>{hoja.errorDeLectura}</Text>
           <Presionable onPress={() => void hoja.reintentar()} accessibilityRole="button" accessibilityLabel="Reintentar" style={estilos.enlace}>
-            <Text style={[t.body, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 16 }]}>Reintentar</Text>
+            <Text style={[t.body, { color: c.goldInk, fontFamily: fuentes.negrita, fontSize: 16 }]}>Reintentar</Text>
           </Presionable>
         </View>
       ) : fase === 'guardado' && vista ? (
@@ -381,7 +382,7 @@ const estilos = StyleSheet.create({
   estado: { paddingHorizontal: 20, paddingVertical: 24, gap: 12 },
   lineaCumplida: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 48, paddingHorizontal: 12, borderRadius: 12 },
   tarjeta: { gap: 6, padding: 14, borderWidth: 1, borderRadius: 16 },
-  pregunta: { marginTop: 10, fontFamily: 'Jost_700Bold', fontSize: 16 },
+  pregunta: { marginTop: 10, fontFamily: fuentes.negrita, fontSize: 16 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   campo: {
     marginTop: 12,
@@ -391,7 +392,7 @@ const estilos = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 16,
-    fontFamily: 'Jost_400Regular',
+    fontFamily: fuentes.regular,
     textAlignVertical: 'top',
   },
   guardado: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, paddingHorizontal: 28 },

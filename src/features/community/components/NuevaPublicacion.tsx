@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { ActivityIndicator, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -220,7 +221,7 @@ function CategoriasDelPost({ lista, cargando, error, recargar, elegida, alElegir
             <Text
               style={[
                 styles.chipTexto,
-                { color: activa ? c.goldInk : c.text, fontFamily: activa ? 'Jost_500Medium' : 'Jost_400Regular' },
+                { color: activa ? c.goldInk : c.text, fontFamily: activa ? fuentes.media : fuentes.regular },
               ]}
             >
               {`${categoria.emoji} ${categoria.label}`}
@@ -238,7 +239,7 @@ function FotosDelPost({ lista, agregando, alAgregar, alQuitar }: NuevaPublicacio
   return (
     <View style={styles.fotos}>
       <Text style={[t.small, { color: c.textSoft }]}>
-        <Text style={{ fontFamily: 'Jost_500Medium', color: c.textStrong }}>Fotos</Text> · al menos una
+        <Text style={{ fontFamily: fuentes.media, color: c.textStrong }}>Fotos</Text> · al menos una
       </Text>
       <View style={styles.mosaico}>
         {lista.map((foto, indice) => (
@@ -298,7 +299,7 @@ const styles = StyleSheet.create({
   },
   titulo: {
     textAlign: 'center',
-    fontFamily: 'Jost_500Medium',
+    fontFamily: fuentes.media,
     fontSize: 17,
     lineHeight: 22,
   },
@@ -321,7 +322,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   publicarTexto: {
-    fontFamily: 'Jost_500Medium',
+    fontFamily: fuentes.media,
     fontSize: 15,
     lineHeight: 20,
   },
@@ -408,7 +409,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   agregarTexto: {
-    fontFamily: 'Jost_500Medium',
+    fontFamily: fuentes.media,
     fontSize: 13,
     lineHeight: 17,
   },

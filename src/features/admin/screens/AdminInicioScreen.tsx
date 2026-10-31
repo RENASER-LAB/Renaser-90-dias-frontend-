@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -151,7 +152,7 @@ export function AdminInicioScreen({
               ]}
             >
               <View style={{ flex: 1, flexShrink: 1 }}>
-                <Text style={[t.body, { color: c.textStrong, fontSize: 18, fontFamily: 'Jost_500Medium' }]}>
+                <Text style={[t.body, { color: c.textStrong, fontSize: 18, fontFamily: fuentes.media }]}>
                   {cola.titulo}
                 </Text>
                 <Text style={[t.body, { color: c.textSoft, fontSize: 16, marginTop: 2 }]}>
@@ -181,7 +182,7 @@ export function AdminInicioScreen({
               ]}
             >
               <View style={{ flex: 1, flexShrink: 1 }}>
-                <Text style={[t.body, { color: c.textStrong, fontSize: 18, fontFamily: 'Jost_500Medium' }]}>
+                <Text style={[t.body, { color: c.textStrong, fontSize: 18, fontFamily: fuentes.media }]}>
                   {seccion.titulo}
                 </Text>
                 <Text style={[t.body, { color: c.textSoft, fontSize: 16, marginTop: 2 }]}>

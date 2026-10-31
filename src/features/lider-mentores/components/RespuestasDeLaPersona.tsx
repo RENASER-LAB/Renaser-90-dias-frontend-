@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -63,8 +64,8 @@ const estilos = StyleSheet.create({
   /* Dos tarjetas iguales; en un teléfono angosto la segunda baja en vez de apretarse. */
   fila: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   tarjeta: { flexGrow: 1, flexBasis: 150, borderWidth: 1, borderRadius: 16, padding: 14, gap: 4 },
-  pregunta: { fontFamily: 'Jost_700Bold', fontSize: 14, lineHeight: 19 },
+  pregunta: { fontFamily: fuentes.negrita, fontSize: 14, lineHeight: 19 },
   valor: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   /* Cifras tabulares: «4 de 12» y «10 de 12» no bailan de ancho de una ficha a otra. */
-  cifra: { fontFamily: 'Jost_700Bold', fontSize: 26, lineHeight: 32, fontVariant: ['tabular-nums'] },
+  cifra: { fontFamily: fuentes.negrita, fontSize: 26, lineHeight: 32, fontVariant: ['tabular-nums'] },
 });

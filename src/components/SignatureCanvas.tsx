@@ -1,3 +1,4 @@
+import { fuentes } from '../theme/fuentes';
 import React, { forwardRef, useImperativeHandle, useState, useRef, useMemo, useCallback } from 'react';
 import {
   View,
@@ -309,7 +310,7 @@ export const SignatureCanvas = forwardRef<SignatureCanvasHandle, SignatureCanvas
           {hasSignature && (
             <View style={styles.signedBadge}>
               <Icon name="check" size={12} color="#4E9F76" />
-              <Text style={[t.micro, { color: c.success, fontFamily: 'Jost_700Bold', fontSize: 10 }]}>
+              <Text style={[t.micro, { color: c.success, fontFamily: fuentes.negrita, fontSize: 10 }]}>
                 TRAZADO
               </Text>
             </View>
@@ -354,7 +355,7 @@ export const SignatureCanvas = forwardRef<SignatureCanvasHandle, SignatureCanvas
                     t.micro,
                     {
                       color: activo ? c.goldInk : c.textSoft,
-                      fontFamily: 'Jost_700Bold',
+                      fontFamily: fuentes.negrita,
                       fontSize: 11,
                       letterSpacing: 1,
                     },
@@ -415,14 +416,14 @@ export const SignatureCanvas = forwardRef<SignatureCanvasHandle, SignatureCanvas
             `capturarComoPngBase64` fotografía. Así el PNG que se sube como evidencia legal es la
             misma imagen que la persona aprobó en pantalla, venga del dedo o del teclado.
 
-            Jost bold en cursiva y no una serif: AGENTS.md §4 reserva Fraunces para `t.hero` y
+            la fuente negrita en cursiva y no una serif: AGENTS.md §4 reserva la fuente display para `t.hero` y
             `t.screenTitle`, y esto no es ninguno de los dos.
           */
           <View style={styles.firmaElectronicaBox} pointerEvents="none">
             <Text
               numberOfLines={1}
               adjustsFontSizeToFit
-              style={{ fontFamily: 'Jost_700Bold', fontStyle: 'italic', fontSize: 26, color: c.goldInk }}
+              style={{ fontFamily: fuentes.negrita, fontStyle: 'italic', fontSize: 26, color: c.goldInk }}
             >
               {nombreElectronico}
             </Text>
@@ -470,7 +471,7 @@ export const SignatureCanvas = forwardRef<SignatureCanvasHandle, SignatureCanvas
               hitSlop={10}
               style={[styles.clearBtn, { borderColor: c.border, backgroundColor: c.cardBg }]}
             >
-              <Text style={[t.micro, { color: c.danger, fontSize: 10.5, fontFamily: 'Jost_700Bold' }]}>
+              <Text style={[t.micro, { color: c.danger, fontSize: 10.5, fontFamily: fuentes.negrita }]}>
                 LIMPIAR FIRMA
               </Text>
             </Pressable>

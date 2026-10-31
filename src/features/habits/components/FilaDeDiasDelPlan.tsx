@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -171,7 +172,7 @@ export function FilaDeDiasDelPlan({
                         : delDia?.propio
                           ? c.goldInk
                           : c.textSoft,
-                    fontFamily: delDia?.propio ? 'Jost_700Bold' : 'Jost_400Regular',
+                    fontFamily: delDia?.propio ? fuentes.negrita : fuentes.regular,
                   },
                 ]}
                 numberOfLines={1}
@@ -212,14 +213,14 @@ export function FilaDeDiasDelPlan({
           >
             <Text
               {...acotado}
-              style={[t.micro, { fontSize: 12, fontFamily: 'Jost_700Bold', color: editando ? c.onGold : c.textSoft }]}
+              style={[t.micro, { fontSize: 12, fontFamily: fuentes.negrita, color: editando ? c.onGold : c.textSoft }]}
             >
               {dia.charAt(0)}
             </Text>
             {/* El día del mes: convierte "el martes" en "el martes 09". */}
             <Text
               {...acotado}
-              style={[t.micro, { fontSize: 11, fontFamily: 'Jost_700Bold', color: editando ? c.onGold : c.textSoft }]}
+              style={[t.micro, { fontSize: 11, fontFamily: fuentes.negrita, color: editando ? c.onGold : c.textSoft }]}
             >
               {diasDelMes[dia]}
             </Text>

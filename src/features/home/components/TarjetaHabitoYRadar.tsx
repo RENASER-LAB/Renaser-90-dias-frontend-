@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
@@ -38,7 +39,6 @@ export interface DatosDeLaMitadDeHabitos {
   /** `8/18`, o `null` si no hay cifra (sin datos). */
   cifra: string | null;
   titulo: string;
-  detalle: string;
   etiquetaAccesible: string;
 }
 
@@ -127,7 +127,6 @@ export function TarjetaHabitoYRadar({
             estado={habitos.cifra}
             tono="dorado"
             titulo={habitos.titulo}
-            detalle={habitos.detalle}
             destacada={false}
             onPress={onAbrirTraining}
             accesibilidad={habitos.etiquetaAccesible}
@@ -142,7 +141,6 @@ export function TarjetaHabitoYRadar({
                 estado={`${mitad.hora ? `${mitad.hora} · ` : ''}${mitad.estado}`}
                 tono={mitad.tono}
                 titulo={mitad.titulo}
-                detalle={mitad.detalle}
                 destacada={mitad.destacada}
                 onPress={mitad.accion === 'ninguna' ? undefined : alTocarElRadar}
                 accesibilidad={etiquetaDeLaMitad(mitad)}
@@ -192,7 +190,10 @@ export function TarjetaHabitoYRadar({
   );
 }
 
-/** Una mitad: el ícono con el rótulo (y el chevron si se toca), una línea de estado, el título y el detalle, a la izquierda. */
+/**
+ * Una mitad: el ícono con el rótulo (y el chevron si se toca), una línea de estado y el título, a la izquierda. **Sin línea de detalle**
+ * (2026-10-31, pedido del dueño: «desaparece la información no relevante»): lo de más está en la hoja de cada mitad y en Training.
+ */
 function Mitad({
   apilada,
   icono,
@@ -200,7 +201,6 @@ function Mitad({
   estado,
   tono,
   titulo,
-  detalle,
   destacada,
   onPress,
   accesibilidad,
@@ -211,7 +211,6 @@ function Mitad({
   estado: string | null;
   tono: 'dorado' | 'ok' | 'suave';
   titulo: string | null;
-  detalle: string;
   destacada: boolean;
   onPress?: () => void;
   accesibilidad: string;
@@ -228,14 +227,13 @@ function Mitad({
         {onPress ? <Icon name="chevron" size={TAMANO_ICONO.chico} color={c.chevron} /> : null}
       </View>
       {estado ? (
-        <Text style={[t.small, estilos.texto, estilos.cifras, { color: colorDelEstado, fontFamily: 'Jost_700Bold' }]}>{estado}</Text>
+        <Text style={[t.small, estilos.texto, estilos.cifras, { color: colorDelEstado, fontFamily: fuentes.negrita }]}>{estado}</Text>
       ) : null}
       {titulo ? (
         <Text style={[t.cardTitle, estilos.texto, { color: c.text, lineHeight: 21 }]} numberOfLines={3}>
           {titulo}
         </Text>
       ) : null}
-      <Text style={[t.small, estilos.texto, { color: c.textSoft }]}>{detalle}</Text>
     </>
   );
   const base = [estilos.mitad, apilada ? null : estilos.mitadEnFila];

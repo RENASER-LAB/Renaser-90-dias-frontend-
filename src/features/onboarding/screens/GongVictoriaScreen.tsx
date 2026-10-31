@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -97,7 +98,7 @@ export function GongVictoriaScreen({ onEnterApp }: GongVictoriaScreenProps) {
         </View>
 
         {/* Footer */}
-        <Text style={[t.micro, styles.footerText, { color: c.textSoft, letterSpacing: 1, fontSize: 11, fontFamily: 'Jost_500Medium' }]}>
+        <Text style={[t.micro, styles.footerText, { color: c.textSoft, letterSpacing: 1, fontSize: 11, fontFamily: fuentes.media }]}>
           BIENVENIDO AL SISTEMA INTEGRAL RENASER 🦅
         </Text>
       </ScrollView>

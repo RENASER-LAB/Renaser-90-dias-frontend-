@@ -316,8 +316,17 @@ describe('las pantallas esconden lo no disponible (código)', () => {
     expect(leer('src/screens/TrainingScreen.tsx')).toMatch(/if \(!habitosPrendidos\.disponible\) \{\s*return \([\s\S]*?<SeccionNoDisponible/);
     const hoy = leer('src/screens/HoyScreen.tsx');
     expect(hoy).toMatch(/resumen\?\.proximoEvento && esDisponible\(CLAVES\.eventos\)/);
-    expect(hoy).toMatch(/resumen\?\.semaforo && esDisponible\(CLAVES\.semaforo\)/);
+    // La tarjeta del semáforo pasó de Hoy a Yo (2026-10-31): la entrada apagada o no disponible se esconde allá.
+    expect(hoy).not.toMatch(/esDisponible\(CLAVES\.semaforo\)\) \? \(\s*<TarjetaSemaforoHoy/);
     const yo = leer('src/screens/YoScreen.tsx');
+    expect(yo).toMatch(/resumen\?\.semaforo && esDisponible\(CLAVES\.semaforo\)/);
+    // «Mi grupo» y «Mis mentores» (2026-10-31: antes eran tarjetas de Hoy) son filas de Yo y siguen las mismas entradas de Soporte TI.
+    const paneles = leer('src/features/paneles-de-rol/hooks/usePanelesDeRol.ts');
+    for (const clave of ['mentorMiGrupo', 'lider', 'tickets', 'semaforo']) {
+      expect(paneles).toMatch(new RegExp(`esDisponible\\(CLAVES\\.${clave}\\)`));
+    }
+    expect(yo).toMatch(/paneles\.filas\.miGrupo/);
+    expect(yo).toMatch(/paneles\.filas\.misMentores/);
     for (const clave of ['caja', 'admin', 'emergencia', 'evidencias', 'notificaciones', 'perfil', 'cuentaEliminar']) {
       expect(yo).toMatch(new RegExp(`esDisponible\\(CLAVES\\.${clave}\\)`));
     }

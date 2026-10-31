@@ -69,6 +69,28 @@ export function queSigue(acciones: readonly AccionConEstado[]): AccionConEstado 
 }
 
 /**
+ * La acción que sigue hoy, de TODAS las de la persona (no por eje): con la misma regla de `queSigue`, la primera sin cumplir en
+ * orden de hora, sin contar las que esperan a la verde. `null` = no queda ninguna (o no hay ninguna): quien llama distingue los
+ * dos casos mirando si la lista venía vacía. La usa la tarjeta de Hoy (2026-10-31).
+ */
+export function accionQueSigueHoy(rocas: readonly RocaDiariaApi[], ahoraMin: number): AccionConEstado | null {
+  return queSigue(ordenarAcciones(rocas).map(accion => ({ accion, estado: estadoDeLaAccion(accion, ahoraMin) })));
+}
+
+/**
+ * La hora de una acción para la tarjeta de Hoy: «09:00 – 09:45» si tiene inicio y fin, «09:00» si solo tiene inicio y
+ * «Sin hora» si no se agendó a una hora. El fin se ignora si no es posterior al inicio (un dato roto no se dibuja).
+ */
+export function rangoDeHoraDeLaAccion(roca: Pick<RocaDiariaApi, 'horaInicio' | 'horaFin'>): string {
+  const inicio = horaCortaDeLaAccion(roca);
+  if (inicio === null) return 'Sin hora';
+  const finMin = minutosDeLaHora(roca.horaFin);
+  const inicioMin = minutosDeLaHora(roca.horaInicio);
+  if (finMin !== null && inicioMin !== null && finMin > inicioMin) return `${inicio} – ${(roca.horaFin as string).slice(0, 5)}`;
+  return inicio;
+}
+
+/**
  * Una fila por eje que tenga acciones hoy, en el orden en que se pasan los ejes (`ejesEnOrden`: el principal primero, como las
  * prioridades de Plan). Un eje sin acciones hoy no tiene fila.
  */

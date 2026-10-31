@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useEffect, useRef } from 'react';
 import {
   KeyboardAvoidingView,
@@ -289,7 +290,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   textoVolver: {
-    fontFamily: 'Jost_500Medium',
+    fontFamily: fuentes.media,
     fontSize: 14.5,
     lineHeight: 20,
   },

@@ -11,6 +11,10 @@ local (nunca contra producción).
 - `regresion/`: un flujo por caso, ordenados por número. Cada uno dice arriba qué prueba y su precondición.
 - `guia-de-ser/` (issue #50): la guía de arranque de SER no se monta sobre el panel de SER y «Ahora no» responde. Pide una
   cuenta de aprendiz con el Día 1 elegido y sin el Pacto firmado; ver su `README.md`.
+- `moderar-muro/` (2026-10-31): ADMIN y ALCHEMIST ocultan, devuelven y eliminan publicaciones del Muro (el «…» de cada tarjeta y
+  Administración → Más opciones → «Publicaciones ocultas»); un aprendiz no tiene el «…». **Escritos y sin correr.** Piden una
+  publicación con el texto «Moderar-1» arriba del Muro y la cola de ocultas vacía (lo dice arriba de cada archivo); se corren de
+  a uno con `.maestro/correr.sh .maestro/moderar-muro/<flujo>.yaml`.
 - `interruptores/` (spec 002): el aviso de mantenimiento en Tribu, el Muro, Training y SER. **No corren solos**: cada uno
   necesita que antes se apague una funcionalidad por la consola Soporte TI (lo dice arriba de cada archivo) y que después
   se vuelva a prender. Se corren de a uno, `.maestro/correr.sh .maestro/interruptores/<flujo>.yaml`, con la precondición
@@ -21,6 +25,14 @@ local (nunca contra producción).
   esa contraseña (`comun/abrir-consola.yaml`). **Esa cuenta necesita una contraseña corta** (≤ 8 letras): Maestro la
   escribe con `inputText`, que tarda ~10 s por letra (ver abajo). 37 y 38 dejan todo como estaba; 39 y 40 necesitan el
   backend con «ver como» (B3).
+
+- `diseno-31/` (2026-10-31): los cambios de diseño del día (Hoy con la tarjeta de acciones y sin la frase ni Coherencia / Racha,
+  Plan con el formato de la referencia, Training con la cabecera sin fase, los nombres en tipo oración, los rituales con texto y la
+  última comida con círculo, Yo con el semáforo y sin la tira «Evidencia», y —`06-roles-en-yo`— Hoy solo con el programa propio y las
+  filas «Mi grupo» / «Mis mentores» en Yo, junto a Administración). **Escritos y sin correr**; cada archivo dice su
+  precondición. Desde ese día Administración, «Mi grupo» y «Mis mentores» se abren desde **Yo** (los flujos de `regresion/20–24`,
+  `mi-radar/11–12` y `lider-ve-a-todos/01` ya entran por ahí). Los nombres de los hábitos ahora se ven en tipo oración: los flujos viejos que los buscaban en mayúsculas usan
+  `(?i)` desde ese día.
 
 ## Cómo correrla
 

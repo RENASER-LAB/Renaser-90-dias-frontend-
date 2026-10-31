@@ -162,7 +162,7 @@ function textos(r: ReactTestRenderer): string {
     .join(' | ');
 }
 
-async function abrirElHabito(r: ReactTestRenderer, titulo = 'JUGO VERDE') {
+async function abrirElHabito(r: ReactTestRenderer, titulo = 'Jugo verde') {
   const filas = r.root.findAll(n => typeof n.props.onPress === 'function'
     && n.findAll(x => (x.type as unknown) === 'Text' && x.props.children === titulo).length > 0);
   await act(async () => {
@@ -251,7 +251,7 @@ describe('la sección «Cómo suena»', () => {
   it('un hábito del catálogo con voz propia dice que la voz dice su nombre; renombrado, dice la frase general', async () => {
     mockPreferencias.mockResolvedValue([preferencia(DE_SIEMPRE, { habitId: GIMNASIO_ID })]);
     const delCatalogo = await montar(gimnasio('GIMNASIO'));
-    await abrirElHabito(delCatalogo, 'GIMNASIO');
+    await abrirElHabito(delCatalogo, 'Gimnasio');
     expect(textos(delCatalogo)).toContain('Una voz dice el nombre del hábito');
     expect(textos(delCatalogo)).not.toContain('frase general');
     act(() => delCatalogo.unmount());
@@ -364,7 +364,7 @@ describe('sin días marcados: «Cómo suena» del hábito entero', () => {
     expect(mockProgramar).toHaveBeenCalledTimes(1);
     const opciones = mockProgramar.mock.calls[0][5] as { alarma?: unknown };
     expect(opciones.alarma).toEqual({ sonido: true, vibracion: true, voz: false, repetir: true });
-    expect(textos(r)).toContain('«JUGO VERDE» suena así: con sonido, vibra, se repite.');
+    expect(textos(r)).toContain('«Jugo verde» suena así: con sonido, vibra, se repite.');
   });
 
   it('tocar y volver a dejarlo igual no es un cambio: el botón es el de siempre', async () => {

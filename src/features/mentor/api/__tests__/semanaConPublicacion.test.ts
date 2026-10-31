@@ -69,7 +69,7 @@ describe('las dos fichas ofrecen «Ver publicación» solo con `publicacionId`',
     for (const ruta of ['mentor/screens/AlumnoScreen.tsx', 'admin/screens/FichaAprendizScreen.tsx']) {
       const fuente = leer(ruta);
       expect(fuente).toContain("from '../../lider-mentores/components/VisorDePublicacion'");
-      expect(fuente).toMatch(/\{o\.publicacionId \? <VerPublicacion publicacionId=\{o\.publicacionId\} titulo=\{o\.titulo\} \/> : null\}/);
+      expect(fuente).toMatch(/\{o\.publicacionId \? <VerPublicacion publicacionId=\{o\.publicacionId\} titulo=\{tituloEnTipoOracion\(o\.titulo\)\} \/> : null\}/);
     }
   });
 });

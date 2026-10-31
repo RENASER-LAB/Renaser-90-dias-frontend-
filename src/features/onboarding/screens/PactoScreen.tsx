@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { Alert } from '../../../components/Alerta';
@@ -137,7 +138,7 @@ export function PactoScreen({
           style={[styles.backBtn, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
         >
           <Icon name="arrowLeft" size={16} color={c.goldInk} />
-          <Text style={[t.micro, { color: c.text, letterSpacing: 1.2, fontSize: 11, fontFamily: 'Jost_700Bold' }]}>
+          <Text style={[t.micro, { color: c.text, letterSpacing: 1.2, fontSize: 11, fontFamily: fuentes.negrita }]}>
             {etiquetaVolver}
           </Text>
         </Pressable>
@@ -176,7 +177,7 @@ export function PactoScreen({
           <Text style={[t.micro, { color: c.textSoft, fontSize: 11, letterSpacing: 1.5, textAlign: 'center' }]}>
             BIENVENIDO OFICIALMENTE A LA
           </Text>
-          <Text style={[t.screenTitle, { color: c.goldInk, fontSize: 17, fontFamily: 'Jost_700Bold', letterSpacing: 1.5, marginTop: 4, textAlign: 'center' }]}>
+          <Text style={[t.screenTitle, { color: c.goldInk, fontSize: 17, fontFamily: fuentes.negrita, letterSpacing: 1.5, marginTop: 4, textAlign: 'center' }]}>
             FAMILIA RENASER
           </Text>
 
@@ -186,10 +187,10 @@ export function PactoScreen({
           <Text style={[t.body, { color: c.textSoft, fontSize: 13.5, textAlign: 'center', marginTop: 10 }]}>
             A partir de hoy, empieza a regir tu vida el
           </Text>
-          <Text style={[t.micro, { color: c.goldInk, fontSize: 11.5, letterSpacing: 1.5, fontFamily: 'Jost_700Bold', marginTop: 4, textAlign: 'center' }]}>
+          <Text style={[t.micro, { color: c.goldInk, fontSize: 11.5, letterSpacing: 1.5, fontFamily: fuentes.negrita, marginTop: 4, textAlign: 'center' }]}>
             CÓDIGO I DE RENASER
           </Text>
-          <Text style={[t.screenTitle, { color: c.textStrong, fontSize: 38, letterSpacing: 4, fontFamily: 'Jost_700Bold', marginTop: 6, textAlign: 'center' }]}>
+          <Text style={[t.screenTitle, { color: c.textStrong, fontSize: 38, letterSpacing: 4, fontFamily: fuentes.negrita, marginTop: 6, textAlign: 'center' }]}>
             VERDAD
           </Text>
 
@@ -199,7 +200,7 @@ export function PactoScreen({
 
         {/* Philosophy & Creed Block */}
         <View style={styles.creedBlock}>
-          <Text style={[t.body, { color: c.textStrong, fontSize: 16, fontFamily: 'Jost_700Bold', textAlign: 'center' }]}>
+          <Text style={[t.body, { color: c.textStrong, fontSize: 16, fontFamily: fuentes.negrita, textAlign: 'center' }]}>
             Sé verdad. Actúa con la VERDAD.
           </Text>
 
@@ -222,14 +223,14 @@ export function PactoScreen({
 
         {/* Statement Box */}
         <View style={[styles.statementBox, { backgroundColor: c.cardBgAlt, borderColor: c.borderStrong }]}>
-          <Text style={[t.body, { color: c.textStrong, fontSize: 15, textAlign: 'center', fontFamily: 'Jost_500Medium' }]}>
-            A partir de hoy, me comprometo a <Text style={{ color: c.goldInk, fontFamily: 'Jost_700Bold' }}>SER VERDAD.</Text>
+          <Text style={[t.body, { color: c.textStrong, fontSize: 15, textAlign: 'center', fontFamily: fuentes.media }]}>
+            A partir de hoy, me comprometo a <Text style={{ color: c.goldInk, fontFamily: fuentes.negrita }}>SER VERDAD.</Text>
           </Text>
         </View>
 
         {/* Signature Box Section */}
         <View style={styles.signatureSection}>
-          <Text style={[t.micro, { color: c.textSoft, fontSize: 11, letterSpacing: 1.5, textAlign: 'center', fontFamily: 'Jost_700Bold', marginBottom: 8 }]}>
+          <Text style={[t.micro, { color: c.textSoft, fontSize: 11, letterSpacing: 1.5, textAlign: 'center', fontFamily: fuentes.negrita, marginBottom: 8 }]}>
             FIRMA PARA CONTINUAR
           </Text>
 
@@ -247,7 +248,7 @@ export function PactoScreen({
             {!hasSigned && (
               <View pointerEvents="none" style={styles.watermarkBox}>
                 <View style={[styles.watermarkLine, { backgroundColor: c.border }]} />
-                <Text style={[t.micro, { color: c.tabInactive, letterSpacing: 2, fontSize: 11, fontFamily: 'Jost_700Bold' }]}>
+                <Text style={[t.micro, { color: c.tabInactive, letterSpacing: 2, fontSize: 11, fontFamily: fuentes.negrita }]}>
                   FIRMA AQUÍ
                 </Text>
               </View>
@@ -266,7 +267,7 @@ export function PactoScreen({
               <Text style={[t.micro, { color: c.textSoft, fontSize: 12 }]}>Limpiar firma</Text>
             </Pressable>
 
-            <Text style={[t.micro, { color: hasSigned ? c.success : c.tabInactive, fontFamily: 'Jost_700Bold', fontSize: 11.5 }]}>
+            <Text style={[t.micro, { color: hasSigned ? c.success : c.tabInactive, fontFamily: fuentes.negrita, fontSize: 11.5 }]}>
               {hasSigned ? '✓ FIRMADO' : 'SIN FIRMAR'}
             </Text>
           </View>

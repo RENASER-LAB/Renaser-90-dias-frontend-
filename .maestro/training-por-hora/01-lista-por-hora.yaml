@@ -32,7 +32,7 @@ appId: com.renaser.app
 - takeScreenshot: T01c-hechos-plegado
 - tapOn: ".* hechos? hoy"
 - scrollUntilVisible:
-    element: "06:00, AGUA TIBIA CON LIMÓN.*"
+    element: "(?i)06:00, AGUA TIBIA CON LIMÓN.*"
     direction: DOWN
     timeout: 20000
 - takeScreenshot: T01d-hechos-desplegado

@@ -1,3 +1,4 @@
+import { fuentes } from '../theme/fuentes';
 import React from 'react';
 import { Pressable, Text, StyleSheet, ActivityIndicator, ViewStyle, TextStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -156,8 +157,8 @@ const styles = StyleSheet.create({
   },
   primaryText: {
     /* `fontFamily` explicito en vez de `fontWeight`: sobre una familia personalizada Android
-       sintetiza la negrita y deforma la Jost en lugar de usar el corte real. */
-    fontFamily: 'Jost_700Bold',
+       sintetiza la negrita y deforma la fuente en lugar de usar el corte real. */
+    fontFamily: fuentes.negrita,
     letterSpacing: 2.2,
     fontSize: 11,
   },
@@ -173,7 +174,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   outlineText: {
-    fontFamily: 'Jost_500Medium',
+    fontFamily: fuentes.media,
     letterSpacing: 1.6,
     fontSize: 11,
   },

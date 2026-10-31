@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, type StyleProp, type TextStyle } from 'react-native';
 
@@ -12,7 +13,7 @@ import { View, Text, StyleSheet, type StyleProp, type TextStyle } from 'react-na
  * NO se usa una librería de markdown a propósito: las respuestas de este producto son texto corto
  * de chat (negritas, cursivas, `código`, listas y algún título), no documentos. Un parser completo
  * traería tablas, HTML embebido, imágenes y enlaces —superficie que acá no se quiere— y sus estilos
- * por defecto pelearían con la tipografía Jost y la paleta dorada. Esto cubre lo que el modelo usa
+ * por defecto pelearían con la tipografía de la app y la paleta dorada. Esto cubre lo que el modelo usa
  * de verdad y nada más.
  *
  * Lo que NO se interpreta se muestra tal cual, que es el comportamiento seguro: ante un markdown
@@ -94,7 +95,7 @@ function Linea({ texto, estilo }: { texto: string; estilo: StyleProp<TextStyle> 
         <Text
           key={i}
           style={[
-            // `fontWeight` no alcanza: con una familia cargada por archivo (Jost) hay que nombrar
+            // `fontWeight` no alcanza: con una familia cargada por archivo (Inter) hay que nombrar
             // la variante, o Android la ignora y el texto sale igual que el normal.
             trozo.negrita ? styles.negrita : null,
             trozo.cursiva ? styles.cursiva : null,
@@ -133,11 +134,11 @@ export function TextoAsistente({ texto, estilo, colorAcento }: Props) {
 
 const styles = StyleSheet.create({
   contenedor: { gap: 8 },
-  negrita: { fontFamily: 'Jost_700Bold' },
+  negrita: { fontFamily: fuentes.negrita },
   cursiva: { fontStyle: 'italic' },
-  codigo: { fontFamily: 'Jost_500Medium', letterSpacing: 0.3 },
+  codigo: { fontFamily: fuentes.media, letterSpacing: 0.3 },
   filaLista: { flexDirection: 'row', gap: 8, alignItems: 'flex-start' },
   // Ancho fijo para que "1." y "10." alineen su texto en la misma columna.
-  marcador: { minWidth: 18, fontFamily: 'Jost_700Bold' },
+  marcador: { minWidth: 18, fontFamily: fuentes.negrita },
   textoLista: { flex: 1 },
 });

@@ -142,13 +142,37 @@ describe('el login con cabecera', () => {
     expect(todo).not.toMatch(/Google|o accede con|Crear cuenta|90 Días para redefinir/);
   });
 
-  it('el ojo y «¿Olvidaste…?» tienen al menos 44 de alto táctil', () => {
+  it('el ojo mide 44 y «¿Olvidaste…?» 48 de alto táctil', () => {
     const r = montar();
     const ojo = tocable(r, 'Mostrar la contraseña');
     const olvido = tocable(r, 'Recuperar la contraseña');
     const estilo = (n: { props: { style?: unknown } }) => Object.assign({}, ...[n.props.style].flat(3).filter(Boolean));
     expect(estilo(ojo).height).toBeGreaterThanOrEqual(44);
-    expect(estilo(olvido).minHeight).toBeGreaterThanOrEqual(44);
+    expect(estilo(olvido).minHeight).toBeGreaterThanOrEqual(48);
+  });
+
+  it('la cabecera cede alto para que «¿Olvidaste…?» no quede bajo el botón fijo (E2E del 31/10)', () => {
+    const r = montar();
+    const cabecera = () => r.root.findAll(n => n.props.variante === 'alta' && 'altoMaximo' in n.props)[0];
+    // Sin medir nada todavía, la cabecera es la de siempre.
+    expect(cabecera().props.altoMaximo).toBeUndefined();
+
+    const layout = (height: number) => ({ nativeEvent: { layout: { x: 0, y: 0, width: 360, height } } });
+    const scroll = r.root.findAll(n => typeof n.props.onLayout === 'function' && n.props.keyboardShouldPersistTaps === 'handled')[0];
+    const cuerpo = r.root.findAll(n => typeof n.props.onLayout === 'function' && n.props.onLayout !== scroll.props.onLayout && Array.isArray(n.props.style))
+      .find(n => JSON.stringify(n.props.style).includes('paddingTop'));
+    expect(cuerpo).toBeDefined();
+    // Lo que se ve del scroll en un teléfono de 360 × 780 (la pantalla menos el pie fijo) y lo que mide el cuerpo.
+    act(() => scroll.props.onLayout(layout(614)));
+    act(() => cuerpo!.props.onLayout(layout(306)));
+    const tope = cabecera().props.altoMaximo as number;
+    expect(tope).toBeGreaterThanOrEqual(176);
+    // Con ese tope: cabecera − solape (36) + cuerpo + 16 de aire cabe en lo que se ve.
+    expect(tope - 36 + 306 + 16).toBeLessThanOrEqual(614);
+
+    // Un teclado que achica el scroll no cambia el tope: se queda con lo que se ve sin teclado.
+    act(() => scroll.props.onLayout(layout(300)));
+    expect(cabecera().props.altoMaximo).toBe(tope);
   });
 
   it('entra con el correo y la contraseña de siempre', async () => {

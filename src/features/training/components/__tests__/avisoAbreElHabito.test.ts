@@ -40,7 +40,7 @@ function Envoltorio({ apertura, diaInicial = null }: { apertura: { registroId: s
   return React.createElement(TrainingPorHora, {
     activa: true, estado: 'listo', mensajeDeError: null, onReintentar: () => undefined, cuentaId: 'cuenta-del-aviso',
     habits: [habito('con-guia', { guia }), habito('sin-guia'), habito('roca-1', { dimension: 'VIDA Y NEGOCIO', habitoId: null, systemKey: null, title: 'Revisar las facturas', time: '20:30' })], planHabits: [], hoyIso: HOY, diaElegido: dia, onElegirDia: setDia,
-    diaPrograma: 40, fase: null, titulos: {}, eventosPrendidos: false, confirmacion: null, onConfirmacionTerminada: () => undefined,
+    diaPrograma: 40, titulos: {}, eventosPrendidos: false, confirmacion: null, onConfirmacionTerminada: () => undefined,
     aperturaPedida: apertura, onAperturaAtendida, onRegistrar, onMarcar: () => undefined, onAbrirEvento: () => undefined,
   });
 }

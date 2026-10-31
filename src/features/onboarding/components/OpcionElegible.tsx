@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, {
@@ -74,7 +75,7 @@ export function OpcionElegible({ etiqueta, elegida, onElegir, forma = 'fila', ac
             esCirculo ? styles.textoCirculo : styles.textoFila,
             {
               color: esCirculo && elegida ? c.onGold : elegida ? c.textStrong : c.text,
-              fontFamily: elegida || esCirculo ? 'Jost_500Medium' : 'Jost_400Regular',
+              fontFamily: elegida || esCirculo ? fuentes.media : fuentes.regular,
             },
           ]}
         >

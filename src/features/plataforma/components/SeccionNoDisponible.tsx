@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { ScrollView, Text, View, type ScrollViewProps, type StyleProp, type ViewStyle } from 'react-native';
 
@@ -20,7 +21,7 @@ export function SeccionNoDisponible({
   return (
     <ScrollView showsVerticalScrollIndicator={false} {...resto} contentContainerStyle={[{ flexGrow: 1, paddingBottom: 36 }, contentContainerStyle]}>
       <View testID="seccion-no-disponible" style={{ paddingTop: 24 }}>
-        <Text accessibilityRole="text" style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 23, fontFamily: 'Jost_400Regular' }]}>
+        <Text accessibilityRole="text" style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 23, fontFamily: fuentes.regular }]}>
           {TEXTO_SECCION_NO_DISPONIBLE}
         </Text>
       </View>

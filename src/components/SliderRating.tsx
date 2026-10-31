@@ -1,3 +1,4 @@
+import { fuentes } from '../theme/fuentes';
 import React from 'react';
 import { View, Text, Pressable, StyleSheet, ViewStyle } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
@@ -64,7 +65,7 @@ export function SliderRating({
                       : isPassed
                       ? c.textStrong
                       : c.tabInactive,
-                    fontFamily: isSelected ? 'Jost_700Bold' : 'Jost_400Regular',
+                    fontFamily: isSelected ? fuentes.negrita : fuentes.regular,
                   },
                 ]}
               >
@@ -76,8 +77,8 @@ export function SliderRating({
       </View>
 
       <View style={styles.labelsRow}>
-        <Text style={[t.micro, { color: c.textSoft, fontSize: 11, fontFamily: 'Jost_500Medium' }]}>{minLabel}</Text>
-        <Text style={[t.micro, { color: c.goldInk, fontSize: 11, fontFamily: 'Jost_700Bold' }]}>{maxLabel}</Text>
+        <Text style={[t.micro, { color: c.textSoft, fontSize: 11, fontFamily: fuentes.media }]}>{minLabel}</Text>
+        <Text style={[t.micro, { color: c.goldInk, fontSize: 11, fontFamily: fuentes.negrita }]}>{maxLabel}</Text>
       </View>
     </View>
   );

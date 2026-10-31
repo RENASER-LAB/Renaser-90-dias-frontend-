@@ -13,11 +13,11 @@ appId: com.renaser.app
 - runFlow: ../comun/ya-adentro.yaml
 - runFlow: ../comun/abrir-training.yaml
 - scrollUntilVisible:
-    element: ".*GIMNASIO.*"
+    element: "(?i).*GIMNASIO.*"
     direction: DOWN
     centerElement: true
     timeout: 30000
-- tapOn: ".*GIMNASIO.*"
+- tapOn: "(?i).*GIMNASIO.*"
 - runFlow:
     when:
       visible: "Tomar foto"
@@ -67,7 +67,7 @@ appId: com.renaser.app
     timeout: 30000
 - runFlow: ../comun/cerrar-aviso-dev.yaml
 - extendedWaitUntil:
-    notVisible: "[0-9:]+, GIMNASIO(, Te toca ahora|, Lo que sigue)?"
+    notVisible: "(?i)[0-9:]+, GIMNASIO(, Te toca ahora|, Lo que sigue)?"
     timeout: 30000
 - scrollUntilVisible:
     element: ".* hechos? hoy"
@@ -75,7 +75,7 @@ appId: com.renaser.app
     timeout: 30000
 - tapOn: ".* hechos? hoy"
 - scrollUntilVisible:
-    element: ".*GIMNASIO, hecho"
+    element: "(?i).*GIMNASIO, hecho"
     direction: DOWN
     timeout: 20000
 - takeScreenshot: 13b-gimnasio-cumplido

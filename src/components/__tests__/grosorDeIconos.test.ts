@@ -52,7 +52,9 @@ const DE_LINEA: IconName[] = [
   'lifeBuoy', 'alarmClock', 'settings', 'images', 'listChecks', 'compass', 'package', 'signature', // caja de 24, de Yo (2026-10-05)
   'brain', 'heart', 'sparkles', // caja de 24, de las dimensiones (2026-10-05; `brain` y `heart` eran de 22)
   'wrench', 'toggleRight', // caja de 24, el aviso de mantenimiento y la consola Soporte TI (spec 002, 2026-10-13)
+  'ellipsis', // caja de 24, el «…» de moderación del Muro (2026-10-31)
   'bellOff', // caja de 24, el chip de un día sin aviso en Planificar (spec 008, 2026-10-20)
+  'chartNoAxesColumn', // caja de 24, «Tu 80/20» de Plan (2026-10-31)
   'chevron', 'arrow', 'filter', 'volume',
 ];
 

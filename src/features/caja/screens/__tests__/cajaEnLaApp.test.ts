@@ -41,9 +41,11 @@ describe('la Caja Renaser en la app', () => {
     expect(yo).toMatch(/<MiCajaScreen caja=\{miCaja\.caja\}/);
   });
 
-  it('Hoy abre Administración en la caja del aviso solo si la cuenta administra', () => {
-    const hoy = leer('screens/HoyScreen.tsx');
-    expect(hoy).toMatch(/abrirCajaAprendizId/);
-    expect(hoy).toMatch(/if \(!capacidades\.administrar\) return;\s*setEnSemaforo\(false\);\s*setAdminAbreEn\(\{ caja: aprendizId \}\)/);
+  it('Yo abre Administración en la caja del aviso solo si la cuenta administra (2026-10-31: antes lo hacía Hoy)', () => {
+    const yo = leer('screens/YoScreen.tsx');
+    expect(yo).toMatch(/abrirCajaAprendizId/);
+    expect(yo).toMatch(/if \(!capacidades\.administrar\) return;\s*if \(aprendizId\) abrirAdministracionEn\(\{ caja: aprendizId \}\)/);
+    // Hoy es solo el programa propio: ya no atiende ese aviso.
+    expect(leer('screens/HoyScreen.tsx')).not.toMatch(/abrirCajaAprendizId/);
   });
 });

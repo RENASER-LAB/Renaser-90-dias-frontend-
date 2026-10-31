@@ -109,52 +109,48 @@ export const dark: Palette = {
  * `t.body`… Se pueden cambiar los valores; no se puede renombrar ni quitar una clave sin tocar
  * todo lo que la usa.
  *
- * ## Qué cambió el 2026-09-14, y por qué
+ * ## La fuente (2026-10-31)
  *
- * La jerarquía estaba construida **casi entera sobre el espaciado de letras**: `hero` a 34 px con
- * `letterSpacing: 8`, `screenTitle` con 2.5, `sectionTitle` con 1.8, `micro` con 1.6. Todo en la
- * misma familia (Jost) y casi todo en el mismo peso (`400Regular`). El resultado es que un título
- * no se veía *importante*, se veía *estirado* — y es exactamente la huella del template genérico:
- * cuando lo único que distingue a un titular es que tiene las letras separadas, la pantalla se lee
- * como una plantilla, no como una marca.
+ * Toda la app usa **Inter** y los nombres de la fuente viven en UN solo archivo, `theme/fuentes.ts`: acá y en cualquier pantalla
+ * se piden por **rol** (`fuentes.regular`, `fuentes.media`, `fuentes.seminegrita`, `fuentes.negrita`, `fuentes.display`), nunca por
+ * nombre de archivo. El dueño pidió SF Pro, pero su licencia no permite usarla en Android; eligió Inter. Antes eran dos familias
+ * distintas (una de texto y una serif de display). Ver `fuentes.ts` para lo que trae el paquete (no trae el corte «Display»: `display` es la Bold).
  *
- * Tres correcciones, en orden de impacto:
+ * ## Qué cambió el 2026-09-14, y por qué (sigue valiendo)
  *
- * 1. **Una serif editorial para los títulos de display** (`hero`, `screenTitle`). Es lo que da el
- *    aire de revista de la referencia que pidió el dueño. Fraunces y no Playfair a propósito:
- *    Playfair es *la* serif por defecto de todo rediseño, y volvía a caer en lo genérico.
- * 2. **Tracking negativo en los tamaños grandes.** Un titular de 38 px con las letras separadas se
- *    deshace; junto, pesa. Es la regla contraria a la de los rótulos chicos, que sí necesitan aire
- *    (`micro`, `sectionTitle`) — pero menos del que tenían.
- * 3. **Cifras tabulares en `metric`.** Los números que cambian —día de programa, puntos, racha—
- *    saltaban de ancho al pasar de 9 a 10, y con ellos saltaba todo lo que tuvieran al lado.
+ * La jerarquía estaba construida **casi entera sobre el espaciado de letras**: `hero` a 34 px con `letterSpacing: 8`, `screenTitle`
+ * con 2.5, `sectionTitle` con 1.8, `micro` con 1.6. Todo en la misma familia y casi todo en el mismo peso. El resultado es que un
+ * título no se veía *importante*, se veía *estirado* — la huella del template genérico.
  *
- * ## Lo que NO cambió, y por qué
+ * 1. **Familia y peso para los títulos de display** (`hero`, `screenTitle`; hoy `fuentes.display`, que da el aire de revista).
+ * 2. **Tracking negativo en los tamaños grandes.** Un titular de 38 px con las letras separadas se deshace; junto, pesa. Es la regla
+ *    contraria a la de los rótulos chicos, que sí necesitan aire (`micro`, `sectionTitle`) — pero menos del que tenían.
+ * 3. **Cifras tabulares en `metric`.** Los números que cambian —día de programa, puntos, racha— saltaban de ancho al pasar de 9 a
+ *    10, y con ellos saltaba todo lo que tuvieran al lado.
  *
- * **Todo el texto de lectura sigue en Jost 400/500/700**, como manda `AGENTS.md` §4. La serif entra
- * sólo en display (≥ 24 px); nada que se lea en párrafo la toca. Los tamaños mínimos de §4 se
- * respetan: párrafo 15, ayuda 13, micro 10.5.
+ * Los tamaños mínimos de `AGENTS.md` §4 se respetan: párrafo 15, ayuda 13, micro 10.5.
  */
 import type { TextStyle } from 'react-native';
+import { fuentes } from './fuentes';
 
 /** Ancho de dígito fijo. Tipado acá para no pelear con el tipo `FontVariant[]` en cada uso. */
 const CIFRAS_TABULARES: TextStyle['fontVariant'] = ['tabular-nums'];
 
 export const type = {
   /** Display grande: portada, números de hito, el saludo del login. */
-  hero: { fontFamily: 'Fraunces_700Bold', fontSize: 38, letterSpacing: -1.2, lineHeight: 42 },
+  hero: { fontFamily: fuentes.display, fontSize: 38, letterSpacing: -1.2, lineHeight: 42 },
   /** Título de pantalla. */
-  screenTitle: { fontFamily: 'Fraunces_600SemiBold', fontSize: 26, letterSpacing: -0.4, lineHeight: 31 },
+  screenTitle: { fontFamily: fuentes.display, fontSize: 26, letterSpacing: -0.6, lineHeight: 31 },
   /** Rótulo de sección. Sigue en versalitas espaciadas, pero con la mitad del tracking de antes. */
-  sectionTitle: { fontFamily: 'Jost_500Medium', fontSize: 12, letterSpacing: 1.2 },
-  sectionSub: { fontFamily: 'Jost_400Regular', fontSize: 13, letterSpacing: 0.2, lineHeight: 19 },
-  micro: { fontFamily: 'Jost_500Medium', fontSize: 10.5, letterSpacing: 1.1 },
-  cardTitle: { fontFamily: 'Jost_500Medium', fontSize: 16, letterSpacing: -0.1 },
-  body: { fontFamily: 'Jost_400Regular', fontSize: 15, lineHeight: 22 },
-  small: { fontFamily: 'Jost_400Regular', fontSize: 13, lineHeight: 19 },
-  /** Cifras. Jost y no la serif: Fraunces no garantiza figuras tabulares. */
-  metric: { fontFamily: 'Jost_500Medium', fontSize: 28, letterSpacing: -0.5, fontVariant: CIFRAS_TABULARES },
-  tab: { fontFamily: 'Jost_500Medium', fontSize: 11, letterSpacing: 0 },
+  sectionTitle: { fontFamily: fuentes.media, fontSize: 12, letterSpacing: 1.2 },
+  sectionSub: { fontFamily: fuentes.regular, fontSize: 13, letterSpacing: 0.2, lineHeight: 19 },
+  micro: { fontFamily: fuentes.media, fontSize: 10.5, letterSpacing: 1.1 },
+  cardTitle: { fontFamily: fuentes.seminegrita, fontSize: 16, letterSpacing: -0.1 },
+  body: { fontFamily: fuentes.regular, fontSize: 15, lineHeight: 22 },
+  small: { fontFamily: fuentes.regular, fontSize: 13, lineHeight: 19 },
+  /** Cifras: ancho de dígito fijo (`tabular-nums`), que Inter trae. */
+  metric: { fontFamily: fuentes.media, fontSize: 28, letterSpacing: -0.5, fontVariant: CIFRAS_TABULARES },
+  tab: { fontFamily: fuentes.media, fontSize: 11, letterSpacing: 0 },
 } satisfies Record<string, TextStyle>;
 
 /**

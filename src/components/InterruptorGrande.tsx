@@ -1,3 +1,4 @@
+import { fuentes } from '../theme/fuentes';
 import React, { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, {
@@ -200,8 +201,8 @@ const estilos = StyleSheet.create({
   deshabilitado: { opacity: 0.5 },
   textos: { flex: 1, flexShrink: 1, gap: 2 },
   // 17 px el rótulo y 15 la explicación: lo que se lee sin acercar el teléfono (pedido del dueño, 40+).
-  etiqueta: { fontSize: 17, lineHeight: 23, fontFamily: 'Jost_500Medium', letterSpacing: 0 },
-  descripcion: { fontSize: 15, lineHeight: 21, fontFamily: 'Jost_400Regular', letterSpacing: 0 },
+  etiqueta: { fontSize: 17, lineHeight: 23, fontFamily: fuentes.media, letterSpacing: 0 },
+  descripcion: { fontSize: 15, lineHeight: 21, fontFamily: fuentes.regular, letterSpacing: 0 },
   columnaDelRiel: { alignItems: 'center', justifyContent: 'center', gap: 2 },
   riel: {
     width: ANCHO_RIEL_GRANDE,
@@ -230,11 +231,11 @@ const estilos = StyleSheet.create({
     textAlignVertical: 'center',
     lineHeight: ALTO_RIEL_GRANDE,
     fontSize: 14,
-    fontFamily: 'Jost_700Bold',
+    fontFamily: fuentes.negrita,
     letterSpacing: 0,
   },
   // Del lado contrario al pulgar: con él a la derecha se lee «Sí» a la izquierda, y al revés.
   si: { left: 11 },
   no: { right: 10 },
-  palabraVaria: { fontSize: 15, lineHeight: 18, fontFamily: 'Jost_700Bold', letterSpacing: 0 },
+  palabraVaria: { fontSize: 15, lineHeight: 18, fontFamily: fuentes.negrita, letterSpacing: 0 },
 });

@@ -39,11 +39,15 @@ describe('habitosParaFotoDeHoy', () => {
     expect(habitosParaFotoDeHoy(tracks, catalogo, false).map(h => h.track.habitoId)).toEqual(['foto']);
   });
 
-  it('pregunta «¿Qué sentiste?» solo en los rituales, como Training', () => {
-    const [ritual] = habitosParaFotoDeHoy([track('r')], [habito('r', 'REQUIRED', 'RITUAL_NIGHT')], false);
+  it('un hábito común se registra con foto y sin pregunta', () => {
     const [comun] = habitosParaFotoDeHoy([track('c')], [habito('c', 'REQUIRED')], false);
-    expect(ritual.conPregunta).toBe(true);
     expect(comun.conPregunta).toBe(false);
+  });
+
+  it('los rituales ya no se ofrecen para foto (2026-10-31): piden solo texto, en Training', () => {
+    for (const clave of ['RITUAL_MORNING', 'RITUAL_MIDDAY', 'RITUAL_NIGHT']) {
+      expect(habitosParaFotoDeHoy([track('r')], [habito('r', 'REQUIRED', clave)], false)).toEqual([]);
+    }
   });
 
   it('en web no ofrece nada: ahí la cámara directa no se usa', () => {

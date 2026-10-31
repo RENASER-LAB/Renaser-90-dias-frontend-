@@ -1,3 +1,4 @@
+import { fuentes } from '../../theme/fuentes';
 import { describe, expect, it, jest } from '@jest/globals';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -9,8 +10,8 @@ import TestRenderer, { act, type ReactTestRenderer } from 'react-test-renderer';
  * `MicroLabel`, el rótulo de sección de toda la app, va sin espaciar (decisión del dueño del
  * 2026-10-05): «Hábitos de hoy», «Fase actual», «Directos», el rótulo de cada campo…
  *
- * Contra el código anterior falla: era `t.micro` —10,5 px, `Jost_500Medium`, `letterSpacing: 1.1`—,
- * y en tipo oración ese aire se leía «H á b i t o s». Ahora: 13 px, `Jost_700Bold`, espaciado 0,
+ * Contra el código anterior falla: era `t.micro` —10,5 px, fuentes.media, `letterSpacing: 1.1`—,
+ * y en tipo oración ese aire se leía «H á b i t o s». Ahora: 13 px, fuentes.negrita, espaciado 0,
  * como «Coherencia» y «Racha» de Hoy.
  */
 
@@ -58,7 +59,7 @@ describe('MicroLabel sin espaciado', () => {
     mockModo = modo;
     const estilo = estiloDe(montar(React.createElement(MicroLabel, null, 'Hábitos de hoy')), 'Hábitos de hoy');
     expect(estilo.letterSpacing).toBe(0);
-    expect(estilo.fontFamily).toBe('Jost_700Bold');
+    expect(estilo.fontFamily).toBe(fuentes.negrita);
     expect(estilo.fontSize).toBeGreaterThanOrEqual(13);
     expect(estilo.color).toBe(color);
     // El texto se muestra como se escribe: nada lo pasa a versales.
@@ -70,7 +71,7 @@ describe('MicroLabel sin espaciado', () => {
     const raiz = montar(React.createElement(FormField, { label: 'Cómo lo vas a llamar', value: '', onChangeText: () => undefined }));
     const estilo = estiloDe(raiz, 'Cómo lo vas a llamar');
     expect(estilo.letterSpacing).toBe(0);
-    expect(estilo.fontFamily).toBe('Jost_700Bold');
+    expect(estilo.fontFamily).toBe(fuentes.negrita);
   });
 });
 
@@ -84,12 +85,13 @@ describe('Hoy: la cifra de la cabecera de cada tarjeta va con la letra del rótu
     .replace(/\/\*[\s\S]*?\*\//g, '')
     .replace(/(^|[^:])\/\/.*$/gm, '$1');
 
-  it.each(['Acciones y objetivos', 'Última evidencia del muro'])('«%s»', rotulo => {
+  // «Acciones y objetivos» se fue de este grupo el 2026-10-31: su tarjeta (`TarjetaAccionDeHoy`) no lleva rótulo ni cifra.
+  it.each(['Última evidencia del muro'])('«%s»', rotulo => {
     const desde = HOY.indexOf(`<MicroLabel>${rotulo}</MicroLabel>`);
     expect(desde).toBeGreaterThan(-1);
     const cabecera = HOY.slice(desde, HOY.indexOf('</Text>', desde));
     expect(cabecera).not.toContain('t.micro');
-    expect(cabecera).toMatch(/<Text style=\{\[t\.small,[^\]]*fontFamily: 'Jost_700Bold'/);
+    expect(cabecera).toMatch(/<Text style=\{\[t\.small,[^\]]*fontFamily: fuentes.negrita/);
   });
 
   /* Spec 016: «Hábitos de hoy» pasó a la mitad de `TarjetaHabitoYRadar`; su cifra («0/15») es la línea de estado. */
@@ -100,6 +102,6 @@ describe('Hoy: la cifra de la cabecera de cada tarjeta va con la letra del rótu
     expect(MITAD).toContain('<MicroLabel>{etiqueta}</MicroLabel>');
     const estado = MITAD.slice(MITAD.indexOf('{estado ? ('), MITAD.indexOf('{titulo ? ('));
     expect(estado).not.toContain('t.micro');
-    expect(estado).toMatch(/<Text style=\{\[t\.small,[^\]]*fontFamily: 'Jost_700Bold'/);
+    expect(estado).toMatch(/<Text style=\{\[t\.small,[^\]]*fontFamily: fuentes.negrita/);
   });
 });

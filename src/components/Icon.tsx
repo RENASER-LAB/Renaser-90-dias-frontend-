@@ -18,7 +18,9 @@ export type IconName =
   | 'timer' | 'badgeCheck' | 'hourglass' | 'ban' | 'rotateCcw' | 'audioLines' | 'sunrise' | 'sunMedium' | 'moonStar' | 'glassWater' | 'showerHead' | 'footprints' | 'salad' | 'utensils' | 'utensilsCrossed' | 'bookOpenText' | 'headphones' | 'notebookPen' | 'handHeart' | 'smartphoneOff'
   | 'sparkles'
   | 'wrench' | 'toggleRight'
-  | 'bellOff';
+  | 'bellOff'
+  | 'chartNoAxesColumn'
+  | 'ellipsis';
 
 /**
  * Grosor del trazo, en píxeles REALES de pantalla, a cualquier tamaño (decisión del dueño,
@@ -866,6 +868,17 @@ export function Icon({ name, size = 20, color, strokeWidth }: Props) {
           <Path {...s24} d="M8.668 3.01A6 6 0 0 1 18 8c0 2.687.77 4.653 1.707 6.05" />
         </Svg>
       );
+    /* Plan (2026-10-31) */
+    /* Las tres barras de «Tu 80/20» en Plan (prioriza lo que más acerca tu meta). Forma de Lucide (ISC,
+       `chart-no-axes-column`) en caja de 24 y trazo `s24`. */
+    case 'chartNoAxesColumn':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Path {...s24} d="M5 21v-6" />
+          <Path {...s24} d="M12 21V3" />
+          <Path {...s24} d="M19 21V9" />
+        </Svg>
+      );
     /* Barra de pestañas */
     /* Los cinco íconos de la barra de abajo (pedido del dueño, 2026-10-05: «íconos que le
        correspondan»; mosaico `barra-iconos-opciones.png`). Caja de 24 y trazo `s24`. Forma de Lucide
@@ -959,6 +972,16 @@ export function Icon({ name, size = 20, color, strokeWidth }: Props) {
         <Svg width={size} height={size} viewBox="0 0 24 24">
           <Circle {...s24} cx={15} cy={12} r={3} />
           <Rect {...s24} x={2} y={5} width={20} height={14} rx={7} />
+        </Svg>
+      );
+    /* Moderación del Muro (2026-10-31): el «…» de una publicación para ADMIN y ALCHEMIST. Forma de Lucide (ISC), caja de 24 y
+       trazo `s24`; los tres puntos son círculos de radio 1 con el trazo común, así que a 24 px miden lo que miden los demás. */
+    case 'ellipsis':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Circle {...s24} cx={12} cy={12} r={1} />
+          <Circle {...s24} cx={19} cy={12} r={1} />
+          <Circle {...s24} cx={5} cy={12} r={1} />
         </Svg>
       );
     case 'chevron':

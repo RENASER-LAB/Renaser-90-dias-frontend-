@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useState } from 'react';
 import { Linking, StyleSheet, Text, View } from 'react-native';
 
@@ -183,9 +184,9 @@ export function DetalleDelEvento({
 }
 
 const estilos = StyleSheet.create({
-  titulo: { fontFamily: 'Jost_500Medium', fontSize: LETRA.grande, lineHeight: 28 },
-  cuando: { fontFamily: 'Jost_500Medium', fontSize: 17, lineHeight: 23 },
-  subtitulo: { fontFamily: 'Jost_500Medium', fontSize: LETRA.titulo, lineHeight: 24 },
+  titulo: { fontFamily: fuentes.media, fontSize: LETRA.grande, lineHeight: 28 },
+  cuando: { fontFamily: fuentes.media, fontSize: 17, lineHeight: 23 },
+  subtitulo: { fontFamily: fuentes.media, fontSize: LETRA.titulo, lineHeight: 24 },
   fila: { flexDirection: 'row', gap: 10 },
   porFila: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   mitad: { flex: 1 },

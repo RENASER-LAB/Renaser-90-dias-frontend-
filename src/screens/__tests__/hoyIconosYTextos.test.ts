@@ -37,9 +37,9 @@ describe('Hoy: íconos', () => {
     expect(HOY).not.toMatch(/GoldCircle/);
   });
 
-  it('los nuevos: medidor, llama, mapa, lista con tildes, imagen; el autor con foto o iniciales', () => {
+  it('los nuevos: mapa, lista con tildes, imagen; el autor con foto o iniciales (el medidor y la llama se fueron con Coherencia y Racha)', () => {
     const usados = iconos(HOY);
-    for (const nuevo of ['gauge', 'flame', 'map', 'image', 'calendar']) {
+    for (const nuevo of ['map', 'image', 'calendar']) {
       expect({ nuevo, usado: usados.includes(nuevo) }).toEqual({ nuevo, usado: true });
     }
     // «Hábitos de hoy» sigue con la lista con tildes, ahora en su tarjeta (spec 016).
@@ -50,7 +50,7 @@ describe('Hoy: íconos', () => {
   it('los chevrons de «entrar» van a 16 (ninguno a 14) y los íconos a 16, 20 o 24', () => {
     expect(HOY).not.toMatch(/name="chevron" size=\{14\}/);
     const tamanos = [...HOY.matchAll(/<Icon\s+name="\w+"\s+size=\{([^}]+)\}/g)].map(m => m[1]);
-    expect(tamanos.length).toBeGreaterThan(8);
+    expect(tamanos.length).toBeGreaterThan(5);
     for (const t of tamanos) expect(['TAMANO_ICONO.chico', 'TAMANO_ICONO.normal', 'TAMANO_ICONO.grande']).toContain(t);
   });
 
@@ -89,9 +89,11 @@ describe('Hoy: textos en tipo oración', () => {
 });
 
 describe('Hoy: tacto', () => {
-  it('las tarjetas de Hoy responden al dedo (Presionable): mapa, acciones, evidencia y evento', () => {
+  it('las tarjetas de Hoy responden al dedo (Presionable): mapa, evidencia y evento; la de acciones, con su botón dorado', () => {
     const tarjetas = [...HOY.matchAll(/<Presionable\b/g)].length;
-    expect(tarjetas).toBeGreaterThanOrEqual(4);
+    expect(tarjetas).toBeGreaterThanOrEqual(3);
+    // La tarjeta de acciones (2026-10-31) no es un botón entera: lo es su botón dorado, que se hunde al apretarlo.
+    expect(sinComentarios(leer('features/home/components/TarjetaAccionDeHoy.tsx'))).toMatch(/<GoldButton/);
   });
 
   it('el orbe vibra al empezar a escuchar y al cerrar la conversación manteniéndolo', () => {

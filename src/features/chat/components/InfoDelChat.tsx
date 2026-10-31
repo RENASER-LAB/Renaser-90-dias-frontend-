@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
@@ -339,7 +340,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 12,
     paddingHorizontal: 14,
-    fontFamily: 'Jost_400Regular',
+    fontFamily: fuentes.regular,
     fontSize: 17,
   },
   verMas: {
@@ -370,7 +371,7 @@ const styles = StyleSheet.create({
   },
   tituloBarra: {
     flex: 1,
-    fontFamily: 'Jost_500Medium',
+    fontFamily: fuentes.media,
     fontSize: 19,
   },
   contenido: {
@@ -391,13 +392,13 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   subtitulo: {
-    fontFamily: 'Jost_400Regular',
+    fontFamily: fuentes.regular,
     fontSize: 17,
     lineHeight: 24,
     textAlign: 'center',
   },
   detalle: {
-    fontFamily: 'Jost_400Regular',
+    fontFamily: fuentes.regular,
     fontSize: 16,
     lineHeight: 22,
     textAlign: 'center',
@@ -409,13 +410,13 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   tituloSeccion: {
-    fontFamily: 'Jost_500Medium',
+    fontFamily: fuentes.media,
     fontSize: 16,
     marginBottom: 6,
     fontVariant: ['tabular-nums'],
   },
   aviso: {
-    fontFamily: 'Jost_400Regular',
+    fontFamily: fuentes.regular,
     fontSize: 16,
     lineHeight: 23,
     paddingVertical: 12,
@@ -454,7 +455,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
   },
   botonFichaTexto: {
-    fontFamily: 'Jost_500Medium',
+    fontFamily: fuentes.media,
     fontSize: 17,
   },
   botonChat: {
@@ -465,7 +466,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   filaNombre: {
-    fontFamily: 'Jost_500Medium',
+    fontFamily: fuentes.media,
     fontSize: 17,
     lineHeight: 23,
   },
@@ -477,7 +478,7 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   marcaTexto: {
-    fontFamily: 'Jost_500Medium',
+    fontFamily: fuentes.media,
     fontSize: 16,
   },
 });

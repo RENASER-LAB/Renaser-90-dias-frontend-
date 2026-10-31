@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useRef, useState } from 'react';
 import { StyleSheet, TextInput } from 'react-native';
 
@@ -132,7 +133,7 @@ const estilos = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 14,
     padding: 14,
-    fontFamily: 'Jost_400Regular',
+    fontFamily: fuentes.regular,
     fontSize: 16,
     lineHeight: 23,
   },

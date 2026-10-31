@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
@@ -110,7 +111,7 @@ export function RevisionSemanalModal({
                     { borderColor: elegido ? c.gold : c.border, backgroundColor: elegido ? c.gold : c.cardBgAlt },
                   ]}
                 >
-                  <Text style={[t.body, { color: elegido ? c.onGold : c.textSoft, fontFamily: 'Jost_700Bold', fontSize: 15 }]}>
+                  <Text style={[t.body, { color: elegido ? c.onGold : c.textSoft, fontFamily: fuentes.negrita, fontSize: 15 }]}>
                     {valor}
                   </Text>
                 </Presionable>
@@ -145,7 +146,7 @@ export function RevisionSemanalModal({
 
 const estilos = StyleSheet.create({
   cuerpo: { paddingHorizontal: 20, paddingTop: 4, paddingBottom: 12, gap: 18 },
-  etiqueta: { fontFamily: 'Jost_500Medium', fontSize: 14, letterSpacing: 0 },
+  etiqueta: { fontFamily: fuentes.media, fontSize: 14, letterSpacing: 0 },
   entrada: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 16, minHeight: 88, textAlignVertical: 'top' },
   escala: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   puntoEscala: { width: 48, height: 48, borderRadius: 24, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },

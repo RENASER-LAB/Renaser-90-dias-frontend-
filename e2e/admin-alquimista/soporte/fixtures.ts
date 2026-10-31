@@ -233,8 +233,14 @@ export async function abrirSeccion(page: Page, seccion: RegExp): Promise<void> {
   await fila.click();
 }
 
-/** Entra a Administración desde Hoy. Devuelve `false` si la cuenta no tiene la entrada. */
+/**
+ * Entra a Administración desde Yo. Devuelve `false` si la cuenta no tiene la entrada.
+ *
+ * 2026-10-31 (pedido del dueño: «lo de cada rol entra desde Yo, no en Hoy»): la tarjeta de Hoy se quitó y la fila de Yo, junto a
+ * «Mi grupo» y «Mis mentores», es la única entrada. Mismo nombre accesible («Abrir Administración»).
+ */
 export async function abrirAdministracion(page: Page): Promise<boolean> {
+  await page.getByRole('tab', { name: /^yo$/i }).click();
   /* El overlay se cierra otra vez ACÁ y no solo al entrar: aparece cuando la app termina de
      cargar el estado del Muro, que puede ser después del login. Una cuenta que acaba de activar
      su programa lo recibe justo al volver a Hoy, y tapa esta misma entrada. */

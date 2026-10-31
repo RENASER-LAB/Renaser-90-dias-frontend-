@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -282,7 +283,7 @@ export function RolConsolaScreen({
   };
 
   const ayuda = [t.body, { color: c.textSoft, fontSize: 16, lineHeight: 22 }];
-  const fuerte = [t.body, { color: c.textStrong, fontSize: 16, fontFamily: 'Jost_500Medium' }];
+  const fuerte = [t.body, { color: c.textStrong, fontSize: 16, fontFamily: fuentes.media }];
   const quien = rol?.actualizadoPor?.nombre?.trim();
   const personas = rol?.personas ?? 0;
   const marcadas = formulario.funcionalidades;
@@ -376,7 +377,7 @@ export function RolConsolaScreen({
           ) : null}
           {arbol.map(grupo => (
             <View key={grupo.area} style={{ gap: 8 }}>
-              <Text style={[t.small, { color: c.textSoft, fontFamily: 'Jost_700Bold', fontSize: 13 }]}>{grupo.area}</Text>
+              <Text style={[t.small, { color: c.textSoft, fontFamily: fuentes.negrita, fontSize: 13 }]}>{grupo.area}</Text>
               {grupo.nodos.map(({ funcionalidad, nivel }) => (
                 <Checkbox
                   key={funcionalidad.clave}

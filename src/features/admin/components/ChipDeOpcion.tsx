@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { StyleSheet, Text } from 'react-native';
 
@@ -40,7 +41,7 @@ export function ChipDeOpcion({
         style={[
           t.body,
           // Mismo peso elegido o no (E-602 del backend, E2E 2026-10-12): pasar a negrita lo ensanchaba y corría los chips de al lado.
-          { color: activo ? c.textStrong : c.textSoft, fontSize: 16, fontFamily: 'Jost_500Medium' },
+          { color: activo ? c.textStrong : c.textSoft, fontSize: 16, fontFamily: fuentes.media },
         ]}
       >
         {etiqueta}

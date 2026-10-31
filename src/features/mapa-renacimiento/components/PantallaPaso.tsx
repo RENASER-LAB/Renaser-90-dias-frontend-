@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -127,7 +128,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1 },
   atrasArea: { alignSelf: 'flex-start', marginBottom: 4 },
   atras: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 8, paddingRight: 8 },
-  atrasTexto: { fontFamily: 'Jost_500Medium', fontSize: 16 },
+  atrasTexto: { fontFamily: fuentes.media, fontSize: 16 },
   pie: { paddingTop: 12, paddingBottom: 14, borderTopWidth: 1 },
   faltan: { borderWidth: 1, borderRadius: 12, padding: 12, marginBottom: 10 },
 });

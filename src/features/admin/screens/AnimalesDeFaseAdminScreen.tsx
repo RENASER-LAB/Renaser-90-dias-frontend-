@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
@@ -93,7 +94,7 @@ export function AnimalesDeFaseAdminScreen({
                     <Image source={animal.imagen} contentFit="contain" style={estilos.imagen} accessibilityIgnoresInvertColors />
                   </View>
                   <View style={{ flex: 1, flexShrink: 1 }}>
-                    <Text style={[t.body, { color: c.textStrong, fontSize: 16, fontFamily: 'Jost_500Medium' }]}>
+                    <Text style={[t.body, { color: c.textStrong, fontSize: 16, fontFamily: fuentes.media }]}>
                       Fase {fase.numero} · {animal.nombre}
                     </Text>
                     <Text style={[t.body, { color: c.textSoft, fontSize: 16, marginTop: 2 }]}>{estadoDeLaImagen(configurado)}</Text>

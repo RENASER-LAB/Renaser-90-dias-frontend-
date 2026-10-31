@@ -1,3 +1,4 @@
+import { fuentes } from '../../../../theme/fuentes';
 import { afterEach, describe, expect, it, jest } from '@jest/globals';
 import React from 'react';
 import { StyleSheet } from 'react-native';
@@ -148,10 +149,10 @@ describe('la tarjeta del semáforo con el mensaje del día', () => {
 });
 
 describe('MensajeDelSemaforo', () => {
-  it('el texto es de tamaño de lectura (15, Jost) y va en el color de texto del tema', () => {
+  it('el texto es de tamaño de lectura (15, regular) y va en el color de texto del tema', () => {
     const r = dibujar(React.createElement(MensajeDelSemaforo, { mensaje: MENSAJE }));
     const texto = r.root.findAll(n => (n.type as unknown) === 'Text')[0];
-    expect(StyleSheet.flatten(texto.props.style)).toMatchObject({ fontFamily: 'Jost_400Regular', fontSize: 15, color: '#1E1B18' });
+    expect(StyleSheet.flatten(texto.props.style)).toMatchObject({ fontFamily: fuentes.regular, fontSize: 15, color: '#1E1B18' });
   });
 
   /* > Corregido 2026-10-19 (E2E en el emulador): el fundido con un valor compartido en un `useEffect` dejaba el

@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -56,7 +57,7 @@ export function FilaDeConversacion({
             <Text
               style={[
                 styles.hora,
-                { color: sinLeer ? c.goldInk : c.textSoft, fontFamily: sinLeer ? 'Jost_700Bold' : 'Jost_400Regular' },
+                { color: sinLeer ? c.goldInk : c.textSoft, fontFamily: sinLeer ? fuentes.negrita : fuentes.regular },
               ]}
             >
               {hora}
@@ -68,7 +69,7 @@ export function FilaDeConversacion({
             numberOfLines={1}
             style={[
               styles.vistaPrevia,
-              { color: sinLeer ? c.text : c.textSoft, fontFamily: sinLeer ? 'Jost_500Medium' : 'Jost_400Regular' },
+              { color: sinLeer ? c.text : c.textSoft, fontFamily: sinLeer ? fuentes.media : fuentes.regular },
             ]}
           >
             {conversacion.lastMessage}
@@ -110,7 +111,7 @@ const styles = StyleSheet.create({
   },
   nombre: {
     flex: 1,
-    fontFamily: 'Jost_500Medium',
+    fontFamily: fuentes.media,
     fontSize: 17,
   },
   hora: {
@@ -131,7 +132,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   contadorTexto: {
-    fontFamily: 'Jost_700Bold',
+    fontFamily: fuentes.negrita,
     fontSize: 13,
     fontVariant: ['tabular-nums'],
   },

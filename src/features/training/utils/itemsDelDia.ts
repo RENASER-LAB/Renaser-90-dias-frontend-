@@ -2,7 +2,7 @@ import type { IconName } from '../../../components/Icon';
 import type { HabitItem } from '../../../screens/TrainingScreen';
 import type { PreferenciaHabitoApi, TrackDelDiaApi } from '../../habits/types/habits.types';
 import { DIAS_DEL_PLAN, NOMBRE_ISO_DEL_DIA, type DiaDelPlan } from '../../habits/utils/semanaDelPlan';
-import { tituloVisible } from '../../habits/utils/renombreDeHabito';
+import { tituloParaMostrar } from '../../habits/utils/tituloEnTipoOracion';
 import type { Ocurrencia } from '../../eventos/types/eventos.types';
 import { linkParaUnirme, nombreDelLink } from '../../eventos/utils/linkDelEvento';
 import { fechaEnZona, horaEnZona } from '../../eventos/utils/zonaHoraria';
@@ -125,7 +125,7 @@ export function itemsDeHoy(habits: HabitItem[], ocurrencias: Ocurrencia[], conte
       return {
         clave: h.id,
         tipo: esAccion ? 'accion' : 'habito',
-        titulo: esAccion ? h.title : tituloVisible({ id: h.habitoId ?? h.id, title: h.title }, contexto.titulos),
+        titulo: esAccion ? h.title : tituloParaMostrar({ id: h.habitoId ?? h.id, title: h.title }, contexto.titulos),
         hora: horaCorta(h.time),
         hecho,
         pausado,
@@ -169,7 +169,7 @@ export function itemsDeUnDiaCerrado(
     return {
       clave: `dia-${contexto.fechaIso}-${t.id}`,
       tipo: 'habito',
-      titulo: tituloVisible({ id: t.habitoId, title: t.tituloHabito }, contexto.titulos),
+      titulo: tituloParaMostrar({ id: t.habitoId, title: t.tituloHabito }, contexto.titulos),
       hora: horaCorta(t.horaDisparo),
       hecho,
       cerrado: !hecho,
@@ -245,7 +245,7 @@ export function itemsPlanificados(contexto: ContextoPlanificado): ItemDelDia[] {
     habitos.push({
       clave: `plan-${contexto.fechaIso}-${h.habitoId}`,
       tipo: 'habito',
-      titulo: tituloVisible({ id: h.habitoId, title: h.title }, contexto.titulos),
+      titulo: tituloParaMostrar({ id: h.habitoId, title: h.title }, contexto.titulos),
       hora: horaDelDiaPlanificado(preferencia, delDia, contexto.fechaIso) ?? horaCorta(h.time),
       hecho: false,
       icono: h.icon ?? null,

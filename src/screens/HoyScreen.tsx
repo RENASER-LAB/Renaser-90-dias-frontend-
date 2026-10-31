@@ -1,3 +1,5 @@
+import { tituloEnTipoOracion } from '../features/habits/utils/tituloEnTipoOracion';
+import { fuentes } from '../theme/fuentes';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
@@ -9,7 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BORDES_DE_UNA_PESTANA } from '../navigation/bordesDeUnaPestana';
-import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../theme/ThemeContext';
 import { space } from '../theme/tokens';
 import { useResponsive } from '../theme/responsive';
@@ -19,40 +21,10 @@ import { Presionable } from '../components/Presionable';
 import { tacto } from '../utils/tacto';
 import { Aparicion } from '../components/Aparicion';
 import { useEsMentor } from '../features/mentor/hooks/useEsMentor';
-import { useCelulaQueAcompano } from '../features/mentor/hooks/useCelulaQueAcompano';
 import { EntradaAlProgramaPropio } from '../features/programa/components/EntradaAlProgramaPropio';
-import { TarjetaMentorHoy } from '../features/mentor/components/TarjetaMentorHoy';
-import { entradaAlGrupoVisible, esLiderDeMentores, esOtroDeMisGrupos } from '../features/mentor/utils/entradaAlGrupo';
-import { BandejaTicketsScreen } from '../features/tickets/screens/BandejaTicketsScreen';
-import { CumplimientoDelLiderScreen, type GrupoAbierto } from '../features/lider-mentores/screens/CumplimientoDelLiderScreen';
-import { LiderMentoresScreen } from '../features/lider-mentores/screens/LiderMentoresScreen';
-import { AprendicesDelLiderScreen } from '../features/lider-mentores/screens/AprendicesDelLiderScreen';
-import { useAprendicesDisponibles } from '../features/lider-mentores/hooks/useAprendicesDisponibles';
-import { alAbrirAviso, consumirRutaPendiente } from '../features/mentor/notificaciones/rutaDeAviso';
-import { TarjetaSemaforoHoy } from '../features/semaforo/components/TarjetaSemaforoHoy';
-import { ControlDePapelDeHoy } from '../features/hoy-por-papel/components/ControlDePapelDeHoy';
-import { MiGrupoEnHoy } from '../features/hoy-por-papel/components/MiGrupoEnHoy';
-import { MisMentoresEnHoy } from '../features/hoy-por-papel/components/MisMentoresEnHoy';
-import { usePapelDeHoy } from '../features/hoy-por-papel/hooks/usePapelDeHoy';
-import { papelesDeHoy } from '../features/hoy-por-papel/utils/papelesDeHoy';
-import { SemaforoScreen } from '../features/semaforo/screens/SemaforoScreen';
-import { useMiSemaforo } from '../features/semaforo/hooks/useMiSemaforo';
 import { usePublicarSemaforoDeHoy } from '../features/semaforo/estado/useSemaforoVigente';
 import { useCelebracionDelDia } from '../features/fenix/hooks/useCelebracionDelDia';
-import { useResumenPorGrupos } from '../features/semaforo/hooks/useLecturaPorSemana';
-import {
-  comoAbrirElSemaforoDelGrupo,
-  diasParaLaTarjeta,
-  hayQuePedirMiSemaforo,
-  quienAbreElResumenPorGrupos,
-} from '../features/semaforo/utils/entradasDelSemaforo';
-import { AdminScreen, type EntradaDeAdmin } from '../features/admin/screens/AdminScreen';
-import { TarjetaAdminHoy } from '../features/admin/components/TarjetaAdminHoy';
-import { TarjetaConfrontacion } from '../features/confrontacion/components/TarjetaConfrontacion';
 import { useCapacidades } from '../features/admin/hooks/useCapacidades';
-import { MiCelulaScreen } from '../features/mentor/screens/MiCelulaScreen';
-import { AlumnoScreen } from '../features/mentor/screens/AlumnoScreen';
-import type { AlumnoConEstado } from '../features/mentor/types/mentor.types';
 import {
   useResumenHome,
   rotuloDeFase,
@@ -60,14 +32,17 @@ import {
 } from '../features/home/hooks/useResumenHome';
 import { useHabitoDelMomento } from '../features/habits/hooks/useHabitoDelMomento';
 import { TarjetaHabitoYRadar } from '../features/home/components/TarjetaHabitoYRadar';
-import { obtenerRocasDeHoy } from '../features/training/api/trainingApi';
 import { useUltimaPublicacionMuro } from '../features/community/hooks/useUltimaPublicacionMuro';
 import { tiempoRelativo } from '../features/community/utils/tiempoRelativo';
 import { useAuth } from '../context/AuthContext';
 import { useMapaRenacimientoAbierto } from '../features/mapa-renacimiento/MapaRenacimientoContext';
-import { useEstadoMapa } from '../features/mapa-renacimiento/hooks/useEstadoMapa';
+import { useLecturaDelEstadoDelMapa } from '../features/mapa-renacimiento/hooks/useEstadoMapa';
 import { mapaHabilitado } from '../features/mapa-renacimiento/utils/mapaHabilitado';
-import type { RocaDiariaApi } from '../features/training/types/training.types';
+import { useAccionesDeHoy } from '../features/objetivos/hooks/useAccionesDeHoy';
+import { useMetaDeLaAccion } from '../features/objetivos/hooks/useMetaDeLaAccion';
+import { TarjetaAccionDeHoy } from '../features/home/components/TarjetaAccionDeHoy';
+import { vistaDeLaAccionDeHoy } from '../features/home/utils/vistaDeLaAccionDeHoy';
+import { minutosDeAhora } from '../features/training/utils/listaDelDia';
 import { ESPACIO_PARA_LANZADOR } from '../features/renasia/components/RenasiaLauncher';
 import { OrbeAcompanante } from '../features/renasia/components/OrbeAcompanante';
 import { AccionDelAcompanante } from '../features/renasia/components/AccionDelAcompanante';
@@ -102,33 +77,17 @@ export default function HoyScreen() {
      Hoy también lo recarga. */
   const { habito: habitoAhora, recargar: recargarHabitoAhora } = useHabitoDelMomento();
   const { user } = useAuth();
-  /* Rol Mentor. Se monta DENTRO de Hoy y no como sexta pestaña: AGENTS.md 1 prohibe tocar los
-     cinco tabs, y ademas el mentor sigue siendo aprendiz — su propio programa no cambia. */
+  /* Rol Mentor: solo para saber si la invitación al programa propio le corresponde. Sus paneles («Mi grupo» y «Mis mentores») ya
+     no están en Hoy: viven en Yo, como Administración (2026-10-31, pedido del dueño: Hoy es solo el programa propio). */
   const esMentor = useEsMentor();
-  /* UNA sola lectura de la celula, repartida a la tarjeta y a la pantalla. Si cada una
-     llamara al hook por su cuenta habria dos peticiones y dos verdades. */
-  const celula = useCelulaQueAcompano(esMentor);
-  const { elegirGrupo } = celula;
   /* Quien puede administrar lo dice el SERVIDOR, no el rol leido en el telefono. Un rol nuevo
      manana no dejaria la entrada colgada, y una capacidad falseada abre pantallas vacias: cada
      endpoint vuelve a autorizar (SDD 003, ARF-15). */
-  const { capacidades, cargando: cargandoCapacidades, error: errorCapacidades, recargar: recargarCapacidades } = useCapacidades();
+  const { capacidades, error: errorCapacidades, recargar: recargarCapacidades } = useCapacidades();
   /* Ya no `esMentor`: la invitacion al programa propio es para todo el staff, ADMIN y ALQUIMISTA
      incluidos. Atarla a "es mentor" los dejaba fuera de un programa que el backend si les
      permitia iniciar — el bloqueo estaba aca, no en el permiso (ARF-16). */
   const programaPropioActivo = esMentor || capacidades.administrar || capacidades.puedeIniciarPrograma;
-  const [enAdministracion, setEnAdministracion] = useState(false);
-  /* La bandeja de tickets: la unica pantalla propia del LIDER DE MENTORES. Se monta como estado
-     de Hoy, igual que Administracion y que las vistas del mentor — no como un tab nuevo. */
-  const esLider = esLiderDeMentores(user?.role);
-  const [enBandejaTickets, setEnBandejaTickets] = useState(false);
-  /* «Mis mentores» (SDD 002, backend D-241): la gestion del cuerpo de mentores, tercera pantalla
-     propia del lider. Mismo patron: estado de Hoy, no un tab nuevo. */
-  const [enMisMentores, setEnMisMentores] = useState(false);
-  /* «Todos los aprendices» (2026-10-31): la lista de todas las personas, con o sin grupo, para el líder. La fila de «Mis
-     mentores» existe solo si el servidor la ofrece (la primera página respondió 200); Hoy se queda con la respuesta para
-     que la fila no parpadee al volver de la lista. */
-  const [enTodosLosAprendices, setEnTodosLosAprendices] = useState(false);
   // El orbe del centro (2026-09-23): conversación por voz con el acompañante, y su chat para
   // confirmar propuestas o leer la respuesta completa.
   const voz = useVozDelOrbe();
@@ -168,233 +127,28 @@ export default function HoyScreen() {
     const resultado = await registroConFoto.iniciar(solicitudDelPedido(pedido));
     voz.cambiarPedidoDeFoto(pedido.registroId, cambioTrasIniciar(resultado, pedido.destino));
   };
-  const [vistaMentor, setVistaMentor] = useState<'ninguna' | 'celula' | 'alumno'>('ninguna');
-  const [alumnoAbierto, setAlumnoAbierto] = useState<AlumnoConEstado | null>(null);
-  /* Spec 018: la ficha abierta desde la lista de «Mi grupo» de Hoy vuelve a Hoy; la que se abre desde la pantalla del
-     grupo (o desde un aviso) vuelve a esa pantalla, como siempre. */
-  const [alumnoVieneDeHoy, setAlumnoVieneDeHoy] = useState(false);
-  /* Semaforo de cumplimiento (D-168). Lo que el dueño autorizo agregar a Hoy el 2026-09-25 es esto
-     y nada mas (ver AGENTS.md): la tarjeta del semaforo con el detalle que abre, la tarjeta del lider
-     de mentores (abajo) y las rutas de los avisos del sabado. El detalle es estado de esta pantalla,
-     como las vistas del mentor. UNA lectura de `/me/semaforo`, compartida por la tarjeta (las barras)
-     y el detalle; solo se pide si `/home` dice que la persona se mide o si el detalle se abrio desde
-     el aviso. */
-  const [enSemaforo, setEnSemaforo] = useState(false);
-  /* Si `/home` ya trae los 7 dias (campo aditivo del backend), la tarjeta no necesita
-     `/me/semaforo`: se pide solo con el detalle abierto. Sin ese campo, como antes. */
-  const miSemaforo = useMiSemaforo(hayQuePedirMiSemaforo(resumen?.semaforo, enSemaforo));
-  /* El fénix (2026-10-06): lo ya leído pasa al color vigente compartido con el botón de SER (sin pedir nada más), y
-     los hitos del día que ya trae `/home` (fase nueva, racha de 7 y 30, todos los hábitos) se celebran una vez por día
-     con la pantalla completa que dibuja `AnfitrionDeCelebraciones` (App.tsx, 2026-10-07). */
-  usePublicarSemaforoDeHoy(resumen?.semaforo, Boolean(resumen), miSemaforo.detalle);
+  /* El semáforo propio (D-168) ya no vive en Hoy (2026-10-31, pedido del dueño): su tarjeta y su detalle pasaron a Yo. Lo que Hoy
+     conserva es el ánimo del fénix: el color de `/home` pasa al color vigente compartido con el botón de SER (sin pedir nada más;
+     Yo publica además el del detalle cuando lo lee), y los hitos del día que ya trae `/home` (fase nueva, racha de 7 y 30, todos
+     los hábitos) se celebran una vez por día con la pantalla completa que dibuja `AnfitrionDeCelebraciones` (App.tsx, 2026-10-07). */
+  usePublicarSemaforoDeHoy(resumen?.semaforo, Boolean(resumen), null);
   useCelebracionDelDia(
     user?.id,
     resumen ? { rachaActual: resumen.rachaActual, habitosHoy: resumen.habitosHoy, fase: resumen.fase } : null,
   );
-  /* Semaforo por grupos (D-168): la pantalla propia del LIDER DE MENTORES, como la bandeja de
-     tickets. UNA lectura, compartida por su tarjeta (que aparece solo si el servidor ya respondio
-     que existe) y su pantalla. Para cualquier otro rol no se pide nada. */
-  const semaforoGrupos = useResumenPorGrupos(esLider);
-  const aprendicesDisponibles = useAprendicesDisponibles(esLider && esDisponible(CLAVES.lider));
-  const [enSemaforoGrupos, setEnSemaforoGrupos] = useState(false);
-  /* Spec 018: el grupo cuya fila se tocó en «Mis mentores». Con él, la pantalla del líder abre directo en ese grupo;
-     sin él (el aviso del sábado) abre en el resumen de siempre. */
-  const [grupoDeLaFila, setGrupoDeLaFila] = useState<GrupoAbierto | null>(null);
-  /* Spec 018: quien lidera mentores ve en Hoy tres papeles —su programa, su grupo y sus mentores— y elige cuál con un
-     control de arriba. Lo que tiene cada cuenta lo dice lo que ya se lee acá (el servidor), no el rol suelto: sin grupo
-     no hay «Mi grupo», y una entrada apagada por Soporte TI no se ofrece. Quien no lidera no ve el control: su Hoy es el
-     de siempre. */
-  const tieneGrupoParaElControl =
-    entradaAlGrupoVisible({ esMentor, rol: user?.role, fallo: celula.fallo }) &&
-    esDisponible(CLAVES.mentorMiGrupo) &&
-    (celula.vista !== null || celula.fallo !== null);
-  const papeles = papelesDeHoy({
-    esLider,
-    tienePrograma: programaPropioActivo,
-    tieneGrupo: tieneGrupoParaElControl,
-    tieneMentores: esDisponible(CLAVES.lider) || esDisponible(CLAVES.tickets) || esDisponible(CLAVES.semaforo),
-  });
-  const { papel: papelLeido, recordado, elegir: elegirPapel } = usePapelDeHoy(user?.id, papeles);
-  const conControl = papeles.length > 0;
-  /* Quien se quedó en «Mi grupo» la última vez: mientras el servidor no diga si acompaña un grupo esa opción todavía no
-     existe, y dibujar «Mi programa» para saltar al grupo medio segundo después es peor que esperar. */
-  const esperandoAlGrupo =
-    conControl && recordado === 'grupo' && !papeles.includes('grupo') && celula.cargando && celula.vista === null;
-  const papel = esperandoAlGrupo ? null : papelLeido;
-  /* Con el papel de mentores o de grupo, lo del programa propio queda oculto pero montado: volver a «Mi programa» es
-     instantáneo y no pierde nada (la conversación del orbe, el borrador de una foto). */
-  const mostrarPrograma = !conControl || papel === 'programa';
-  const ocultoSiNoEsElPrograma = mostrarPrograma ? null : styles.oculto;
-  /* El aviso del sabado al mentor abre su grupo con el semaforo a la vista. */
-  const [enfocarSemaforoDelGrupo, setEnfocarSemaforoDelGrupo] = useState(false);
-  /* El aviso del sabado a administracion entra directo al semaforo de Administracion. La clave
-     vuelve a montar la pila de vistas para que entre por ahi aunque ya estuviera abierta. */
-  const [adminAbreEn, setAdminAbreEn] = useState<EntradaDeAdmin>('inicio');
-  const [montajeAdmin, setMontajeAdmin] = useState(0);
-
-  /* El aviso de la Caja Renaser al Admin (`/admin/caja/{aprendizId}`, D-219) llega por
-     `AbridorDeAvisos` con `abrirCajaAprendizId`, ya sin capas obligatorias encima. Abre Administracion
-     en esa caja. Espera a saber si la cuenta administra (lo dice el servidor); si no, se descarta. */
-  const rutaDeHoy = useRoute();
-  useEffect(() => {
-    const aprendizId = (rutaDeHoy.params as { abrirCajaAprendizId?: string } | undefined)?.abrirCajaAprendizId;
-    if (!aprendizId || cargandoCapacidades) return;
-    (navigation as any).setParams({ abrirCajaAprendizId: undefined });
-    if (!capacidades.administrar) return;
-    setEnSemaforo(false);
-    setAdminAbreEn({ caja: aprendizId });
-    setMontajeAdmin(n => n + 1);
-    setEnAdministracion(true);
-  }, [rutaDeHoy.params, cargandoCapacidades, capacidades.administrar, navigation]);
-
-  /* D-222: «Ver ficha» desde la info de un chat, para el Admin/Alquimista: `ComunidadScreen` pide esta
-     pestaña con `abrirFichaAprendiz` y Administración abre esa ficha, con Inicio debajo. Mismo camino que
-     la Caja de arriba: se consume una vez y, si la cuenta no administra, se descarta. */
-  useEffect(() => {
-    const persona = (rutaDeHoy.params as { abrirFichaAprendiz?: { id: string; fullName: string | null } } | undefined)
-      ?.abrirFichaAprendiz;
-    if (!persona?.id || cargandoCapacidades) return;
-    (navigation as any).setParams({ abrirFichaAprendiz: undefined });
-    if (!capacidades.administrar) return;
-    setEnSemaforo(false);
-    setAdminAbreEn({ ficha: { id: persona.id, fullName: persona.fullName } });
-    setMontajeAdmin(n => n + 1);
-    setEnAdministracion(true);
-  }, [rutaDeHoy.params, cargandoCapacidades, capacidades.administrar, navigation]);
-
-  /* Un aviso tocado desde la bandeja del sistema abre la ficha de ese alumno (RF-25).
-     La ruta la deja `rutaDeAviso` y se atiende ACA porque las vistas del mentor son estado de
-     esta pantalla, no rutas del navegador (AGENTS.md 1: los cinco tabs no se tocan).
-
-     Se espera al padron antes de abrir. No es una demora evitable: `AlumnoScreen` necesita al
-     alumno entero —dia de programa, habitos, evidencias—, y eso llega con el grupo. Mientras
-     tanto la ruta queda pendiente; `alAbrirAviso` reentrega lo que ya estuviera esperando, asi
-     que un toque con la app cerrada no se pierde por llegar antes que los datos.
-
-     Si el alumno NO esta en el padron, se abre el grupo y nada mas. Un aviso viejo de alguien
-     que ya roto no debe llevar a su ficha: sus datos ya no son de este mentor. */
-  useEffect(() => {
-    if (!esMentor) return;
-    const abrir = () => {
-      const vista = celula.vista;
-      if (!vista) return;
-      /* Solo las rutas de alumno: la del semaforo la atiende su propio efecto, mas abajo. */
-      const ruta = consumirRutaPendiente('alumno');
-      if (!ruta) return;
-      setEnSemaforo(false);
-      const abrirAlumnoDe = (padron: AlumnoConEstado[]) => {
-        const alumno = padron.find(a => a.participanteId === ruta.alumnoId);
-        if (alumno) {
-          setAlumnoAbierto(alumno);
-          setVistaMentor('alumno');
-        } else {
-          setVistaMentor('celula');
-        }
-      };
-      /* Alumno de OTRO de sus grupos (D-141): se pasa a ese grupo y se abre la ficha con su
-         padron. Mientras llega, se ve el grupo cargando. */
-      if (esOtroDeMisGrupos(ruta.grupoId, vista)) {
-        setVistaMentor('celula');
-        void elegirGrupo(ruta.grupoId).then(nueva => abrirAlumnoDe(nueva?.todos ?? []));
-        return;
-      }
-      abrirAlumnoDe(vista.todos);
-    };
-    abrir();
-    return alAbrirAviso(abrir);
-  }, [esMentor, celula.vista, elegirGrupo]);
-
-  /* El aviso del sabado (`/semaforo`, «Tu semana ya cerro») abre el detalle del semaforo. Para
-     cualquier rol: le llega a toda persona medida, no solo al mentor. Se trae Hoy al frente por si
-     el toque encontro la app en otra pestaña; si no, el detalle quedaria abierto donde no se ve. */
-  useEffect(() => {
-    const abrir = () => {
-      if (!consumirRutaPendiente('semaforo')) return;
-      setEnSemaforo(true);
-      (navigation as any).navigate('Hoy');
-    };
-    abrir();
-    return alAbrirAviso(abrir);
-  }, [navigation]);
-
-  /* El resumen del sabado al mentor (`/mentor/groups/{g}/semaforo`) abre su grupo con la seccion
-     del semaforo a la vista. Como la ruta de un alumno, espera al padron; y si el aviso es de un
-     grupo que ya no acompana, abre el grupo y nada mas. */
-  useEffect(() => {
-    if (!esMentor) return;
-    const abrir = () => {
-      const vista = celula.vista;
-      if (!vista) return;
-      const ruta = consumirRutaPendiente('semaforoGrupo');
-      if (!ruta) return;
-      setEnSemaforo(false);
-      const como = comoAbrirElSemaforoDelGrupo(ruta.grupoId, vista.celula.id, vista.grupos.map(g => g.id));
-      /* Aviso de otro de sus grupos (D-141): se abre ESE grupo, no el que estaba mirando. */
-      if (como === 'cambiar') void elegirGrupo(ruta.grupoId);
-      setEnfocarSemaforoDelGrupo(como !== 'grupo');
-      setVistaMentor('celula');
-      (navigation as any).navigate('Hoy');
-    };
-    abrir();
-    return alAbrirAviso(abrir);
-  }, [esMentor, celula.vista, navigation, elegirGrupo]);
-
-  /* El resumen general del sabado (`/semaforo/grupos`): el lider de mentores abre su pantalla;
-     administracion y alquimista, el semaforo de Administracion. Espera a saber si la cuenta
-     administra, porque eso lo dice el servidor. */
-  useEffect(() => {
-    const abrir = () => {
-      const quien = quienAbreElResumenPorGrupos({
-        esLider,
-        administrar: capacidades.administrar,
-        cargandoCapacidades,
-      });
-      if (quien === 'esperar' || quien === 'nadie') return;
-      if (!consumirRutaPendiente('semaforoGrupos')) return;
-      setEnSemaforo(false);
-      if (quien === 'lider') {
-        setEnBandejaTickets(false);
-        setEnSemaforoGrupos(true);
-      } else {
-        setAdminAbreEn('semaforo');
-        setMontajeAdmin(n => n + 1);
-        setEnAdministracion(true);
-      }
-      (navigation as any).navigate('Hoy');
-    };
-    abrir();
-    return alAbrirAviso(abrir);
-  }, [esLider, capacidades.administrar, cargandoCapacidades, navigation]);
   const { abrir: abrirMapa, abierto: mapaAbierto } = useMapaRenacimientoAbierto();
-  const estadoMapa = useEstadoMapa(user?.id ?? null, mapaAbierto);
+  const { estado: estadoMapa, confirmado: estadoMapaConfirmado } = useLecturaDelEstadoDelMapa(user?.id ?? null, mapaAbierto);
   const {
     publicacion: ultimaPublicacion,
     cargando: cargandoUltimaPublicacion,
     recargar: recargarUltimaPublicacion,
   } = useUltimaPublicacionMuro();
 
-  const [rocas, setRocas] = useState<RocaDiariaApi[]>([]);
-  const [cargandoRocas, setCargandoRocas] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
-  const cargarRocas = useCallback(async () => {
-    setCargandoRocas(true);
-    try {
-      const data = await obtenerRocasDeHoy();
-      setRocas(data);
-    } catch {
-      // Degrada amigablemente si aún no hay rocas planificadas
-      setRocas([]);
-    } finally {
-      setCargandoRocas(false);
-    }
-  }, []);
-
-  useFocusEffect(
-    useCallback(() => {
-      cargarRocas();
-    }, [cargarRocas])
-  );
+  /* Las acciones de HOY (`GET /rocks/today`), una vez cada vez que Hoy vuelve al foco: la misma lectura de siempre, ahora con el
+     hook de Plan (`useAccionesDeHoy`). Alimenta la tarjeta de acciones de arriba (2026-10-31). */
+  const { rocas: accionesDeHoy, recargar: recargarAcciones } = useAccionesDeHoy();
 
   // D-229: una propuesta de SER confirmada (un hábito nuevo, uno marcado o pausado) cambia lo de hoy.
   useEffect(
@@ -406,19 +160,11 @@ export default function HoyScreen() {
     [recargarResumen, recargarHabitoAhora]
   );
 
-  const recargarSemaforo = miSemaforo.recargar;
-  const recargarGrupo = celula.recargar;
-  const releerGruposDelLider = semaforoGrupos.volverAVigente;
   const recargarTodo = useCallback(async () => {
     setRefreshing(true);
-    // Las barras de la tarjeta del semaforo: sin esto el resumen se refrescaria y ellas no.
-    recargarSemaforo();
-    // Spec 018: deslizar con «Mi grupo» o «Mis mentores» a la vista relee ESA lista.
-    if (papel === 'grupo') recargarGrupo();
-    if (papel === 'mentores') releerGruposDelLider();
     await Promise.all([
       recargarResumen(),
-      cargarRocas(),
+      recargarAcciones(),
       recargarUltimaPublicacion(),
       recargarHabitoAhora(),
       recargarCapacidades(),
@@ -426,18 +172,12 @@ export default function HoyScreen() {
     setRefreshing(false);
   }, [
     recargarResumen,
-    cargarRocas,
+    recargarAcciones,
     recargarUltimaPublicacion,
     recargarHabitoAhora,
-    recargarSemaforo,
     recargarCapacidades,
-    papel,
-    recargarGrupo,
-    releerGruposDelLider,
   ]);
 
-  // Roca Prioritaria de Hoy: Posición 1 (Pareto Verde) o la primera disponible
-  const rocaPrioritaria = rocas.find(r => r.posicion === 1) || rocas[0] || null;
   const evidenciasUltimaPublicacion = ultimaPublicacion?.media ?? [];
 
   /* El fénix del centro. Su diámetro (140 en un teléfono estándar; menor en uno angosto o bajo) sale del
@@ -502,6 +242,18 @@ export default function HoyScreen() {
     diasQueQuedanSiSeSabe({ diaPrograma: resumen?.diaPrograma, inscrito: resumen?.inscrito, cargando: false }),
   );
   const mostrarMapa = MAPA_DIA7_HABILITADO && !!user;
+  /* La tarjeta de acciones de arriba (2026-10-31): qué muestra lo decide `vistaDeLaAccionDeHoy`, con las acciones de hoy que
+     esta pantalla ya lee y el Mapa que ya lee la tarjeta del Mapa; la meta de la acción que sigue, `useMetaDeLaAccion`. */
+  const vistaDeLaAccion = useMemo(
+    () =>
+      vistaDeLaAccionDeHoy({
+        rocas: accionesDeHoy,
+        mapa: { habilitado: MAPA_DIA7_HABILITADO && !!user, estado: estadoMapa, confirmado: estadoMapaConfirmado },
+        ahoraMin: minutosDeAhora(Date.now()),
+      }),
+    [accionesDeHoy, MAPA_DIA7_HABILITADO, user, estadoMapa, estadoMapaConfirmado],
+  );
+  const metaDeLaAccion = useMetaDeLaAccion(vistaDeLaAccion?.tipo === 'accion' ? vistaDeLaAccion.accion : null);
   const tituloMapa = estadoMapa === 'activo'
     ? 'Tu mapa está activo'
     : estadoMapa === 'en_progreso' || estadoMapa === 'listo_para_revision' ? 'Continúa tu mapa' : 'Diseña tu mapa';
@@ -512,43 +264,17 @@ export default function HoyScreen() {
      redacta. `sin-datos` cae al texto genérico de siempre —Día 0, cuenta recién aprobada, o el
      endpoint falló— porque inventar un hábito sería peor que no decir nada. */
   const tituloHabitoAhora = useMemo(() => {
-    if (habitoAhora.titulo) return habitoAhora.titulo;
+    // El nombre del hábito llega en mayúsculas del catálogo: se muestra en tipo oración (2026-10-31).
+    if (habitoAhora.titulo) return tituloEnTipoOracion(habitoAhora.titulo);
     if (habitoAhora.estado === 'todo-hecho') return '¡Todos los hábitos completados!';
     return 'Lidera tu energía diaria.';
   }, [habitoAhora]);
 
-  const detalleHabitoAhora = useMemo(() => {
-    const quedan = habitoAhora.pendientes === 1 ? 'queda 1 pendiente' : `quedan ${habitoAhora.pendientes} pendientes`;
-    if (habitoAhora.estado === 'ahora') {
-      return habitoAhora.hora ? `Te toca ahora · ${habitoAhora.hora} · ${quedan}` : `Te toca ahora · ${quedan}`;
-    }
-    if (habitoAhora.estado === 'proximo') {
-      return `Empieza a las ${habitoAhora.hora} · ${quedan}`;
-    }
-    if (habitoAhora.estado === 'todo-hecho') {
-      return resumen?.habitosHoy
-        ? `${resumen.habitosHoy.completados} de ${resumen.habitosHoy.total} hábitos cumplidos en esta jornada.`
-        : 'No queda nada pendiente en esta jornada.';
-    }
-    return resumen?.habitosHoy
-      ? `${resumen.habitosHoy.completados} de ${resumen.habitosHoy.total} hábitos cumplidos en esta jornada.`
-      : 'Todo lo demás se alinea cuando cumples tu disciplina.';
-  }, [habitoAhora, resumen]);
-
-  // `null` = todavía no planificó ninguna acción diaria esta semana, y eso NO es un 100 (D-128).
-  // Hasta el 2026-09-15 acá había `?? 100`: con el backend caído, sin datos, o sin haber hecho
-  // nada, la pantalla decía "100 % · Nivel de excelencia". Ahora dice "—".
-  const coherenciaScore =
-    resumen?.coherencia === null || resumen?.coherencia === undefined
-      ? null
-      : Math.round(resumen.coherencia);
   /* `null` = no se sabe (`/home` falló, todavía carga o no trajo el dato): la pantalla dice «—».
-     > **Corregido 2026-10-05.** Acá había `?? 100`, `?? 0` y `?? 0`: con `/home` caído Hoy decía
-     > «100 pts», «0 días» y «Récord histórico: 0 d», tres datos inventados (el mismo error que el
-     > «DÍA 1 DE 90» del 2026-09-07 y el «100 %» de coherencia del 2026-09-15). Yo ya decía «—». */
+     > **Corregido 2026-10-05.** Acá había `?? 100`: con `/home` caído Hoy decía «100 pts», un dato inventado (el mismo error
+     > que el «DÍA 1 DE 90» del 2026-09-07). Yo ya decía «—».
+     > **Corregido 2026-10-31.** Coherencia y racha se fueron de Hoy (pedido del dueño: ya están en Yo); quedan los puntos. */
   const puntosLiga = typeof resumen?.puntosLiga === 'number' ? resumen.puntosLiga : null;
-  const rachaActual = typeof resumen?.rachaActual === 'number' ? resumen.rachaActual : null;
-  const rachaMaxima = typeof resumen?.rachaMaxima === 'number' ? resumen.rachaMaxima : null;
 
   /* El orbe responde también al tacto (rediseño de Hoy, 2026-10-05): un «tic» cuando el toque
      EMPIEZA a escuchar y el «toc» del sistema cuando mantenerlo presionado cierra la conversación.
@@ -569,96 +295,6 @@ export default function HoyScreen() {
         terminarConversacion();
       }
     : undefined;
-
-  /* Las vistas del mentor toman la pantalla completa, como el Mapa: son otro contexto de
-     trabajo, no una tarjeta mas dentro del dia propio. El retroceso del sistema las cierra
-     paso a paso (cada una registra su `useSystemBackHandler`). */
-  /* El detalle del semaforo va PRIMERO: el aviso del sabado puede llegar con otra vista abierta
-     (Administracion, el grupo). Al volver, esa vista sigue donde estaba. */
-  if (enSemaforo) {
-    return (
-      <SemaforoScreen
-        semaforo={miSemaforo}
-        onVolver={() => setEnSemaforo(false)}
-        onPausaCambiada={() => void recargarResumen()}
-      />
-    );
-  }
-  /* Administracion toma la pantalla completa, como las vistas del mentor y como el Mapa: es otro
-     contexto de trabajo, no una tarjeta mas dentro del dia propio. */
-  if (enAdministracion && capacidades.administrar) {
-    return (
-      <AdminScreen
-        key={montajeAdmin}
-        abrirEn={adminAbreEn}
-        onSalir={() => {
-          setEnAdministracion(false);
-          setAdminAbreEn('inicio');
-        }}
-      />
-    );
-  }
-  /* Misma forma que Administracion: pantalla completa, y el retroceso del sistema la cierra
-     (la registra ella con su `useSystemBackHandler`). */
-  if (enBandejaTickets && esLider) {
-    return <BandejaTicketsScreen onVolver={() => setEnBandejaTickets(false)} />;
-  }
-  if (enMisMentores && esLider) {
-    return <LiderMentoresScreen onSalir={() => setEnMisMentores(false)} />;
-  }
-  /* Misma forma: la lista de todas las personas del programa, abierta desde «Mis mentores». */
-  if (enTodosLosAprendices && esLider) {
-    return <AprendicesDelLiderScreen onSalir={() => setEnTodosLosAprendices(false)} />;
-  }
-  /* Misma forma que la bandeja: la otra pantalla propia del lider de mentores. Desde la spec 005 (2026-10-19)
-     el resumen por grupos baja al grupo y a la persona: `CumplimientoDelLiderScreen` lo envuelve y maneja esos
-     niveles por dentro (persona ← grupo ← resumen ← Hoy), sin otra vista de Hoy. */
-  if (enSemaforoGrupos && esLider) {
-    return (
-      <CumplimientoDelLiderScreen
-        lectura={semaforoGrupos}
-        grupoInicial={grupoDeLaFila ?? undefined}
-        onSalir={() => {
-          setEnSemaforoGrupos(false);
-          setGrupoDeLaFila(null);
-        }}
-      />
-    );
-  }
-  if (esMentor && vistaMentor === 'alumno' && alumnoAbierto) {
-    return (
-      <AlumnoScreen
-        alumno={alumnoAbierto}
-        grupoId={celula.vista?.celula.id ?? null}
-        onVolver={() => {
-          setVistaMentor(alumnoVieneDeHoy ? 'ninguna' : 'celula');
-          setAlumnoVieneDeHoy(false);
-        }}
-      />
-    );
-  }
-  if (esMentor && vistaMentor === 'celula') {
-    return (
-      <MiCelulaScreen
-        onSalir={() => {
-          setVistaMentor('ninguna');
-          setEnfocarSemaforoDelGrupo(false);
-        }}
-        enfocarSemaforo={enfocarSemaforoDelGrupo}
-        onAbrirAlumno={alumno => {
-          setAlumnoAbierto(alumno);
-          setAlumnoVieneDeHoy(false);
-          setVistaMentor('alumno');
-        }}
-        vista={celula.vista}
-        cargando={celula.cargando}
-        fallo={celula.fallo}
-        detalle={celula.detalle}
-        recargar={celula.recargar}
-        onElegirGrupo={elegirGrupo}
-      />
-    );
-  }
 
   return (
     <SafeAreaView edges={BORDES_DE_UNA_PESTANA} style={{ flex: 1, backgroundColor: c.bg }}>
@@ -696,7 +332,7 @@ export default function HoyScreen() {
         <View style={styles.programStatusBar}>
           <View style={{ flex: 1 }}>
             <Text
-              style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}
+              style={[t.small, { color: c.goldInk, fontFamily: fuentes.negrita }]}
               accessibilityLabel={`Fase del programa: ${faseNombre ?? 'sin datos'}`}
             >
               {faseNombre ?? '—'}
@@ -709,85 +345,39 @@ export default function HoyScreen() {
           {/* La cifra sola, como en Ranking (rediseño de Hoy, 2026-10-05). Llevaba un rayo, que en
               Plan es «Tu semana», dentro de una píldora en versales. */}
           <Text
-            style={[t.small, styles.cifras, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 14 }]}
+            style={[t.small, styles.cifras, { color: c.goldInk, fontFamily: fuentes.negrita, fontSize: 14 }]}
             accessibilityLabel={puntosLiga === null ? 'Puntos de la liga: sin datos' : `${puntosLiga} puntos de la liga`}
           >
             {puntosLiga ?? '—'} pts
           </Text>
         </View>
 
-        {/* Spec 018: quien lidera mentores elige qué ve en Hoy —su programa, su grupo o sus mentores—. Solo existe para
-            esa cuenta y con más de un papel disponible; para el resto Hoy es el de siempre, sin control. Mientras se lee
-            lo último que eligió (unos milisegundos, una vez) no se dibuja, para que Hoy no salte de un papel a otro. */}
-        {conControl && papel !== null ? (
-          <View style={styles.controlDePapel}>
-            <ControlDePapelDeHoy papeles={papeles} valor={papel} onCambiar={elegirPapel} />
-          </View>
-        ) : null}
-
-        {/* La frase de confrontación del día. Va acá —pegada a "DÍA n DE 90" y ANTES de las
-            métricas— porque la guía del cliente es explícita sobre para qué sirve: revelar, no
-            informar. Debajo de los números ya sería un dato más. */}
-        {mostrarPrograma ? <TarjetaConfrontacion diaPrograma={diaConocido} /> : null}
+        {/* La raya dorada corta que iba sobre la frase del día se queda bajo la cabecera (pedido del dueño, 2026-10-31: «la
+            cabecera queda: fase, día, puntos y la raya»). Es solo adorno: el lector de pantalla no la lee. */}
+        <View
+          style={[styles.raya, { backgroundColor: c.gold }]}
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+        />
 
         {/* ========================================================================= */}
-        {/* 2. MÉTRICAS CLAVE REALES: COHERENCIA Y RACHA                              */}
+        {/* 2. LA ACCIÓN QUE SIGUE HOY (2026-10-31)                                   */}
         {/* ========================================================================= */}
         </Aparicion>
 
-        <Aparicion retardo={70} style={ocultoSiNoEsElPrograma}>
-        {/* Eran dos tarjetas con borde y fondo, una dorada y la otra gris sin motivo. Ahora son
-            dos columnas de texto sobre el fondo de la pantalla, separadas por UNA línea de pelo:
-            el único borde que queda es el que de verdad hace falta, porque sin él las dos cifras
-            se leerían como una sola frase. El icono ya no se va al margen derecho — acompaña al
-            rótulo, y todo el bloque se lee de izquierda a derecha. */}
-        <View style={styles.metricsRow}>
-          {/* Coherencia real */}
-          <View style={styles.metricBloque}>
-            <View style={styles.metricEncabezado}>
-              {/* Un medidor y no la diana: la diana era la misma del Código Renaser y de Acciones. */}
-              <Text style={[t.small, { color: c.textSoft, fontFamily: 'Jost_700Bold' }]}>Coherencia</Text>
-              <Icon name="gauge" size={TAMANO_ICONO.chico} color={c.goldInk} />
-            </View>
-            <View style={styles.metricCifra}>
-              <Text style={[t.metric, { color: c.goldInk }]}>
-                {coherenciaScore ?? '—'}
-              </Text>
-              {coherenciaScore !== null && (
-                <Text style={{ fontFamily: 'Jost_500Medium', fontSize: 15, color: c.goldInk }}>%</Text>
-              )}
-            </View>
-            <Text style={[t.small, { color: c.micro, fontSize: 12, marginTop: 4 }]}>
-              {coherenciaScore === null
-                ? 'Planifica tu semana para verla'
-                : coherenciaScore >= 80
-                  ? 'Nivel de excelencia'
-                  : 'Consistencia del día'}
-            </Text>
-          </View>
-
-          <View style={[styles.metricSeparador, { backgroundColor: c.divider }]} />
-
-          {/* Racha real */}
-          <View style={styles.metricBloque}>
-            <View style={styles.metricEncabezado}>
-              {/* La llama de Lucide a 16: la de antes, a 14, se leía como una gota. Gris en 0. */}
-              <Text style={[t.small, { color: c.textSoft, fontFamily: 'Jost_700Bold' }]}>Racha</Text>
-              <Icon name="flame" size={TAMANO_ICONO.chico} color={rachaActual ? c.goldInk : c.chevron} />
-            </View>
-            <View style={styles.metricCifra}>
-              <Text style={[t.metric, { color: c.textStrong }]}>
-                {rachaActual ?? '—'}
-              </Text>
-              {rachaActual !== null && (
-                <Text style={[t.small, { color: c.textSoft }]}>{rachaActual === 1 ? 'día' : 'días'}</Text>
-              )}
-            </View>
-            <Text style={[t.small, { color: c.micro, fontSize: 12, marginTop: 4 }]}>
-              Récord histórico: {rachaMaxima === null ? '—' : `${rachaMaxima} d`}
-            </Text>
-          </View>
-        </View>
+        <Aparicion retardo={70}>
+        {/* Pedido del dueño, 2026-10-31: se quitaron la frase del día y Coherencia / Racha (ya están en Yo) y, en su lugar y antes
+            de «Tu acompañante», va la tarjeta de «Acciones y objetivos» con el diseño nuevo: la que sigue hoy, su meta y un
+            botón que lleva a Training. Mientras no se sabe qué mostrar no se dibuja nada (sin parpadeo). */}
+        {vistaDeLaAccion && metaDeLaAccion.lista ? (
+          <TarjetaAccionDeHoy
+            vista={vistaDeLaAccion}
+            meta={metaDeLaAccion.meta}
+            alEmpezar={accionId => (navigation as any).navigate('Training', { abrirAccionId: accionId })}
+            alHacerElMapa={abrirMapa}
+            alAgendar={() => (navigation as any).navigate('Plan')}
+          />
+        ) : null}
 
         {errorResumen && (
           <View style={[styles.errorBox, { backgroundColor: c.dangerWash, borderLeftColor: c.danger }]}>
@@ -802,7 +392,7 @@ export default function HoyScreen() {
         {/* ========================================================================= */}
         </Aparicion>
 
-        <Aparicion retardo={140} style={ocultoSiNoEsElPrograma}>
+        <Aparicion retardo={140}>
         <View style={styles.hero}>
           {/* Sin anillos ni partícula detrás: el fénix es el centro y va sin fondo (pedido del dueño, 2026-10-06). */}
           {/* El centro del hero es el acompañante por voz (pedido del dueño, 2026-09-23). Antes
@@ -810,7 +400,7 @@ export default function HoyScreen() {
               dato se le pregunta ahora al propio acompañante ("¿cuál es mi foco de hoy?"), que lo
               lee con consultar_rocas. Tocar el orbe: escucha, piensa y responde en voz alta. */}
           <View style={styles.heroCenter}>
-            <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_500Medium', textAlign: 'center' }]}>
+            <Text style={[t.small, { color: c.goldInk, fontFamily: fuentes.media, textAlign: 'center' }]}>
               Tu acompañante
             </Text>
             <View style={{ marginTop: isShort ? 10 : 14 }}>
@@ -855,7 +445,7 @@ export default function HoyScreen() {
               hitSlop={8}
               style={({ pressed }) => [styles.definirRocaEnlace, { opacity: pressed ? 0.6 : 1 }]}
             >
-              <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 14 }]}>Ver en el chat</Text>
+              <Text style={[t.small, { color: c.goldInk, fontFamily: fuentes.negrita, fontSize: 14 }]}>Ver en el chat</Text>
               <Icon name="chevron" size={TAMANO_ICONO.chico} color={c.goldInk} />
             </Pressable>
           </View>
@@ -868,63 +458,7 @@ export default function HoyScreen() {
         </Aparicion>
 
         <Aparicion retardo={210} style={{ paddingBottom: 24 }}>
-        {/* Spec 018, «Mi grupo»: los aprendices del grupo que acompaña quien lidera mentores, con su color y su %. */}
-        {papel === 'grupo' ? (
-          <MiGrupoEnHoy
-            vista={celula.vista}
-            cargando={celula.cargando}
-            fallo={celula.fallo}
-            onReintentar={celula.recargar}
-            onAbrirGrupo={() => setVistaMentor('celula')}
-            onAbrirAlumno={alumno => {
-              setAlumnoAbierto(alumno);
-              setAlumnoVieneDeHoy(true);
-              setVistaMentor('alumno');
-            }}
-          />
-        ) : null}
-
-        {/* Spec 018, «Mis mentores», solo para el líder de mentores: el resultado por grupo y, debajo, las consultas de
-            mentores y el padrón. Reemplaza a las tres tarjetas sueltas que tenía (tickets, semáforo por grupos y «Mis
-            mentores»): abren las mismas pantallas. */}
-        {papel === 'mentores' && esLider ? (
-          <MisMentoresEnHoy
-            lectura={semaforoGrupos}
-            verGrupos={esDisponible(CLAVES.semaforo)}
-            verConsultas={esDisponible(CLAVES.tickets)}
-            verMentores={esDisponible(CLAVES.lider)}
-            verTodos={aprendicesDisponibles === true}
-            onAbrirTodos={() => setEnTodosLosAprendices(true)}
-            onAbrirGrupo={(grupo, inicio) => {
-              setGrupoDeLaFila({ grupoId: grupo.grupoId, nombre: grupo.grupoNombre?.trim() || 'Grupo sin nombre', inicio });
-              setEnSemaforoGrupos(true);
-            }}
-            onAbrirConsultas={() => setEnBandejaTickets(true)}
-            onAbrirMentores={() => setEnMisMentores(true)}
-          />
-        ) : null}
-
-        <View style={[{ gap: space.gap }, ocultoSiNoEsElPrograma]}>
-          {/* Solo para ADMIN/ALQUIMISTA. El resto de Hoy no cambia para nadie. */}
-          {/* Spec 002, fase 2: una entrada que todavía no le toca a esta cuenta (despliegue, rol personalizado) no se dibuja. */}
-          {capacidades.administrar && esDisponible(CLAVES.admin) ? <TarjetaAdminHoy onAbrir={() => setEnAdministracion(true)} /> : null}
-
-          {/* Solo para quien acompana una celula. El resto de Hoy no cambia.
-
-              La condicion vive en `entradaAlGrupoVisible` y no aca: un LIDER DE MENTORES contaba
-              como mentor, pero el backend no le deja tener grupo asignado, asi que esta tarjeta
-              le decia para siempre que no tiene aprendices. Para todos los demas roles la
-              funcion devuelve exactamente lo que devolvia `esMentor`. */}
-          {/* Con el control de papel, el grupo del líder es «Mi grupo» y no una tarjeta más (spec 018). */}
-          {!conControl && entradaAlGrupoVisible({ esMentor, rol: user?.role, fallo: celula.fallo }) && esDisponible(CLAVES.mentorMiGrupo) ? (
-            <TarjetaMentorHoy
-              onAbrir={() => setVistaMentor('celula')}
-              vista={celula.vista}
-              cargando={celula.cargando}
-              fallo={celula.fallo}
-            />
-          ) : null}
-
+        <View style={{ gap: space.gap }}>
           {/* El programa propio (D-260): «Hacer mi programa de 90 días» a quien no tiene fila y, a quien
               la tiene sin Día 1, «Elegir mi Día 1». La tarjeta vive en `EntradaAlProgramaPropio`,
               la misma de Yo y Training. «Ahora no» sigue siendo solo de Hoy. */}
@@ -982,58 +516,13 @@ export default function HoyScreen() {
             habitos={{
               cifra: cifrasDeHabitos(resumen?.habitosHoy),
               titulo: tituloHabitoAhora,
-              detalle: detalleHabitoAhora,
-              etiquetaAccesible: habitoAhora.titulo ? `Abrir Training: ${habitoAhora.titulo}` : 'Abrir Training',
+              etiquetaAccesible: habitoAhora.titulo ? `Abrir Training: ${tituloEnTipoOracion(habitoAhora.titulo)}` : 'Abrir Training',
             }}
             onAbrirTraining={() => (navigation as any).navigate('Training')}
             diaPrograma={resumen?.diaPrograma}
             inscrito={resumen?.inscrito}
             onAbrirMiRadar={() => (navigation as any).navigate('Yo', { abrirMiRadar: true })}
           />
-
-          {/* Semaforo de cumplimiento (D-168). Entre Habitos y Acciones porque junta las dos cosas.
-              Solo si `/home` dice que la persona se mide: con `null` —no se mide, o un backend que
-              todavia no lo manda— Hoy queda exactamente como estaba. */}
-          {resumen?.semaforo && esDisponible(CLAVES.semaforo) ? (
-            <TarjetaSemaforoHoy
-              semaforo={resumen.semaforo}
-              dias={diasParaLaTarjeta(resumen.semaforo, miSemaforo.detalle)}
-              onAbrir={() => setEnSemaforo(true)}
-            />
-          ) : null}
-
-          {/* Tarjeta Rocas y Objetivos */}
-          <Presionable onPress={() => (navigation as any).navigate('Plan')} accessibilityRole="button">
-          <Card>
-            <View style={styles.between}>
-              <View style={{ flex: 1 }}>
-                <View style={styles.encabezadoTarjeta}>
-                  <View style={styles.rotuloDeLaFila}>
-                    <MicroLabel>Acciones y objetivos</MicroLabel>
-                  </View>
-                  <Text style={[t.small, styles.cifras, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
-                    {resumen?.rocasHoy ? `${resumen.rocasHoy.completados}/${resumen.rocasHoy.total}` : 'Pareto 80/20'}
-                  </Text>
-                </View>
-                {/* Era 13.5: el mismo papel que el título de las otras tarjetas, dos puntos y
-                    medio más chico. Ahora todas usan `t.cardTitle` sin retoque. */}
-                <Text style={[t.cardTitle, { color: c.text, marginTop: 12 }]}>
-                  {resumen?.rocasHoy && resumen.rocasHoy.completados > 0
-                    ? `${resumen.rocasHoy.completados} de ${resumen.rocasHoy.total} acciones selladas hoy.`
-                    : 'Prioridad #1 del día'}
-                </Text>
-                <Text style={[t.small, { color: c.textSoft, marginTop: 5 }]}>
-                  {rocaPrioritaria
-                    ? `Foco: "${rocaPrioritaria.titulo}"`
-                    : mostrarMapa && estadoMapa !== null && estadoMapa !== 'activo'
-                      ? 'Tu objetivo de 90 días nace de tu Mapa de Renacimiento.'
-                      : 'Define tu objetivo en Plan para sostener la dirección.'}
-                </Text>
-              </View>
-              <Icon name="chevron" size={TAMANO_ICONO.chico} color={c.chevron} />
-            </View>
-          </Card>
-          </Presionable>
 
           {/* Última evidencia real del Muro: se omiten publicaciones de texto sin evidencia.
               Rediseño de Hoy (2026-10-05): la tarjeta entera responde al dedo (`Presionable`), el
@@ -1059,7 +548,7 @@ export default function HoyScreen() {
                       <View style={styles.rotuloDeLaFila}>
                         <MicroLabel>Última evidencia del muro</MicroLabel>
                       </View>
-                      <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
+                      <Text style={[t.small, { color: c.goldInk, fontFamily: fuentes.negrita }]}>
                         {tiempoRelativo(ultimaPublicacion.createdAt)}
                       </Text>
                     </View>
@@ -1093,7 +582,7 @@ export default function HoyScreen() {
                         {evidenciasUltimaPublicacion.length > 0 && (
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 }}>
                             <Icon name="image" size={TAMANO_ICONO.chico} color={c.goldInk} />
-                            <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_500Medium' }]}>
+                            <Text style={[t.small, { color: c.goldInk, fontFamily: fuentes.media }]}>
                               {evidenciasUltimaPublicacion.length}
                               {evidenciasUltimaPublicacion.length === 1 ? ' foto' : ' fotos'}
                             </Text>
@@ -1141,7 +630,7 @@ export default function HoyScreen() {
                     </Text>
                     {/* «Hoy · 20:00» o «mar 6 oct · 20:00» (rediseño de Hoy, 2026-10-05): decía
                         «5/10/26, 20:00», que se lee mayo u octubre según quién. */}
-                    <Text style={[t.small, styles.cifras, { color: c.goldInk, fontFamily: 'Jost_700Bold', marginTop: 3 }]}>
+                    <Text style={[t.small, styles.cifras, { color: c.goldInk, fontFamily: fuentes.negrita, marginTop: 3 }]}>
                       {cuandoEsElEvento(resumen.proximoEvento.iniciaEn)}
                     </Text>
                   </View>
@@ -1180,39 +669,12 @@ const styles = StyleSheet.create({
   cifras: {
     fontVariant: ['tabular-nums'],
   },
-  /* Spec 018: el control de papel va pegado a la línea de fase y día, con aire antes de lo que cambia. */
-  controlDePapel: { marginTop: 14, marginBottom: 4 },
-  /* Lo del programa propio cuando se mira otro papel: oculto y montado (volver es instantáneo, sin releer). */
-  oculto: { display: 'none' },
+  raya: { width: 34, height: 2, borderRadius: 1, marginTop: 20 },
   programStatusBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginTop: 4,
-  },
-  metricsRow: {
-    flexDirection: 'row',
-    alignItems: 'stretch',
-    gap: space.gap,
-  },
-  metricBloque: {
-    flex: 1,
-  },
-  metricEncabezado: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
-  },
-  metricCifra: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: 3,
-    marginTop: 6,
-  },
-  /** El único borde que sobrevive en este bloque, y sólo porque separa dos cifras contiguas. */
-  metricSeparador: {
-    width: 1,
-    alignSelf: 'stretch',
   },
   /* Regla lateral en vez de recuadro completo: el mismo gesto que usa la frase del día, y no
      mete otra caja con borde en una pantalla que acaba de perder tres. */

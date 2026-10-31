@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -283,7 +284,7 @@ export function DespliegueConsolaScreen({
   };
 
   const ayuda = [t.body, { color: c.textSoft, fontSize: 16, lineHeight: 22 }];
-  const fuerte = [t.body, { color: c.textStrong, fontSize: 16, fontFamily: 'Jost_500Medium' }];
+  const fuerte = [t.body, { color: c.textStrong, fontSize: 16, fontFamily: fuentes.media }];
   const quien = despliegue?.actualizadoPor?.nombre?.trim();
   const yaSonProbadores = new Set(probadores.map(p => p.id));
   const encontrados = (resultados ?? []).filter(p => !yaSonProbadores.has(p.id));
@@ -455,7 +456,7 @@ export function DespliegueConsolaScreen({
                         accessibilityLabel={`Sumar a ${p.nombre?.trim() || p.email || 'esta persona'} como probador`}
                         style={[estilos.botonTexto, { borderColor: c.gold, backgroundColor: c.goldWash }]}
                       >
-                        <Text style={[t.body, { color: c.goldInk, fontSize: 16, fontFamily: 'Jost_500Medium' }]}>
+                        <Text style={[t.body, { color: c.goldInk, fontSize: 16, fontFamily: fuentes.media }]}>
                           {trabajandoCon === p.id ? 'Sumando…' : 'Sumar'}
                         </Text>
                       </Presionable>
@@ -487,7 +488,7 @@ export function DespliegueConsolaScreen({
                     <View style={[estilos.tarjeta, { backgroundColor: c.cardBg, borderColor: c.border, gap: 6 }]}>
                       <View style={estilos.filaTabla}>
                         {['Hora', 'Dentro', 'Fuera'].map(encabezado => (
-                          <Text key={encabezado} style={[t.small, estilos.celda, { color: c.textSoft, fontFamily: 'Jost_700Bold', fontSize: 13 }]}>
+                          <Text key={encabezado} style={[t.small, estilos.celda, { color: c.textSoft, fontFamily: fuentes.negrita, fontSize: 13 }]}>
                             {encabezado}
                           </Text>
                         ))}
@@ -549,7 +550,7 @@ function TarjetaDeCifras({ titulo, pedidos, errores }: { titulo: string; pedidos
 
 const estilos = StyleSheet.create({
   tarjeta: { borderWidth: 1, borderRadius: 16, padding: 14, gap: 4 },
-  cifraGrande: { fontFamily: 'Jost_700Bold', fontSize: 30, lineHeight: 36 },
+  cifraGrande: { fontFamily: fuentes.negrita, fontSize: 30, lineHeight: 36 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   fila: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 8, minHeight: 56 },
   botonIcono: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
@@ -558,7 +559,7 @@ const estilos = StyleSheet.create({
   campo: { flex: 1, fontSize: 16, paddingVertical: 10 },
   cifras: { flexDirection: 'row', gap: 10, flexWrap: 'wrap' },
   cifra: { flexGrow: 1, flexBasis: 140 },
-  valor: { fontFamily: 'Jost_700Bold', fontSize: 24, lineHeight: 30 },
+  valor: { fontFamily: fuentes.negrita, fontSize: 24, lineHeight: 30 },
   filaTabla: { flexDirection: 'row', gap: 8 },
   celda: { flex: 1, fontSize: 13 },
   numero: { fontVariant: ['tabular-nums'] },

@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -91,7 +92,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   dosPuntos: {
-    fontFamily: 'Jost_700Bold',
+    fontFamily: fuentes.negrita,
     fontSize: 26,
     marginBottom: 2,
   },

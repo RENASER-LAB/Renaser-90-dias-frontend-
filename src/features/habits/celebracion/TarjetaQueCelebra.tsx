@@ -169,7 +169,9 @@ const styles = StyleSheet.create({
     bottom: -1,
     borderWidth: 2,
   },
-  titulo: { flex: 1 },
+  /* Sin `flex: 1`: dentro de la columna de la fila de Training, crecía hacia abajo hasta llenar el alto que sobraba y el texto
+     de un título de una línea quedaba arriba, ~7 dp más alto que la hora y el botón (E2E del 31/10). Mide lo que mide el texto. */
+  titulo: { flexShrink: 1 },
   raya: {
     position: 'absolute',
     height: 1.5,

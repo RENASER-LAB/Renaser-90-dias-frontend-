@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -119,7 +120,7 @@ export function FilaDeAjuste({
 
 const estilos = StyleSheet.create({
   grupo: { gap: 8 },
-  titulo: { fontFamily: 'Jost_500Medium', fontSize: 14, lineHeight: 19, paddingHorizontal: RELLENO_X },
+  titulo: { fontFamily: fuentes.media, fontSize: 14, lineHeight: 19, paddingHorizontal: RELLENO_X },
   caja: { borderWidth: 1, borderRadius: space.radius, overflow: 'hidden' },
   /* 1 px y no `hairlineWidth`: en un Android de densidad alta la línea de pelo en `divider` claro no se ve. */
   separador: { height: 1, marginLeft: SANGRIA_SEPARADOR },
@@ -139,6 +140,6 @@ const estilos = StyleSheet.create({
     justifyContent: 'center',
   },
   textos: { flex: 1, minWidth: 0, gap: 1 },
-  tituloFila: { fontFamily: 'Jost_500Medium', fontSize: 16, lineHeight: 22 },
+  tituloFila: { fontFamily: fuentes.media, fontSize: 16, lineHeight: 22 },
   detalle: { fontSize: 14, lineHeight: 19 },
 });

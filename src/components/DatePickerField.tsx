@@ -1,3 +1,4 @@
+import { fuentes } from '../theme/fuentes';
 import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
@@ -118,7 +119,7 @@ export function DatePickerField({ label, value, onChange, helperText, error }: D
           style={[
             t.body,
             styles.valor,
-            elegida ? { color: c.textStrong, fontFamily: 'Jost_500Medium' } : { color: c.tabInactive },
+            elegida ? { color: c.textStrong, fontFamily: fuentes.media } : { color: c.tabInactive },
           ]}
         >
           {textoDelCampo || 'Selecciona tu fecha de nacimiento'}

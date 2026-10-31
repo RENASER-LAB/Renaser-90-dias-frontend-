@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useState } from 'react';
 import { FlatList, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';
@@ -72,5 +73,5 @@ const styles = StyleSheet.create({
   lista: { paddingHorizontal: 8, paddingBottom: 8 },
   sticker: { aspectRatio: 1, padding: 6, minHeight: 48 },
   imagen: { width: '100%', height: '100%' },
-  estado: { textAlign: 'center', fontFamily: 'Jost_500Medium', fontSize: 14, paddingTop: 4 },
+  estado: { textAlign: 'center', fontFamily: fuentes.media, fontSize: 14, paddingTop: 4 },
 });

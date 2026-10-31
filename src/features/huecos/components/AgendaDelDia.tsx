@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -66,7 +67,7 @@ export function AgendaDelDia({ dia, momento, cerrada }: { dia: DiaConHuecos; mom
       {aviso ? (
         <View accessible accessibilityLabel={`${aviso.titulo}. ${aviso.detalle}`} style={estilos.aviso}>
           <Text style={[t.body, { color: c.text, fontSize: 16, lineHeight: 23 }]}>
-            <Text style={{ fontFamily: 'Jost_700Bold' }}>{aviso.titulo}. </Text>
+            <Text style={{ fontFamily: fuentes.negrita }}>{aviso.titulo}. </Text>
             {aviso.detalle}
           </Text>
         </View>
@@ -109,7 +110,7 @@ const estilos = StyleSheet.create({
   ventana: { fontSize: 14, lineHeight: 20, fontVariant: ['tabular-nums'] },
   etiquetas: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 },
   etiqueta: { paddingVertical: 3, paddingHorizontal: 9, borderRadius: 8, borderWidth: 1 },
-  textoDeEtiqueta: { fontFamily: 'Jost_700Bold', fontSize: 13, lineHeight: 18 },
+  textoDeEtiqueta: { fontFamily: fuentes.negrita, fontSize: 13, lineHeight: 18 },
   aviso: { marginTop: 12 },
   nota: { fontSize: 14, lineHeight: 20, marginTop: 10 },
 });

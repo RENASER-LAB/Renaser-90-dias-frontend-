@@ -25,37 +25,36 @@ describe('Plan → Objetivos: decide con la puerta del Mapa', () => {
   it('lee el estado del Mapa de esta cuenta, y se vuelve a leer al abrir Objetivos o al volver del Mapa', () => {
     expect(PLAN).toMatch(/const \{ abrir: abrirMapa, abierto: mapaAbierto \} = useMapaRenacimientoAbierto\(\);/);
     expect(PLAN).toMatch(
-      /const \{ puerta, reintentar: reintentarPuerta \} = usePuertaDeObjetivos\(\s*user\?\.id \?\? null,\s*`\$\{mapaAbierto\}:\$\{activeSubView\}`,?\s*\);/,
+      /const \{ puerta, reintentar: reintentarPuerta \} = usePuertaDeObjetivos\(\s*user\?\.id \?\? null,\s*mapaAbierto,?\s*\);/,
     );
   });
 
-  it('con la puerta cerrada, Objetivos dibuja el aviso y no el selector de eje, el objetivo, el mes ni la semana', () => {
-    // Una sola rama: `puerta !== 'abierta'` → aviso; si no, todo lo de siempre, en el mismo ScrollView.
+  it('con la puerta cerrada, Plan dibuja el aviso y no el selector de eje, el objetivo, la semana ni las acciones', () => {
+    // Una sola rama: `puerta !== 'abierta'` → aviso; si no, todo lo del eje, en el mismo ScrollView (2026-10-31: Plan es una sola pantalla).
     const inicio = PLAN.indexOf("{puerta !== 'abierta' ? (");
     const separador = PLAN.indexOf(') : (', inicio);
     expect(inicio).toBeGreaterThan(0);
     expect(separador).toBeGreaterThan(inicio);
     const aviso = PLAN.slice(inicio, separador);
-    const objetivos = PLAN.slice(separador, PLAN.indexOf('<HojaDesdeAbajo', separador));
+    const contenido = PLAN.slice(separador, PLAN.indexOf('</ScrollView>', separador));
     expect(aviso).toMatch(/<PuertaDelMapa puerta=\{puerta\} onHacerMapa=\{abrirMapa\} onReintentar=\{reintentarPuerta\} \/>/);
-    for (const editable of ['<ControlSegmentado', 'openEditGoalModal', '<NivelesDelPlan', 'setEditandoMes(true)', 'Tu objetivo de 90 días']) {
+    for (const editable of ['<ControlSegmentado', '<TarjetaDelObjetivo', '<PlanDelEje']) {
       expect({ editable, enElAviso: aviso.includes(editable) }).toEqual({ editable, enElAviso: false });
-      expect({ editable, enLosObjetivos: objetivos.includes(editable) }).toEqual({ editable, enLosObjetivos: true });
+      expect({ editable, enElContenido: contenido.includes(editable) }).toEqual({ editable, enElContenido: true });
     }
-    // El volver y el título «Objetivos» quedan fuera de la rama: se ven con la puerta cerrada.
-    expect(PLAN.indexOf('accessibilityLabel="Volver a Plan"')).toBeLessThan(PLAN.indexOf("{puerta !== 'abierta' ? ("));
+    // La cabecera («Plan» y «Tu dirección en 90 días») queda fuera de la rama: se ve con la puerta cerrada.
+    expect(PLAN.indexOf('<ScreenHeader title="Plan" />')).toBeLessThan(inicio);
   });
 
-  it('sigue habiendo un solo scroll en Objetivos y el volver sigue siendo el de siempre', () => {
-    const desde = PLAN.indexOf("{activeSubView === 'objetivos' && (");
-    const vista = PLAN.slice(desde, PLAN.indexOf('<HojaDesdeAbajo', desde));
-    expect((vista.match(/<ScrollView/g) ?? []).length).toBe(1);
-    expect(vista).toMatch(/accessibilityLabel="Volver a Plan"/);
+  it('hay un solo scroll en Plan', () => {
+    expect((PLAN.match(/<ScrollView/g) ?? []).length).toBe(2); // el de la pantalla y el de la hoja del objetivo
+    const principal = PLAN.slice(0, PLAN.indexOf('<HojaDesdeAbajo'));
+    expect((principal.match(/<ScrollView/g) ?? []).length).toBe(1);
   });
 
-  it('el aviso de «Toca cada una para escribir tu objetivo» solo con la puerta abierta; sin Mapa dice de dónde salen', () => {
-    expect(PLAN).toMatch(/puerta === 'abierta' && \(\s*<Text[^>]*>\s*Toca cada una para escribir tu objetivo\./);
-    expect(PLAN).toMatch(/puerta === 'espera-al-mapa' && \(\s*<Text[^>]*>\s*Tus objetivos nacen de tu Mapa de Renacimiento\./);
+  it('sin Mapa, Plan no escribe «Toca cada una…»: las prioridades en lista se fueron con el formato nuevo', () => {
+    expect(PLAN).not.toContain('Toca cada una para escribir tu objetivo.');
+    expect(PLAN).not.toContain('Prioridades clave');
   });
 
   it('un rechazo `MAPA_PENDIENTE` muestra el mensaje del servidor y ofrece «Hacer mi Mapa»; los demás, como siempre', () => {
@@ -73,10 +72,13 @@ describe('Hoy: lo dice desde el inicio, solo con texto', () => {
     expect(HOY).toContain('`Tu plan para ${lapsoDelMapa} empieza aquí: de este Mapa nacen tus objetivos. 15–20 min.`');
   });
 
-  it('«Acciones y objetivos» no manda a definirlo en Plan si el Mapa no está activo', () => {
-    expect(HOY).toMatch(
-      /mostrarMapa && estadoMapa !== null && estadoMapa !== 'activo'\s*\? 'Tu objetivo de 90 días nace de tu Mapa de Renacimiento\.'\s*: 'Define tu objetivo en Plan para sostener la dirección\.'/,
-    );
+  it('la tarjeta de acciones no manda a definirlo en Plan si el Mapa no está activo: dice que nace del Mapa y abre el Mapa', () => {
+    // Desde el 2026-10-31 la tarjeta es `TarjetaAccionDeHoy` y qué muestra lo decide `vistaDeLaAccionDeHoy` (probada aparte).
+    const TARJETA = sinComentarios(leer('features/home/components/TarjetaAccionDeHoy.tsx'));
+    expect(TARJETA).toContain("titulo = 'Tu objetivo de 90 días nace de tu Mapa de Renacimiento.';");
+    expect(TARJETA).toContain("texto: 'Hacer mi Mapa'");
+    expect(HOY).not.toContain('Define tu objetivo en Plan para sostener la dirección.');
+    expect(HOY).toMatch(/alHacerElMapa=\{abrirMapa\}/);
   });
 
   it('el Mapa sigue opcional en Hoy: la tarjeta no se vuelve obligatoria ni tapa nada', () => {

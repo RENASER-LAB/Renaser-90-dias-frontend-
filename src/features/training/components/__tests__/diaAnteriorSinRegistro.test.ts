@@ -113,7 +113,6 @@ function Envoltorio({ activa = true, cuenta }: { activa?: boolean; cuenta: strin
     diaElegido: dia,
     onElegirDia: setDia,
     diaPrograma: 40,
-    fase: null,
     titulos: {},
     eventosPrendidos: true,
     confirmacion: null,

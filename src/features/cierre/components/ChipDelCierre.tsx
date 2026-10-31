@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { StyleSheet, Text } from 'react-native';
 
@@ -35,7 +36,7 @@ export function ChipDelCierre({
         { backgroundColor: elegido ? c.goldWash : c.cardBg, borderColor: elegido ? c.gold : c.border },
       ]}
     >
-      <Text style={[t.body, { color: elegido ? c.textStrong : c.textSoft, fontSize: 16, fontFamily: 'Jost_500Medium' }]}>
+      <Text style={[t.body, { color: elegido ? c.textStrong : c.textSoft, fontSize: 16, fontFamily: fuentes.media }]}>
         {etiqueta}
       </Text>
     </Presionable>

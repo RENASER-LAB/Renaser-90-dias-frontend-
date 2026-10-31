@@ -1,9 +1,11 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { memo } from 'react';
 import { Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Icon, TAMANO_ICONO } from '../../../components/Icon';
 import { AvatarPersona } from '../../../components/ui';
 import { ConfirmacionEnLinea } from '../../../components/ConfirmacionEnLinea';
+import { Presionable } from '../../../components/Presionable';
 import type { CommentItem, PostItem } from '../../../screens/ComunidadScreen';
 import { useTheme } from '../../../theme/ThemeContext';
 import { space } from '../../../theme/tokens';
@@ -37,6 +39,8 @@ export type AccionesPublicacion = {
   enviarComentario: (postId: string) => void;
   /** La confirmación en línea de esta publicación terminó de irse. */
   cerrarConfirmacion: (postId: string) => void;
+  /** El «…» de moderación (solo ADMIN y ALCHEMIST, ver `puedeModerar`): abre la hoja de esta publicación. */
+  moderar: (postId: string) => void;
 };
 
 type Props = {
@@ -53,6 +57,12 @@ type Props = {
   comentariosExpandidos: Record<string, boolean>;
   /** «Compartida en …», debajo de las acciones, cuando ESTA publicación se acaba de compartir. */
   confirmacion?: { clave: number; texto: string } | null;
+  /**
+   * Dibuja el «…» de moderación arriba a la derecha (pedido del dueño, 2026-10-31). Solo `true` para ADMIN y ALCHEMIST
+   * (`puedeModerarElMuro`); para cualquier otro rol —y para el AUTOR de la publicación— la tarjeta es exactamente la de
+   * siempre. Sin el prop, no hay botón.
+   */
+  puedeModerar?: boolean;
   acciones: AccionesPublicacion;
 };
 
@@ -76,6 +86,7 @@ function TarjetaPublicacionMuroBase({
   fotoComentario,
   comentariosExpandidos,
   confirmacion,
+  puedeModerar = false,
   acciones,
 }: Props) {
   const { c, t } = useTheme();
@@ -110,14 +121,29 @@ function TarjetaPublicacionMuroBase({
               </Text>
             </View>
           </View>
-          {/* Sin día no hay insignia. Dibujar "Día 0" era peor que no dibujar nada. */}
-          {post.diaPrograma !== null ? (
-            <View style={[styles.dayBadge, { backgroundColor: c.goldWash }]}>
-              <Text style={[t.micro, { color: c.goldInk, fontSize: 11, fontFamily: 'Jost_700Bold' }]}>
-                Día {post.diaPrograma}
-              </Text>
-            </View>
-          ) : null}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            {/* Sin día no hay insignia. Dibujar "Día 0" era peor que no dibujar nada. */}
+            {post.diaPrograma !== null ? (
+              <View style={[styles.dayBadge, { backgroundColor: c.goldWash }]}>
+                <Text style={[t.micro, { color: c.goldInk, fontSize: 11, fontFamily: fuentes.negrita }]}>
+                  Día {post.diaPrograma}
+                </Text>
+              </View>
+            ) : null}
+            {/* Moderar (2026-10-31): solo para ADMIN y ALCHEMIST. Área de 48 que no agranda la cabecera (márgenes
+                negativos: el ícono de 24 queda alineado con el borde de la tarjeta). Una publicación que todavía se
+                está subiendo (`pendiente`) no tiene id del servidor: no se modera. */}
+            {puedeModerar && !post.pendiente ? (
+              <Presionable
+                onPress={() => acciones.moderar(post.id)}
+                accessibilityRole="button"
+                accessibilityLabel="Opciones de moderación"
+                style={styles.botonModerar}
+              >
+                <Icon name="ellipsis" size={TAMANO_ICONO.grande} color={c.textSoft} />
+              </Presionable>
+            ) : null}
+          </View>
         </View>
 
         {/* Texto del Post con "Ver más..." */}
@@ -133,7 +159,7 @@ function TarjetaPublicacionMuroBase({
               onPress={() => acciones.alternarExpandida(post.id)}
               style={{ minHeight: 48, justifyContent: 'center' }}
             >
-              <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
+              <Text style={[t.small, { color: c.goldInk, fontFamily: fuentes.negrita }]}>
                 {isExpanded ? 'Ver menos' : 'Ver más...'}
               </Text>
             </Pressable>
@@ -154,7 +180,7 @@ function TarjetaPublicacionMuroBase({
                   { backgroundColor: c.placeholderA },
                 ]}
               >
-                <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
+                <Text style={[t.micro, { color: c.goldInk, fontFamily: fuentes.negrita, fontSize: 11 }]}>
                   {post.media[0].title}
                 </Text>
                 {/* Overlay DESPUÉS del texto a propósito: si la foto carga, lo tapa; si es
@@ -176,7 +202,7 @@ function TarjetaPublicacionMuroBase({
                     onPress={() => acciones.abrirFotos(post, idx)}
                     style={[styles.mediaHalfBox, { backgroundColor: c.placeholderA }]}
                   >
-                    <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
+                    <Text style={[t.micro, { color: c.goldInk, fontFamily: fuentes.negrita }]}>
                       {m.title}
                     </Text>
                     <FotoMuro url={m.url} mimeType={m.mimeType} radioBorde={10} colorFondo={c.cardBgAlt} />
@@ -192,7 +218,7 @@ function TarjetaPublicacionMuroBase({
                   onPress={() => acciones.abrirFotos(post, 0)}
                   style={[styles.mediaLargeLeft, { backgroundColor: c.placeholderA }]}
                 >
-                  <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
+                  <Text style={[t.micro, { color: c.goldInk, fontFamily: fuentes.negrita, fontSize: 11 }]}>
                     {post.media[0].title}
                   </Text>
                   <FotoMuro
@@ -209,7 +235,7 @@ function TarjetaPublicacionMuroBase({
                       onPress={() => acciones.abrirFotos(post, idx + 1)}
                       style={[styles.mediaSmallRight, { backgroundColor: c.placeholderA }]}
                     >
-                      <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
+                      <Text style={[t.micro, { color: c.goldInk, fontFamily: fuentes.negrita, fontSize: 11 }]}>
                         {m.title}
                       </Text>
                       <FotoMuro url={m.url} mimeType={m.mimeType} radioBorde={8} colorFondo={c.cardBgAlt} />
@@ -279,7 +305,7 @@ function TarjetaPublicacionMuroBase({
               style={[
                 styles.actionTexto,
                 post.userReaction === 'like'
-                  ? { color: c.goldInk, fontFamily: 'Jost_700Bold' }
+                  ? { color: c.goldInk, fontFamily: fuentes.negrita }
                   : { color: c.textSoft },
               ]}
             >
@@ -352,7 +378,7 @@ function TarjetaPublicacionMuroBase({
                       hitSlop={6}
                       style={{ minHeight: 48, justifyContent: 'center' }}
                     >
-                      <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
+                      <Text style={[t.small, { color: c.goldInk, fontFamily: fuentes.negrita }]}>
                         {isExpanded ? 'Ver menos' : 'Ver más...'}
                       </Text>
                     </Pressable>
@@ -392,7 +418,7 @@ function TarjetaPublicacionMuroBase({
                           t.small,
                           styles.cifras,
                           cItem.userReaction === 'like'
-                            ? { color: c.goldInk, fontFamily: 'Jost_700Bold' }
+                            ? { color: c.goldInk, fontFamily: fuentes.negrita }
                             : { color: c.textSoft },
                         ]}
                       >
@@ -431,7 +457,7 @@ function TarjetaPublicacionMuroBase({
                   <View style={{ flex: 1 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                       <Icon name="image" size={TAMANO_ICONO.chico} color={c.goldInk} />
-                      <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>Foto adjunta</Text>
+                      <Text style={[t.small, { color: c.goldInk, fontFamily: fuentes.negrita }]}>Foto adjunta</Text>
                     </View>
                     <Text style={[t.small, { color: c.textSoft }]}>
                       Lista para enviar con tu comentario
@@ -489,6 +515,8 @@ function TarjetaPublicacionMuroBase({
 export const TarjetaPublicacionMuro = memo(TarjetaPublicacionMuroBase);
 
 const styles = StyleSheet.create({
+  /** El «…» de moderación: 48 de área táctil sin sumar alto a la cabecera (36 del avatar) ni correr el borde derecho. */
+  botonModerar: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center', marginVertical: -6, marginRight: -12 },
   /* El contenedor externo de una publicación: su borde se queda. Lo que se fue son los trece
      bordes que vivían adentro. */
   postCard: {
@@ -563,7 +591,7 @@ const styles = StyleSheet.create({
   },
   rxCountTexto: {
     fontSize: 13,
-    fontFamily: 'Jost_700Bold',
+    fontFamily: fuentes.negrita,
     fontVariant: ['tabular-nums'],
   },
   actionButtonsRow: {
@@ -601,7 +629,7 @@ const styles = StyleSheet.create({
   },
   /** Texto de lectura (14), no versal de 10,5: es la acción más usada del Muro. */
   actionTexto: {
-    fontFamily: 'Jost_500Medium',
+    fontFamily: fuentes.media,
     fontSize: 14,
     flexShrink: 1,
   },

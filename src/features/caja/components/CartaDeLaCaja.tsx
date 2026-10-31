@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Image, StyleSheet, Text, View } from 'react-native';
 
@@ -98,7 +99,7 @@ export function CartaDeLaCaja({ aprendizId, nombre }: { aprendizId: string; nomb
 }
 
 const estilos = StyleSheet.create({
-  titulo: { fontFamily: 'Jost_500Medium', fontSize: 18, lineHeight: 24 },
+  titulo: { fontFamily: fuentes.media, fontSize: 18, lineHeight: 24 },
   botones: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   boton: { flexGrow: 1, flexBasis: 140 },
   marco: { borderWidth: 1, borderRadius: 16, overflow: 'hidden', width: '100%', maxWidth: 420, alignSelf: 'center' },

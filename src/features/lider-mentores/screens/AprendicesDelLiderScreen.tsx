@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -7,7 +8,7 @@ import { useSystemBackHandler } from '../../../hooks/useSystemBackHandler';
 import { useOcultarBarraAlDesplazar } from '../../../navigation/barraAlDesplazar/BarraInferior';
 import { useResponsive } from '../../../theme/responsive';
 import { useTheme } from '../../../theme/ThemeContext';
-import { FilaDeLista, ListaDeFilas } from '../../hoy-por-papel/components/FilaDeLista';
+import { FilaDeLista, ListaDeFilas } from '../../paneles-de-rol/components/FilaDeLista';
 import { ESPACIO_PARA_LANZADOR } from '../../renasia/components/RenasiaLauncher';
 import { CargandoLectura, FalloDeLectura } from '../../semaforo/components/EstadoDeLectura';
 import { AvatarDeLaLista } from '../components/AvatarDeLaLista';
@@ -198,7 +199,7 @@ function PieDeLaLista({ lista }: { lista: ReturnType<typeof useAprendicesDelLide
         accessibilityLabel="No pudimos cargar más aprendices. Reintentar"
         style={[estilos.reintentar, { borderColor: c.borderStrong }]}
       >
-        <Text style={[t.body, { fontSize: 16, color: c.textStrong, fontFamily: 'Jost_700Bold' }]}>
+        <Text style={[t.body, { fontSize: 16, color: c.textStrong, fontFamily: fuentes.negrita }]}>
           No pudimos cargar más. Reintentar
         </Text>
       </Pressable>

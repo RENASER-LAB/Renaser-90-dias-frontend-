@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useCallback } from 'react';
 import {
   ActivityIndicator,
@@ -114,7 +115,7 @@ export function RegistroConFotoModal({
                 style={[estilos.retomar, { backgroundColor: c.bg, borderColor: c.borderStrong, opacity: enviando ? 0.5 : 1 }]}
               >
                 <Icon name="camera" size={16} color={c.goldInk} />
-                <Text style={[t.micro, { color: c.textStrong, fontFamily: 'Jost_700Bold', fontSize: 11.5 }]}>
+                <Text style={[t.micro, { color: c.textStrong, fontFamily: fuentes.negrita, fontSize: 11.5 }]}>
                   {medicion ? 'CAMBIAR FOTO' : 'TOMAR OTRA'}
                 </Text>
               </Pressable>
@@ -135,7 +136,7 @@ export function RegistroConFotoModal({
               },
             ]}
           >
-            <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]} numberOfLines={2}>
+            <Text style={[t.micro, { color: c.goldInk, fontFamily: fuentes.negrita }]} numberOfLines={2}>
               {registro.titulo.toUpperCase()}
             </Text>
             {medicion ? (
@@ -215,7 +216,7 @@ export function RegistroConFotoModal({
               {enviando ? (
                 <ActivityIndicator size="small" color={c.textSoft} />
               ) : (
-                <Text style={[t.micro, { color: c.textSoft, fontFamily: 'Jost_700Bold', fontSize: 11.5 }]}>
+                <Text style={[t.micro, { color: c.textSoft, fontFamily: fuentes.negrita, fontSize: 11.5 }]}>
                   CANCELAR
                 </Text>
               )}
@@ -252,7 +253,7 @@ const estilos = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 15,
-    fontFamily: 'Jost_400Regular',
+    fontFamily: fuentes.regular,
     textAlignVertical: 'top',
   },
   filaKm: { flexDirection: 'row', alignItems: 'center', gap: 10 },
@@ -263,7 +264,7 @@ const estilos = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 14,
     fontSize: 24,
-    fontFamily: 'Jost_500Medium',
+    fontFamily: fuentes.media,
   },
   error: { borderWidth: 1, borderRadius: 10, padding: 10 },
   cancelar: { minHeight: 48, borderWidth: 1, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },

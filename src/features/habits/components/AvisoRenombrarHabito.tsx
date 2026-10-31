@@ -1,3 +1,5 @@
+import { tituloEnTipoOracion } from '../utils/tituloEnTipoOracion';
+import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -77,7 +79,7 @@ export function AvisoRenombrarHabito({
     >
       <Aparicion desplazamiento={12}>
         <View
-          accessibilityLabel={`Puedes cambiarle el nombre a ${tituloHabito}`}
+          accessibilityLabel={`Puedes cambiarle el nombre a ${tituloEnTipoOracion(tituloHabito)}`}
           style={[styles.tarjeta, { borderColor: c.borderStrong }]}
         >
           {/* Capa de fondo, aparte del contenido: la opacidad vive acá para que el texto de
@@ -87,8 +89,8 @@ export function AvisoRenombrarHabito({
 
           <View style={styles.fila}>
             <View style={styles.texto}>
-              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]} numberOfLines={1}>
-                {tituloHabito}
+              <Text style={[t.micro, { color: c.goldInk, fontFamily: fuentes.negrita }]} numberOfLines={1}>
+                {tituloEnTipoOracion(tituloHabito)}
               </Text>
               <Text style={[t.small, { color: c.text, marginTop: 3 }]}>
                 Si no te cae bien, puedes ponerle el nombre que sí vayas a hacer.
@@ -111,10 +113,10 @@ export function AvisoRenombrarHabito({
             <Pressable
               onPress={onAceptar}
               accessibilityRole="button"
-              accessibilityLabel={`Cambiarle el nombre a ${tituloHabito}`}
+              accessibilityLabel={`Cambiarle el nombre a ${tituloEnTipoOracion(tituloHabito)}`}
               style={[styles.accion, { backgroundColor: c.gold }]}
             >
-              <Text style={[t.micro, { color: c.onGold, fontFamily: 'Jost_700Bold' }]}>
+              <Text style={[t.micro, { color: c.onGold, fontFamily: fuentes.negrita }]}>
                 CAMBIARLE EL NOMBRE
               </Text>
             </Pressable>
@@ -124,7 +126,7 @@ export function AvisoRenombrarHabito({
               accessibilityLabel="Dejarlo como está"
               style={[styles.accion, { borderColor: c.border, borderWidth: 1 }]}
             >
-              <Text style={[t.micro, { color: c.textSoft, fontFamily: 'Jost_500Medium' }]}>
+              <Text style={[t.micro, { color: c.textSoft, fontFamily: fuentes.media }]}>
                 ASÍ ESTÁ BIEN
               </Text>
             </Pressable>

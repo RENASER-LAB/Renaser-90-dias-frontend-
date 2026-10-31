@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
@@ -51,7 +52,7 @@ export function FilaIntegrante({
             </Text>
             {integrante.badge && (
               <View style={[styles.badge, { backgroundColor: c.goldWash }]}>
-                <Text style={[t.micro, { color: c.goldInk, fontSize: 10.5, fontFamily: 'Jost_700Bold' }]}>
+                <Text style={[t.micro, { color: c.goldInk, fontSize: 10.5, fontFamily: fuentes.negrita }]}>
                   {integrante.badge}
                 </Text>
               </View>
@@ -70,7 +71,7 @@ export function FilaIntegrante({
           style={[styles.botonChat, { backgroundColor: c.gold }]}
         >
           <Icon name="messageCircle" size={TAMANO_ICONO.chico} color={c.onGold} />
-          <Text style={[t.body, { color: c.onGold, fontFamily: 'Jost_700Bold' }]}>Escribir</Text>
+          <Text style={[t.body, { color: c.onGold, fontFamily: fuentes.negrita }]}>Escribir</Text>
         </Presionable>
       )}
     </View>

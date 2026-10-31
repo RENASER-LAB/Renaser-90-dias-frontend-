@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useState } from 'react';
 import { ActivityIndicator, Image, Platform, StyleSheet, Text, View } from 'react-native';
 
@@ -129,7 +130,7 @@ export function ImagenRemota({ url, descripcion }: { url: string; descripcion: s
 }
 
 const estilos = StyleSheet.create({
-  titulo: { fontFamily: 'Jost_500Medium', fontSize: 18, lineHeight: 24 },
+  titulo: { fontFamily: fuentes.media, fontSize: 18, lineHeight: 24 },
   fila: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   botones: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   boton: { flexGrow: 1, flexBasis: 140 },

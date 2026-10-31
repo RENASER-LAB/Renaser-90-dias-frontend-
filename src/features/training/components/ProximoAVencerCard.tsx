@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
@@ -144,7 +145,7 @@ const styles = StyleSheet.create({
   },
   puntos: {
     fontSize: 14,
-    fontFamily: 'Jost_500Medium',
+    fontFamily: fuentes.media,
     fontVariant: ['tabular-nums'],
   },
   pie: {

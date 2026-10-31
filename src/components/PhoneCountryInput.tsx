@@ -1,3 +1,4 @@
+import { fuentes } from '../theme/fuentes';
 import React, { useState, useMemo, useCallback, useRef } from 'react';
 import { View, Text, TextInput, StyleSheet } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
@@ -119,7 +120,7 @@ export function PhoneCountryInput({
           style={[styles.countryPill, { borderColor: c.borderStrong, backgroundColor: c.cardBgAlt }]}
         >
           <Text style={styles.flagText}>{selectedCountry.flag}</Text>
-          <Text style={[t.body, { color: c.textStrong, fontFamily: 'Jost_500Medium', fontSize: 16 }]}>
+          <Text style={[t.body, { color: c.textStrong, fontFamily: fuentes.media, fontSize: 16 }]}>
             {selectedCountry.code}
           </Text>
           <View style={styles.flechaAbajo}>
@@ -147,7 +148,7 @@ export function PhoneCountryInput({
             returnKeyType={returnKeyType}
             onSubmitEditing={onSubmitEditing}
             maxLength={selectedCountry.maxDigits || 12}
-            style={[styles.phoneTextInput, { color: c.textStrong, fontFamily: 'Jost_400Regular' }]}
+            style={[styles.phoneTextInput, { color: c.textStrong, fontFamily: fuentes.regular }]}
           />
         </View>
       </View>

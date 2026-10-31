@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useEffect } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
@@ -206,7 +207,7 @@ const styles = StyleSheet.create({
     gap: 1,
   },
   autor: {
-    fontFamily: 'Jost_700Bold',
+    fontFamily: fuentes.negrita,
     fontSize: 14.5,
   },
   lineaDelResumen: {
@@ -216,7 +217,7 @@ const styles = StyleSheet.create({
   },
   resumen: {
     flexShrink: 1,
-    fontFamily: 'Jost_400Regular',
+    fontFamily: fuentes.regular,
     fontSize: 14.5,
     lineHeight: 19,
   },
@@ -224,7 +225,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 9,
     paddingVertical: 12,
-    fontFamily: 'Jost_400Regular',
+    fontFamily: fuentes.regular,
     fontStyle: 'italic',
     fontSize: 14.5,
   },

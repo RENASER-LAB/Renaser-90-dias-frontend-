@@ -1,7 +1,7 @@
 /**
- * La fase en la que está alguien, la que leen Plan («Fase actual» y «Arquitectura de tiempo») y la tarjeta
+ * La fase en la que está alguien, la que leen Plan («Fase actual») y la tarjeta
  * de Yo (pedido del dueño, 2026-10-06: «En Yo las fases deben ser iguales que en Plan […] los mismos días
- * que salen en Plan, en "Arquitectura de tiempo"»).
+ * que salen en Plan, en "Arquitectura de tiempo"»; esa sección se quitó de Plan el 2026-10-31, ya está en Yo).
  *
  * Contra el código anterior falla: `faseEnCurso` no existía; Yo hacía su cuenta en
  * `yo/utils/diasDeLaFase.ts` y no tenía el rango («Días 8–34») que muestra Plan.
@@ -9,7 +9,6 @@
 import { describe, expect, it } from '@jest/globals';
 
 import { FASES_EN_ORDEN } from '../../hooks/useResumenHome';
-import { tramosDeLasFases } from '../../../objetivos/utils/arquitecturaDeTiempo';
 import { faseEnCurso } from '../faseEnCurso';
 
 /** La regla del backend, `users.api.FasePrograma.paraDiaPrograma` (cortes 8, 35 y 65), copiada solo para el test. */
@@ -36,13 +35,13 @@ describe('faseEnCurso en el día 30 y en los bordes de cada fase', () => {
     expect(fase).toMatchObject({ numero, nombre, rango, diasDeLaFase: { dia: diaEnLaFase, total } });
   });
 
-  it('del día 1 al 90, es la misma fase que Plan marca «en curso» en «Arquitectura de tiempo»', () => {
+  it('del día 1 al 90, es la fase de la tabla única de fases que contiene ese día, con su día dentro de ella', () => {
+    // «Arquitectura de tiempo» de Plan se quitó el 2026-10-31 (ya está en Yo): esta cuenta es la de la tarjeta de Yo.
     for (let dia = 1; dia <= 90; dia++) {
       const fase = faseEnCurso(faseDelBackend(dia), dia);
-      const tramo = tramosDeLasFases(dia, faseDelBackend(dia)).find(t => t.estado === 'en_curso');
-      expect([fase?.numero, fase?.nombre, fase?.rango]).toEqual([tramo?.numero, tramo?.nombre, tramo?.rango]);
-      // El día dentro de la fase es el relleno del tramo en curso de Plan.
-      expect(fase!.diasDeLaFase!.dia / fase!.diasDeLaFase!.total).toBeCloseTo(tramo!.avance, 6);
+      const esperada = FASES_EN_ORDEN.find(f => dia >= f.primerDia && dia <= f.ultimoDia)!;
+      expect([fase?.numero, fase?.nombre, fase?.rango]).toEqual([esperada.numero, esperada.nombre, esperada.rango]);
+      expect(fase!.diasDeLaFase).toEqual({ dia: dia - esperada.primerDia + 1, total: esperada.ultimoDia - esperada.primerDia + 1 });
     }
   });
 });

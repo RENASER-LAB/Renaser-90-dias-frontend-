@@ -3,6 +3,7 @@ import { useFocusEffect } from '@react-navigation/native';
 
 import { mensajeDeError } from '../../../services/http/apiClient';
 import { escucharPostPublicado } from '../../sparkie/events/avisoPrimerPost';
+import { escucharMuroModerado } from '../events/muroModerado';
 import * as wallApi from '../api/wallApi';
 import type { WallPost } from '../types/community.types';
 
@@ -66,6 +67,8 @@ export function useUltimaPublicacionMuro() {
 
   // Una publicación propia recién confirmada puede ser justo la que Hoy tiene que mostrar.
   useEffect(() => escucharPostPublicado(invalidarUltimaPublicacionMuro), []);
+  // Y una publicación que se acaba de ocultar o eliminar (2026-10-31) puede ser justo la que Hoy estaba mostrando.
+  useEffect(() => escucharMuroModerado(invalidarUltimaPublicacionMuro), []);
 
   useFocusEffect(
     useCallback(() => {

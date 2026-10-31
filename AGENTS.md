@@ -231,6 +231,335 @@ Hasta hoy el líder llegaba a una persona solo por Hoy → «Mis mentores» → 
 * **Hace falta un APK nuevo** (solo JavaScript: ni `package.json`, ni `app.json`, ni código nativo; la app no se actualiza por aire) y
   **el backend con `/leadership/people` antes**: contra uno anterior la fila no se dibuja y Hoy queda como estaba.
 
+> **Corregido 2026-10-31 (punto 16, más tarde el mismo día).** «Mis mentores» ya no está en Hoy: es una fila de **Yo**, y «Todos los
+> aprendices» sigue siendo una de sus filas. Donde esta entrada dice «Hoy → Mis mentores» o «estado de Hoy», léase Yo → Mis mentores. El
+> atrás sube un nivel: persona → lista → «Mis mentores» → Yo. El flujo de Maestro `lider-ve-a-todos/01` entra ahora por Yo.
+
+## Cambio por pedido del dueño — 2026-10-31 — diseño de Hoy, Plan y Training, y la fuente Inter en toda la app
+
+Pedidos del dueño del 31/10 con capturas; **todo es de la app, sin backend**. Cada punto es un commit aparte de la rama
+`diseno-31-inter`. Lo que cambia y nada más:
+
+### Hoy: sin la frase del día ni Coherencia / Racha, y la tarjeta de acciones arriba (puntos 1 a 3)
+* **Se quita la frase del día** (la frase en serif bajo la cabecera). La cabecera queda: fase, «Día N de 90», los puntos y **la raya
+  dorada corta** (el dueño: «la cabecera queda: fase, día, puntos y la raya»), que ahora es de la pantalla y no de la frase. Lo de
+  abajo sube. `TarjetaConfrontacion` ya no se monta; su contenido (`confrontacion/data`, `fraseDelDia`) queda en el repo, sin uso.
+* **Se quita el bloque Coherencia / Racha** («Coherencia 0 %», «Consistencia del día», «Racha 2 días», «Récord histórico»): **Yo ya
+  los muestra** (Coherencia con su %, Puntos de liga y Racha con «días»). Comprobado en `YoScreen`. Lo único que Hoy mostraba y Yo no
+  es el «Récord histórico» (`rachaMaxima`) y las dos líneas de apoyo («Consistencia del día», «Nivel de excelencia»): se van con el
+  bloque, sin pasarlas a Yo.
+  > **Corregido el mismo día (punto 14):** el récord sí pasó a Yo, como una línea bajo la Racha. Las dos líneas de apoyo se quedaron afuera.
+* **En su lugar, la tarjeta de «Acciones y objetivos»**, antes de «Tu acompañante» (`home/components/TarjetaAccionDeHoy`), con el
+  diseño de la referencia del dueño y nuestras palabras: tarjeta con el fondo y el borde del tema; arriba el ícono `calendar` de 16 y
+  la hora de la acción («09:00 – 09:45» con inicio y fin; «09:00» con solo inicio; «Sin hora»); el título en negrita (18); «Meta: …»
+  (el objetivo de la semana de esa acción o, sin semana, la primera cláusula del de 90 días; sin meta la línea no se dibuja,
+  `objetivos/utils/metaDeLaAccion`); y un botón dorado de 52 a todo el ancho, «**Empezar ahora** ›», que lleva a Training con
+  `abrirAccionId` (lo mismo que «Registrar en Training» de Plan). Sin los «…» de la referencia (no harían nada) y sin «Iniciar
+  enfoque» (el dueño: «mismo diseño, no las mismas palabras»).
+* **Qué acción muestra:** la que sigue hoy con la regla de `objetivos/utils/accionesDeHoy` (`accionQueSigueHoy`: la primera sin
+  cumplir en orden de hora, sin contar las que esperan a la verde). Usa la lectura de `/rocks/today` que Hoy ya hacía
+  (`useAccionesDeHoy`, una vez por foco: **sin pedidos nuevos** para las acciones). **La meta sí lee:** `GET /rocks/weekly` y, solo si
+  la semana no la resuelve, `GET /rocks/master`, **una vez por acción y por sesión** (`useMetaDeLaAccion` guarda lo leído en
+  memoria; un fallo no se guarda). La tarjeta espera a saber la meta para dibujarse una sola vez, ya completa.
+* **Estados**, mismo esqueleto (`home/utils/vistaDeLaAccionDeHoy`, pura): sin Mapa activo → «Tu objetivo de 90 días nace de tu Mapa
+  de Renacimiento.» con «Hacer mi Mapa ›» (solo con el estado del Mapa **confirmado**: `useLecturaDelEstadoDelMapa`, un teléfono
+  nuevo dice «no iniciado» de quien ya lo hizo); sin acciones hoy → «Hoy no tienes acciones agendadas» con «Agendar en Plan ›»; todo
+  cumplido → «Cumpliste tus acciones de hoy» (sin botón); mientras carga, nada (sin parpadeo). Con acciones por hacer, la acción
+  manda sobre el Mapa. **Se quitó la tarjeta vieja de abajo** (no se duplica).
+* **No cambian** el resto de Hoy, los papeles del líder, el orbe ni los demás tabs. Sin animaciones nuevas.
+  > **Corregido el mismo día (punto 16):** los papeles del líder ya no están en Hoy; ver «Los paneles de rol viven en Yo» más abajo.
+* **Pruebas:** Jest `vistaDeLaAccionDeHoy`, `tarjetaAccionDeHoy`, `metaDeLaAccion`, `useMetaDeLaAccion`,
+  `useLecturaDelEstadoDelMapa` y `accionesDeHoy` (la que sigue y la hora); se ajustaron las que leían el código de Hoy.
+
+### Plan: sin «Arquitectura de tiempo» (punto 4)
+* **Se quita la sección «Arquitectura de tiempo»** (las cuatro fases con su barra y su lista) de la pantalla principal de Plan: ya
+  está en Yo (la tarjeta de fase, «Fase 2 de 4 · Días 8–34» con su avance). «Fase actual» y lo demás quedan. Se borró lo que
+  quedó sin uso: `objetivos/utils/arquitecturaDeTiempo` (y su prueba) y los estilos del riel de fases. `faseEnCurso` sigue siendo la
+  única cuenta de la fase (Plan, Yo y la vista previa de Administración).
+
+### Training: la cabecera sin la línea de fase y día (punto 5)
+* **Se quita «El Maestro Interno · Día 55 de 90»** de la cabecera de `TrainingPorHora`. Quedan el día elegido en grande («Sábado
+  31») y su resumen («0 de 17 hechos · 0 pts»). Se borró `lineaDelPrograma` y la prop `fase` de `TrainingPorHora` (nada más la
+  leía); `diaPrograma` se queda (decide qué días se pueden leer). El día y la fase del programa siguen en Hoy y en Yo.
+
+### Training: los nombres de los hábitos «no tan mayúsculas» (punto 6)
+* **Un título que llega del servidor TODO en mayúsculas se muestra en tipo oración**: «AGUA TIBIA CON LIMÓN» → «Agua tibia con
+  limón»; «RITUAL TIERRA - AGUA - FUEGO (mañana)» → «Ritual tierra - agua - fuego (mañana)». Lo hace una sola función pura,
+  `habits/utils/tituloEnTipoOracion` (con pruebas), y se usa al DIBUJAR en Training: la lista de hoy y la de otro día, la hoja
+  del hábito (`itemsDelDia` → `tituloParaMostrar`), «Tus prácticas» → Planificar (la lista, el título del editor, la pausa y
+  «Cambiar nombre»), y los títulos del registro con foto y de la hoja de evidencia.
+* **Reglas:** (1) solo cambia si el título «llega todo en mayúsculas», y lo que va entre paréntesis **no cuenta** para decidirlo
+  (el catálogo escribe «(mañana)» en minúsculas, y por eso «RITUAL … (mañana)» tiene minúsculas aunque lo demás grite); (2) un
+  título que ya tiene minúsculas —el que la persona puso con «Cambiar nombre», «Clase diaria», «Pastilla Renacer»— se deja tal
+  cual, aunque el nombre propio lo haya escrito en mayúsculas; (3) **siglas y nombres propios:** «SER» (y «IA», «TV», «USD») siguen
+  en mayúsculas, «RENASER» queda «Renaser» y «RENACER» (la «Pastilla Renacer») «Renacer»; para sumar una sigla, es una línea en
+  `SIGLAS`. Los títulos de las **acciones de los objetivos** (los escribe la persona) no se tocan.
+* **Solo cambia lo que se muestra.** No cambia lo que se guarda ni lo que se manda al servidor, ni el texto de las alarmas
+  (`recordatorios.programar(…, h.title, …)` sigue con el título del catálogo), ni cómo se empareja la voz de la alarma (por id y
+  por título del catálogo). Hoy (la tarjeta de hábitos) y Yo no cambian: el pedido era de Training.
+
+### Training: los rituales piden solo texto (punto 7)
+* **Los tres «Ritual Tierra - Agua - Fuego» (mañana, mediodía y noche; claves `RITUAL_MORNING`, `RITUAL_MIDDAY`, `RITUAL_NIGHT`)
+  se registran escribiendo, sin cámara.** En la hoja, en lugar de «Tomar foto», el botón **«Escribir cómo me siento»** (ícono
+  `pencil`; en la fila, la píldora «Escribir» en lugar de «Subir»). Abre `RegistroDeRitualConTexto` (una `HojaDesdeAbajo`) con la
+  pregunta **«¿Cómo te sientes después de realizar el ritual?»**, obligatoria, y «Enviar» fijo abajo; el campo llega a 4000
+  caracteres, que es lo que acepta el servidor (`respuestaTexto` de `/complete` es `@Size(max = 4000)`; «¿Qué sentiste?» no pone
+  tope en la app).
+* **Por los mismos caminos de siempre:** `confirmarEvidencia` con evidencia `TEXTO` y `completarRegistro` con esa misma respuesta
+  (`respuestaTexto`), que emite `habitoCumplido` (alarmas, celebraciones, puntos). La regla es `registrarConTexto`
+  (`habits/utils/registroConFoto`, con pruebas): el mismo orden que el registro con foto, sin subida a S3; si el texto ya quedó
+  guardado y el cierre falla, reintentar solo cierra (no duplica la evidencia); un rechazo de un registro que ya figura
+  completado se da por bueno. Ambos pasos comprueban que el registro siga siendo de HOY (spec 002): si pasó la medianoche no se
+  manda nada, se avisa («Tu día cambió…») y se recarga. Lo escrito se guarda como borrador en memoria por registro y se pierde al
+  enviar; un doble toque manda un solo pedido. El aviso al terminar es el de «Evidencia entregada» de siempre.
+* **El servidor lo acepta** (comprobado leyendo el backend, solo lectura): el catálogo dice evidencia `OBLIGATORIA` sin tipo, y
+  `RegistroService.requireEvidenciaSiLaExige` solo pide que el registro tenga **alguna** evidencia (`registrosHabitoConEvidencia`
+  no mira el tipo); `POST /habit-tracks/{id}/evidence` acepta `TEXTO` con `contenidoTexto`, sin restricción por hábito. Es el mismo
+  camino de la Audioterapia. El texto del servidor «Este hábito pide una foto: súbela…» solo sale si no hay ninguna evidencia.
+* **«RITUAL DE MAÑANA (domingo)» no cambia:** es de evidencia **opcional** y no tiene clave de sistema (V69 solo se la dio a los tres
+  de Tierra - Agua - Fuego), así que sigue con «Subir» y las cuatro formas. SER, desde el orbe o el chat, todavía puede pedir la
+  foto de un ritual y se registra con el camino de la foto y «¿Qué sentiste?» (`preguntaQueSintio`); Yo → «+ Subir foto» ya no
+  ofrece los rituales (`habitosParaFotoDeHoy`, porque `seRegistraConFoto` es falso para ellos).
+
+### Training: «Última comida del día» vuelve a llevar el círculo (punto 8)
+* **Es opcional y se marca con el círculo**, como Despertar y Dormir: su fila lleva el ✓ para marcarla hecha de un toque
+  (`completarHabitoSimple`, el mismo cierre sin evidencia) en lugar de «Subir». Es la corrección del ajuste del 2026-10-30 («en la
+  evidencia opcional la fila lleva solo «Subir»») **solo para esta**: los demás opcionales (Día sin celular, Meditar, Escritura
+  libre…) siguen con «Subir».
+* **Se reconoce por el id de su plantilla de catálogo** (`ID_DE_LA_PLANTILLA_ULTIMA_COMIDA` = `3a8a82a0-787d-46bc-a69e-b29c110a37bc`,
+  el `habitos.id` de producción, igual en todos los entornos), **nunca por el título**: no tiene `clave_sistema` y su título se
+  muestra en tipo oración y se puede cambiar. En un entorno donde el id no coincida, queda con «Subir» (lo seguro). Si en algún
+  entorno su evidencia fuera obligatoria, no se cierra con el círculo: pide su registro.
+* La hoja del hábito no cambia: sigue con «Subir evidencia» y «Marcar como hecho». Lo hecho, lo cerrado y los otros días, igual.
+
+### Plan: la pantalla principal con el formato de la referencia (punto 10)
+Pedido del dueño: «en Plan replica este formato de acuerdo a lo que tenemos». La maqueta se tradujo con **nuestros datos y nombres**
+(sin sus textos de ejemplo). Plan pasa a ser **una sola pantalla**, de arriba abajo:
+* **a. Cabecera:** «Plan» grande y, debajo y en dorado, «Tu dirección en 90 días». La diana de la maqueta no se dibuja (no tiene acción).
+* **b. Selector de eje:** el `ControlSegmentado` de Objetivos, con el principal primero y el ícono de cada eje (`iconoDelEje`):
+  **Cuerpo**, **Negocio**, **Relaciones**. `ControlSegmentado` suma la opción `icono` (16, opcional; sin ella no cambia nada). Todo lo de
+  abajo es del eje elegido.
+* **c. Tarjeta del objetivo de 90 días** (`TarjetaDelObjetivo`): el objetivo en negrita; «Inicio 82 · Actual 81 · Meta 80 kg» (la
+  línea base, el avance y la meta, que ya teníamos: `lineaDelObjetivo`); el % a la derecha en dorado; la barra; y, si existe, «Este mes:
+  81.6 kg» como una línea chica (tocarla la corrige, como antes). Los **tres puntos** de la derecha abren la hoja de siempre
+  —**escribir el objetivo** si falta, o **anotar el avance** si ya nació del Mapa y quedó fijo (D-234)—: «Editar» y «Anotar avance»
+  son la misma hoja, porque el objetivo fijo solo admite el avance. Sin avance que anotar (Relaciones fijo, sin meta) no se dibujan.
+* **d. «Esta semana»** (`TarjetaEstaSemana`): el ícono `calendar`, el objetivo semanal del eje, «2 de 6» a la derecha y la barra.
+  **Honestidad del dato:** el servidor no manda los días que ya pasaron (`/rocks/today` y `/rocks/upcoming` van de hoy hacia
+  adelante), así que la cuenta es de hoy a fin de semana y la tarjeta lo dice («acciones cumplidas, de hoy a fin de semana»). Sin
+  semana armada: «Todavía no armaste esta semana» con **«Arma tu semana ›»**. Conserva «Cerrar este objetivo con mi revisión»
+  (`RevisionSemanalModal`), «Ir al Mapa» si faltan los tres objetivos y, el domingo, «La que empieza el lunes» con «Armar la semana
+  que empieza» (D-203).
+* **e. «Acciones que mueven la meta»** (`AccionesQueMuevenLaMeta`): las agendadas del eje, de hoy y las que vienen (`today`, `tomorrow`
+  y `upcoming`, una vez por foco, ahora con `useRocasDiarias`); cada fila con su ícono (el del eje, el ✓ de línea si está cumplida, el
+  candado si espera a la verde), el título, «Mar 27 oct · 09:00» y su chevron. **Tocar una de hoy lleva a Training con
+  `abrirAccionId`** (ahí se sellan, como siempre); **una que viene abre «Agendar»**. Sin acciones: una línea con «Agendar mis
+  acciones»; con acciones, «Agendar otro día». Debajo van **los recordatorios de las acciones** (`RecordatorioDeAcciones`, sin cambios).
+  > **Corregido 2026-10-31 (punto 21, ajustes tras el E2E).** Los recordatorios ya no van a la vista debajo de la lista: son la fila «Recordatorios de tus
+  > acciones ›», que abre una hoja con el mismo control. Ver «Ajustes tras el E2E del rediseño», al final de esta entrada.
+* **f. «Tu 80/20»** (ícono nuevo `chartNoAxesColumn`, Lucide): «Prioriza lo que más acerca tu meta.»; abre una hoja con la regla de
+  Pareto de siempre —la acción verde va primero, las otras esperan con candado— y las acciones de HOY del eje con su color en
+  palabras (Verde / Amarilla / Roja) y su estado (los mismos textos de `textoDelEstado`).
+* **g. «Organizar mi semana ›»**, botón dorado a todo el ancho: abre el **asistente de la semana** (`PlanSemanalModal`) si el eje no tiene
+  objetivo semanal (o el domingo, si falta el de la que empieza) y, con el eje ya armado, **«Agendar»**: organizar la semana es repartir
+  sus acciones. Bloqueada, lleva al Mapa.
+* **Sin Mapa activo:** `PuertaDelMapa` («Primero tu Mapa de Renacimiento») en lugar de todo lo del eje, como desde el 2026-10-27.
+* **Lo que salió de la pantalla** (se integró arriba o se quitó): «Fase actual» (ya está en Yo), «Arquitectura de tiempo» (punto 4),
+  las **«Prioridades clave»** en lista (las reemplaza el selector de eje), **«Tus acciones de hoy · por eje»** de la spec 016 (la
+  reemplaza «Acciones que mueven la meta») y **la sub-vista de Objetivos con su flecha de volver** (`activeSubView`). Se borraron
+  `NivelesDelPlan`, `TarjetaPlanSemanal`, `TarjetaAccionesDelDia` y `TarjetaAccionesDeHoyPorEje`, que `PlanDelEje` y `TarjetasDelPlan`
+  reemplazan sin perder funciones: editar el objetivo, anotar el avance, la cifra del mes, armar la semana, agendar, revisar la
+  semana, los recordatorios y el sellado de acciones (en Training, desde la fila) siguen teniendo entrada. La alarma de una acción
+  con hora (`abrirObjetivosEje`) abre Plan en ese eje.
+* **No cambian:** la barra de pestañas, los asistentes y hojas (`PlanSemanalModal`, `RevisionSemanalModal`, `AgendarAccionesModal`,
+  `EditarObjetivoDelMesModal`), las reglas del servidor ni los demás tabs. Sin animaciones nuevas (`Presionable` en filas y tarjetas).
+* **Pruebas:** `planDelEje` (con todo, sin semana, sin acciones, el domingo, bloqueada y errores), `planPrincipal` (la lógica pura),
+  `controlSegmentadoConIcono`, `planRediseno` y `planEsperaAlMapa` (el Mapa y el selector) reescritas.
+
+### Yo: sin la tira «Evidencia» (punto 11)
+* **Se quita de Yo la tira «Evidencia»** (las tres miniaturas con `MiniaturaDeEvidencia`, debajo de Coherencia, Puntos de liga y
+  Racha, con su «Todavía no subiste evidencias.» y el «+N»). **«Mis evidencias» sigue en Ajustes → Tu proceso**, sin tocar (su grilla
+  con la foto real y el visor en grande). Se borró lo que quedó sin uso: la medida de la miniatura y los estilos `more` y `rowCard`.
+
+### El semáforo pasa de Hoy a Yo (punto 12)
+* **En Yo**, el gráfico de línea «Tu cumplimiento · últimos 7 días» (debajo de la tarjeta de fase) **se quita** (se borró
+  `curvaDeEvolucion`), y en su lugar va **la tarjeta del semáforo tal cual estaba en Hoy** (`TarjetaSemaforoHoy`): «Tu semáforo · últimos 7
+  días», el estado, el %, «5 de 7 días con datos», el mensaje del día con el búho (spec 006) y las siete barras. **En Hoy esa tarjeta
+  desaparece.**
+* **Mismas reglas que tenía en Hoy:** aparece solo si `/home` trae `semaforo` distinto de `null` (y la entrada `semaforo` no está apagada
+  por Soporte TI); sin él no hay tarjeta y el gráfico viejo tampoco vuelve; las barras salen de `semaforo.dias` o de `/me/semaforo`
+  (`useMiSemaforo` + `hayQuePedirMiSemaforo` + `diasParaLaTarjeta`); el mensaje sale como en la spec 006. **Sin pedidos de más:** Yo ya
+  leía `/home` (`useResumenHome`); la lectura de `/me/semaforo` se movió de Hoy a Yo.
+* **Tocarla abre el detalle** (`SemaforoScreen`) a pantalla completa desde Yo, con su flecha de volver y el atrás del sistema de vuelta a
+  Yo (`enSemaforo`, como la Caja).
+* **El aviso del sábado `/semaforo`** (`rutaDeAviso`, sin cambios) lo sigue recibiendo **Hoy**, que siempre está montada, y trae a Yo con
+  el parámetro `abrirSemaforo`; Yo abre el detalle y lo olvida. Se eligió esto por ser lo más simple: Yo no siempre está montada cuando
+  llega el aviso, Hoy sí (es el mismo camino de `abrirCaja` y `abrirMiRadar`).
+* **El fénix de Hoy sigue recibiendo el color del semáforo:** Hoy sigue publicando el color de `/home` (`usePublicarSemaforoDeHoy(…, null)`, sin
+  pedir nada), y Yo publica además el del detalle cuando lo lee. Lo demás del fénix (`useMantenerSemaforoVigente` al volver al frente y
+  tras cumplir un hábito) no cambia.
+* **No cambia** lo del mentor, el líder y Administración en Hoy («Mi grupo», «Mis mentores», el resumen por grupos y sus avisos): esto es solo
+  la tarjeta del semáforo propio del aprendiz.
+
+### Hoy: «Hábitos de hoy» y el Radar sin la línea de detalle (punto 13)
+Textual del dueño: «desaparece la información no relevante en Hábitos de hoy, y en Mi Radar esa información no aporta».
+* **En `TarjetaHabitoYRadar` se quita la línea de detalle de abajo de cada mitad.** Hábitos: «Te toca ahora · 11:00 · quedan 17 pendientes» y
+  sus variantes. Radar: «Cinco preguntas, un minuto. Responde hasta las 13:00.» y las de los demás estados («Cierra a las…», «Se abre en
+  2 min…», «La siguiente a las…», «05:30 a 22:30 · 17 veces», «Cada hora entre tu Despertar y tu Dormir…», «Toca para ver tu horario.»).
+* **Quedan:** el ícono con el rótulo y su chevron, la línea de estado y el título de cada mitad (la cifra o el hábito de esta hora;
+  «Código Renaser · 13:00 · Innegociable», «Registrado», «Próxima a las 20:00»…). Las dos mitades siguen alineadas a la izquierda y arriba,
+  con el mismo alto mínimo de 48 y sin renglón vacío abajo.
+* **Lo que hace cada mitad al tocarla no cambia**; la hoja «Tu Radar de hoy» (sigue diciendo el horario y las veces), la hoja de lo
+  respondido (`siguiente`) y Training conservan su detalle. `MitadDelRadar` ya no tiene `detalle`, y `DatosDeLaMitadDeHabitos` tampoco.
+* **La lectura de pantalla queda con lo que se ve:** `etiquetaDeLaMitad` dice el rótulo, la hora, el estado y el título («Código Renaser
+  13:00, Registrado»). Pruebas: `mitadDelRadar` y `tarjetaHabitoYRadar` (que el detalle no aparece ni en pantalla ni en voz).
+
+### La fuente de toda la app: Inter, en un solo archivo (punto 9)
+Pedido del dueño: SF Pro. **Su licencia no permite usarla en Android, así que el dueño eligió Inter.** Y una regla de él: la fuente tiene que
+ser **global, como un CSS global**.
+* **Inter reemplaza a Jost (texto) y a Fraunces (display) en toda la app.** Paquete: `@expo-google-fonts/inter@0.4.2` (se fue
+  `@expo-google-fonts/jost` y `@expo-google-fonts/fraunces`). **Revisado antes de instalar** (`npm view` y el tarball, sin instalarlo):
+  autor `Expo Team <team@expo.io>`; repositorio `github.com/expo/google-fonts` (`font-packages/inter`); mantenedores `brentvatne`,
+  `ccheever`, `kadikraman`, `jake7`; licencia MIT y OFL-1.1; **sin `preinstall`, `install` ni `postinstall`** (el `package.json` solo tiene
+  `name`, `version`, `main`, `repository`, `author`, `license`); **sin dependencias**; el código son 18 `index.js` de una línea cada uno (un
+  `require` del `.ttf`) y `useFonts.js` (un `loadAsync` de `expo-font`); ningún `fetch`, `eval`, `child_process`, `process.env`, `atob` ni red;
+  el `integrity` del `package-lock.json` coincide con el del tarball revisado. Se instaló con `--ignore-scripts`.
+* **Qué trae y qué no:** las 9 pesas estáticas con el corte óptico de texto; **no trae «Inter Display»** (el corte óptico grande). Por eso
+  los títulos grandes (`t.hero`, `t.screenTitle`) usan la **Bold** y ganan el aire de display con el espaciado negativo que ya tenían. Si
+  algún día se suma un corte Display, es cambiar un nombre en `fuentes.ts`. Se cargan cuatro pesas (400, 500, 600 y 700), no las 18.
+* **Un solo archivo: `src/theme/fuentes.ts`.** Exporta **roles**, no nombres de archivo: `fuentes.regular` (400), `fuentes.media` (500),
+  `fuentes.seminegrita` (600), `fuentes.negrita` (700) y `fuentes.display` (hoy la 700), y `FUENTES_A_CARGAR` (los cuatro `.ttf` que
+  `App.tsx` le pasa a `useFonts`). **Ningún otro archivo de `src/` escribe un nombre de fuente**: piden el rol o usan los tokens `t.*`
+  (`hero` y `screenTitle` → `display`; `cardTitle` → `seminegrita`; `body` y `small` → `regular`; `micro`, `metric`, `tab` → `media`).
+  `src/theme/__tests__/fuenteUnica.test.ts` falla si un archivo de `src/` o `App.tsx` escribe `Inter_…`, `Jost_…` o `Fraunces_…`, o un
+  `fontFamily` con un texto. **Cambiar la fuente de toda la app es tocar ese archivo.** Equivalencias para leer lo anterior: donde este
+  documento dice `Jost_400Regular`, `Jost_500Medium` o `Jost_700Bold`, hoy es `fuentes.regular`, `.media` o `.negrita`; donde dice
+  `Fraunces_600SemiBold` o `Fraunces_700Bold`, `fuentes.display`.
+* **Más ancha que Jost:** Inter mide 6 a 14 % más en texto corrido (medido con las pesas reales: «Comunidad» 1,08×, «Relaciones» 1,11×,
+  títulos de hábito 1,11×); las cifras, ±2 % (siguen tabulares). Los títulos display miden lo mismo que con Fraunces (±5 %). Se revisaron los
+  lugares con ancho justo: la barra de pestañas (cabe: «Comunidad» a 11 px mide ~60 en un cuarto de 72), los chips de los días (la hora
+  mide igual), la columna de la hora de Training (46), la tarjeta de fase de Yo (`medidasDeLaTarjetaDeFase` reserva por ancho, no por
+  fuente; el nombre de fase mide igual que con Fraunces) y los segmentados: `ControlSegmentado` con `achicarTexto` (el de cuatro
+  opciones del Ranking y el selector de eje de Plan, que lleva ícono) pasa a relleno lateral de 4 y a achicarse hasta el 80 % en vez del 85 %.
+  **Sin emulador en esta corrida:** el aspecto en pantalla se confirma con las capturas en claro y oscuro.
+* **No se tocó** `public/privacidad` ni `public/eliminar-cuenta` (páginas web estáticas con su propia fuente de Google Fonts, no son la app).
+
+### Yo: el récord de racha bajo la Racha (punto 14)
+* Debajo de la **Racha** de Yo va una línea chica, «**Récord: 3 días**» (o «Récord: 1 día»), con `rachaMaxima` de `/home`, lo mismo que Hoy
+  mostraba como «Récord histórico» antes de quitarse (punto 2). **Sin dato** (`/home` caído o sin el campo) **no se dibuja** (un récord
+  de 0 sí se dice: «Récord: 0 días»). 13 px, el gris secundario (`textSoft`) y `tabular-nums`. El texto sale de `home/utils/textoDelRecord`.
+
+### Los nombres de los hábitos en tipo oración en TODA la app (punto 15)
+El dueño pidió que lo del punto 6 no sea solo de Training. Se usa la misma `habits/utils/tituloEnTipoOracion` (o `tituloParaMostrar`, que
+respeta el nombre propio) **en el punto donde se pinta el nombre**:
+* **Hoy:** la tarjeta «Hábitos de hoy» (el hábito de esta hora) y lo que oye el lector de pantalla.
+* **SER:** la tarjeta y la hoja del pedido de foto del acompañante (`tituloDelPedido`: el hábito en tipo oración; una **acción del día** —`destino:
+  'roca'— la escribió la persona y no se toca) y el título del registro con foto que abre.
+* **Yo:** «+ Subir foto» (el elegir hábito y el título del registro). «Mis evidencias» no nombra hábitos.
+* **Fichas:** del mentor o la guía (los 7 días, la rejilla semanal, el visor de evidencia y de publicación), del líder (`DiaDeLaPersona` y lo que dice el
+  lector, `dichoDeLaObligacion`) y de Administración («Detalle de hábitos»).
+* **Tiempo libre de la ficha:** los bloques de HÁBITO de la agenda del día (`nombreDelBloque`); las acciones, los eventos y la agenda personal, tal cual.
+* **«Mi agenda»** (Comunidad → Eventos), el selector de hora y el aviso de cambiar el nombre de una bebida.
+* **No nombran hábitos** y no se tocaron: el semáforo, el cierre, el Radar y «Mis evidencias».
+* **No cambia** lo que se guarda, lo que se manda al servidor ni **el texto de las alarmas**; los esquemas de lo que llega no transforman el título.
+  Prueba: `tituloEnTodaLaApp.test.ts` (dónde se usa, la lógica pura y lo que no cambia).
+
+### Los paneles de rol viven en Yo; Hoy es solo el programa propio (punto 16)
+Textual: «¿qué fue eso? Debe ir dentro de Administración, lo mismo de cada uno, no en Hoy de cada rol; se ve feo, respeta pues». Deshace
+la spec 018 en Hoy (el control «Mi programa · Mi grupo · Mis mentores») y las tarjetas de rol que Hoy tenía desde septiembre. Lo que
+cambia y nada más:
+* **Hoy es SOLO el programa propio de la persona, para todos los roles.** Se quitaron: el control de papel (`ControlDePapelDeHoy`,
+  `usePapelDeHoy`, `papelesDeHoy`, `papelRecordado` y la memoria `renaser.hoy.papel.<id>`), «Mi grupo» y «Mis mentores» como listas de Hoy
+  (`MiGrupoEnHoy`, `MisMentoresEnHoy`), las tarjetas de rol (`TarjetaMentorHoy`, `TarjetaAdminHoy`), las pantallas de rol que Hoy abría como
+  estado propio (grupo, ficha del aprendiz, tickets, mentores, todos los aprendices, resumen del líder, Administración) y **todas sus
+  escuchas de avisos** y de `abrirCajaAprendizId` / `abrirFichaAprendiz`. La raya dorada ya no depende de ningún papel y nada queda
+  «oculto pero montado». **Se conserva** la invitación «Elegir mi Día 1» para el personal que no hace su programa
+  (`EntradaAlProgramaPropio`) y el color del semáforo que recibe el fénix (`usePublicarSemaforoDeHoy(resumen?.semaforo, …, null)`).
+* **Yo suma una fila por panel de rol, con la misma forma que «Administración»** (`FilaDeAjuste`, en la misma lista, entre
+  «Administración» y «Tuve una emergencia»): **«Mi grupo»** (ícono `users`, «Tus aprendices») y **«Mis mentores»** (ícono `award`,
+  «Grupos, consultas y reporte del mes»; no `usersThree`, que es el de la pestaña Comunidad y `barraDePestanasIconos.test.ts` no deja usar en otra parte). **Las reglas de quién las ve son las de siempre, sin inventar ninguna** (`paneles-de-rol/utils/
+  filasDeRol`, pura): «Mi grupo» para el mentor o la guía que acompaña un grupo (un mentor sin grupo la conserva, todavía no se lo
+  asignaron; el líder solo si de verdad acompaña uno, y no antes de saberlo, para no dibujarla un instante), con la entrada `mentor.mi_grupo`
+  prendida; «Mis mentores» solo para el líder de mentores y con alguna de sus tres entradas (`lider`, `tickets`, `semaforo`) prendida;
+  «Administración» no cambia (`canAdminister`). **El aprendiz no ve ninguna** y su Yo queda como estaba.
+* **Cada fila abre una pantalla completa de Yo** (como la Caja y Administración; `PantallaDelPanelDeRol`): «Mi grupo» abre `MiCelulaScreen`
+  con la cabecera «‹ Mi grupo» (prop nueva y opcional `rotuloDeVolver`, por defecto «Volver»); «Mis mentores» abre `MisMentoresEnYo`, con
+  la cabecera «‹ Mis mentores» y el contenido de la spec 018 (`ListaDeMisMentores`): Resultado por grupo, Consultas de mentores, Mentores y
+  reporte del mes y Todos los aprendices. **El atrás (la flecha y el del sistema) sube un nivel por vez hasta Yo**
+  (`vistaDeRegreso`): ficha → «Mi grupo» → Yo; consultas / mentores / todos / resultado de un grupo → «Mis mentores» → Yo. Una fila de grupo
+  sigue abriendo la pantalla del líder directo en ese grupo. Lo que Hoy mostraba como lista de aprendices con su % en «Mi grupo» lo muestra
+  ahora `MiCelulaScreen`, que ya listaba a los aprendices con su semáforo (es la pantalla del grupo que pidió el dueño).
+* **Los avisos del teléfono que abrían esas vistas desde Hoy abren lo mismo, ahora desde Yo** (`navigation/abrirAviso.ts` los lleva a Yo
+  con un parámetro; `usePanelesDeRol` y `YoScreen` los consumen una sola vez y limpian la ruta, para que volver no los reabra):
+  | Aviso | Ruta | Abre |
+  |---|---|---|
+  | Resumen del sábado del mentor / revisión del líder | `/mentor/groups/{g}/semaforo` | Yo → «Mi grupo» con la sección del semáforo a la vista (de otro de sus grupos: pasa a ese grupo) |
+  | Un aprendiz del grupo | `/mentor/groups/{g}/learners/{a}` | Yo → «Mi grupo» → la ficha de ese aprendiz (si ya no está en el padrón, abre el grupo y nada más) |
+  | Resumen por grupos del sábado | `/semaforo/grupos` | Líder: Yo → «Mis mentores» → resultado por grupo. Administración y Alquimista: Yo → Administración → Semáforo |
+  | Semáforo propio del sábado | `/semaforo` | Yo → el detalle de su semáforo |
+  | Caja de un aprendiz | `/admin/caja/{id}` | Yo → Administración → Caja Renaser → esa caja (solo si la cuenta administra) |
+  | «Ver ficha» desde la info de un chat | `abrirFichaAprendiz` | Yo → Administración → la ficha (Comunidad ahora navega a Yo, no a Hoy) |
+  Como antes, los de rol **no esperan** a las capas obligatorias (el de la caja del Admin sí) y quien no puede abrirlos (otro rol, sin
+  grupo, sin permiso) no ve nada: el aviso se descarta. No hay una ruta de aviso de tickets en la app: no había nada que mover.
+* **Dónde vive el código:** `features/paneles-de-rol/` (la carpeta `hoy-por-papel` renombrada): `utils/filasDeRol`, `vistasDeLosPaneles`,
+  `avisosDeLosPaneles` (puras), `hooks/usePanelesDeRol` (UNA lectura de su grupo, UNA del resumen por grupos del líder, la vista abierta y
+  el aviso pendiente; solo pide lo que le toca a la cuenta), `screens/PantallaDelPanelDeRol` y `MisMentoresEnYo`, `components/ListaDeMisMentores`
+  y `FilaDeLista`. **Donde esta guía dice «Administración (estado de `Hoy`)» o «Hoy → Administración», léase Yo → Administración.**
+* **No cambian:** las pantallas de rol por dentro (`MiCelulaScreen`, `AlumnoScreen`, bandeja de tickets, mentores, todos los aprendices,
+  resumen del líder, Administración y su raíz, incluido su botón «Mi programa», que ahora sale a Yo), los permisos (los decide el servidor),
+  las entradas de Soporte TI, «Mi grupo» de Comunidad → Tribu, los demás tabs ni la barra. Sin animaciones, íconos ni dependencias nuevas.
+* **Pruebas:** Jest `filasDeRol` (el líder ve «Mis mentores»; el mentor y la guía, «Mi grupo»; el aprendiz, ninguna; el líder espera al grupo y
+  la esconde con `sin_celula`; las tres entradas de Soporte TI), `vistasDeLosPaneles` (el atrás un nivel por vez), `avisosDeLosPaneles`
+  (parámetros, ficha, otro grupo, padrón que falta, resumen general), `panelesDeRol` (las filas montadas de «Mis mentores»),
+  `panelesDeRolEnYo` (Hoy sin control ni tarjetas ni escuchas; Yo con las filas y el panel; el hook; la pantalla) y `abrirAviso` /
+  `avisosDeLaCaja` (cada aviso lleva a Yo con su parámetro, sin esperar a las capas los de rol). Se actualizaron `semaforoEnYo`, `cajaEnLaApp`,
+  `loNoDisponible` e `infoDelChatIntegrantes`. Maestro, escrito y sin correr: `.maestro/diseno-31/06-roles-en-yo.yaml`; los flujos que
+  entraban a Administración, «Mis mentores» o «Todos los aprendices» desde Hoy (`regresion/20–24`, `mi-radar/11–12`, `15`, `lider-ve-a-todos/01`)
+  y el `abrirAdministracion` de `e2e/admin-alquimista` entran ahora por Yo (sin correr).
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
+
+### Ajustes tras el E2E del rediseño (puntos 17 a 21)
+Cinco arreglos visuales que salieron de las capturas del E2E del 31/10 (`e2e-rediseno/`). Todo es de la app, solo JavaScript, sin backend, sin
+animaciones, íconos ni dependencias nuevas. Cada punto es un commit aparte de la rama `app-31-rediseno-y-moderacion`.
+* **17. Login: «¿Olvidaste tu contraseña?» ya no queda bajo el botón.** La cabecera mide ~54 % de la pantalla y lo de debajo (título, dos campos
+  y el enlace) más el pie fijo (botón, «Solicitar acceso», privacidad) pasaban de lo que se ve en un teléfono de 360 × 780 o en el Pixel 6: el
+  enlace quedaba en el borde de abajo del scroll, tapado por el fundido sobre el pie. Ahora la cabecera **cede alto** lo justo para que el
+  formulario quepa sin desplazar con el teclado cerrado (`topeDeAltoParaElFormulario` en `auth/utils/cabeceraDelIngreso`; `CabeceraDelIngreso`
+  recibe `altoMaximo`): `alto ≤ lo que se ve del scroll − lo que mide el cuerpo − 16 de aire + 36 de solape`, con un mínimo de 176 (cabeza y
+  alas; la cola ya se funde). Se mide lo real (`onLayout` del scroll, el mayor alto visto con el pie y sin teclado, y del cuerpo sin avisos de
+  error), así que también sirve con la letra grande del sistema; el teclado nunca la cambia (con teclado, el campo se lleva a la vista como
+  antes). Sin medidas todavía la cabecera es la de siempre (la primera pasada no se ve: la imagen entra con su fundido). El enlace mide 48 de
+  alto táctil (era 44). **No cambia** el diseño aprobado del 2026-10-05: mismos textos, orden, degradado y animaciones; solo el fénix se ve algo
+  más corto en teléfonos que no entraban (según la cuenta con las medidas de diseño: ~37 dp en el Pixel 6 y ~90 en 360 × 780; a confirmar en pantalla).
+* **18. Training: el título de una línea se centra en la fila.** Quedaba ~7 dp más arriba que la hora y que el botón o el círculo. La cuenta
+  lo explica: el área del nombre mide 48 como mínimo con 6 de relleno (36 útiles) y el texto 22, y (36 − 22) / 2 = 7; con dos líneas (44) no
+  sobraba nada y se veía centrado. La caja del título (`TituloQueSeTacha`) llevaba `flex: 1` dentro de una columna, crecía hacia abajo y dejaba
+  el texto en su borde de arriba. Ahora mide lo que mide el texto (`flexShrink: 1`) y la columna del nombre (`FilaDelDia`) centra lo que tiene. Por
+  qué NO se tocó el `lineHeight` de `theme/fuentes.ts` ni de los tokens: no es la métrica de Inter, y cambiarlo habría movido todas las pantallas.
+  Hallazgo hecho por geometría y pruebas, **sin emulador**: falta confirmarlo en pantalla.
+* **19. Pantallas del líder, una sola cabecera.** «Mentores y reporte del mes», «Todos los aprendices», «Reporte del mes», la ficha del mentor,
+  la lista y la ficha de la persona, y «Semáforo por grupos» llevaban «← VOLVER» en versalitas (`BarraDelLider`, y una copia en
+  `SemaforoGruposScreen`); «Mis mentores» llevaba «‹ Título». Ahora todas usan `CabeceraAdmin` («‹ Título», botón «Volver» de 48, el mismo
+  atrás): `BarraDelLider` es un envoltorio de ella y `SemaforoGruposScreen` la usa directo. El atrás del sistema no cambia.
+* **20. Plan: la línea del objetivo.** «Inicio 10000 · Actual 14000 · Meta 30000 S/» se partía en «Meta / 30000 S/» y la barra quedaba pegada.
+  `lineaDelObjetivo` usa `formatearNumero` (el formato de la app para cifras: miles con espacio duro, «30 000»; la coma y el punto ya significan
+  decimal en el Mapa) y une etiqueta, cifra y unidad con espacios duros («Meta 30 000 S/»): si el renglón se parte, es entre partes, en el « · ».
+  La barra sube a 12 de aire. El texto del objetivo (lo escribe la persona) no se toca.
+* **21. Plan: «Recordatorios de tus acciones ›» es una fila que abre una hoja.** El bloque con la fila de días, el interruptor, «Aviso antes de
+  cada acción» y «Cómo suena» dentro de «Acciones que mueven la meta» empujaba «Tu 80/20» y «Organizar mi semana ›» unas tres pantallas más
+  abajo. Ahora es una fila de 56 con la campana, el título y, en una línea, el estado guardado en este teléfono («Todos los días a las 08:00 ·
+  aviso 10 min antes», «Sin recordatorio diario · avisos 30 y 10 min antes y a la hora», «Apagados en este teléfono», «… según el día» si los
+  días no coinciden; `notificaciones/resumenDelRecordatorio`, puro), que abre una `HojaDesdeAbajo` grande con el MISMO `RecordatorioDeAcciones`
+  de siempre, sin tocar su lógica (`components/RecordatoriosDeLasAcciones`). La fila lee lo guardado al montar y al cerrar la hoja; sin lectura
+  dice «Recordatorio diario y aviso de cada acción». Con la semana sin armar o sin alarmas locales (web, Expo Go), no se dibuja, como antes.
+  **Las alarmas no dependen de la hoja:** el control ponía al día las alarmas de cada acción cuando Plan le pasaba la lista nueva; con él dentro
+  de una hoja cerrada eso habría dejado de correr. Salió a `useAlarmasAlDiaConLasAcciones`, que la fila monta siempre; el control suma la prop
+  `sincronizarConLaLista` (por defecto `true`, así Yo → Alarmas no cambia) y la hoja de Plan lo apaga para no hacerlo dos veces.
+* **Pruebas:** Jest `cabeceraDelIngreso` (el tope por tamaño de pantalla y letra, el mínimo, sin medidas), `loginConCabecera` (48 de alto táctil y
+  el tope tras medir), `alineacionDeLaFila`, `cabeceraDeLasPantallasDelLider`, `planPrincipal` (`lineaDelObjetivo`), `resumenDelRecordatorio`,
+  `recordatoriosDeLasAcciones` (la fila, la hoja con el mismo control, las alarmas con la hoja cerrada) y `planDelEje`.
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
+
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
 Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel especializado en React Native, Expo y TypeScript. Al crear, refactorizar o modificar cualquier pantalla o componente, debes cumplir OBLIGATORIAMENTE con los siguientes estándares:
@@ -302,6 +631,8 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       a la siguiente como la de planificar— y, debajo, UNA lista con los hábitos, las acciones del día y los eventos,
       por la hora planificada. **Ya no se ven afuera** las cinco dimensiones, «Arma tu semana los domingos» ni la tarjeta
       «Próximo a vencer» (el primero de la lista ya lo es; `ProximoAVencerCard` queda sin uso, con su prueba).
+      > **Corregido 2026-10-31 (pedido del dueño).** La línea de la fase y el día («El Espejo · Día 3 de 90») ya no se dibuja; la
+      > cabecera queda con el día elegido y su resumen (y el engranaje). Ver la entrada del 2026-10-31.
     * **La lista de hoy** (`utils/listaDelDia`, pura y probada): lo que sigue por hora, y el primero dice «Te toca ahora»
       (su hora ya llegó) o «Lo que sigue»; después «Sin hora»; después «Se te pasó la hora · todavía puedes registrarlos
       hoy», con el texto de menos puntos de D-259 que ya existe (`avisoDeHoraPasada`); al final, plegado, «N hechos
@@ -325,6 +656,10 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       «Cumplido a las 06:12 · +8 pts» y lo que escribió; la Pastilla y la Clase conservan su ventana de solo lectura. Un
       evento lleva a su detalle en Comunidad → Eventos (`abrirEventoId`). El aviso del teléfono que abre un hábito
       (`aperturaDesdeAviso.habitoAAbrir`) lo abre como al tocar su fila, ya no la dimensión.
+      > **Corregido 2026-10-31.** El nombre de un hábito del catálogo que llega en mayúsculas se ve en tipo oración («Agua tibia
+      > con limón»); ver la entrada del 2026-10-31.
+      > **Corregido 2026-10-31.** En los rituales (`RITUAL_MORNING`, `RITUAL_MIDDAY`, `RITUAL_NIGHT`) el botón no es «Tomar foto»
+      > sino «Escribir cómo me siento».
     * **Un día anterior: sin registrar NUNCA** (regla explícita del dueño: «nunca debería llegar» a subir algo). Se lee
       `GET /api/v1/habit-tracks/day?date=` (solo de ayer hacia atrás, hasta el lunes y no antes del Día 1; el servidor
       responde 400 a cualquier otra fecha y la app ni la pide) **solo cuando la persona toca ese día**: nunca al abrir
@@ -369,6 +704,7 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       fila lleva **solo «Subir»**, como botón aparte que abre las cuatro formas; ya no lleva el círculo, que «le quitaba lo
       simple». Tocar el nombre abre la hoja con «Subir evidencia» y «Marcar como hecho» (`ControlDeLaFila` `subir`). Un día
       anterior que no se pudo cargar dice una sola línea, «No pudimos cargar este día.», con «Reintentar».
+      > **Corregido 2026-10-31.** «Última comida del día» ya no lleva «Subir» sino el círculo; los demás opcionales siguen igual.
   * **Cambio por pedido del dueño — 2026-10-19 — alarmas como el despertador, aviso cuando el teléfono las
     borra y guía por marca (tab `Yo` → Alarmas, una hoja global y, en Training → Planificar, una oferta única de la
     guía)** (spec 007 del backend, `specs/007-alarmas-confiables/`; pedido: «los usuarios dicen que sus alarmas no
@@ -608,6 +944,9 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       Lo que sigue a una hoja (el formulario, Yo) espera a que la hoja se vaya del todo (`alTerminarDeCerrar`, como las de
       Training). «Registrar ahora» solo aparece cuando el servidor lo aceptaría; si no, dice por qué («Hoy no tienes Mi Radar»,
       «Mi Radar funciona de 03:00 a 23:59.», «Ya registraste esta hora»).
+      > **Corregido 2026-10-31 (pedido del dueño).** La columna «Dice» ya no incluye la línea de abajo («Cinco preguntas, un minuto…»,
+      > «Responde hasta…», «Listo por esta hora. El siguiente a las 14:00.»…): quedan el rótulo, el estado y el título. Lo que hace cada
+      > mitad al tocarla no cambia.
     * **Una sola lógica, sin duplicar**: las horas de hoy y la hora en curso salen de `resumenDeMiRadarHoy` (`utils/miRadar.ts`,
       sobre `horasDelDia`), que ahora usa también `useMiRadar` de Yo; el envío es el de `RadarContext` (`radar.enviar`: el mismo
       `POST /radar` y el mismo 409 que se relee y se da por registrado); `HOY_SIN_RADAR`, `FUERA_DE_HORARIO` y el pie del
@@ -635,6 +974,8 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       cuando llega la hora del siguiente ítem del día, hábitos incluidos, y Plan no lee los hábitos); la que sigue es la primera
       sin cumplir en orden de hora, sin contar las que esperan a la verde. Sin acciones hoy: «Hoy no tienes acciones agendadas.
       Agéndalas desde tus objetivos: toca una prioridad clave y elige «Agendar mis acciones».».
+      > **Corregido 2026-10-31.** Esta tarjeta ya no existe: las acciones del eje elegido salen en «Acciones que mueven la meta» (hoy y
+      > las que vienen), y tocar una de hoy sigue llevando a Training con `abrirAccionId`. Ver la entrada del 2026-10-31.
     * **La hoja de un eje** (`HojaDesdeAbajo`): sus acciones de hoy con hora, nombre, estado en palabras («Cumplida 10:14»,
       «Pendiente», «Se te pasó la hora · todavía puedes registrarla hoy», «Se abre al completar la primera») y su símbolo, y
       fijo abajo «Registrar en Training». **Plan solo muestra:** el botón no registra nada, lleva a Training con
@@ -647,6 +988,8 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     * **No cambian**: «Fase actual», «Prioridades clave», «Arquitectura de tiempo», la vista de Objetivos, las demás tarjetas
       de Hoy, el formulario de los días 1 a 7, los avisos, Training (salvo `abrirAccionId`), Yo, Comunidad ni la barra.
       Sin dependencias nuevas ni backend nuevo.
+      > **Corregido 2026-10-31.** «Arquitectura de tiempo» salió de Plan; el resto de esta lista sigue (hasta el rediseño de Plan del
+      > mismo día, más abajo).
     * **Anotado, no inventado**: la vista previa decía «Pendiente · en 20 min» en la hoja del eje; no hay regla para ese
       umbral y no se dibuja. Tampoco había diseño para «En espera» (antes del primer registro de los días 1 a 7) ni para el día
       sin Radar: llevan los textos de arriba (los de la tarjeta de antes y los de Yo → Mi Radar).
@@ -784,14 +1127,26 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       (`renaser.hoy.papel.<id>` en AsyncStorage; un almacenamiento roto no tumba Hoy). La primera vez abre en «Mi programa»; si
       lo recordado ya no le corresponde, también. Quien se quedó en «Mi grupo» espera a que el servidor diga si acompaña uno, en
       vez de dibujar «Mi programa» y saltar al grupo.
+      > **Corregido 2026-10-31 (pedido del dueño, punto 16: «debe ir dentro de Administración, lo mismo de cada uno, no en Hoy de cada
+      > rol; se ve feo»).** El control «Mi programa · Mi grupo · Mis mentores» **ya no existe**: Hoy es SOLO el programa propio, para todos
+      > los roles. Se borraron `ControlDePapelDeHoy`, `usePapelDeHoy`, `papelesDeHoy` y `papelRecordado` (la memoria por cuenta
+      > `renaser.hoy.papel.<id>` queda sin leer en el teléfono), `MiGrupoEnHoy`, `TarjetaMentorHoy` y `TarjetaAdminHoy`, y la carpeta
+      > `features/hoy-por-papel/` pasó a `features/paneles-de-rol/`. «Mi grupo» y «Mis mentores» son filas de **Yo**, junto a
+      > «Administración». Ver la entrada del 2026-10-31.
     * **«Mi programa»** es el Hoy de siempre. Con otro papel a la vista, lo del programa propio (la frase del día,
       coherencia y racha, el orbe y todas sus tarjetas) queda **oculto pero montado** (`display: 'none'`): volver es
       instantáneo y no pierde la conversación del orbe. La línea de fase, día y puntos queda siempre.
+      > **Corregido 2026-10-31 (pedido del dueño).** Ya no hay frase del día ni Coherencia / Racha en Hoy (están en Yo); lo del
+      > programa que se oculta es la raya dorada, la tarjeta de acciones, el orbe y las demás tarjetas. Ver la entrada del 2026-10-31.
+      > **Corregido 2026-10-31 (punto 16).** Lo de «Mi programa» oculto pero montado ya no aplica: no hay otro papel que mostrar en Hoy.
     * **«Mi grupo»** (`MiGrupoEnHoy`): el rótulo «Grupo Octubre · 6 aprendices» (abre el grupo entero, `MiCelulaScreen`) y una
       fila por aprendiz con su foto, su punto de color y su % del semáforo del grupo (`GET /mentor/groups/{g}/semaforo`, en el
       orden del servidor; sin número dice «—», nunca un 0 %). Tocar a uno abre su ficha de siempre (`AlumnoScreen`) y **volver
       regresa a Hoy**; abierta desde la pantalla del grupo o desde un aviso, vuelve a esa pantalla, como antes. Sin el semáforo
       (404, 403, sin red) la lista sale igual, con los nombres y sin color.
+      > **Corregido 2026-10-31 (punto 16).** «Mi grupo» ya no es una lista en Hoy: es la fila «Mi grupo» de Yo, que abre `MiCelulaScreen`
+      > (que ya lista a los aprendices con su semáforo) a pantalla completa con la cabecera «‹ Mi grupo». Tocar a un aprendiz abre su
+      > ficha de siempre y volver regresa a «Mi grupo»; la flecha y el atrás del sistema suben un nivel por vez hasta Yo.
     * **«Mis mentores»** (`MisMentoresEnHoy`, solo el líder): **Resultado por grupo · Últimos 7 días**, una fila por grupo con
       su nombre, su mentor (o «Sin mentor asignado» en rojo), el punto de color y el % del promedio —los del servidor, sin
       recalcular—; abajo, «Consultas de mentores» con «N sin responder» (abre la bandeja de tickets de siempre) y «Mentores y
@@ -801,6 +1156,10 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       sábado `/semaforo/grupos` sigue abriendo el resumen por grupos de siempre, con sus totales. Al abrirse la lista vuelve a
       los últimos 7 días y relee. La cifra de consultas sale de la primera página de la bandeja (30): si hay más páginas dice
       «N+», y no afirma «nada sin responder» si no vio todas. Cada lista es independiente: sin una, las otras siguen.
+      > **Corregido 2026-10-31 (punto 16).** «Mis mentores» es la fila «Mis mentores» de Yo (`MisMentoresEnYo`, con la cabecera «‹ Mis
+      > mentores»; la lista es la misma, `ListaDeMisMentores`): Resultado por grupo, Consultas de mentores, Mentores y reporte del mes y
+      > Todos los aprendices, con las mismas reglas. Cada pantalla que cuelga de ella vuelve a «Mis mentores» y esta, a Yo (un nivel por
+      > vez, `vistaDeRegreso`). Las rutas del aviso `/semaforo/grupos` no cambian: abre el mismo resumen, ahora desde Yo.
     * **Se borraron las tres tarjetas sueltas del líder** en Hoy (`TarjetaMentoresHoy`, `TarjetaBandejaHoy` y
       `TarjetaSemaforoGruposHoy`): sus pantallas se abren desde las filas de arriba. Deslizar para recargar relee la lista que
       está a la vista.
@@ -873,6 +1232,8 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       Radar de hoy» lo repite y su enlace pasa a «Abrir Mi Radar»), «Hoy no tienes Mi Radar» y la fila de Yo `Encendido · 05:30 a 22:30 · 17 veces`.
       Las fichas del mentor, del líder y de Administración (`CodigoRenaserDelAlumno`): `Mi Radar: encendido · 05:30 a 22:30 · 17 veces`, `… · hoy no
       tiene Radar` o `apagado`.
+      > **Corregido 2026-10-31.** En Hoy ya no se dice la línea «05:30 a 22:30 · 17 veces» ni «Toca para ver tu horario.»: la mitad queda con
+      > su estado y su título («Próxima a las 20:00»). La hoja «Tu Radar de hoy» sigue diciendo el horario y las veces.
     * **Lo único que se toca fuera de Yo, Hoy y las fichas** son dos cambios **aditivos**: `FilaDeDiasDelPlan` suma la prop opcional
       `etiquetaPropiaDelDia` (lo que oye el lector de pantalla de cada pastilla; Training y Plan no la pasan y su fila es la de siempre) e
       `InterruptorGrande` deja de dibujar la línea de descripción cuando va vacía.
@@ -944,10 +1305,14 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     * **Objetivos**: volver es la flecha de 24 en 48 con el nombre del eje (eran «← VOLVER A PLAN» y la píldora
       «02. OBJETIVOS (3 NIVELES)»), y debajo un `ControlSegmentado` Cuerpo / Negocio / Relaciones para cambiar de
       eje sin volver a Plan, en el orden de las tarjetas (el principal primero).
+      > **Corregido 2026-10-31 (pedido del dueño, «en Plan replica este formato»).** La sub-vista Objetivos, su flecha de volver y las
+      > «Prioridades clave» en lista ya no existen: Plan es una sola pantalla con el selector de eje arriba. Ver la entrada del 2026-10-31.
     * **«Arquitectura de tiempo»** dibuja las cuatro fases del programa con su largo (1–7, 8–34, 35–64, 65–90) y
       su nombre, y marca la que dice el backend; antes eran tres tramos de 30 días que contradecían la «Fase
       actual» de arriba. Los días salen de `FASES_EN_ORDEN` (`home/hooks/useResumenHome`, que ahora trae
       `primerDia`/`ultimoDia` y arma el rótulo con ellos), vía `objetivos/utils/arquitecturaDeTiempo`.
+      > **Corregido 2026-10-31 (pedido del dueño).** «Arquitectura de tiempo» ya no está en Plan (ya está en Yo); se borró con su
+      > cuenta (`arquitecturaDeTiempo`). `FASES_EN_ORDEN` y `faseEnCurso` siguen siendo la tabla única de fases.
     * **Íconos** (bloque `/* Plan */` de `Icon.tsx`: `activity`, `heartHandshake`, `calendarRange`; `flag` es el de
       Hoy y `compass` el de Yo):
       cada eje con el suyo (`objetivos/utils/iconoDelEje`: Cuerpo `activity`, Negocio `briefcase`, Relaciones
@@ -984,6 +1349,8 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       20. La propuesta flotante de SER, la cabecera y el vacío de su chat llevan `OrbeQuieto` (eran `spark` y el
       globo `chat`); el chat de Sparkie conservaba el globo (Sparkie se retiró el 2026-10-06, D-255). El Código Renaser conserva `target` hasta que entre
       `compass` del rediseño de Plan.
+      > **Corregido 2026-10-31.** Coherencia (`gauge`) y la racha (`flame`) ya no se dibujan en Hoy: el dueño quitó el bloque
+      > porque está en Yo. Los íconos siguen en `Icon.tsx` y Yo los usa.
     * **Tipo oración** en lugar de versales: fase, «Día 15 de 90», «Coherencia», «Racha», «días», «Tu
       acompañante», «Ver en el chat» (14 con chevron de 16), los estados del Código Renaser («En espera»,
       «Registrado», «Innegociable», «Abierto»), «Cancelar»/«Confirmar»/«Tomar foto» de la propuesta (también en
@@ -1012,6 +1379,8 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       (`evidence/components/MiniaturaDeEvidencia`, `expo-image`) encima del ícono del tipo, que sigue de
       respaldo: sin `fotoUrl` (texto, video, audio, o un backend anterior a D-252), con una URL que no es de
       la red, o si la foto no carga. La foto entra con un fundido de `DURACION_MS.fundido`.
+      > **Corregido 2026-10-31 (pedido del dueño).** La tira de tres miniaturas de Yo se quitó; queda la grilla de «Mis evidencias»
+      > (Ajustes → Tu proceso).
     * En la grilla del registro, tocar una foto la abre en grande en el visor que ya existía
       (`ImageViewerModal`, sin reacciones ni comentarios). En la tira, tocar sigue llevando al registro.
     * `fotoUrl` es opcional y tolerante en `evidenceSchemas.ts`; la clave de caché es la URL sin la firma
@@ -1305,6 +1674,8 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     * **Hoy no inventa datos**: sin `/home` (o sin el dato) los puntos dicen «— pts» (era `?? 100`: «100 pts»), la
       racha «—» y el récord «—» (eran `?? 0`), y la tarjeta del Mapa «lo que queda del programa» (con `diaConocido ??
       0` decía «los próximos 90 días»). Con el Mapa activo dice «para los próximos N días» (decía «para los N días»).
+      > **Corregido 2026-10-31.** Hoy solo dice ahora los puntos («— pts» sin dato); la racha y el récord se fueron con el bloque
+      > Coherencia / Racha.
     * **Área táctil del botón de la cabecera** (`ScreenHeader`, el engranaje de Yo y el de tu grupo en Comunidad):
       caja de 44 × 44 (era 38) con márgenes de −3, así que el ícono (24) y la altura de la cabecera (46) no cambian.
     * No se tocaron Plan, Training, la vista del Pacto firmado, las miniaturas de evidencias ni los íconos del Mapa.
@@ -1540,6 +1911,8 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       cambia.
       > **Corregido 2026-10-29 (spec 018).** La tarjeta suelta se fue: «Mis mentores» es ahora una opción del control de arriba
       > de Hoy (con «Mi programa» y «Mi grupo») y `LiderMentoresScreen` se abre desde la fila «Mentores y reporte del mes».
+      > **Corregido 2026-10-31 (punto 16).** «Mis mentores» ya no está en Hoy: es una fila de Yo (ver la entrada del 2026-10-31).
+      > `LiderMentoresScreen` se abre desde la fila «Mentores y reporte del mes» de esa pantalla.
     * Todo vive en `src/features/lider-mentores/`: padrón (un mentor por fila: grupo y aprendices, semáforo de sus
       aprendices, consultas sin responder y evaluación del mes), ficha (grupos, consultas, evaluación, «Lo que le
       dijiste», «Escribirle» y Reconocer / Sugerir / Alertar), la pantalla para escribir una observación (con la casilla
@@ -1688,6 +2061,9 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     * **Avisos** (D-218): `/caja` abre Yo con su caja y `/admin/caja/{aprendizId}` abre Hoy →
       Administración → Caja Renaser → esa caja. Los dos esperan a que se cierre una capa obligatoria
       (Código Renaser, arranque guiado, Pacto), como los de hábitos (`navigation/abrirAviso.ts`).
+      > **Corregido 2026-10-31 (punto 16).** El aviso del Admin abre ahora **Yo** → Administración → Caja Renaser → esa caja:
+      > `abrirCajaAprendizId` lo lee `YoScreen` (si la cuenta administra; si no, lo descarta), no Hoy, que ya no tiene nada de Administración.
+      > Lo mismo para «Ver ficha» desde la info de un chat (`abrirFichaAprendiz`). Sigue esperando a las capas obligatorias.
     * **Administración**: «Caja Renaser» en «Más» de la raíz (lista con pestañas por estado y conteo,
       buscador, «Descargar» la planilla), el detalle de cada caja (datos de envío, checklist, foto de
       la caja, formulario del envío, comprobante, carta, historial y un botón por acción) y «Contenido
@@ -2165,6 +2541,10 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
   * **Excepción autorizada por el dueño del producto — 2026-09-26 — tab `Hoy`, tarjetas del mentor
     y de administración (retroalimentación del 26/09, spec `docs/specs/RETROALIMENTACION_2026-09-26.md`
     del backend, S-1, S-6 y A-1).** Lo único que cambia en `Hoy`:
+    > **Corregido 2026-10-31 (pedido del dueño, punto 16).** Las dos tarjetas ya no están en Hoy (`TarjetaMentorHoy` y `TarjetaAdminHoy` se
+    > borraron): «Mi grupo» (mentor o guía que acompaña un grupo) y «Administración» son filas de **Yo**, junto a «Mis mentores» del líder.
+    > Las reglas de cuándo salen no cambian (el rol, si acompaña un grupo y las entradas de Soporte TI). Los rótulos «MI GRUPO» y
+    > «OPERACIÓN» de abajo ya no existen. El semáforo del grupo sigue dentro de «Mi grupo». Ver la entrada del 2026-10-31.
     * **Tarjeta «Mi grupo» (solo mentores):** su línea la dice el semáforo del grupo
       (`GET /api/v1/mentor/groups/{g}/semaforo`): «N necesitan tu ayuda esta semana» (rojo + amarillo),
       «Nadie necesita ayuda esta semana» o «N aprendices · todavía sin actividad para medir». Antes
@@ -2199,6 +2579,8 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       (`DAILY_CLASS`, Audioterapia, Pastilla, post de Comunidad, Despertar/Dormir), las rocas y el
       build web, que siguen con lo de antes. **Los de evidencia opcional no cambian**: siguen con el
       modal de las cuatro formas.
+      > **Corregido 2026-10-31 (pedido del dueño).** Los tres rituales ya no abren la cámara: piden solo texto («Escribir cómo me
+      > siento» y «¿Cómo te sientes después de realizar el ritual?»). Ver la entrada del 2026-10-31.
     * **`Training` — VER sobre un hábito ya cumplido ya no abre el modal de subida**: muestra lo
       que se escribió. Antes subía otra vez y terminaba en un `/complete` que el backend rechaza.
       Tampoco se abre la cámara para un registro `EXPIRADO`/`FALLIDO`.
@@ -2385,6 +2767,9 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     Autorizada junto con el diseño del semáforo de cumplimiento del aprendiz (D-168; el contrato vive
     en el backend, `docs/arquitectura/SEMAFORO_DEL_APRENDIZ.md`). El alcance es **solo** la tarjeta
     del semáforo, entre *Hábitos de hoy* y *Acciones y objetivos*, y el detalle que abre:
+    > **Corregido 2026-10-31 (pedido del dueño).** La tarjeta del semáforo y su detalle ya no están en Hoy: pasaron a Yo (en el lugar del
+    > gráfico «Tu cumplimiento»), con las mismas reglas. El aviso del sábado entra por Hoy y abre el detalle en Yo (`abrirSemaforo`). Ver
+    > la entrada del 2026-10-31.
     * La tarjeta aparece solo si `GET /api/v1/home` trae `semaforo` distinto de `null`. Para quien no
       se mide, y con un backend que todavía no lo manda, Hoy queda exactamente como estaba.
     * El detalle (`features/semaforo/screens/SemaforoScreen.tsx`) es estado de Hoy, como las vistas
@@ -2406,6 +2791,11 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       > «Mis mentores» y la bandeja, su fila «Consultas de mentores». El aviso `/semaforo/grupos` sigue abriendo este resumen.
     Una excepción puntual **no abre** el tab: cualquier otro cambio sobre los cinco principales
     vuelve a necesitar autorización explícita.
+      > **Corregido 2026-10-31 (punto 16).** Las escuchas de estos avisos ya no viven en `HoyScreen`: `/semaforo`, `/mentor/groups/{g}/semaforo`,
+      > `/mentor/groups/{g}/learners/{a}` y `/semaforo/grupos` entran por `navigation/abrirAviso.ts`, que lleva a **Yo** con un parámetro
+      > (`abrirSemaforo`, `abrirSemaforoDelGrupo`, `abrirAlumno`, `abrirSemaforoPorGrupos`) que Yo consume una sola vez. «Mi grupo» y la
+      > ficha esperan al padrón del grupo; el resumen por grupos abre «Mis mentores» al líder y el semáforo de Administración a quien
+      > administra. No esperan a las capas obligatorias, como antes.
   * **Excepción autorizada por el dueño del producto — 2026-09-22 — tabs `Training` y `Plan`.**
     Dos pedidos del dueño ese día, sobre capturas:
     * **`Training` — la Audioterapia Semanal abre con la MISMA hoja que la Pastilla Renacer.**
@@ -2863,6 +3253,8 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       —uno por persona y por día, con su nombre, el hábito que más le cuesta o el que mejor le va y cuánto le falta para
       el siguiente color—: la app NO transforma el texto. Sale todos los días, también sin color (inicio, pausa, sin
       programa, cuenta en pausa, graduado). El lector de pantalla lo lee: el texto se suma a la etiqueta de la tarjeta.
+      > **Corregido 2026-10-31.** La tarjeta (con este mensaje y su búho) ya no está en Hoy: pasó a Yo, en el lugar del gráfico «Tu
+      > cumplimiento». El mensaje se dibuja igual (`MensajeDelSemaforo` dentro de `TarjetaSemaforoHoy`) y sale de `/home` como siempre.
     * **Los 15 stickers** (WebP de 512, sin texto en la imagen, 5 dorados para lo que se celebra y 10 azules) viven en
       `assets/stickers/semaforo/`, y `semaforo/data/stickersDelSemaforo.ts` es el único lugar que los nombra (la prueba
       frena que el catálogo del servidor use uno que falte). Un nombre desconocido, vacío o una imagen que no carga
@@ -3156,6 +3548,9 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       «Más opciones»). El fénix de Hoy, sin SER, queda como imagen (su ánimo a la vista). **«Eliminar mi cuenta» nunca se
       esconde** (Google Play exige que se encuentre): con `cuenta.eliminar` no disponible, la fila abre la página pública
       `/eliminar-cuenta` en el navegador (`abrirEliminarCuentaEnLaWeb`, `features/legal/enlacesLegales.ts`).
+      > **Corregido 2026-10-31 (punto 16).** «En Hoy las tarjetas de Administración, Mi grupo, Mis mentores, tickets, semáforo»: esas
+      > entradas ya no están en Hoy sino en Yo (filas «Administración», «Mi grupo» y «Mis mentores»; el semáforo propio, en su tarjeta de
+      > Yo) y se esconden con los mismos interruptores. En Hoy queda el próximo evento.
     * **Pestaña sin nada disponible**: Training, o Comunidad sin ninguna sección con interruptor (Testimonios sola no la
       sostiene), quedan con «Esta sección todavía no está disponible para tu cuenta.» (`SeccionNoDisponible`), sin el
       ícono de mantenimiento ni «Reintentar». Las pestañas nunca desaparecen.
@@ -3218,6 +3613,8 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       Hoy (`abrirMapa` de `MapaRenacimientoContext`: el Mapa reemplaza a las pestañas). Texto de 16, botón de 52, sin
       animación (se ve de vez en cuando y no reemplaza nada que se esté usando). **Con el Mapa activo, Plan es
       exactamente el de siempre.**
+      > **Corregido 2026-10-31.** Objetivos dejó de ser una sub-vista: `PuertaDelMapa` se dibuja en la pantalla principal de Plan, en lugar
+      > del selector de eje y de todo lo del eje, con la misma regla.
     * **Cómo se sabe si el Mapa está activo** (`objetivos/hooks/usePuertaDeObjetivos`, decisión pura en
       `objetivos/utils/puertaDeObjetivos`): lo mismo que lee la tarjeta de Hoy —«activo» en el borrador del teléfono o
       `GET /api/v1/mapa-renacimiento` con `stageCompleted`, que solo puede confirmar—. A diferencia de Hoy, Plan no
@@ -3237,6 +3634,9 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       15–20 min.» (era «Convierte lo aprendido en un plan claro para …») y la línea de «Acciones y objetivos» sin objetivo
       dice «Tu objetivo de 90 días nace de tu Mapa de Renacimiento.» (era «Define tu objetivo en Plan para sostener la
       dirección.», que mandaba a un lugar donde ya no se puede).
+      > **Corregido 2026-10-31.** La línea de «Acciones y objetivos» ya no existe: la tarjeta de abajo (con «Prioridad #1 del día» y
+      > «Define tu objetivo en Plan…») se reemplazó por `TarjetaAccionDeHoy`, arriba, que sin Mapa activo dice «Tu objetivo de 90
+      > días nace de tu Mapa de Renacimiento.» con «Hacer mi Mapa». Ver la entrada del 2026-10-31.
     * **Rechazo del servidor, tolerante**: `PUT /api/v1/rocks/master/{eje}` puede responder `MAPA_PENDIENTE` (código
       tentativo, 409 o 403; el backend lo decide). `useRocasMaestras.definir` devuelve `mapaPendiente: true` con el
       mensaje del servidor (`objetivos/utils/mapaPendiente`) y Plan lo muestra con «Ahora no» / **«Hacer mi Mapa»**; el
@@ -3376,6 +3776,75 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     * **Hace falta un APK nuevo** (solo JavaScript: ni `package.json`, ni `app.json`, ni código nativo; la app no se
       actualiza por aire). Backend nuevo, ninguno.
 
+  * **Cambio por pedido del dueño — 2026-10-31 — tab `Comunidad` (Muro) y Administración: ocultar y eliminar publicaciones, solo
+    ADMIN y ALCHEMIST** (sin backend nuevo: `WallController` ya tenía todo, con `MODERATE_WALL`). Textual: «una función para
+    Administrador y Alquimista para eliminar publicaciones, que solo les salga a estos roles». Motivo: una persona subió una
+    publicación en blanco al Muro. El dueño eligió «Ocultar y eliminar». Lo que cambia y nada más:
+    * **El «…» de cada publicación del Muro** (`TarjetaPublicacionMuro`, prop nueva `puedeModerar`), arriba a la derecha, junto a
+      la insignia del día: área de 48 que no agranda la cabecera (márgenes negativos), nombre «Opciones de moderación» y el ícono
+      `ellipsis` (Lucide, caja de 24, `s24`; nuevo en `Icon.tsx`). **Solo lo ve ADMIN o ALCHEMIST** (`usePuedeModerarElMuro`): el
+      rol de la sesión Y `canAdminister` de `GET /mentor/context` (la misma condición que muestra Administración y que
+      `MODERATE_WALL`); un fallo de esa consulta o un backend anterior lo dejan oculto. Ni el líder, ni el mentor, ni la guía, ni el
+      aprendiz —**ni el autor de la publicación**— lo ven; y a quien no puede ni se le hace el pedido de capacidades
+      (`useCapacidades({ activo })`, parámetro nuevo y opcional: sin él, el hook es el de siempre). Una publicación que todavía se
+      está subiendo (`pendiente`) no lo lleva. Sin animación nueva: `Presionable`.
+    * **La hoja del «…»** (`HojaDeModeracionDelMuro`, sobre `HojaDesdeAbajo`; una sola para todo el Muro): «Ocultar publicación»,
+      con «Deja de verse en el Muro. Puedes devolverla desde Administración.», y «Eliminar para siempre», en rojo. Eliminar pide
+      confirmación con el `Alert` de `components/Alerta` y su botón destructivo: «¿Eliminar esta publicación para siempre?
+      También se borran sus comentarios, reacciones y fotos. No se puede deshacer.» (la hoja queda abierta debajo: cancelar no
+      pierde dónde se estaba). Mientras trabaja, las dos filas se apagan y la que corre dice «Ocultando…» / «Eliminando…».
+    * **Eliminar desde el Muro son DOS pedidos** (hallazgo al leer el servidor): `DELETE /wall/{id}/permanent` solo actúa sobre una
+      publicación OCULTA —sobre una visible responde 404, igual que sobre una que no existe—, así que la app primero oculta
+      (`DELETE /wall/{id}`) y después borra. Un 404 al ocultar no corta (puede que otra cuenta ya la haya ocultado); si se ocultó y el
+      borrado falla, la publicación sale igual de la lista y el diálogo dice que quedó oculta y que se termina desde Administración
+      → Más opciones → Publicaciones ocultas. Lo que se borra (fotos del almacenamiento, comentarios, reacciones) lo decide el
+      servidor; la app no lo recalcula.
+    * **Al terminar**: la publicación sale de la lista en el acto (`quitarPublicacion` de `useWallFeed`), la hoja se cierra,
+      `tacto.logro()` y una `ConfirmacionEnLinea` —«Publicación oculta» / «Publicación eliminada»— que **flota arriba del Muro** (no
+      va en el encabezado de la lista: quien modera suele estar a mitad del Muro y la tarjeta que tocó ya no está). El Muro se relee
+      **en silencio** (`releerEnSilencio`: sin `loading`, sin volver arriba, conservando los comentarios abiertos, las que se están
+      publicando y lo traído más abajo; `fusionarPrimeraPagina` decide el cursor) y la tarjeta «última evidencia» de Hoy da por
+      vencida su lectura. Los dos avisos viajan por un emisor de pocas líneas (`community/events/muroModerado`).
+      > **Corregido 2026-10-31 (el dueño, tras el E2E: «salió de fondo y se sobreponía a lo que había, arruinando la experiencia del
+      > usuario»).** Decía que la línea «Publicación oculta / eliminada» era una `ConfirmacionEnLinea` que flotaba arriba del Muro.
+      > Salía semitransparente y encima de los círculos de las secciones («Muro», «Eventos»). Ahora es **`AvisoDeAbajo`**
+      > (`components/AvisoDeAbajo.tsx`), un snackbar como los de WhatsApp o Instagram: **abajo**, nunca sobre la cabecera ni los
+      > círculos; fondo **opaco** (`cardBgAlt`), borde (`borderStrong`) y sombra suave; el ✓ dorado y el texto de 16 px; sin recibir
+      > toques. Va **encima de los botones flotantes de SER** con la cuenta del «Deshacer» de Pasar lista (`alturaDelAviso` =
+      > `ALTO_TAB_BAR + SEPARACION + DIAMETRO + 8` + borde seguro, de `renasia/components/lugarDelLanzador`): como el orbe baja con
+      > la barra de pestañas cuando se esconde al desplazar, encima de él el aviso queda a la vista con la barra a la vista o
+      > escondida. Movimiento: entra con fundido y 8 px en 200 ms con ease-out fuerte y sale en 150 ms; con «reducir movimiento», solo
+      > fundido; se va solo a los 2,5 s; un aviso nuevo con otro a la vista reinicia la cuenta. Lo usan el Muro y «Publicaciones
+      > ocultas» de Administración («Publicación devuelta al Muro»). `ConfirmacionEnLinea` no cambió. Prueba: `avisoDeAbajo`.
+    * **Errores**: un 403 dice «No tienes permiso para moderar el Muro.»; un 404 saca la publicación de la lista sin error ni
+      aviso; los demás, en un diálogo con el mensaje del servidor. El 503 de «Muro apagado» y el 403 de «solo lectura» de Soporte TI
+      siguen su camino de siempre (`apiFetch`).
+    * **Administración → Más opciones → «Publicaciones ocultas»** (`PublicacionesOcultasScreen`, vista nueva de la pila de
+      `AdminScreen`; sigue la disponibilidad del Muro, `CLAVES.muro`): la cola de `GET /wall/hidden` paginada por cursor («Ver más
+      publicaciones»). Cada una con su autor (foto o iniciales), la fecha («30 de octubre, 21:04» en la hora del teléfono), el texto
+      recortado a dos líneas (o «Sin texto») y la miniatura de su primera foto, si tiene; y dos botones de 52: **«Devolver al
+      Muro»** (`POST /wall/{id}/restore`) y **«Eliminar para siempre»** (`DELETE /wall/{id}/permanent`, con la misma confirmación).
+      Cargando, vacío («No hay publicaciones ocultas.») y error con «Reintentar» (un 403 no ofrece reintentar). Devolver una
+      publicación hace que aparezca en el Muro aunque ya esté abierto (el aviso de arriba). El atrás del sistema vuelve a «Más
+      opciones». La fila «Categorías del muro y conocimiento» de «Desde el panel web» ya no dice «Moderación» ni que «moderar exige
+      ver la publicación entera»: eso ya se hace desde la app.
+    * **Esquemas tolerantes**: la cola de ocultas valida cada fila por separado (`paginaDeOcultasTolerante`): una fila rota se pierde
+      ELLA y no la página; un cursor que no es texto significa «no hay más». Una publicación en blanco (sin texto ni fotos), que es
+      justo lo que motivó esto, es una fila válida. Las escrituras no leen el cuerpo de la respuesta (`{ id }`).
+    * **No cambian**: el diseño de la tarjeta para quien no modera, los permisos (el servidor autoriza cada llamada), el autor
+      que oculta lo suyo por otro camino (no hay botón para eso), los comentarios, Hoy, Plan, Training y Yo. **No se tocó el visor
+      «Ver publicación»** de las fichas del mentor, del líder y de Administración (`VisorDePublicacion`): es una hoja dentro de otra
+      hoja y moderar ahí obligaría a refrescar la ficha; queda para otra vez si se pide.
+    * **Pruebas**: Jest `moderacionDelMuro` (rol + servidor, el orden ocultar → borrar, los 403 y 404, la fusión de la relectura,
+      la fecha local), `moderacionDelMuroApi` (rutas, verbos y una fila rota), `usePuedeModerarElMuro` (los siete roles; ni el autor),
+      `moderarDesdeLaTarjeta` (el «…» solo con permiso, 48, nombre, `ellipsis`), `useModeracionDelMuro` (ocultar saca la
+      publicación, eliminar pide confirmación y no manda nada antes, 403 y 404), `usePublicacionesOcultas` (la lista devuelve y
+      elimina), `muroSeReleeAlModerar`, `publicacionesOcultasEnAdministracion` y `moderarElMuroEnComunidad`. Maestro, **escritos y
+      sin correr**: `.maestro/moderar-muro/01` (admin: «…» → ocultar → «Publicaciones ocultas» → devolver → «…» → eliminar) y `02`
+      (aprendiz: no hay «…»).
+    * **Hace falta un APK nuevo** (solo JavaScript: ni `package.json`, ni `app.json`, ni código nativo; la app no se actualiza por
+      aire). Backend nuevo, ninguno.
+
 ## 2. 📱 RESPONSIVIDAD UNIVERSAL (XIAOMI, ANDROID, IOS Y TABLETS)
 * **Cero Doble Scroll**: NUNCA coloques un contenedor con `maxHeight` fijo o scroll interno dentro de otro `ScrollView`. Toda pantalla debe tener UN ÚNICO contenedor de scroll fluido con `contentContainerStyle={{ flexGrow: 1, paddingBottom: 36 }}`.
 * **Adaptabilidad a Xiaomi y Pantallas Altas (20:9 / 19.5:9)**:
@@ -3404,7 +3873,11 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
 
 ## 4. 👁️ TIPOGRAFÍA, CONTRASTE Y ACCESIBILIDAD (UX/IA)
 * **Grosor y Claridad**: Prohibido usar fuentes ultrafinas (`300Light` o `200ExtraLight`) para lectura prolongada. Usar siempre **`Jost_400Regular`**, **`Jost_500Medium`** y **`Jost_700Bold`**.
+  > **Corregido 2026-10-31 (pedido del dueño).** La fuente de la app es **Inter**, no Jost: usa siempre los roles de `src/theme/fuentes.ts`
+  > (`fuentes.regular`, `.media`, `.seminegrita`, `.negrita`), nunca un nombre de archivo. Las pesas ultrafinas siguen prohibidas (ni se cargan).
 * **Serif editorial, SOLO en display** *(agregado 2026-09-14)*: **`Fraunces_600SemiBold`** y **`Fraunces_700Bold`** se usan únicamente en los tokens `t.hero` y `t.screenTitle` (≥ 24 px). **Nada que se lea en párrafo la toca**: texto corrido, inputs, cláusulas y etiquetas siguen en Jost, que es lo que esta regla protege. Entró porque la jerarquía estaba construida sobre `letterSpacing` (el `hero` llegaba a 8) en vez de sobre familia y peso, y eso hacía que cada pantalla se leyera como plantilla. Si alguna vez se quiere volver atrás, es un valor en `theme/tokens.ts` y dos imports en `App.tsx`.
+  > **Corregido 2026-10-31 (pedido del dueño).** Ya no hay serif: el display también es Inter (`fuentes.display`, hoy la Bold, porque el paquete no trae el corte Display); la regla de que **nada que se lea en párrafo usa el display** sigue. Fraunces se fue del proyecto.
+* **La fuente es una regla global, en un solo archivo** *(agregado 2026-10-31, pedido del dueño: «como un CSS global»)*: el nombre de la fuente se escribe **solo** en `src/theme/fuentes.ts`, que exporta **roles** (`fuentes.regular`, `.media`, `.seminegrita`, `.negrita`, `.display`). Ningún otro archivo de `src/` (ni `App.tsx`) escribe `Inter_…`, `Jost_…` ni `Fraunces_…`, ni un `fontFamily` con un texto: pide el rol o usa los tokens `t.*`. `theme/__tests__/fuenteUnica.test.ts` lo vigila. Cambiar la fuente de toda la app es tocar ese archivo.
 * **El espaciado de letras no es jerarquía** *(agregado 2026-09-14)*: un titular grande lleva tracking **negativo** (junta, pesa); sólo los rótulos chicos en versales (`micro`, `sectionTitle`) llevan tracking positivo, y por debajo de 1.5. Estirar un texto para que parezca importante es el gesto que hay que evitar.
   > **Corregido 2026-10-05 (decisión del dueño).** Un rótulo en **tipo oración** no lleva espaciado: `MicroLabel` (el rótulo de sección de toda la app) pasó a 13 px, `Jost_700Bold` y `letterSpacing: 0`; con el 1,1 de `t.micro` se leía «H á b i t o s». El tracking positivo queda solo para lo que todavía va en versales.
 * **Cifras que cambian, tabulares**: todo número que se actualiza en pantalla (día de programa, puntos, racha) va con `fontVariant: ['tabular-nums']` — ya está en el token `t.metric`. Sin eso, pasar de 9 a 10 corre de lugar todo lo que tenga al lado.

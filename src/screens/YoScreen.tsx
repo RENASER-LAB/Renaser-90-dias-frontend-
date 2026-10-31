@@ -1,3 +1,4 @@
+import { fuentes } from '../theme/fuentes';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Image,
@@ -12,7 +13,6 @@ import {
 import { Alert } from '../components/Alerta';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BORDES_DE_UNA_PESTANA } from '../navigation/bordesDeUnaPestana';
-import Svg, { Path, Circle } from 'react-native-svg';
 import { useTheme } from '../theme/ThemeContext';
 import { space } from '../theme/tokens';
 import { useResponsive } from '../theme/responsive';
@@ -21,7 +21,9 @@ import { InterruptoresDeAvisos } from '../features/alarmas/components/Interrupto
 import { SeccionAlarmas } from '../features/alarmas/components/SeccionAlarmas';
 import { useSystemBackHandler } from '../hooks/useSystemBackHandler';
 import { MicroLabel, ScreenHeader } from '../components/ui';
-import { AdminScreen } from '../features/admin/screens/AdminScreen';
+import { AdminScreen, type EntradaDeAdmin } from '../features/admin/screens/AdminScreen';
+import { usePanelesDeRol } from '../features/paneles-de-rol/hooks/usePanelesDeRol';
+import { PantallaDelPanelDeRol } from '../features/paneles-de-rol/screens/PantallaDelPanelDeRol';
 import { useCapacidades } from '../features/admin/hooks/useCapacidades';
 import { EntradaAlProgramaPropio } from '../features/programa/components/EntradaAlProgramaPropio';
 import { useDiaUnoPorElegir } from '../features/programa/hooks/useDiaUnoPorElegir';
@@ -39,6 +41,7 @@ import { PactoFirmado } from '../features/yo/components/PactoFirmado';
 import { TarjetaDeFase } from '../features/yo/components/TarjetaDeFase';
 import { animalConfigurado } from '../features/yo/utils/animalConfigurado';
 import { faseEnCurso } from '../features/home/utils/faseEnCurso';
+import { textoDelRecord } from '../features/home/utils/textoDelRecord';
 import { useAnimalesDeFase } from '../features/yo/hooks/useAnimalesDeFase';
 import { ANIMAL_DE_FASE } from '../features/yo/data/animalesDeFase';
 import { useCelebracionDelDia } from '../features/fenix/hooks/useCelebracionDelDia';
@@ -102,14 +105,15 @@ import { esSoporteTi } from '../features/soporte-ti/utils/rolSoporteTi';
 import { useDisponibilidad } from '../features/plataforma/estado/useFuncionalidad';
 import { CLAVES } from '../features/plataforma/utils/clavesDeLaApp';
 import { useMiSemaforo } from '../features/semaforo/hooks/useMiSemaforo';
-import { hayQuePedirMiSemaforo } from '../features/semaforo/utils/entradasDelSemaforo';
-import { curvaDeEvolucion } from '../features/semaforo/utils/curvaDeEvolucion';
-import { dichoDelDia } from '../features/semaforo/utils/lecturaDelSemaforo';
+import { diasParaLaTarjeta, hayQuePedirMiSemaforo } from '../features/semaforo/utils/entradasDelSemaforo';
+import { TarjetaSemaforoHoy } from '../features/semaforo/components/TarjetaSemaforoHoy';
+import { SemaforoScreen } from '../features/semaforo/screens/SemaforoScreen';
+import { usePublicarSemaforoDeHoy } from '../features/semaforo/estado/useSemaforoVigente';
 import { ElegirHabitoParaFotoModal } from '../features/habits/components/ElegirHabitoParaFotoModal';
 import { RegistroConFotoModal } from '../features/habits/components/RegistroConFotoModal';
 import { useRegistroConFoto } from '../features/habits/hooks/useRegistroConFoto';
 import { useRenombreLocal } from '../features/habits/hooks/useRenombreDeHabito';
-import { tituloVisible } from '../features/habits/utils/renombreDeHabito';
+import { tituloParaMostrar } from '../features/habits/utils/tituloEnTipoOracion';
 import type { HabitoParaFoto } from '../features/habits/utils/habitosParaFotoDeHoy';
 import { medicionPedidaDe } from '../features/habits/utils/registroConFoto';
 import { useOcultarBarraAlDesplazar } from '../navigation/barraAlDesplazar/BarraInferior';
@@ -119,7 +123,7 @@ import { useOcultarBarraAlDesplazar } from '../navigation/barraAlDesplazar/Barra
 // =========================================================================
 /* Corregido 2026-09-29 («nada en Yo puede aparentar»): acá vivían `EVOLUCION` y `PATRONES`, las
    coordenadas fijas de la curva de «Tu Evolución» y del gráfico de «Patrones» — la misma subida
-   para cualquiera, desde el día 1. La curva ahora sale del semáforo (`curvaDeEvolucion`) y
+   para cualquiera, desde el día 1. La curva salía del semáforo (`curvaDeEvolucion`, que se borró el 2026-10-31: en su lugar va la tarjeta del semáforo) y
    «Patrones» se quitó: no hay un dato que sea "tus patrones". También se quitaron `LOGROS_DEL_PROGRAMA`
    (metas sin fuente y sin registro de logros detrás) y la sub-vista del video de activación (no hay
    video). */
@@ -278,7 +282,7 @@ export default function YoScreen() {
   const { guardarCapitulo, avanzarEstado, aceptarHito, guardarFirma } = usePersistenciaOnboarding();
   const { rs, isTablet, horizontalPadding, contentMaxWidth } = useResponsive();
   const { user, logout, actualizarPerfil, refrescarPerfil } = useAuth();
-  const { resumen } = useResumenHome();
+  const { resumen, recargar: recargarResumen } = useResumenHome();
   /* La misma cuenta que «Fase actual» y «Arquitectura de tiempo» de Plan (`faseEnCurso`): número, nombre,
      rango y día dentro de la fase salen de un solo lugar, así Yo no puede decir otra cosa que Plan. */
   const faseActual = faseEnCurso(resumen?.fase, resumen?.diaPrograma);
@@ -289,14 +293,16 @@ export default function YoScreen() {
     resumen ? { rachaActual: resumen.rachaActual, habitosHoy: resumen.habitosHoy, fase: resumen.fase } : null,
   );
   const animalesConfigurados = useAnimalesDeFase();
-  const moreSize = rs(56);
 
-  /* «Tu Evolución»: el cumplimiento de cada día de la ventana del semáforo. Mismas fuentes que la
-     tarjeta de Hoy: los días del campo `semaforo` de `/home` y, si un backend viejo no los manda,
-     `GET /me/semaforo`. Sin semáforo (apagado, o quien no se mide) no hay curva. */
-  const miSemaforo = useMiSemaforo(hayQuePedirMiSemaforo(resumen?.semaforo, false));
-  const diasDelSemaforo = resumen?.semaforo?.dias ?? miSemaforo.detalle?.vigente?.dias ?? [];
-  const curva = curvaDeEvolucion(diasDelSemaforo);
+  /* El semáforo propio (2026-10-31, pedido del dueño: la tarjeta pasó de Hoy a Yo, en lugar del gráfico de línea «Tu cumplimiento»).
+     Mismas reglas que tenía en Hoy: aparece solo si `/home` trae `semaforo`; las barras salen de `semaforo.dias` o, si un backend
+     viejo no los manda, de `GET /me/semaforo` (`useMiSemaforo` + `hayQuePedirMiSemaforo`); con el detalle abierto, siempre se lee.
+     Tocarla abre el detalle (`SemaforoScreen`) acá mismo, con su flecha de volver. */
+  const [enSemaforo, setEnSemaforo] = useState(false);
+  const miSemaforo = useMiSemaforo(hayQuePedirMiSemaforo(resumen?.semaforo, enSemaforo));
+  /* El fénix de Hoy toma su ánimo del color del semáforo (`semaforoVigente`): Hoy publica el de `/home`; Yo publica además el del
+     detalle cuando lo lee, sin pedir nada de más. */
+  usePublicarSemaforoDeHoy(resumen?.semaforo, Boolean(resumen), miSemaforo.detalle);
 
   /* Los avisos de éxito (perfil guardado, Pacto sellado…) son una línea bajo la cabecera de la
      vista donde se ve lo hecho, y se van solos (`ConfirmacionEnLinea`). Los errores siguen en
@@ -332,7 +338,7 @@ export default function YoScreen() {
         void iniciarRegistroConFoto(
           {
             registroId: track.id,
-            titulo: tituloVisible({ id: track.habitoId, title: track.tituloHabito }, renombre.titulos),
+            titulo: tituloParaMostrar({ id: track.habitoId, title: track.tituloHabito }, renombre.titulos),
             conPregunta,
             // D-226: pista para los km (la que manda es la del registro fresco).
             medicion: medicionPedidaDe(track),
@@ -369,8 +375,13 @@ export default function YoScreen() {
   const memoriaRenasia = useMemoriaDeRenasia(activeView === 'hub' || activeView === 'memoria_renasia');
   /* Segunda puerta a Administracion, ademas de la de Hoy. Dos entradas y ningun sexto tab: el
      administrador llega desde donde este, y los cinco tabs quedan como estaban (SDD 003, ARF-01). */
-  const { capacidades, error: errorCapacidades, recargar: recargarCapacidades } = useCapacidades();
+  const { capacidades, cargando: cargandoCapacidades, error: errorCapacidades, recargar: recargarCapacidades } = useCapacidades();
   const [enAdministracion, setEnAdministracion] = useState(false);
+  /* Por dónde entra Administración: `inicio` desde la fila; el aviso del sábado entra al semáforo, el de una caja a esa caja y «Ver
+     ficha» desde la info de un chat a esa ficha (2026-10-31: antes lo atendía Hoy). La clave vuelve a montar la pila de vistas
+     para que entre por ahí aunque ya estuviera abierta. */
+  const [adminAbreEn, setAdminAbreEn] = useState<EntradaDeAdmin>('inicio');
+  const [montajeAdmin, setMontajeAdmin] = useState(0);
   /* Caja Renaser (D-219, pedido del dueño del 28/09): la fila «Tu Caja Renaser» y su pantalla. La
      fila aparece solo si el servidor dice que hay algo que mostrarle (desde el día 8, sin pausa y en
      Perú). El aviso `/caja` llega con `abrirCaja` (lo deja `AbridorDeAvisos`, D-218). */
@@ -422,11 +433,55 @@ export default function YoScreen() {
   const veSoporteTi = esSoporteTi(user?.role);
   const rutaDeYo = useRoute();
   const navegacionDeYo = useNavigation();
+  /* Quita parámetros de la ruta de Yo: se consumen una sola vez (volver atrás no los repite). */
+  const limpiarParametros = useCallback(
+    (claves: readonly string[]) => {
+      (navegacionDeYo as unknown as { setParams: (p: Record<string, unknown>) => void }).setParams(
+        Object.fromEntries(claves.map(clave => [clave, undefined])),
+      );
+    },
+    [navegacionDeYo],
+  );
+  const abrirAdministracionEn = useCallback((entrada: EntradaDeAdmin) => {
+    setAdminAbreEn(entrada);
+    setMontajeAdmin(n => n + 1);
+    setEnAdministracion(true);
+  }, []);
+  /* Los paneles de rol —«Mi grupo» (mentor o guía) y «Mis mentores» (líder)— como filas de esta lista, junto a Administración
+     (2026-10-31, pedido del dueño: «debe ir dentro de Administración, lo mismo de cada uno, no en Hoy de cada rol»). Hoy es solo el
+     programa propio. Los avisos que abrían esas vistas desde Hoy traen a Yo con un parámetro y los atiende el hook. */
+  const abrirElSemaforoDeAdministracion = useCallback(() => abrirAdministracionEn('semaforo'), [abrirAdministracionEn]);
+  const paneles = usePanelesDeRol({
+    params: rutaDeYo.params,
+    limpiarParametros,
+    administrar: capacidades.administrar,
+    cargandoCapacidades,
+    abrirElSemaforoDeAdministracion,
+  });
+  /* Avisos de Administración: la caja de un aprendiz (`/admin/caja/{id}`, D-219) y «Ver ficha» desde la info de un chat
+     (D-222). Esperan a saber si la cuenta administra (lo dice el servidor); si no, se descartan. */
+  useEffect(() => {
+    const p = rutaDeYo.params as { abrirCajaAprendizId?: string; abrirFichaAprendiz?: { id: string; fullName: string | null } } | undefined;
+    const aprendizId = p?.abrirCajaAprendizId;
+    const persona = p?.abrirFichaAprendiz;
+    if ((!aprendizId && !persona?.id) || cargandoCapacidades) return;
+    limpiarParametros(['abrirCajaAprendizId', 'abrirFichaAprendiz']);
+    if (!capacidades.administrar) return;
+    if (aprendizId) abrirAdministracionEn({ caja: aprendizId });
+    else if (persona?.id) abrirAdministracionEn({ ficha: { id: persona.id, fullName: persona.fullName } });
+  }, [rutaDeYo.params, cargandoCapacidades, capacidades.administrar, limpiarParametros, abrirAdministracionEn]);
   useEffect(() => {
     const params = rutaDeYo.params as { abrirCaja?: boolean } | undefined;
     if (!params?.abrirCaja) return;
     setEnCaja(true);
     (navegacionDeYo as unknown as { setParams: (p: Record<string, unknown>) => void }).setParams({ abrirCaja: undefined });
+  }, [rutaDeYo.params, navegacionDeYo]);
+  /* El aviso del sábado (`/semaforo`, «Tu semana ya cerró») lo recibe Hoy, que siempre está montada, y trae a Yo con `abrirSemaforo`. */
+  useEffect(() => {
+    const params = rutaDeYo.params as { abrirSemaforo?: boolean } | undefined;
+    if (!params?.abrirSemaforo) return;
+    setEnSemaforo(true);
+    (navegacionDeYo as unknown as { setParams: (p: Record<string, unknown>) => void }).setParams({ abrirSemaforo: undefined });
   }, [rutaDeYo.params, navegacionDeYo]);
   useEffect(() => {
     const params = rutaDeYo.params as { abrirMiRadar?: boolean } | undefined;
@@ -611,11 +666,30 @@ export default function YoScreen() {
   }
 
   if (enAdministracion && capacidades.administrar) {
-    return <AdminScreen onSalir={() => setEnAdministracion(false)} />;
+    return (
+      <AdminScreen
+        key={montajeAdmin}
+        abrirEn={adminAbreEn}
+        onSalir={() => {
+          setEnAdministracion(false);
+          setAdminAbreEn('inicio');
+        }}
+      />
+    );
+  }
+
+  /* Un panel de rol a pantalla completa: «Mi grupo» o «Mis mentores», con las pantallas que cuelgan de ellos. */
+  if (paneles.abierto) {
+    return <PantallaDelPanelDeRol paneles={paneles} />;
   }
 
   if (eliminandoCuenta) {
     return <EliminarMiCuentaScreen onVolver={() => setEliminandoCuenta(false)} onCerrada={logout} />;
+  }
+
+  /* El detalle del semáforo, a pantalla completa como la Caja: su flecha de volver y el atrás del sistema regresan a Yo. */
+  if (enSemaforo) {
+    return <SemaforoScreen semaforo={miSemaforo} onVolver={() => setEnSemaforo(false)} onPausaCambiada={() => void recargarResumen()} />;
   }
 
   if (enCaja && miCaja.visible && miCaja.caja) {
@@ -749,21 +823,15 @@ export default function YoScreen() {
                 />
               </View>
             ) : null}
-            {/* La curva era un dibujo fijo (ver `curvaDeEvolucion`). Ahora es el cumplimiento de
-                cada día del semáforo; con menos de dos días medidos no se dibuja. */}
-            {curva ? (
-              <View
-                accessible
-                accessibilityLabel={`Tu cumplimiento de los últimos ${diasDelSemaforo.length} días. ${diasDelSemaforo.map(dichoDelDia).join('. ')}.`}
-                style={{ marginTop: 14, gap: 6 }}
-              >
-                <Svg width="100%" height={78} viewBox="0 0 320 78">
-                  <Path d={curva.trazo} stroke={c.gold} strokeWidth={1.5} strokeLinecap="round" fill="none" />
-                  {curva.puntos.map(p => <Circle key={p.clave} cx={p.x} cy={p.y} r={2.8} fill={c.gold} />)}
-                </Svg>
-                <Text style={[t.small, { color: c.micro }]}>
-                  Tu cumplimiento · últimos {diasDelSemaforo.length} días
-                </Text>
+            {/* Tu semáforo (2026-10-31): la tarjeta de Hoy, tal cual, en el lugar del gráfico «Tu cumplimiento · últimos 7 días». Solo si
+                `/home` trae `semaforo`; sin él no hay tarjeta (y el gráfico viejo no vuelve). */}
+            {resumen?.semaforo && esDisponible(CLAVES.semaforo) ? (
+              <View style={{ marginTop: 14 }}>
+                <TarjetaSemaforoHoy
+                  semaforo={resumen.semaforo}
+                  dias={diasParaLaTarjeta(resumen.semaforo, miSemaforo.detalle)}
+                  onAbrir={() => setEnSemaforo(true)}
+                />
               </View>
             ) : null}
           </View>
@@ -788,7 +856,7 @@ export default function YoScreen() {
                   {resumen?.coherencia == null ? '—' : Math.round(resumen.coherencia)}
                 </Text>
                 {resumen?.coherencia == null ? null : (
-                  <Text style={{ fontFamily: 'Jost_500Medium', fontSize: 15, color: c.goldInk }}>%</Text>
+                  <Text style={{ fontFamily: fuentes.media, fontSize: 15, color: c.goldInk }}>%</Text>
                 )}
               </View>
             </View>
@@ -814,72 +882,16 @@ export default function YoScreen() {
                   <Text style={[t.small, { color: c.textSoft }]}>{resumen.rachaActual === 1 ? 'día' : 'días'}</Text>
                 )}
               </View>
+              {/* El récord de racha (2026-10-31, pedido del dueño: lo que Hoy mostraba como «Récord histórico» y se quitó con
+                  Coherencia / Racha): una línea chica bajo la racha. Sin dato (`/home` caído o sin el campo) no se dibuja. */}
+              {typeof resumen?.rachaMaxima === 'number' ? (
+                <Text style={[t.small, styles.statRecord, { color: c.textSoft }]}>{textoDelRecord(resumen.rachaMaxima)}</Text>
+              ) : null}
             </View>
           </View>
 
-          {/* EVIDENCIA */}
-          {esDisponible(CLAVES.evidencias) ? (
-          <View>
-            <MicroLabel>Evidencia</MicroLabel>
-            {/* Antes: tres cajas "FOTO" fijas y un "+6" escrito a mano, que daban a entender
-                nueve evidencias a cualquiera. Ahora sale del mismo listado real que la
-                sub-pantalla, y cuando no hay ninguna se dice, no se rellena. */}
-            {cargandoEvidencias ? (
-              <Text style={[t.body, { color: c.textSoft, marginTop: 12 }]}>
-                Cargando tus evidencias…
-              </Text>
-            ) : evidencias.length === 0 ? (
-              <Pressable
-                onPress={() => setActiveView('evidencias')}
-                accessibilityRole="button"
-                accessibilityLabel="Ver tus evidencias"
-                style={[styles.rowCard, { borderColor: c.border, backgroundColor: c.cardBg, marginTop: 12 }]}
-              >
-                <Icon name="camera" size={18} color={c.chevron} />
-                {/* Era 12.5: es el texto principal de la fila, no una etiqueta de ayuda. */}
-                <Text style={[t.body, { color: c.textSoft, flex: 1 }]}>
-                  {errorEvidencias ? 'No se pudieron cargar tus evidencias.' : 'Todavía no subiste evidencias.'}
-                </Text>
-                <Icon name="chevron" size={12} color={c.chevron} />
-              </Pressable>
-            ) : (
-              <View style={{ flexDirection: 'row', gap: space.gap, marginTop: 12 }}>
-                {evidencias.slice(0, 3).map(ev => (
-                  <Pressable
-                    key={ev.id}
-                    onPress={() => setActiveView('evidencias')}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Ver evidencia del ${fechaDeEvidencia(ev.subidaEn ?? ev.timestampExif)}`}
-                    style={{ flex: 1 }}
-                  >
-                    {/* El borde se queda: estas miniaturas se tocan. Lo que se fue es el
-                        `borderRadius: 10` suelto — ahora sale del token de radio interno.
-                        2026-10-05 (D-252): la foto real, con el ícono del tipo de respaldo. */}
-                    <MiniaturaDeEvidencia
-                      evidencia={ev}
-                      style={[
-                        styles.more,
-                        { height: moreSize, borderColor: c.border, backgroundColor: c.cardBg },
-                      ]}
-                      tamanoIcono={18}
-                      colorIcono={c.goldInk}
-                    />
-                  </Pressable>
-                ))}
-                {evidencias.length > 3 && (
-                  <Pressable
-                    onPress={() => setActiveView('evidencias')}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Ver las otras ${evidencias.length - 3} evidencias`}
-                    style={[styles.more, { width: moreSize, height: moreSize, borderColor: c.border, backgroundColor: c.cardBg }]}
-                  >
-                    <Text style={[t.body, { color: c.textSoft }]}>+{evidencias.length - 3}</Text>
-                  </Pressable>
-                )}
-              </View>
-            )}
-          </View>
-          ) : null}
+          {/* La tira «Evidencia» (las tres miniaturas) se quitó el 2026-10-31, pedido del dueño: «Mis evidencias» sigue en
+              Ajustes → Tu proceso. */}
 
           {/* Corregido 2026-09-29: acá estaban «Reflexión diaria» e «Identidad», dos tarjetas que al
               tocarlas solo mostraban un aviso con una frase fija, y «Patrones», un gráfico dibujado
@@ -927,6 +939,28 @@ export default function YoScreen() {
                 detalle="Grupos, personas y solicitudes"
                 etiqueta="Abrir Administración"
                 onPress={() => setEnAdministracion(true)}
+              />
+            ) : null}
+            {/* MI GRUPO (mentor o guía que acompaña un grupo) y MIS MENTORES (líder): como Administración, no en Hoy (2026-10-31).
+                Las reglas son las de siempre: el rol, si acompaña un grupo y las entradas de Soporte TI. */}
+            {paneles.filas.miGrupo ? (
+              <FilaDeAjuste
+                key="mi-grupo"
+                icono="users"
+                titulo="Mi grupo"
+                detalle="Tus aprendices"
+                etiqueta="Abrir Mi grupo"
+                onPress={() => paneles.ir({ tipo: 'miGrupo', enfocarSemaforo: false })}
+              />
+            ) : null}
+            {paneles.filas.misMentores ? (
+              <FilaDeAjuste
+                key="mis-mentores"
+                icono="award"
+                titulo="Mis mentores"
+                detalle="Grupos, consultas y reporte del mes"
+                etiqueta="Abrir Mis mentores"
+                onPress={() => paneles.ir({ tipo: 'misMentores' })}
               />
             ) : null}
             {/* TUVE UNA EMERGENCIA (D-244): solo si el servidor dice que esta cuenta puede pedirlo. */}
@@ -986,7 +1020,7 @@ export default function YoScreen() {
               {profileAvatar ? (
                 <Image source={{ uri: profileAvatar }} style={styles.avatarImageLarge} accessibilityLabel="Foto de perfil" />
               ) : (
-                <Text style={{ color: c.goldInk, fontSize: 18, fontFamily: 'Jost_700Bold' }}>{profileInitials}</Text>
+                <Text style={{ color: c.goldInk, fontSize: 18, fontFamily: fuentes.negrita }}>{profileInitials}</Text>
               )}
             </View>
             <View style={{ flex: 1, gap: 3 }}>
@@ -1304,7 +1338,7 @@ export default function YoScreen() {
                           styles.cifras,
                           {
                             color: enProgreso ? c.onGold : c.goldInk,
-                            fontFamily: 'Jost_700Bold',
+                            fontFamily: fuentes.negrita,
                             fontSize: 14,
                           },
                         ]}
@@ -1373,18 +1407,18 @@ export default function YoScreen() {
               un compromiso en letra de nota al pie. Todo pasa a `t.body` (15/22). */}
           <View style={[styles.pactoDocumentCard, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
             <View style={{ borderBottomWidth: 1, borderBottomColor: c.divider, paddingBottom: 12 }}>
-              <Text style={{ fontFamily: 'Jost_700Bold', color: c.goldInk, fontSize: 16, fontStyle: 'italic' }}>
+              <Text style={{ fontFamily: fuentes.negrita, color: c.goldInk, fontSize: 16, fontStyle: 'italic' }}>
                 Pacto de Renacimiento
               </Text>
               <Text style={[t.small, { color: c.textSoft, marginTop: 4 }]}>Acto fundacional</Text>
             </View>
 
             <Text style={[t.body, { color: c.text }]}>
-              Yo, <Text style={{ color: c.goldInk, fontFamily: 'Jost_700Bold' }}>{profileName}</Text>, en pleno uso de mi consciencia, declaro este pacto conmigo mismo en presencia del sistema RENASER y de la versión más alta de mí.
+              Yo, <Text style={{ color: c.goldInk, fontFamily: fuentes.negrita }}>{profileName}</Text>, en pleno uso de mi consciencia, declaro este pacto conmigo mismo en presencia del sistema RENASER y de la versión más alta de mí.
             </Text>
 
             <Text style={[t.body, { color: c.text }]}>
-              <Text style={{ fontFamily: 'Jost_700Bold', color: c.textStrong }}>Renuncio a la mediocridad.</Text> Renuncio al desdén con que he tratado mi cuerpo, mi mente, mis emociones y mi tiempo.
+              <Text style={{ fontFamily: fuentes.negrita, color: c.textStrong }}>Renuncio a la mediocridad.</Text> Renuncio al desdén con que he tratado mi cuerpo, mi mente, mis emociones y mi tiempo.
             </Text>
 
             <View style={{ gap: 10, marginVertical: 4 }}>
@@ -1395,7 +1429,7 @@ export default function YoScreen() {
               ))}
             </View>
 
-            <Text style={[t.body, { color: c.goldInk, fontFamily: 'Jost_700Bold', borderTopWidth: 1, borderTopColor: c.divider, paddingTop: 12 }]}>
+            <Text style={[t.body, { color: c.goldInk, fontFamily: fuentes.negrita, borderTopWidth: 1, borderTopColor: c.divider, paddingTop: 12 }]}>
               Si lo cumplo, gano una identidad nueva. Si lo abandono, pierdo la versión de mí que ya estaba esperando del otro lado.
             </Text>
           </View>
@@ -1419,7 +1453,7 @@ export default function YoScreen() {
                   Android no le robe el gesto al dedo, y en modo dual, porque el nombre caligráfico
                   que se veía antes era —sin serlo— la firma electrónica que §3 pide ofrecer. */}
               <View style={styles.signatureBox}>
-                <Text style={{ fontFamily: 'Jost_700Bold', color: c.goldInk, fontSize: 15, fontStyle: 'italic' }}>
+                <Text style={{ fontFamily: fuentes.negrita, color: c.goldInk, fontSize: 15, fontStyle: 'italic' }}>
                   Firma con tu dedo
                 </Text>
 
@@ -1499,7 +1533,7 @@ export default function YoScreen() {
                 accessibilityLabel="Subir la foto de un hábito de hoy"
                 style={[styles.createHabitBtn, { backgroundColor: c.gold }]}
               >
-                <Text style={[t.small, { color: c.onGold, fontFamily: 'Jost_700Bold' }]}>+ Subir Foto</Text>
+                <Text style={[t.small, { color: c.onGold, fontFamily: fuentes.negrita }]}>+ Subir Foto</Text>
               </Pressable>
             ) : null}
           </View>
@@ -1635,14 +1669,14 @@ export default function YoScreen() {
                 {profileAvatar ? (
                   <Image source={{ uri: profileAvatar }} style={styles.avatarImageLarge} accessibilityLabel="Foto de perfil" />
                 ) : (
-                  <Text style={{ color: c.goldInk, fontSize: 24, fontFamily: 'Jost_700Bold' }}>{profileInitials}</Text>
+                  <Text style={{ color: c.goldInk, fontSize: 24, fontFamily: fuentes.negrita }}>{profileInitials}</Text>
                 )}
               </View>
               <View style={[styles.insigniaCamara, { backgroundColor: c.gold, borderColor: c.bg }]}>
                 <Icon name="camera" size={TAMANO_ICONO.chico} color={c.onGold} />
               </View>
             </View>
-            <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_500Medium', fontSize: 15 }]}>
+            <Text style={[t.small, { color: c.goldInk, fontFamily: fuentes.media, fontSize: 15 }]}>
               {subiendoAvatar ? 'Subiendo…' : 'Cambiar foto'}
             </Text>
           </Presionable>
@@ -1924,10 +1958,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   /** El nombre de un campo, en tipo oración (eran versales doradas con dos puntos: «NOMBRE COMPLETO:»). */
-  rotuloCampo: { fontFamily: 'Jost_500Medium', fontSize: 15, lineHeight: 20 },
+  rotuloCampo: { fontFamily: fuentes.media, fontSize: 15, lineHeight: 20 },
   avatarImage: { width: '100%', height: '100%', borderRadius: 22 },
   avatarImageLarge: { width: '100%', height: '100%', borderRadius: 35 },
-  avatarInitials: { fontSize: 15, fontFamily: 'Jost_700Bold' },
+  avatarInitials: { fontSize: 15, fontFamily: fuentes.negrita },
   /* Era una tarjeta con borde dorado de 1.5 que contenía otro disco con borde: dos rectángulos
      para presentar a una persona. Ahora es una fila de encabezado sobre el fondo de la pantalla,
      igual que la barra de estado de Hoy. */
@@ -1938,11 +1972,11 @@ const styles = StyleSheet.create({
   statBloque: { flex: 1 },
   /* Rótulo de bloque en tipo oración: 13 px en negrita y sin espaciar, el de «Coherencia» y «Racha»
      de Hoy (2026-10-05). Reemplaza las versales de `t.micro` con su `letterSpacing: 1.1`. */
-  rotulo: { fontFamily: 'Jost_700Bold', letterSpacing: 0 },
+  rotulo: { fontFamily: fuentes.negrita, letterSpacing: 0 },
+  /** «Récord: 3 días»: 13 px, el gris secundario y cifras tabulares. */
+  statRecord: { fontSize: 13, lineHeight: 18, marginTop: 2, fontVariant: ['tabular-nums'] },
   statCifra: { flexDirection: 'row', alignItems: 'baseline', gap: 2, marginTop: 6 },
   statSeparador: { width: 1, alignSelf: 'stretch' },
-  more: { borderRadius: space.radiusSm, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  rowCard: { borderWidth: 1, borderRadius: space.radius, minHeight: 48, paddingVertical: 14, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   /* Una barra de 6 px de alto no necesita contorno; el contraste lo da el color del riel. */
   progressBarBg: { height: 6, borderRadius: 3, overflow: 'hidden' },
   progressBarFill: { height: '100%', borderRadius: 3 },

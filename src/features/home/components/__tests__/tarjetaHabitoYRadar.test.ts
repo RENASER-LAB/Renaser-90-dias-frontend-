@@ -90,7 +90,7 @@ function montar(diaPrograma = 3) {
   act(() => {
     raiz = TestRenderer.create(
       React.createElement(TarjetaHabitoYRadar, {
-        habitos: { cifra: '8/18', titulo: 'RITUAL TIERRA - AGUA - FUEGO (mediodía)', detalle: 'Te toca ahora · 13:00 · quedan 10 pendientes', etiquetaAccesible: 'Abrir Training: RITUAL' },
+        habitos: { cifra: '8/18', titulo: 'RITUAL TIERRA - AGUA - FUEGO (mediodía)', etiquetaAccesible: 'Abrir Training: RITUAL' },
         onAbrirTraining,
         diaPrograma,
         inscrito: true,
@@ -122,12 +122,49 @@ afterEach(() => {
   onAbrirMiRadar.mockReset();
 });
 
+describe('sin línea de detalle (2026-10-31, pedido del dueño: «desaparece la información no relevante»)', () => {
+  it('cada mitad queda con el ícono y el rótulo, la línea de estado y el título; sin «Te toca ahora…» ni «Cinco preguntas, un minuto…»', () => {
+    mockRadar.actual = crearRadar();
+    montar();
+    const t = textos();
+    for (const queda of ['Hábitos de hoy', '8/18', 'RITUAL TIERRA - AGUA - FUEGO (mediodía)', 'Código Renaser', '13:00 · Innegociable', '¿Dónde estás ahora mismo?']) {
+      expect(t).toContain(queda);
+    }
+    for (const sobra of ['Te toca ahora', 'quedan', 'Cinco preguntas', 'Cierra a las', 'Responde hasta']) {
+      expect({ sobra, esta: t.includes(sobra) }).toEqual({ sobra, esta: false });
+    }
+  });
+
+  it('desde el día 8, ni «Cada hora entre tu Despertar…», ni «La siguiente a las…», ni «05:30 a 22:30 · 17 veces»', () => {
+    mockRadar.actual = desdeElOcho();
+    montar(10);
+    const t = textos();
+    for (const sobra of ['Cada hora entre', 'La siguiente a las', 'veces', 'Responde hasta', 'Toca para ver']) {
+      expect({ sobra, esta: t.includes(sobra) }).toEqual({ sobra, esta: false });
+    }
+    expect(botones()).toHaveLength(2);
+  });
+
+  it('las dos mitades siguen siendo botones con el mismo alto mínimo y sin hueco propio abajo (sin un renglón vacío)', () => {
+    mockRadar.actual = crearRadar();
+    montar();
+    for (const b of botones()) {
+      const estilo = StyleSheet.flatten(b.props.style({ pressed: false }));
+      expect(estilo).toMatchObject({ minHeight: 48, justifyContent: 'flex-start' });
+      // El último hijo de cada mitad es el título o el estado: ningún `Text` vacío al final.
+      const textosDeLaMitad = b.findAll(x => (x.type as unknown) === 'Text');
+      expect(textosDeLaMitad.length).toBeGreaterThan(0);
+      for (const tx of textosDeLaMitad) expect(React.Children.toArray(tx.props.children).join('').trim()).not.toBe('');
+    }
+  });
+});
+
 describe('las dos mitades', () => {
   it('hábitos y Radar lado a lado, cada una con su rótulo, y la de hábitos lleva a Training', () => {
     mockRadar.actual = crearRadar();
     montar();
     const t = textos();
-    for (const esperado of ['Hábitos de hoy', '8/18', 'RITUAL TIERRA - AGUA - FUEGO (mediodía)', 'Te toca ahora · 13:00 · quedan 10 pendientes', 'Código Renaser', '13:00 · Innegociable', '¿Dónde estás ahora mismo?']) {
+    for (const esperado of ['Hábitos de hoy', '8/18', 'RITUAL TIERRA - AGUA - FUEGO (mediodía)', 'Código Renaser', '13:00 · Innegociable', '¿Dónde estás ahora mismo?']) {
       expect(t).toContain(esperado);
     }
     expect(botones()).toHaveLength(2);
@@ -143,7 +180,7 @@ describe('las dos mitades', () => {
       expect(e).toMatchObject({ flex: 1, alignItems: 'stretch', justifyContent: 'flex-start' });
     }
     const textos = raiz!.root.findAll(x => (x.type as unknown) === 'Text' && StyleSheet.flatten(x.props.style)?.textAlign != null);
-    expect(textos.length).toBeGreaterThanOrEqual(6);
+    expect(textos.length).toBeGreaterThanOrEqual(4);
     expect(textos.every(x => StyleSheet.flatten(x.props.style)?.textAlign === 'left')).toBe(true);
     expect(raiz!.root.findAll(x => StyleSheet.flatten(x.props.style)?.flexDirection === 'row' && x.props.accessibilityRole === undefined).length).toBeGreaterThan(0);
   });

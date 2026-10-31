@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Linking, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';
@@ -95,7 +96,7 @@ function CuerpoDeLaEvidencia({
       ))}
       {respuestaTexto && !respuestaYaLeidaComoEvidencia(respuestaTexto, textosLeidos) ? (
         <View style={{ gap: 6 }}>
-          <Text accessibilityRole="header" style={[t.body, { color: c.textStrong, fontSize: 16, fontFamily: 'Jost_700Bold' }]}>
+          <Text accessibilityRole="header" style={[t.body, { color: c.textStrong, fontSize: 16, fontFamily: fuentes.negrita }]}>
             Lo que escribió
           </Text>
           <Text selectable style={[t.body, { color: c.text, fontSize: 16, lineHeight: 24 }]}>

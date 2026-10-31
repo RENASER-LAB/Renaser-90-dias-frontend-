@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react';
 import {
   Pressable,
@@ -542,5 +543,5 @@ const estilos = StyleSheet.create({
   accion: { flex: 1, paddingHorizontal: 10 },
   casilla: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 48, alignSelf: 'flex-start' },
   cuadro: { width: 26, height: 26, borderRadius: 7, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
-  casillaTexto: { fontFamily: 'Jost_500Medium', fontSize: LETRA.cuerpo + 1 },
+  casillaTexto: { fontFamily: fuentes.media, fontSize: LETRA.cuerpo + 1 },
 });

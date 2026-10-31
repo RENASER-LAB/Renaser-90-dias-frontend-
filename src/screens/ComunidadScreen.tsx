@@ -1,3 +1,4 @@
+import { fuentes } from '../theme/fuentes';
 import React, { useState, useMemo, useEffect, useCallback, useRef, useReducer } from 'react';
 import {
   View,
@@ -39,6 +40,7 @@ import { MicroLabel, ScreenHeader, AvatarPersona } from '../components/ui';
 import { Icon, IconName, TAMANO_ICONO } from '../components/Icon';
 import { GoldButton } from '../components/GoldButton';
 import { Presionable } from '../components/Presionable';
+import { AvisoDeAbajo } from '../components/AvisoDeAbajo';
 import { ConfirmacionEnLinea } from '../components/ConfirmacionEnLinea';
 import { tacto } from '../utils/tacto';
 import { separacionDeLaFila } from '../features/community/utils/filaDeMedallones';
@@ -76,6 +78,9 @@ import { avisarPostDiarioCerrado } from '../features/habits/events/avisoPostDiar
 import { ImageViewerModal, type ImageViewerItem } from '../features/community/components/ImageViewerModal';
 import { SharePostSheet } from '../features/community/components/SharePostSheet';
 import { HojaDeReacciones } from '../features/community/components/HojaDeReacciones';
+import { HojaDeModeracionDelMuro } from '../features/community/components/HojaDeModeracionDelMuro';
+import { useModeracionDelMuro } from '../features/community/hooks/useModeracionDelMuro';
+import { usePuedeModerarElMuro } from '../features/community/hooks/usePuedeModerarElMuro';
 import { NuevaPublicacion } from '../features/community/components/NuevaPublicacion';
 import { ControlSegmentado } from '../components/ControlSegmentado';
 import { useCursos } from '../features/academy/hooks/useCursos';
@@ -571,7 +576,7 @@ function SiguienteOFinalizar({ texto, abierto }: { texto: string; abierto: boole
   const color = abierto ? c.goldInk : c.textSoft;
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-      <Text style={[t.body, { color, fontFamily: abierto ? 'Jost_700Bold' : 'Jost_500Medium' }]}>{texto}</Text>
+      <Text style={[t.body, { color, fontFamily: abierto ? fuentes.negrita : fuentes.media }]}>{texto}</Text>
       {/* Con la lección sin completar, un candado (de línea, no 🔒); completada, el chevron. */}
       <Icon name={abierto ? 'chevron' : 'lock'} size={TAMANO_ICONO.chico} color={color} />
     </View>
@@ -588,7 +593,7 @@ function VerMasOMenos({ abierto }: { abierto: boolean }) {
           un segundo renglón que la caja (de un renglón de alto) no mostraba. En la tarjeta de la
           lista no pasaba porque ahí la caja caía en otra posición y redondeaba para arriba. 1 dp
           son 1 a 3 píxeles: más que lo que se pierde al redondear, en cualquier densidad. */}
-      <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold', paddingRight: 1 }]}>{abierto ? 'Ver menos' : 'Ver más'}</Text>
+      <Text style={[t.small, { color: c.goldInk, fontFamily: fuentes.negrita, paddingRight: 1 }]}>{abierto ? 'Ver menos' : 'Ver más'}</Text>
       {/* `chevron` apunta a la derecha: 90° baja (se abre), −90° sube (se cierra). */}
       <View style={{ transform: [{ rotate: abierto ? '-90deg' : '90deg' }] }}>
         <Icon name="chevron" size={TAMANO_ICONO.chico} color={c.goldInk} />
@@ -1205,6 +1210,7 @@ export default function ComunidadScreen() {
     cargarComentarios,
     agregarComentario: agregarComentarioRemoto,
     publicarOptimista,
+    quitarPublicacion,
     cargarMas: cargarMasPublicaciones,
     cargandoMas: muroCargandoMas,
     hayMas: hayMasPublicaciones,
@@ -1399,6 +1405,15 @@ export default function ComunidadScreen() {
   const [confirmacionMuro, setConfirmacionMuro] = useState<Confirmacion | null>(null);
   const [confirmacionDePublicacion, setConfirmacionDePublicacion] = useState<(Confirmacion & { postId: string }) | null>(null);
   const [confirmacionCursos, setConfirmacionCursos] = useState<Confirmacion | null>(null);
+  /* Moderar el Muro (ADMIN y ALCHEMIST, 2026-10-31). El aviso «Publicación oculta / eliminada» es un snackbar de abajo
+     (`AvisoDeAbajo`) y no va en el encabezado de la lista: quien modera suele estar a mitad del Muro y la tarjeta que
+     tocó ya no está. */
+  const [confirmacionModeracion, setConfirmacionModeracion] = useState<Confirmacion | null>(null);
+  const puedeModerarMuro = usePuedeModerarElMuro();
+  const moderacion = useModeracionDelMuro({
+    quitarPublicacion,
+    anunciar: texto => setConfirmacionModeracion({ clave: Date.now(), texto }),
+  });
 
   // Ventana Externa de Publicación a Pantalla Completa
   const [createPostModalVisible, setCreatePostModalVisible] = useState(false);
@@ -2197,10 +2212,10 @@ export default function ComunidadScreen() {
   const abrirFichaDesdeLaInfo = (integrante: IntegranteDeLaInfo) => {
     if (!integrante.usuarioId) return;
     /* D-222: el ADMIN/ALQUIMISTA abre la ficha de administración (la de Personas), que sirve a cualquier
-       aprendiz, esté o no en un grupo: se pide a Hoy, que es donde vive Administración. */
+       aprendiz, esté o no en un grupo: se pide a Yo, donde vive Administración (2026-10-31; antes, a Hoy). */
     if (esAdministracionDeGrupos(user?.role)) {
       setGroupInfoVisible(false);
-      irAPestana('Hoy', { abrirFichaAprendiz: { id: integrante.usuarioId, fullName: integrante.nombreCompleto } });
+      irAPestana('Yo', { abrirFichaAprendiz: { id: integrante.usuarioId, fullName: integrante.nombreCompleto } });
       return;
     }
     if (!celulaIdAbierto) return;
@@ -2627,6 +2642,10 @@ export default function ComunidadScreen() {
     enviarComentario: postId => void handleAddComment(postId),
     cerrarConfirmacion: postId =>
       setConfirmacionDePublicacion(actual => (actual?.postId === postId ? null : actual)),
+    moderar: postId => {
+      const publicacion = posts.find(p => p.id === postId);
+      if (publicacion) moderacion.abrir({ id: publicacion.id, autor: publicacion.author, resumen: publicacion.text });
+    },
   };
   const accionesPublicacion = useMemo<AccionesPublicacion>(
     () => ({
@@ -2646,6 +2665,7 @@ export default function ComunidadScreen() {
       escribirComentario: (id, texto) => accionesVigentes.current!.escribirComentario(id, texto),
       enviarComentario: id => accionesVigentes.current!.enviarComentario(id),
       cerrarConfirmacion: id => accionesVigentes.current!.cerrarConfirmacion(id),
+      moderar: id => accionesVigentes.current!.moderar(id),
     }),
     []
   );
@@ -2662,11 +2682,13 @@ export default function ComunidadScreen() {
         fotoComentario={commentPhotos[item.id]}
         comentariosExpandidos={expandedComments}
         confirmacion={confirmacionDePublicacion?.postId === item.id ? confirmacionDePublicacion : null}
+        puedeModerar={puedeModerarMuro}
         acciones={accionesPublicacion}
       />
     ),
     [
       confirmacionDePublicacion,
+      puedeModerarMuro,
       expandedPosts,
       openComments,
       publicacionDestacada,
@@ -2892,7 +2914,7 @@ export default function ComunidadScreen() {
                       textAlign: 'center',
                       letterSpacing: 0,
                       fontSize: 11,
-                      fontFamily: activa ? 'Jost_700Bold' : 'Jost_400Regular',
+                      fontFamily: activa ? fuentes.negrita : fuentes.regular,
                     },
                   ]}
                 >
@@ -2955,7 +2977,7 @@ export default function ComunidadScreen() {
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
                   <AvatarPersona nombre={nombreUsuario} avatarUrl={user?.avatarUrl} size={36} />
                   <View style={{ flex: 1, gap: 3 }}>
-                    <Text style={[t.body, { color: c.textStrong, fontFamily: 'Jost_500Medium' }]}>
+                    <Text style={[t.body, { color: c.textStrong, fontFamily: fuentes.media }]}>
                       ¿Qué conquistaste hoy, {primerNombreUsuario}?
                     </Text>
                     {/* Era 10 px: por debajo del mínimo de micro-etiqueta, y es la línea que
@@ -3045,6 +3067,12 @@ export default function ComunidadScreen() {
           removeClippedSubviews={false}
         />
       )}
+      {/* «Publicación oculta» / «Publicación eliminada» (moderación, 2026-10-31): un aviso tipo snackbar ABAJO, encima de los
+          botones flotantes de SER y de la barra de pestañas, con fondo opaco. Nunca sobre la cabecera ni los círculos de las
+          secciones (el primero se vio flotando arriba, transparente, mezclado con «Muro» y «Eventos»). No recibe toques. */}
+      {seccionActiva === 'muro' ? (
+        <AvisoDeAbajo aviso={confirmacionModeracion} onTerminar={() => setConfirmacionModeracion(null)} />
+      ) : null}
 
       {/* ========================================================================= */}
       {/* SECCIÓN EVENTOS (2026-09-26, E-5 a E-8)                                   */}
@@ -3135,7 +3163,7 @@ export default function ComunidadScreen() {
                     <Icon name="quote" size={28} color={c.goldInk} />
                   </View>
                   <View style={[styles.badgePill, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
-                    <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
+                    <Text style={[t.small, { color: c.goldInk, fontFamily: fuentes.negrita }]}>
                       Próximamente
                     </Text>
                   </View>
@@ -3258,14 +3286,14 @@ export default function ComunidadScreen() {
                   <View style={[styles.rankCircleNumber, { backgroundColor: c.gold }]}>
                     {/* Sin posición se pinta una raya sola: el "#-" que salía antes se leía como
                         un dato roto, no como un lugar todavía sin ocupar. */}
-                    <Text style={[t.micro, styles.cifras, { color: c.onGold, fontFamily: 'Jost_700Bold' }]}>
+                    <Text style={[t.micro, styles.cifras, { color: c.onGold, fontFamily: fuentes.negrita }]}>
                       {userRankEntry.rank === '-' ? '—' : `#${userRankEntry.rank}`}
                     </Text>
                   </View>
                   {/* Eran tres textos de 11 px con la familia escrita a mano. Pasan a los tokens,
                       que ya traen las cifras tabulares, y a tamaño de lectura. */}
                   <View style={{ flex: 1, gap: 3 }}>
-                    <Text style={[t.cardTitle, styles.cifras, { color: c.textStrong, fontSize: 15, fontFamily: 'Jost_700Bold' }]}>
+                    <Text style={[t.cardTitle, styles.cifras, { color: c.textStrong, fontSize: 15, fontFamily: fuentes.negrita }]}>
                       Tu Posición ({nombreUsuario})
                     </Text>
                     <Text style={[t.small, styles.cifras, { color: c.goldInk }]}>
@@ -3291,13 +3319,13 @@ export default function ComunidadScreen() {
                         u.isCurrentUser && { backgroundColor: c.cardBgAlt },
                       ]}
                     >
-                      <Text style={[t.small, styles.cifras, { color: u.medal ? c.goldInk : c.textSoft, fontFamily: 'Jost_700Bold', width: 34 }]}>
+                      <Text style={[t.small, styles.cifras, { color: u.medal ? c.goldInk : c.textSoft, fontFamily: fuentes.negrita, width: 34 }]}>
                         #{u.rank}
                       </Text>
-                      <Text style={[t.body, { color: c.textStrong, fontFamily: u.isCurrentUser ? 'Jost_700Bold' : 'Jost_400Regular', flex: 1 }]}>
+                      <Text style={[t.body, { color: c.textStrong, fontFamily: u.isCurrentUser ? fuentes.negrita : fuentes.regular, flex: 1 }]}>
                         {u.name}
                       </Text>
-                      <Text style={[t.small, styles.cifras, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
+                      <Text style={[t.small, styles.cifras, { color: c.goldInk, fontFamily: fuentes.negrita }]}>
                         {u.scoreText}
                       </Text>
                     </EntradaEscalonada>
@@ -3395,7 +3423,7 @@ export default function ComunidadScreen() {
                 <View style={styles.courseCoverHeader}>
                   <CursoPortada url={course.coverUrl} />
                   <View style={[styles.courseCategoryBadge, { backgroundColor: 'rgba(0,0,0,0.65)' }]}>
-                    <Text style={[t.small, { color: c.goldInk, fontSize: 12, lineHeight: 16, fontFamily: 'Jost_700Bold' }]}>
+                    <Text style={[t.small, { color: c.goldInk, fontSize: 12, lineHeight: 16, fontFamily: fuentes.negrita }]}>
                       {course.category}
                     </Text>
                   </View>
@@ -3435,7 +3463,7 @@ export default function ComunidadScreen() {
                       <Text style={[t.small, styles.cifras, { color: c.textSoft, fontSize: 12.5 }]}>
                         {course.totalResources} {course.totalResources === 1 ? 'Lección' : 'Lecciones'}
                       </Text>
-                      <Text style={[t.small, styles.cifras, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 12.5 }]}>
+                      <Text style={[t.small, styles.cifras, { color: c.goldInk, fontFamily: fuentes.negrita, fontSize: 12.5 }]}>
                         {obtenerProgresoCurso(course)}% Completado
                       </Text>
                     </View>
@@ -3445,7 +3473,7 @@ export default function ComunidadScreen() {
                   </View>
                   {/* Tipo oración y el chevron de verdad (2026-10-05): era «EXPLORAR CONTENIDO ›». */}
                   <View style={[styles.exploreBtn, { borderColor: c.gold, backgroundColor: c.cardBgAlt, flexDirection: 'row', gap: 8 }]}>
-                    <Text style={[t.body, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>Explorar contenido</Text>
+                    <Text style={[t.body, { color: c.goldInk, fontFamily: fuentes.negrita }]}>Explorar contenido</Text>
                     <Icon name="chevron" size={TAMANO_ICONO.chico} color={c.goldInk} />
                   </View>
                 </View>
@@ -3485,7 +3513,7 @@ export default function ComunidadScreen() {
               hitSlop={8}
             >
               <Icon name="arrowLeft" size={TAMANO_ICONO.grande} color={c.goldInk} />
-              <Text style={[t.body, { color: c.goldInk, fontFamily: 'Jost_500Medium' }]}>Volver a los cursos</Text>
+              <Text style={[t.body, { color: c.goldInk, fontFamily: fuentes.media }]}>Volver a los cursos</Text>
             </Pressable>
           </View>
 
@@ -3537,7 +3565,7 @@ export default function ComunidadScreen() {
           <View style={{ gap: space.gapLg, marginTop: space.gapLg, paddingBottom: 28 }}>
             {selectedCourse.sections.map(section => (
               <View key={section.id} style={styles.sectionCard}>
-                <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 0.8 }]}>
+                <Text style={[t.micro, { color: c.goldInk, fontFamily: fuentes.negrita, letterSpacing: 0.8 }]}>
                   {section.title}
                 </Text>
                 <View style={{ gap: 10 }}>
@@ -3586,7 +3614,7 @@ export default function ComunidadScreen() {
                               {
                                 color: completada ? c.goldInk : c.textStrong,
                                 fontSize: 15,
-                                fontFamily: completada ? 'Jost_700Bold' : 'Jost_500Medium',
+                                fontFamily: completada ? fuentes.negrita : fuentes.media,
                               },
                             ]}
                           >
@@ -3599,7 +3627,7 @@ export default function ComunidadScreen() {
                         {completada ? (
                           <View style={[styles.completedBadgePill, { backgroundColor: c.goldWash, flexDirection: 'row', gap: 4 }]}>
                             <Icon name="check" size={TAMANO_ICONO.chico} color={c.goldInk} />
-                            <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>Hecho</Text>
+                            <Text style={[t.small, { color: c.goldInk, fontFamily: fuentes.negrita }]}>Hecho</Text>
                           </View>
                         ) : bloqueada ? (
                           <Icon name="lock" size={TAMANO_ICONO.normal} color={c.textSoft} />
@@ -3650,7 +3678,7 @@ export default function ComunidadScreen() {
               hitSlop={8}
             >
               <Icon name="arrowLeft" size={TAMANO_ICONO.grande} color={c.goldInk} />
-              <Text style={[t.body, { color: c.goldInk, fontFamily: 'Jost_500Medium' }]}>Volver al curso</Text>
+              <Text style={[t.body, { color: c.goldInk, fontFamily: fuentes.media }]}>Volver al curso</Text>
             </Pressable>
           </View>
 
@@ -3742,7 +3770,7 @@ export default function ComunidadScreen() {
                     <View style={{ transform: [{ rotate: '180deg' }] }}>
                       <Icon name="chevron" size={TAMANO_ICONO.chico} color={c.textSoft} />
                     </View>
-                    <Text style={[t.body, { color: c.textSoft, fontFamily: 'Jost_500Medium' }]}>Anterior</Text>
+                    <Text style={[t.body, { color: c.textSoft, fontFamily: fuentes.media }]}>Anterior</Text>
                   </View>
                 </Pressable>
               ) : (
@@ -3991,7 +4019,7 @@ export default function ComunidadScreen() {
                         { borderColor: elegido ? c.goldInk : c.border, backgroundColor: elegido ? c.goldWash : c.cardBg },
                       ]}
                     >
-                      <Text numberOfLines={1} style={[t.body, { color: elegido ? c.goldInk : c.textSoft, fontFamily: 'Jost_500Medium' }]}>
+                      <Text numberOfLines={1} style={[t.body, { color: elegido ? c.goldInk : c.textSoft, fontFamily: fuentes.media }]}>
                         {g.cellName}
                       </Text>
                     </Pressable>
@@ -4031,7 +4059,7 @@ export default function ComunidadScreen() {
                 {integrantesDelGrupo.length > 0 && (
                   <View style={styles.tribuVerTodos}>
                     {/* Tipo oración (2026-10-05): era «VER TODOS» / «OCULTAR» en versales espaciadas. */}
-                    <Text numberOfLines={1} style={[t.body, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
+                    <Text numberOfLines={1} style={[t.body, { color: c.goldInk, fontFamily: fuentes.negrita }]}>
                       {integrantesAbiertos ? 'Ocultar' : 'Ver todos'}
                     </Text>
                     {/* El ícono `chevron` apunta a la derecha: girado 90° baja (cerrado, "se
@@ -4073,7 +4101,7 @@ export default function ComunidadScreen() {
                         },
                       ]}
                     >
-                      <Text style={[t.small, styles.cifras, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
+                      <Text style={[t.small, styles.cifras, { color: c.goldInk, fontFamily: fuentes.negrita }]}>
                         +{tribuRestantes}
                       </Text>
                     </View>
@@ -4655,13 +4683,13 @@ export default function ComunidadScreen() {
           {selectedMemberProfile && (
             <View style={[styles.profileModalCard, { borderColor: c.gold, backgroundColor: c.cardBg }]}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: c.divider, paddingBottom: 8 }}>
-                <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1 }]}>
+                <Text style={[t.micro, { color: c.goldInk, fontFamily: fuentes.negrita, letterSpacing: 1 }]}>
                   PERFIL DEL INTEGRANTE
                 </Text>
                 <Pressable onPress={() => setSelectedMemberProfile(null)}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
                 <Icon name="close" size={12} color={c.goldInk} />
-                <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>Cerrar</Text>
+                <Text style={[t.micro, { color: c.goldInk, fontFamily: fuentes.negrita }]}>Cerrar</Text>
               </View>
                 </Pressable>
               </View>
@@ -4694,7 +4722,7 @@ export default function ComunidadScreen() {
 
               <View style={[styles.focusCard, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}>
                 <Text style={[t.micro, { color: c.textSoft, fontSize: 10.5 }]}>ENFOQUE PRINCIPAL:</Text>
-                <Text style={[t.body, { color: c.textStrong, fontSize: 11.5, fontFamily: 'Jost_500Medium', marginTop: 2 }]}>
+                <Text style={[t.body, { color: c.textStrong, fontSize: 11.5, fontFamily: fuentes.media, marginTop: 2 }]}>
                   {selectedMemberProfile.focus}
                 </Text>
               </View>
@@ -4734,6 +4762,15 @@ export default function ComunidadScreen() {
           alAgregar: () => void handleAgregarFoto(),
           alQuitar: indice => setAttachedPhotos(prev => prev.filter((_, i) => i !== indice)),
         }}
+      />
+
+      {/* Moderar una publicación (ADMIN y ALCHEMIST, 2026-10-31): la hoja del «…» de la tarjeta. */}
+      <HojaDeModeracionDelMuro
+        publicacion={moderacion.publicacion}
+        ocupado={moderacion.ocupado}
+        alCerrar={moderacion.cerrar}
+        alOcultar={() => void moderacion.ocultar()}
+        alEliminar={moderacion.eliminar}
       />
 
       {/* ========================================================================= */}
@@ -4823,7 +4860,7 @@ export default function ComunidadScreen() {
  */
 const styles = StyleSheet.create({
   chatAviso: {
-    fontFamily: 'Jost_400Regular',
+    fontFamily: fuentes.regular,
     fontSize: 16,
     lineHeight: 23,
     textAlign: 'center',
@@ -5146,7 +5183,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 3,
     fontSize: 10.5,
-    fontFamily: 'Jost_700Bold',
+    fontFamily: fuentes.negrita,
   },
   /** El punto que late al lado del cronómetro mientras se graba. */
   grabandoPunto: {
@@ -5194,7 +5231,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   chatTextoCampo: {
-    fontFamily: 'Jost_400Regular',
+    fontFamily: fuentes.regular,
     fontSize: 17,
   },
   mediaOptionBtn: {
@@ -5212,7 +5249,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   avisoDelChat: {
-    fontFamily: 'Jost_500Medium',
+    fontFamily: fuentes.media,
     fontSize: 15,
     paddingHorizontal: 14,
     paddingVertical: 6,

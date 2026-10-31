@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { View, Text, Pressable, ActivityIndicator, StyleSheet } from 'react-native';
 
@@ -132,7 +133,7 @@ export function MensajeBurbuja({
                 hitSlop={{ top: 14, bottom: 14, left: 10, right: 10 }}
                 style={styles.reintentarBtn}
               >
-                <Text style={[t.micro, { color: c.goldInk, fontSize: 11, fontFamily: 'Jost_700Bold' }]}>
+                <Text style={[t.micro, { color: c.goldInk, fontSize: 11, fontFamily: fuentes.negrita }]}>
                   REINTENTAR
                 </Text>
               </Pressable>

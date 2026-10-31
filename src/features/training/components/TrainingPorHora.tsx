@@ -32,7 +32,6 @@ import {
   puntosDeHoy,
   type ItemDelDia,
 } from '../utils/itemsDelDia';
-import { lineaDelPrograma } from '../utils/lineaDelPrograma';
 import { contarElDia, textoDelResumenDeHoy } from '../utils/listaDelDia';
 import { fechaDelDiaUno, semanaDe, sePuedeLeerElDia, tituloDelDia } from '../utils/semanaDeTraining';
 import { vistaDeOtroDia } from '../utils/vistaDeOtroDia';
@@ -66,7 +65,6 @@ export function TrainingPorHora({
   diaElegido,
   onElegirDia,
   diaPrograma,
-  fase,
   titulos,
   eventosPrendidos,
   cierrePrendido = true,
@@ -100,7 +98,6 @@ export function TrainingPorHora({
   diaElegido: string | null;
   onElegirDia: (iso: string | null) => void;
   diaPrograma: number | null;
-  fase: string | null;
   titulos: Readonly<Record<string, string>>;
   eventosPrendidos: boolean;
   /**
@@ -313,14 +310,9 @@ export function TrainingPorHora({
         return textoDelResumenDeHoy(hechos, total, puntosDeHoy(itemsHoy));
       })()
     : otroDia?.resumen ?? '';
-  const programa = lineaDelPrograma(fase, diaPrograma);
 
   return (
     <View>
-      {programa ? (
-        <Text style={[t.small, { color: c.textSoft, fontVariant: ['tabular-nums'] }]}>{programa}</Text>
-      ) : null}
-
       <View style={estilos.titulo}>
         <Text accessibilityRole="header" style={[t.screenTitle, { color: c.textStrong }]}>
           {tituloDelDia(dia.iso)}

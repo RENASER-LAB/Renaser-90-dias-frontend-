@@ -145,7 +145,7 @@ function textos(r: ReactTestRenderer): string {
 
 async function abrirElHabito(r: ReactTestRenderer) {
   const filas = r.root.findAll(n => typeof n.props.onPress === 'function'
-    && n.findAll(x => (x.type as unknown) === 'Text' && x.props.children === 'JUGO VERDE').length > 0);
+    && n.findAll(x => (x.type as unknown) === 'Text' && x.props.children === 'Jugo verde').length > 0);
   await act(async () => {
     filas[filas.length - 1].props.onPress();
   });

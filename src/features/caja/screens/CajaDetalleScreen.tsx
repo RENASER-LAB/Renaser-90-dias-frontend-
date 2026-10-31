@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -317,7 +318,7 @@ function ReportarProblema({
               accessibilityState={{ selected: elegido }}
               style={[estilos.motivo, { borderColor: elegido ? c.danger : c.border, backgroundColor: c.cardBg }]}
             >
-              <Text style={[t.body, { color: c.textStrong, fontSize: 16, fontFamily: elegido ? 'Jost_700Bold' : 'Jost_400Regular' }]}>
+              <Text style={[t.body, { color: c.textStrong, fontSize: 16, fontFamily: elegido ? fuentes.negrita : fuentes.regular }]}>
                 {m.etiqueta}
               </Text>
             </Pressable>

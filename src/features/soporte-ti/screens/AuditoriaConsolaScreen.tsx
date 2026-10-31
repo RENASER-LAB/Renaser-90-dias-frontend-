@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -116,7 +117,7 @@ export function AuditoriaConsolaScreen({
               <Text style={[t.small, { color: c.textSoft, fontSize: 13 }]}>
                 {fechaYHora(cambio.creadoEn)} · {tipoDeCambio(cambio.tipo)}
               </Text>
-              {nombre ? <Text style={[t.body, { color: c.textStrong, fontSize: 16, fontFamily: 'Jost_500Medium' }]}>{nombre}</Text> : null}
+              {nombre ? <Text style={[t.body, { color: c.textStrong, fontSize: 16, fontFamily: fuentes.media }]}>{nombre}</Text> : null}
               {resumen ? <Text style={[t.body, { color: c.text, fontSize: 16 }]}>{resumen}</Text> : null}
               {cambio.motivo ? <Text style={ayuda}>Motivo: {cambio.motivo}</Text> : null}
               <Text style={ayuda}>{actor ? `Por ${actor}` : cambio.tipo?.toUpperCase() === 'AUTOMATICO' ? 'Lo hizo el sistema' : 'Sin autor registrado'}</Text>

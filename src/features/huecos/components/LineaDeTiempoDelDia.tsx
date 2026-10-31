@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
@@ -157,14 +158,14 @@ const estilos = StyleSheet.create({
   hora: {
     position: 'absolute',
     left: 0,
-    fontFamily: 'Jost_500Medium',
+    fontFamily: fuentes.media,
     fontSize: 12,
     fontVariant: ['tabular-nums'],
   },
   zona: { position: 'absolute', top: 0, bottom: 0, right: 0 },
   carril: { position: 'absolute' },
   bloque: { flex: 1, justifyContent: 'center', borderRadius: 8, borderWidth: StyleSheet.hairlineWidth, overflow: 'hidden', paddingHorizontal: 8 },
-  nombre: { fontFamily: 'Jost_500Medium', fontSize: 13 },
+  nombre: { fontFamily: fuentes.media, fontSize: 13 },
   hueco: {
     position: 'absolute',
     left: 0,
@@ -178,6 +179,6 @@ const estilos = StyleSheet.create({
     borderWidth: 1.5,
     overflow: 'hidden',
   },
-  duracion: { fontFamily: 'Jost_700Bold', fontSize: 13, flexShrink: 1 },
-  rango: { fontFamily: 'Jost_500Medium', fontSize: 13, fontVariant: ['tabular-nums'] },
+  duracion: { fontFamily: fuentes.negrita, fontSize: 13, flexShrink: 1 },
+  rango: { fontFamily: fuentes.media, fontSize: 13, fontVariant: ['tabular-nums'] },
 });

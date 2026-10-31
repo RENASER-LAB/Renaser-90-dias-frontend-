@@ -42,6 +42,11 @@ export function accionDeLaTarjeta(h: HabitoDeLaTarjeta): AccionDeLaTarjeta {
       return { icono: 'bookOpen', etiqueta: 'Clase' };
     case 'COMMUNITY_POST':
       return { icono: 'newspaper', etiqueta: 'Publicar' };
+    // Los rituales piden solo texto (2026-10-31).
+    case 'RITUAL_MORNING':
+    case 'RITUAL_MIDDAY':
+    case 'RITUAL_NIGHT':
+      return { icono: 'pencil', etiqueta: 'Escribir' };
     default:
       return { icono: 'camera', etiqueta: 'Subir' };
   }

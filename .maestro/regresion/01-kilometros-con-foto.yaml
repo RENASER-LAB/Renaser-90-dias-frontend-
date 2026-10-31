@@ -10,11 +10,11 @@ appId: com.renaser.app
 - runFlow: ../comun/abrir-training.yaml
 # Centrada: abajo a la derecha, la fila queda debajo del botón flotante de SER y el toque abre su chat.
 - scrollUntilVisible:
-    element: ".*KILÓMETROS DIARIOS.*"
+    element: "(?i).*KILÓMETROS DIARIOS.*"
     direction: DOWN
     centerElement: true
     timeout: 30000
-- tapOn: ".*KILÓMETROS DIARIOS.*"
+- tapOn: "(?i).*KILÓMETROS DIARIOS.*"
 # Con guía cargada, la fila abre la hoja del hábito con «Tomar foto» (la etiqueta es solo esas dos palabras); sin guía,
 # abre directo la hoja de origen.
 - runFlow:
@@ -50,7 +50,7 @@ appId: com.renaser.app
 - tapOn: "REGISTRAR"
 - runFlow: ../comun/cerrar-aviso-dev.yaml
 - extendedWaitUntil:
-    notVisible: "[0-9:]+, KILÓMETROS DIARIOS(, Te toca ahora|, Lo que sigue)?"
+    notVisible: "(?i)[0-9:]+, KILÓMETROS DIARIOS(, Te toca ahora|, Lo que sigue)?"
     timeout: 30000
 - scrollUntilVisible:
     element: ".* hechos? hoy"
@@ -58,7 +58,7 @@ appId: com.renaser.app
     timeout: 30000
 - tapOn: ".* hechos? hoy"
 - scrollUntilVisible:
-    element: ".*KILÓMETROS DIARIOS, hecho"
+    element: "(?i).*KILÓMETROS DIARIOS, hecho"
     direction: DOWN
     timeout: 20000
 - takeScreenshot: 01b-kilometros-cumplido

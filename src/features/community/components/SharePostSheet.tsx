@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';
@@ -161,7 +162,7 @@ function VistaPreviaDelPost({ post }: { post: SharePostTargetPost }) {
         />
       ) : null}
       <View style={styles.vistaPreviaTextos}>
-        <Text numberOfLines={1} style={[t.small, { color: c.goldInk, fontFamily: 'Jost_500Medium' }]}>
+        <Text numberOfLines={1} style={[t.small, { color: c.goldInk, fontFamily: fuentes.media }]}>
           {post.author || 'Renaser'}
         </Text>
         <Text numberOfLines={2} style={[t.small, { color: c.text }]}>
@@ -266,12 +267,12 @@ const styles = StyleSheet.create({
     gap: 1,
   },
   nombre: {
-    fontFamily: 'Jost_500Medium',
+    fontFamily: fuentes.media,
     fontSize: 16,
     lineHeight: 21,
   },
   detalle: {
-    fontFamily: 'Jost_400Regular',
+    fontFamily: fuentes.regular,
     fontSize: 14,
     lineHeight: 19,
   },

@@ -1,0 +1,55 @@
+# Plan con el formato de la referencia del dueño (2026-10-31). ESCRITO Y SIN CORRER. Sin «Arquitectura de tiempo», sin «Fase actual»,
+# sin las «Prioridades clave» en lista ni la sub-vista de Objetivos; con «Plan» / «Tu dirección en 90 días», el selector de eje con
+# ícono, el objetivo de 90 días, «Esta semana», «Acciones que mueven la meta», «Tu 80/20» y «Organizar mi semana ›».
+# Precondición: Mapa activo y la semana armada con acciones agendadas. cuenta: aprendiz
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "PLAN"
+- extendedWaitUntil:
+    visible: "Tu dirección en 90 días"
+    timeout: 30000
+- assertNotVisible: "Arquitectura de tiempo"
+- assertNotVisible: "Fase actual"
+- assertNotVisible: "Prioridades clave"
+- assertNotVisible: "Tus acciones de hoy.*"
+- assertVisible: "Cuerpo"
+- assertVisible: "Negocio"
+- assertVisible: "Relaciones"
+- assertVisible: "Tu objetivo de 90 días"
+- takeScreenshot: P03a-plan-formato-nuevo
+# Cambiar de eje: todo lo de abajo es del eje elegido.
+- tapOn: "Negocio"
+- assertVisible: "Esta semana.*"
+- takeScreenshot: P03b-eje-negocio
+- scrollUntilVisible:
+    element: "Acciones que mueven la meta"
+    direction: DOWN
+    timeout: 30000
+- scrollUntilVisible:
+    element: "Tu 80/20"
+    direction: DOWN
+    timeout: 30000
+- tapOn: "Tu 80/20"
+- extendedWaitUntil:
+    visible: "Prioriza lo que más acerca tu meta\\."
+    timeout: 10000
+- assertVisible: ".*la acción verde va primero.*"
+- takeScreenshot: P03c-hoja-80-20
+- back
+- scrollUntilVisible:
+    element: "Organizar mi semana"
+    direction: DOWN
+    timeout: 30000
+- takeScreenshot: P03d-organizar-mi-semana
+# Los tres puntos del objetivo abren la hoja de siempre (escribir o anotar avance).
+- scrollUntilVisible:
+    element: "Más opciones del objetivo"
+    direction: UP
+    timeout: 30000
+- tapOn: "Más opciones del objetivo"
+- extendedWaitUntil:
+    visible: "Tu objetivo de 90 días|Define tu objetivo de 90 días"
+    timeout: 10000
+- takeScreenshot: P03e-hoja-del-objetivo
+- back

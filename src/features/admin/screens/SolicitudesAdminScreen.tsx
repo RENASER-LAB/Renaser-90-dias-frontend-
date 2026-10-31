@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -256,7 +257,7 @@ export function SolicitudesAdminScreen({
             key={solicitud.id}
             style={[estilos.tarjeta, { backgroundColor: c.cardBg, borderColor: c.border, gap: 4 }]}
           >
-            <Text style={[t.body, { color: c.textStrong, fontSize: 18, fontFamily: 'Jost_500Medium' }]}>
+            <Text style={[t.body, { color: c.textStrong, fontSize: 18, fontFamily: fuentes.media }]}>
               {solicitud.fullName ?? 'Sin nombre'}
             </Text>
             <Text style={[t.body, { color: c.textSoft, fontSize: 16 }]}>{solicitud.email ?? 'Sin correo'}</Text>

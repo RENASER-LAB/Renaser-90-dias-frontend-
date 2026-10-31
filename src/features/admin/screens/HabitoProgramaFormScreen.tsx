@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useMemo, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated, { FadeIn, ReduceMotion } from 'react-native-reanimated';
@@ -264,7 +265,7 @@ export function HabitoProgramaFormScreen({
         <Seccion titulo="¿Para quién es?" detalle="Un cambio de roles rige desde mañana; lo de hoy se respeta.">
           <View style={[estilos.interruptor, { backgroundColor: c.cardBg, borderColor: c.border }]}>
             <View style={{ flex: 1, flexShrink: 1 }}>
-              <Text style={[t.body, { color: c.textStrong, fontSize: 16, fontFamily: 'Jost_500Medium' }]}>Para todos los roles</Text>
+              <Text style={[t.body, { color: c.textStrong, fontSize: 16, fontFamily: fuentes.media }]}>Para todos los roles</Text>
               <Text style={ayuda}>También para los roles que se agreguen después.</Text>
             </View>
             <Interruptor etiqueta="Para todos los roles" valor={formulario.paraTodos} onCambiar={v => cambiar('paraTodos', v)} />

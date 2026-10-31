@@ -1,8 +1,8 @@
 import React, { useEffect, useRef } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Icon } from '../../../components/Icon';
+import { CabeceraAdmin } from '../../admin/components/CabeceraAdmin';
 import { useSystemBackHandler } from '../../../hooks/useSystemBackHandler';
 import { useResponsive } from '../../../theme/responsive';
 import { useTheme } from '../../../theme/ThemeContext';
@@ -49,7 +49,7 @@ export function SemaforoGruposScreen({
   conservarSemana?: boolean;
 }) {
   const barraAlDesplazar = useOcultarBarraAlDesplazar();
-  const { c, t } = useTheme();
+  const { c } = useTheme();
   const { horizontalPadding, contentMaxWidth } = useResponsive();
 
   useSystemBackHandler(() => {
@@ -66,21 +66,8 @@ export function SemaforoGruposScreen({
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
-      <View style={[estilos.barra, { paddingHorizontal: horizontalPadding }]}>
-        <Pressable
-          onPress={onVolver}
-          hitSlop={12}
-          accessibilityRole="button"
-          accessibilityLabel="Volver"
-          style={estilos.volver}
-        >
-          <Icon name="arrowLeft" size={15} color={c.goldInk} />
-          <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1 }]}>VOLVER</Text>
-        </Pressable>
-        <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 18, flex: 1 }]} numberOfLines={1}>
-          Semáforo por grupos
-        </Text>
-      </View>
+      {/* «‹ Título», la misma cabecera que el resto de las pantallas del líder (2026-10-31). */}
+      <CabeceraAdmin titulo="Semáforo por grupos" onVolver={onVolver} />
 
       <ScrollView
         {...barraAlDesplazar}
@@ -105,9 +92,3 @@ export function SemaforoGruposScreen({
     </SafeAreaView>
   );
 }
-
-const estilos = StyleSheet.create({
-  barra: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingTop: 8, paddingBottom: 10 },
-  /* 48 px de alto: el mínimo cómodo para una sola mano (AGENTS.md §4). */
-  volver: { height: 48, flexDirection: 'row', alignItems: 'center', gap: 6 },
-});

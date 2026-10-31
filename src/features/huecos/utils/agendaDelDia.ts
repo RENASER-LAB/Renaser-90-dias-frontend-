@@ -1,3 +1,4 @@
+import { tituloEnTipoOracion } from '../../habits/utils/tituloEnTipoOracion';
 import type {
   BloqueOcupado,
   DiaConHuecos,
@@ -195,7 +196,9 @@ export function acomodarEnCarriles(bloques: readonly BloqueOcupado[], ventana: V
 }
 
 /** Lo que dice un bloque: su nombre, o «Ocupado» si no lo tiene (la agenda personal). */
-export function nombreDelBloque(bloque: Pick<BloqueOcupado, 'titulo'>): string {
+export function nombreDelBloque(bloque: Pick<BloqueOcupado, 'titulo'> & { tipo?: string }): string {
+  // El nombre de un hábito llega en mayúsculas del catálogo: se muestra en tipo oración (2026-10-31). Acciones y eventos, tal cual.
+  if (bloque.titulo && bloque.tipo === 'HABITO') return tituloEnTipoOracion(bloque.titulo);
   return bloque.titulo ?? 'Ocupado';
 }
 
