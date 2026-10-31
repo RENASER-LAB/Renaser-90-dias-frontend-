@@ -567,6 +567,50 @@ animaciones, íconos ni dependencias nuevas. Cada punto es un commit aparte de l
   `recordatoriosDeLasAcciones` (la fila, la hoja con el mismo control, las alarmas con la hoja cerrada) y `planDelEje`.
 * **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
 
+## Cambio por pedido del dueño — 2026-10-31 — Código Renaser con la voz: dictar la respuesta y escuchar la pregunta (spec 030)
+
+Pedido del dueño (textual): «El sistema debe poder ofrecer el servicio de audios al responder el radar.» Spec, plan y tareas en
+`Renaser-90-dias-backend/specs/030-codigo-renaser-con-audio/`; decisiones del dueño del mismo día: **030-1 A** (dictar la respuesta y
+escuchar la pregunta con la voz Dora, grabada y sin red; la energía se toca, no se dicta) y **030-2 B** (el registro dice «dictado» y
+lo ven el mentor, el líder y Administración). Toca el formulario del Código Renaser, que vive en **Hoy** (pantalla obligatoria de los
+días 1 a 7 y mitad del Radar) y en **Yo → Mi Radar**. Lo que cambia y nada más:
+* **Un micrófono y un «Escuchar» por pregunta** (`radar/components/VozDeLaPregunta`, `BotonDeVoz`; 48 de alto, ícono y palabra, sin
+  movimiento propio salvo el hundimiento de `Presionable`, un «tic» de `tacto.seleccion()` por toque). Es el mismo formulario
+  (`CodigoRenaserModal`) en las cuatro entradas —la pantalla obligatoria, Hoy, Mi Radar y el aviso del teléfono—, así que se ve y funciona
+  igual en todas. Las cuatro preguntas, las horas, la obligatoriedad, el borrador, un registro por hora y el 409 **no cambian**.
+* **Dictar** reutiliza `useDictado` (el reconocimiento de voz del teléfono, el mismo del chat de SER; español `es-419`; el audio no se
+  guarda ni se sube). Lo dictado se **suma** al final del campo, se ve mientras se habla, queda **editable** y se corta en los 2 000
+  caracteres de siempre. **Nada se registra solo:** solo «Registrar»; con el micrófono abierto ese botón dice «Terminar de dictar» y
+  cierra el micrófono. **Un solo micrófono a la vez**: tocar el de otra pregunta cierra el primero, espera a que entregue su texto y recién
+  entonces abre el segundo (`useDictadoDelRadar`). Sin reconocimiento de voz en el teléfono no hay «Dictar» y el formulario es el de hoy.
+  Si falla (sin permiso, sin red, sin motor en español, ocupado) una línea bajo esa pregunta lo dice —«… escribe tu respuesta»— y lo
+  escrito y lo dictado antes no se tocan.
+* **Escuchar** lee el enunciado y su ayuda con la voz Dora de las alarmas, **cuatro MP3 grabados** (`assets/sonidos/voz_radar_que_*.mp3`,
+  generados con `scripts/sonidos/generar-sonidos.sh voces`, que ahora también lee `radar/vocesDelRadar.json`; sin campanita; Whisper los
+  entendió sin errores), desde el paquete de la app, **sin red**. Una voz a la vez; se detiene al terminar, al tocar de nuevo, **antes** de
+  abrir el micrófono, al registrar y al cerrar el formulario. El reproductor (`expo-audio`) nace al primer toque. **Límite aceptado:** el
+  teléfono no le cuenta su volumen a la app (haría falta código nativo nuevo), así que mientras suena una línea dice «Si no la oyes, sube
+  el volumen de tu teléfono.» en vez de detectar el volumen en cero.
+* **«Dictado»** (030-2 B): el pedido de `POST /api/v1/radar` suma `dictado: true` **solo si** alguna respuesta se dictó y sigue en el texto
+  (un campo que la persona vacía deja de contar; corregir una palabra no); una respuesta escrita viaja idéntica a la de siempre. El
+  borrador local guarda qué respuestas se dictaron. En las fichas del mentor o guía, del líder, de Administración y de Alquimista
+  (`CodigoRenaserDelAlumno`), cada registro dictado dice «Dictado por voz. Puede haber errores de transcripción.» (solo texto, como el
+  resto de la sección). Viaja en las mismas filas que ya leen, así que si el interruptor de la spec 034 oculta el Código Renaser, tampoco
+  se ve «dictado».
+* **Arreglo en lo compartido:** `useDictado` ahora atiende **solo su propia sesión** de micrófono. El reconocedor manda sus eventos a todos
+  los que escuchan; sin este seguro, dictar el Código Renaser habría puesto al orbe de Hoy «escuchando» y habría mostrado «Tú: <lo que
+  dictaste>» bajo el fénix. El chat de SER y el orbe se comportan igual que antes (`useDictado.test.ts`).
+* **Política de privacidad** (`public/privacidad/index.html`): dice que el Código Renaser también se puede dictar con el reconocimiento de
+  voz del teléfono y que el audio no se guarda. **Debe publicarse antes de sacar el APK.**
+* **No cambian**: Plan, Training, Comunidad, los demás tabs, el semáforo, los puntos, Mi Radar (horas, modos, veces), los avisos y sus
+  canales, ni quién ve el Código Renaser.
+* **Hace falta el backend con V132 (D-297) antes y un APK nuevo** (los cuatro MP3 van dentro del APK; la app no se actualiza por aire).
+  Contra un backend anterior la app funciona igual (el servidor ignora `dictado`) y las fichas no muestran la línea.
+* **Pruebas:** `useDictado.test.ts`, `useDictadoDelRadar.test.ts`, `useEscucharPregunta.test.ts`, `dictadoDelRadar.test.ts`,
+  `vozDelRadar.test.ts`, `codigoRenaserConVoz.test.ts`, `dictadoEnElContrato.test.ts`, `codigoRenaserDelAlumno.test.ts` y
+  `sonidosElegibles.test.ts`. Maestro: `.maestro/codigo-renaser/41-dictar-y-escuchar.yaml` (escrito, **no corrido**: este trabajo no usó el
+  emulador).
+
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
 Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel especializado en React Native, Expo y TypeScript. Al crear, refactorizar o modificar cualquier pantalla o componente, debes cumplir OBLIGATORIAMENTE con los siguientes estándares:
