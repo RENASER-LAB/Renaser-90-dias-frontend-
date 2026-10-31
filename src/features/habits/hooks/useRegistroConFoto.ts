@@ -13,12 +13,14 @@ import { obtenerTracksDeHoy } from '../api/habitsApi';
 import { DiaDeHabitosCambiadoError, MENSAJE_SIN_CONEXION_PARA_REGISTRAR } from '../api/registroVigente';
 import { fotoPendiente } from '../storage/fotoPendiente';
 import {
+  archivoDeFotoRecuperada,
   archivoDeResultadoDeCamara,
   elegirFotoDeGaleria,
   tomarFotoConCamara,
   type ArchivoEvidencia,
 } from '../utils/capturarEvidencia';
 import { RechazoParaMostrar, type DestinoDeFoto, type ReglasDelDestino } from '../utils/destinoDeFoto';
+import { buscarFotoDeLaCamara, soltarFotoHuerfana } from '../utils/fotoHuerfanaDeLaCamara';
 import {
   avisoParaFoto,
   estadoParaFoto,
@@ -457,9 +459,15 @@ export function useRegistroConFoto(opciones: OpcionesRegistroConFoto) {
   }, [enviando, responderOrigen]);
 
   /**
-   * Android mató la app con la cámara abierta y la volvió a abrir: la foto está en
-   * `getPendingResultAsync` y el registro para el que era, en `fotoPendiente`. Best-effort: si
-   * falta cualquiera de las dos cosas, no se hace nada (la persona vuelve a tocar el hábito).
+   * Android mató la app con la cámara abierta y la volvió a abrir. El registro para el que era está en `fotoPendiente`
+   * (se anota justo antes de abrir la cámara) y la foto se recupera de dos maneras, según qué mató el sistema:
+   * - **solo la actividad** (el proceso siguió): `expo-image-picker` guardó el resultado en memoria
+   *   (`getPendingResultAsync`);
+   * - **el proceso entero** (poca memoria; `adb shell am kill`): no hay nada en memoria y Android le entrega el resultado
+   *   a React antes de que esté listo, que lo descarta (#49). Queda el archivo que la cámara escribió en la caché de la app
+   *   (`fotoHuerfanaDeLaCamara`).
+   * Mejor esfuerzo: si falta el registro anotado o no hay foto por ningún lado, no se hace nada (la persona vuelve a
+   * tocar el hábito).
    */
   const reanudarPendiente = useCallback(async () => {
     if (Platform.OS !== 'android' || ocupadoRef.current || registroRef.current) return;
@@ -467,10 +475,16 @@ export function useRegistroConFoto(opciones: OpcionesRegistroConFoto) {
     try {
       const pendiente = await ImagePicker.getPendingResultAsync().catch(() => null);
       const contexto = await fotoPendiente.tomar(Date.now());
-      if (!pendiente || !contexto || !('canceled' in pendiente)) return;
+      if (!contexto) return;
       const reglas = reglasPara(contexto.destino, opcionesRef.current.destinos);
       if (!reglas) return;
-      const archivo = await archivoDeResultadoDeCamara(pendiente);
+      let archivo = pendiente && 'canceled' in pendiente ? await archivoDeResultadoDeCamara(pendiente) : null;
+      if (!archivo) {
+        const huerfana = buscarFotoDeLaCamara(contexto.guardadaEnMs);
+        archivo = huerfana ? await archivoDeFotoRecuperada(huerfana) : null;
+        // La original (a resolución completa) ya no hace falta: la que se sube es la normalizada.
+        if (huerfana && archivo) soltarFotoHuerfana(huerfana);
+      }
       if (!archivo) return;
       const estado = await verificar(reglas, contexto.registroId, false);
       if (avisarSiNoSePuede(estado, contexto.destino)) return;

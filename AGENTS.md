@@ -3165,6 +3165,41 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       el backend (acepta cualquier foto) ni los tabs.
     * **Hace falta un APK nuevo** (la app no se actualiza por aire).
 
+  * **Corrección — 2026-10-31 — registro con foto: la foto no se pierde si Android mata la app con la cámara abierta, y
+    «Reintentar» (issues #49 y #51)**. Solo JavaScript: ni diseño, ni textos, ni tabs, ni código nativo. Lo que cambia y nada más:
+    * **#49, la causa.** `getPendingResultAsync` de `expo-image-picker` (la recuperación que ya existía, `reanudarPendiente`)
+      solo sirve cuando muere la ACTIVIDAD y el proceso sigue (la prueba de la documentación es «No conservar actividades»):
+      Expo guarda ese resultado en una variable en memoria, y el resto de su estado solo lo anota en `onHostDestroy`. Cuando el
+      sistema mata el PROCESO (poca memoria, `adb shell am kill`) no queda nada, y Android le entrega el resultado a la
+      actividad nueva antes de que React esté listo, que lo descarta («Tried to access onActivityResult while context is not
+      ready»). Lo único que sobrevive es el ARCHIVO que la cámara escribió en `cache/ImagePicker/` y la nota
+      `fotoPendiente` (AsyncStorage) que se anota antes de abrir la cámara.
+    * **#49, el arreglo** (`habits/utils/fotoHuerfanaDeLaCamara.ts`, `reanudarPendiente`): si hay nota vigente (30 min) y
+      `getPendingResultAsync` no trae nada, se busca en esa carpeta la foto más nueva que la nota (con contenido, de imagen y
+      escrita después de abrir la cámara), se procesa como cualquier foto de la cámara (JPEG a 1440 px, con la hora del
+      archivo como `tomadaEn`) y vuelve la pantalla partida con ella; la original a resolución completa se borra. El resultado
+      de Expo, cuando existe, sigue mandando. `HoyScreen` también llama a `reanudarPendiente` al montarse, porque al
+      reabrirse la app cae en Hoy y Training no se monta hasta visitarlo (la nota se consume una sola vez: la retoma la
+      primera pantalla que se monte). `fotoHuerfanaDeLaCamara.test.ts` vigila contra el código fuente de `expo-image-picker`
+      que la carpeta sigue siendo `ImagePicker`. **Límites:** una foto de la GALERÍA (kilómetros) no se recupera: el
+      selector del sistema no deja archivo propio hasta que Expo lo exporta en el proceso muerto; y si la persona cierra la
+      cámara sin tomar nada no hay nada que recuperar (el archivo vacío que crea Expo se ignora).
+    * **#51, lo que se pudo establecer.** El hook sí vuelve a subir en cada «Reintentar» (nueva dirección firmada, archivo leído
+      otra vez, mismo PUT: probado con la subida y el hook enteros). El mismo texto para todo —`mensajeDeError` da el genérico
+      a cualquier error que no sea `ApiError`— tapaba en qué paso fallaba, y no queda nada en logcat. **La causa del
+      fallo visto en el emulador (después de quitar y reponer `adb reverse` del almacenamiento) NO se pudo reproducir ni
+      confirmar sin el emulador**: queda por verificar con el E2E (flujo 13 de Maestro y, para el PUT a S3, la prueba manual
+      que su cabecera explica). Leyendo el código de `expo/fetch` en Android no hay estado que se cachee tras un fallo.
+    * **#51, lo que cambia:** (1) cada paso del envío (pedir la dirección de subida, leer el archivo, subir a S3, confirmar,
+      cerrar) deja en el registro de la app `[evidencia] falló el paso «…»` con el error original (`enPasoDelEnvio`; no cambia
+      el tipo del error ni lo que se muestra); (2) el PUT a S3 se repite hasta dos veces dentro del mismo envío (pausas de 0,5 y
+      1,5 s) si la red se cae a mitad o S3 responde 5xx; un 4xx no se repite; (3) un archivo local que ya no existe (el `fetch` de
+      Expo responde 404 «File not found» en vez de lanzar) ya no se sube como si fuera la foto. También vale para las fotos de
+      las acciones del día (`subirArchivoAS3`).
+    * **Pruebas:** `fotoTrasMorirElProceso.test.ts`, `fotoHuerfanaDeLaCamara.test.ts`, `subidaDeEvidencia.test.ts`,
+      `reintentarTrasFalloDeRed.test.ts`; Maestro `regresion/12-foto-tras-matar-la-app.yaml` y `13-reintentar-sube-la-foto.yaml`.
+    * **Hace falta un APK nuevo** (solo JavaScript: no hay código nativo nuevo, pero la app no se actualiza por aire).
+
 ## 2. 📱 RESPONSIVIDAD UNIVERSAL (XIAOMI, ANDROID, IOS Y TABLETS)
 * **Cero Doble Scroll**: NUNCA coloques un contenedor con `maxHeight` fijo o scroll interno dentro de otro `ScrollView`. Toda pantalla debe tener UN ÚNICO contenedor de scroll fluido con `contentContainerStyle={{ flexGrow: 1, paddingBottom: 36 }}`.
 * **Adaptabilidad a Xiaomi y Pantallas Altas (20:9 / 19.5:9)**:

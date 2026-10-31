@@ -2,6 +2,7 @@ import { ApiError } from '../../../services/http/apiClient';
 import type { ArchivoParaSubir } from '../api/evidenciaHabitoApi';
 import type { TrackDelDiaApi } from '../types/habits.types';
 import type { DestinoDeFoto } from './destinoDeFoto';
+import { enPasoDelEnvio } from './enPasoDelEnvio';
 
 /**
  * Reglas puras del REGISTRO CON FOTO (pedido del dueño, 2026-09-26): los hábitos que exigen
@@ -320,7 +321,9 @@ export async function registrarConFoto(
     alConfirmarEvidencia();
   }
   try {
-    const registro = await deps.completar(entrada.registroId, respuesta, valorMedido);
+    const registro = await enPasoDelEnvio('cerrar el registro', () =>
+      deps.completar(entrada.registroId, respuesta, valorMedido),
+    );
     return { puntosOtorgados: registro.puntosOtorgados, yaEstabaCompletado: false };
   } catch (error) {
     const yaCompletado = esRechazoDelServidor(error) && (await figuraCompletado(entrada.registroId, deps));
