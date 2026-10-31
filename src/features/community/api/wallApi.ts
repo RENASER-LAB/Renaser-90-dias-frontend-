@@ -17,6 +17,7 @@ import {
   wallCommentCreadoSchema,
   wallCommentsPageSchema,
   wallFeedPageSchema,
+  paginaDeOcultasTolerante,
   wallPostSchema,
   wallReactionsPageSchema,
   wallReactionToggleSchema,
@@ -30,9 +31,11 @@ import {
  * `features/auth/api/authApi.ts`.
  *
  * Lo que NO está acá, a propósito:
- * - `PATCH`/`DELETE /api/v1/wall/{id}` (editar/ocultar post) y lo mismo para comentarios: el
- *   diseño actual de la pestaña "muro" no tiene ningún botón de editar/borrar sobre una
- *   publicación o comentario propio, así que no hay desde dónde dispararlos sin inventar UI.
+ * - `PATCH /api/v1/wall/{id}` (editar el post) y editar/borrar comentarios: el diseño actual de la pestaña
+ *   "muro" no tiene ningún botón de editar/borrar sobre una publicación o comentario propio, así que no hay
+ *   desde dónde dispararlos sin inventar UI.
+ * - Lo que SÍ está desde el 2026-10-31 es la moderación (ocultar, devolver, eliminar para siempre y la cola de
+ *   ocultas), solo para ADMIN y ALCHEMIST: ver el bloque «Moderación» al final.
  */
 
 export async function obtenerFeedMuro(cursor?: string, category?: string): Promise<WallFeedPage> {
@@ -188,4 +191,39 @@ export async function publicarEnMuro(
     body: { text, media, category: category ?? null },
   });
   return validarRespuesta<WallPost>(wallPostSchema, r, 'POST /api/v1/wall');
+}
+
+/* ── Moderación (2026-10-31) ─────────────────────────────────────────────────────────────────────────────────
+ * Solo ADMIN y ALCHEMIST (`MODERATE_WALL`); el servidor vuelve a autorizar cada llamada (un 403 sale con
+ * palabras en la pantalla). Contrato verificado en `WallController` / `PublicacionMuroService` del backend:
+ *
+ * - `DELETE /wall/{id}` OCULTA. Lo puede hacer el autor o quien modera. 404 si no existe o ya está oculta.
+ * - `POST /wall/{id}/restore` la devuelve al Muro. 404 si no existe o NO está oculta.
+ * - `DELETE /wall/{id}/permanent` la borra de verdad (sus comentarios, reacciones y fotos). **Solo actúa sobre una
+ *   publicación OCULTA**: sobre una visible responde 404, igual que sobre una que no existe. Por eso eliminar desde
+ *   el Muro son dos pedidos en orden (ocultar, borrar) y desde la cola, uno.
+ * - `GET /wall/hidden?cursor=` la cola, con la forma del feed.
+ * Las tres escrituras responden `{ id }`; no se lee: lo que importa es que no fallaron.
+ */
+
+/** Oculta una publicación: deja de verse en el Muro, se puede devolver. */
+export async function ocultarPublicacion(postId: string): Promise<void> {
+  await apiFetch<unknown>(`/api/v1/wall/${postId}`, { method: 'DELETE' });
+}
+
+/** La devuelve al Muro (solo quien modera). */
+export async function restaurarPublicacion(postId: string): Promise<void> {
+  await apiFetch<unknown>(`/api/v1/wall/${postId}/restore`, { method: 'POST' });
+}
+
+/** La elimina para siempre; la publicación tiene que estar oculta (ver arriba). */
+export async function eliminarPublicacionParaSiempre(postId: string): Promise<void> {
+  await apiFetch<unknown>(`/api/v1/wall/${postId}/permanent`, { method: 'DELETE' });
+}
+
+/** Las publicaciones ocultas, paginadas por cursor; una fila que no se entiende se pierde sola. */
+export async function obtenerPublicacionesOcultas(cursor?: string): Promise<WallFeedPage> {
+  const query = cursor ? `?cursor=${encodeURIComponent(cursor)}` : '';
+  const r = await apiFetch<unknown>(`/api/v1/wall/hidden${query}`);
+  return paginaDeOcultasTolerante(r, 'GET /api/v1/wall/hidden') as WallFeedPage;
 }

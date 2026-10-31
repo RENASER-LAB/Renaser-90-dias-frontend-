@@ -106,6 +106,32 @@ export const urlSubidaMuroSchema = z
   .passthrough();
 
 /**
+ * `GET /api/v1/wall/hidden` — la cola de moderación (las publicaciones ocultas), solo para ADMIN y ALCHEMIST
+ * (Administración → Más opciones → «Publicaciones ocultas», 2026-10-31).
+ *
+ * **Tolerante a propósito: una fila rota se pierde ELLA, no la página.** El feed del Muro valida la página entera
+ * (`wallFeedPageSchema`: una fila mala la tumba), y eso está bien para lo que todos leen; la cola de moderación es la
+ * herramienta con la que se limpia lo roto —una publicación en blanco, una foto que ya no está—, así que no puede
+ * quedarse sin cargar por culpa de una de ellas. Lo único indispensable es que `posts` sea una lista.
+ */
+export const wallOcultasPageSchema = z
+  .object({
+    posts: z.array(z.unknown()),
+    nextCursor: z.string().nullish().catch(null),
+  })
+  .passthrough();
+
+/** La respuesta de {@link wallOcultasPageSchema} con solo las filas que se entienden. */
+export function paginaDeOcultasTolerante(dato: unknown, endpoint: string): { posts: z.infer<typeof wallPostSchema>[]; nextCursor: string | null } {
+  const pagina = validarRespuesta<{ posts: unknown[]; nextCursor?: string | null }>(wallOcultasPageSchema, dato, endpoint);
+  const posts = pagina.posts.flatMap(fila => {
+    const lectura = wallPostSchema.safeParse(fila);
+    return lectura.success ? [lectura.data] : [];
+  });
+  return { posts, nextCursor: pagina.nextCursor ?? null };
+}
+
+/**
  * Valida y devuelve el dato con el tipo que el resto del código ya espera. Si la forma no coincide
  * se lanza un error que dice QUÉ campo falló y en qué endpoint.
  */

@@ -1,0 +1,20 @@
+# Moderar el Muro (AGENTS.md, 2026-10-31): un APRENDIZ no tiene el «…» de moderación en ninguna publicación, tampoco en la suya.
+# ESCRITO Y SIN CORRER: se corre cuando haya emulador libre, con el backend local (base clonada, nunca producción).
+#
+# Precondición: hay al menos una publicación en el Muro con el texto «Moderar-1» (la misma del flujo 01). Mejor si la cuenta
+# E2E_APRENDIZ es quien la escribió: así se comprueba que ni el autor ve el «…».
+# Se corre con: .maestro/correr.sh .maestro/moderar-muro/02-aprendiz-no-ve-los-tres-puntos.yaml
+# cuenta: aprendiz
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "COMUNIDAD"
+- tapOn: "Muro"
+- extendedWaitUntil:
+    visible: "Moderar-1"
+    timeout: 30000
+- takeScreenshot: MM02a-muro-del-aprendiz
+- assertNotVisible: "Opciones de moderación"
+# Y Administración ni existe para esta cuenta, así que «Publicaciones ocultas» tampoco.
+- tapOn: "HOY"
+- assertNotVisible: "Abrir Administración"

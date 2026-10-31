@@ -28,14 +28,19 @@ const NINGUNA: Capacidades = { administrar: false, puedeIniciarPrograma: false, 
  *
  * Un fallo de la consulta se trata como "no puede": `capacidadesDePrograma` devuelve `null` ante
  * cualquier error, y un error de red no es un permiso.
+ *
+ * `activo: false` (2026-10-31) no pregunta nada y deja "ninguna capacidad": para quien solo necesita saber esto si ya
+ * se sabe de antemano que podría (el «…» de moderación del Muro, que solo puede ser de ADMIN o ALCHEMIST, no le suma un
+ * pedido a cada aprendiz que abre Comunidad). Sin la opción, el hook es el de siempre.
  */
-export function useCapacidades() {
+export function useCapacidades({ activo = true }: { activo?: boolean } = {}) {
   const [capacidades, setCapacidades] = useState<Capacidades>(NINGUNA);
-  const [cargando, setCargando] = useState(true);
+  const [cargando, setCargando] = useState(activo);
   const [error, setError] = useState(false);
   const consultaActual = useRef(0);
 
   const cargar = useCallback(async () => {
+    if (!activo) return;
     const consulta = ++consultaActual.current;
     setCargando(true);
     const respuesta = await capacidadesDePrograma();
@@ -53,7 +58,7 @@ export function useCapacidades() {
         : NINGUNA,
     );
     setCargando(false);
-  }, []);
+  }, [activo]);
 
   useEffect(() => {
     void cargar();

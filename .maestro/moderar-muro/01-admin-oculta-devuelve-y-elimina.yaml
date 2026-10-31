@@ -1,0 +1,134 @@
+# Moderar el Muro (AGENTS.md, 2026-10-31): un ADMIN o ALCHEMIST oculta una publicación desde su «…», la ve en Administración →
+# Más opciones → «Publicaciones ocultas», la devuelve al Muro, y después la elimina para siempre (con confirmación).
+# ESCRITO Y SIN CORRER: se corre cuando haya emulador libre, con el backend local (base clonada, nunca producción).
+#
+# Precondición (datos del backend local):
+#   - La cuenta E2E_ADMIN es ADMIN o ALCHEMIST.
+#   - «Moderar-1» es el texto de la publicación MÁS NUEVA del Muro (la de arriba): se publica desde una cuenta de aprendiz con
+#     el flujo regresion/03 cambiando el texto, o se inserta en la base. El «…» que se toca es el de la primera tarjeta.
+#   - La cola de «Publicaciones ocultas» está vacía al empezar (así el único «Devolver al Muro» es el de esa publicación).
+# Se corre con: .maestro/correr.sh .maestro/moderar-muro/01-admin-oculta-devuelve-y-elimina.yaml
+# cuenta: admin
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+
+# 1. En el Muro: el «…» de la publicación → «Ocultar publicación».
+- tapOn: "COMUNIDAD"
+- tapOn: "Muro"
+- extendedWaitUntil:
+    visible: "Moderar-1"
+    timeout: 30000
+- takeScreenshot: MM01a-muro-con-los-tres-puntos
+- tapOn:
+    text: "Opciones de moderación"
+    index: 0
+- extendedWaitUntil:
+    visible: "Moderar publicación"
+    timeout: 15000
+- assertVisible: "Ocultar publicación"
+- assertVisible: "Deja de verse en el Muro. Puedes devolverla desde Administración."
+- assertVisible: "Eliminar para siempre"
+- takeScreenshot: MM01b-hoja-de-moderacion
+- tapOn: "Ocultar publicación"
+# Sale de la lista en el acto y la línea lo dice (flota sobre el Muro unos 4 s).
+- extendedWaitUntil:
+    visible: "Publicación oculta"
+    timeout: 3000
+    optional: true
+- assertNotVisible: "Moderar-1"
+- takeScreenshot: MM01c-publicacion-oculta
+
+# 2. Administración → Más opciones → «Publicaciones ocultas»: está ahí, con su autor y el texto.
+- tapOn: "HOY"
+- scrollUntilVisible:
+    element: "Abrir Administración"
+    direction: DOWN
+- tapOn: "Abrir Administración"
+- extendedWaitUntil:
+    visible: "Operación del programa"
+    timeout: 15000
+- scrollUntilVisible:
+    element: "Más opciones"
+    direction: DOWN
+- tapOn: "Más opciones"
+- extendedWaitUntil:
+    visible: "Publicaciones ocultas"
+    timeout: 15000
+- tapOn: "Publicaciones ocultas"
+- extendedWaitUntil:
+    visible: "Lo que se sacó del Muro"
+    timeout: 15000
+- assertVisible: "Moderar-1"
+- assertVisible: "Devolver al Muro"
+- assertVisible: "Eliminar para siempre"
+- takeScreenshot: MM01d-cola-de-ocultas
+
+# 3. Devolverla al Muro: sale de la cola.
+- tapOn: "Devolver al Muro"
+- extendedWaitUntil:
+    visible: "Publicación devuelta al Muro"
+    timeout: 3000
+    optional: true
+- assertVisible: "No hay publicaciones ocultas."
+- assertNotVisible: "Moderar-1"
+- takeScreenshot: MM01e-devuelta
+
+# 4. El atrás del sistema sube un nivel: Publicaciones ocultas → Más opciones → Administración → Hoy.
+- back
+- assertVisible: "Desde acá"
+- back
+- assertVisible: "Operación del programa"
+- back
+- assertVisible: "Abrir Administración"
+
+# 5. Vuelve al Muro (el Muro ya estaba abierto y se relee solo con el aviso de «se moderó»).
+- tapOn: "COMUNIDAD"
+- extendedWaitUntil:
+    visible: "Moderar-1"
+    timeout: 30000
+- takeScreenshot: MM01f-de-vuelta-en-el-muro
+
+# 6. «…» → «Eliminar para siempre» → la confirmación (primero se cancela, después se confirma).
+- tapOn:
+    text: "Opciones de moderación"
+    index: 0
+- extendedWaitUntil:
+    visible: "Moderar publicación"
+    timeout: 15000
+- tapOn: "Eliminar para siempre"
+- extendedWaitUntil:
+    visible: "¿Eliminar esta publicación para siempre?"
+    timeout: 15000
+- assertVisible: "También se borran sus comentarios, reacciones y fotos. No se puede deshacer."
+- takeScreenshot: MM01g-confirmacion
+# Android pinta los botones del diálogo en mayúsculas: se busca sin distinguirlas.
+- tapOn: "(?i)cancelar"
+- assertVisible: "Moderar publicación"
+- tapOn: "Eliminar para siempre"
+- extendedWaitUntil:
+    visible: "¿Eliminar esta publicación para siempre?"
+    timeout: 15000
+- tapOn: "(?i)eliminar para siempre"
+- extendedWaitUntil:
+    visible: "Publicación eliminada"
+    timeout: 3000
+    optional: true
+- assertNotVisible: "Moderar-1"
+- takeScreenshot: MM01h-eliminada
+
+# 7. De verdad se borró (no solo se ocultó): la cola sigue vacía.
+- tapOn: "HOY"
+- tapOn: "Abrir Administración"
+- extendedWaitUntil:
+    visible: "Operación del programa"
+    timeout: 15000
+- scrollUntilVisible:
+    element: "Más opciones"
+    direction: DOWN
+- tapOn: "Más opciones"
+- tapOn: "Publicaciones ocultas"
+- extendedWaitUntil:
+    visible: "No hay publicaciones ocultas."
+    timeout: 20000
+- takeScreenshot: MM01i-cola-vacia

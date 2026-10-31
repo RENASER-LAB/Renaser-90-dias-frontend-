@@ -40,6 +40,7 @@ import { MicroLabel, ScreenHeader, AvatarPersona } from '../components/ui';
 import { Icon, IconName, TAMANO_ICONO } from '../components/Icon';
 import { GoldButton } from '../components/GoldButton';
 import { Presionable } from '../components/Presionable';
+import { AvisoDeAbajo } from '../components/AvisoDeAbajo';
 import { ConfirmacionEnLinea } from '../components/ConfirmacionEnLinea';
 import { tacto } from '../utils/tacto';
 import { separacionDeLaFila } from '../features/community/utils/filaDeMedallones';
@@ -77,6 +78,9 @@ import { avisarPostDiarioCerrado } from '../features/habits/events/avisoPostDiar
 import { ImageViewerModal, type ImageViewerItem } from '../features/community/components/ImageViewerModal';
 import { SharePostSheet } from '../features/community/components/SharePostSheet';
 import { HojaDeReacciones } from '../features/community/components/HojaDeReacciones';
+import { HojaDeModeracionDelMuro } from '../features/community/components/HojaDeModeracionDelMuro';
+import { useModeracionDelMuro } from '../features/community/hooks/useModeracionDelMuro';
+import { usePuedeModerarElMuro } from '../features/community/hooks/usePuedeModerarElMuro';
 import { NuevaPublicacion } from '../features/community/components/NuevaPublicacion';
 import { ControlSegmentado } from '../components/ControlSegmentado';
 import { useCursos } from '../features/academy/hooks/useCursos';
@@ -1206,6 +1210,7 @@ export default function ComunidadScreen() {
     cargarComentarios,
     agregarComentario: agregarComentarioRemoto,
     publicarOptimista,
+    quitarPublicacion,
     cargarMas: cargarMasPublicaciones,
     cargandoMas: muroCargandoMas,
     hayMas: hayMasPublicaciones,
@@ -1400,6 +1405,15 @@ export default function ComunidadScreen() {
   const [confirmacionMuro, setConfirmacionMuro] = useState<Confirmacion | null>(null);
   const [confirmacionDePublicacion, setConfirmacionDePublicacion] = useState<(Confirmacion & { postId: string }) | null>(null);
   const [confirmacionCursos, setConfirmacionCursos] = useState<Confirmacion | null>(null);
+  /* Moderar el Muro (ADMIN y ALCHEMIST, 2026-10-31). El aviso «Publicación oculta / eliminada» es un snackbar de abajo
+     (`AvisoDeAbajo`) y no va en el encabezado de la lista: quien modera suele estar a mitad del Muro y la tarjeta que
+     tocó ya no está. */
+  const [confirmacionModeracion, setConfirmacionModeracion] = useState<Confirmacion | null>(null);
+  const puedeModerarMuro = usePuedeModerarElMuro();
+  const moderacion = useModeracionDelMuro({
+    quitarPublicacion,
+    anunciar: texto => setConfirmacionModeracion({ clave: Date.now(), texto }),
+  });
 
   // Ventana Externa de Publicación a Pantalla Completa
   const [createPostModalVisible, setCreatePostModalVisible] = useState(false);
@@ -2628,6 +2642,10 @@ export default function ComunidadScreen() {
     enviarComentario: postId => void handleAddComment(postId),
     cerrarConfirmacion: postId =>
       setConfirmacionDePublicacion(actual => (actual?.postId === postId ? null : actual)),
+    moderar: postId => {
+      const publicacion = posts.find(p => p.id === postId);
+      if (publicacion) moderacion.abrir({ id: publicacion.id, autor: publicacion.author, resumen: publicacion.text });
+    },
   };
   const accionesPublicacion = useMemo<AccionesPublicacion>(
     () => ({
@@ -2647,6 +2665,7 @@ export default function ComunidadScreen() {
       escribirComentario: (id, texto) => accionesVigentes.current!.escribirComentario(id, texto),
       enviarComentario: id => accionesVigentes.current!.enviarComentario(id),
       cerrarConfirmacion: id => accionesVigentes.current!.cerrarConfirmacion(id),
+      moderar: id => accionesVigentes.current!.moderar(id),
     }),
     []
   );
@@ -2663,11 +2682,13 @@ export default function ComunidadScreen() {
         fotoComentario={commentPhotos[item.id]}
         comentariosExpandidos={expandedComments}
         confirmacion={confirmacionDePublicacion?.postId === item.id ? confirmacionDePublicacion : null}
+        puedeModerar={puedeModerarMuro}
         acciones={accionesPublicacion}
       />
     ),
     [
       confirmacionDePublicacion,
+      puedeModerarMuro,
       expandedPosts,
       openComments,
       publicacionDestacada,
@@ -3046,6 +3067,12 @@ export default function ComunidadScreen() {
           removeClippedSubviews={false}
         />
       )}
+      {/* «Publicación oculta» / «Publicación eliminada» (moderación, 2026-10-31): un aviso tipo snackbar ABAJO, encima de los
+          botones flotantes de SER y de la barra de pestañas, con fondo opaco. Nunca sobre la cabecera ni los círculos de las
+          secciones (el primero se vio flotando arriba, transparente, mezclado con «Muro» y «Eventos»). No recibe toques. */}
+      {seccionActiva === 'muro' ? (
+        <AvisoDeAbajo aviso={confirmacionModeracion} onTerminar={() => setConfirmacionModeracion(null)} />
+      ) : null}
 
       {/* ========================================================================= */}
       {/* SECCIÓN EVENTOS (2026-09-26, E-5 a E-8)                                   */}
@@ -4735,6 +4762,15 @@ export default function ComunidadScreen() {
           alAgregar: () => void handleAgregarFoto(),
           alQuitar: indice => setAttachedPhotos(prev => prev.filter((_, i) => i !== indice)),
         }}
+      />
+
+      {/* Moderar una publicación (ADMIN y ALCHEMIST, 2026-10-31): la hoja del «…» de la tarjeta. */}
+      <HojaDeModeracionDelMuro
+        publicacion={moderacion.publicacion}
+        ocupado={moderacion.ocupado}
+        alCerrar={moderacion.cerrar}
+        alOcultar={() => void moderacion.ocultar()}
+        alEliminar={moderacion.eliminar}
       />
 
       {/* ========================================================================= */}

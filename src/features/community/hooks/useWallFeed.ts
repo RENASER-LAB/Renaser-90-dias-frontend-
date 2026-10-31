@@ -4,7 +4,9 @@ import type { CommentItem, PostItem } from '../../../screens/ComunidadScreen';
 import { mensajeDeError } from '../../../services/http/apiClient';
 import * as wallApi from '../api/wallApi';
 import { aplicarReaccion, mapearComentario, mapearPublicacion } from '../api/wallMappers';
+import { escucharMuroModerado } from '../events/muroModerado';
 import type { WallReactionType } from '../types/community.types';
+import { fusionarPrimeraPagina } from '../utils/moderacionDelMuro';
 import type { FotoMuroNormalizada } from '../utils/normalizarImagen';
 
 /**
@@ -85,6 +87,47 @@ export function useWallFeed() {
   useEffect(() => {
     void recargar();
   }, [recargar]);
+
+  /**
+   * Lo que hay en pantalla, para quien lo necesita fuera de un `setPosts`: la relectura de abajo decide el cursor
+   * con lo que ya estaba cargado.
+   */
+  const postsAhora = useRef<PostItem[]>([]);
+  postsAhora.current = posts;
+  const releyendo = useRef(false);
+
+  /**
+   * Pone al día la primera página SIN vaciar la lista ni volver arriba (moderación, 2026-10-31): `recargar`
+   * enciende `loading` y reemplaza todo por la primera página; esto la funde con lo que ya estaba
+   * (`fusionarPrimeraPagina`). Un fallo se traga: la lista local ya refleja lo que la persona hizo y la siguiente
+   * recarga completa lo corrige.
+   */
+  const releerEnSilencio = useCallback(async () => {
+    if (releyendo.current) return;
+    releyendo.current = true;
+    try {
+      const pagina = await wallApi.obtenerFeedMuro();
+      const { posts: fusionadas, hayMasAbajo } = fusionarPrimeraPagina(
+        postsAhora.current,
+        pagina.posts.map(mapearPublicacion)
+      );
+      setPosts(fusionadas);
+      if (!hayMasAbajo) setCursor(pagina.nextCursor);
+    } catch {
+      /* Silencioso a propósito, ver arriba. */
+    } finally {
+      releyendo.current = false;
+    }
+  }, []);
+
+  /** Saca una publicación de la lista en el acto (la moderación que acaba de confirmar el servidor). */
+  const quitarPublicacion = useCallback((postId: string) => {
+    setPosts(prev => prev.filter(p => p.id !== postId));
+  }, []);
+
+  // Se moderó el Muro desde otro lado (devolver una publicación desde Administración → Publicaciones ocultas): este
+  // Muro ya está montado y no vuelve a leer solo.
+  useEffect(() => escucharMuroModerado(() => void releerEnSilencio()), [releerEnSilencio]);
 
   /**
    * El backend hace el toggle (tocar el mismo tipo lo saca, tocar el otro lo reemplaza), así que
@@ -255,6 +298,8 @@ export function useWallFeed() {
     cargarComentarios,
     agregarComentario,
     publicarOptimista,
+    releerEnSilencio,
+    quitarPublicacion,
     cargarMas,
     cargandoMas,
     /** `false` cuando el servidor ya no tiene más páginas: es lo que distingue "se acabó" de "todavía no pedí". */

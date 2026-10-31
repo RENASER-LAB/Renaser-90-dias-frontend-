@@ -3732,6 +3732,75 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     * **Hace falta un APK nuevo** (solo JavaScript: ni `package.json`, ni `app.json`, ni código nativo; la app no se
       actualiza por aire). Backend nuevo, ninguno.
 
+  * **Cambio por pedido del dueño — 2026-10-31 — tab `Comunidad` (Muro) y Administración: ocultar y eliminar publicaciones, solo
+    ADMIN y ALCHEMIST** (sin backend nuevo: `WallController` ya tenía todo, con `MODERATE_WALL`). Textual: «una función para
+    Administrador y Alquimista para eliminar publicaciones, que solo les salga a estos roles». Motivo: una persona subió una
+    publicación en blanco al Muro. El dueño eligió «Ocultar y eliminar». Lo que cambia y nada más:
+    * **El «…» de cada publicación del Muro** (`TarjetaPublicacionMuro`, prop nueva `puedeModerar`), arriba a la derecha, junto a
+      la insignia del día: área de 48 que no agranda la cabecera (márgenes negativos), nombre «Opciones de moderación» y el ícono
+      `ellipsis` (Lucide, caja de 24, `s24`; nuevo en `Icon.tsx`). **Solo lo ve ADMIN o ALCHEMIST** (`usePuedeModerarElMuro`): el
+      rol de la sesión Y `canAdminister` de `GET /mentor/context` (la misma condición que muestra Administración y que
+      `MODERATE_WALL`); un fallo de esa consulta o un backend anterior lo dejan oculto. Ni el líder, ni el mentor, ni la guía, ni el
+      aprendiz —**ni el autor de la publicación**— lo ven; y a quien no puede ni se le hace el pedido de capacidades
+      (`useCapacidades({ activo })`, parámetro nuevo y opcional: sin él, el hook es el de siempre). Una publicación que todavía se
+      está subiendo (`pendiente`) no lo lleva. Sin animación nueva: `Presionable`.
+    * **La hoja del «…»** (`HojaDeModeracionDelMuro`, sobre `HojaDesdeAbajo`; una sola para todo el Muro): «Ocultar publicación»,
+      con «Deja de verse en el Muro. Puedes devolverla desde Administración.», y «Eliminar para siempre», en rojo. Eliminar pide
+      confirmación con el `Alert` de `components/Alerta` y su botón destructivo: «¿Eliminar esta publicación para siempre?
+      También se borran sus comentarios, reacciones y fotos. No se puede deshacer.» (la hoja queda abierta debajo: cancelar no
+      pierde dónde se estaba). Mientras trabaja, las dos filas se apagan y la que corre dice «Ocultando…» / «Eliminando…».
+    * **Eliminar desde el Muro son DOS pedidos** (hallazgo al leer el servidor): `DELETE /wall/{id}/permanent` solo actúa sobre una
+      publicación OCULTA —sobre una visible responde 404, igual que sobre una que no existe—, así que la app primero oculta
+      (`DELETE /wall/{id}`) y después borra. Un 404 al ocultar no corta (puede que otra cuenta ya la haya ocultado); si se ocultó y el
+      borrado falla, la publicación sale igual de la lista y el diálogo dice que quedó oculta y que se termina desde Administración
+      → Más opciones → Publicaciones ocultas. Lo que se borra (fotos del almacenamiento, comentarios, reacciones) lo decide el
+      servidor; la app no lo recalcula.
+    * **Al terminar**: la publicación sale de la lista en el acto (`quitarPublicacion` de `useWallFeed`), la hoja se cierra,
+      `tacto.logro()` y una `ConfirmacionEnLinea` —«Publicación oculta» / «Publicación eliminada»— que **flota arriba del Muro** (no
+      va en el encabezado de la lista: quien modera suele estar a mitad del Muro y la tarjeta que tocó ya no está). El Muro se relee
+      **en silencio** (`releerEnSilencio`: sin `loading`, sin volver arriba, conservando los comentarios abiertos, las que se están
+      publicando y lo traído más abajo; `fusionarPrimeraPagina` decide el cursor) y la tarjeta «última evidencia» de Hoy da por
+      vencida su lectura. Los dos avisos viajan por un emisor de pocas líneas (`community/events/muroModerado`).
+      > **Corregido 2026-10-31 (el dueño, tras el E2E: «salió de fondo y se sobreponía a lo que había, arruinando la experiencia del
+      > usuario»).** Decía que la línea «Publicación oculta / eliminada» era una `ConfirmacionEnLinea` que flotaba arriba del Muro.
+      > Salía semitransparente y encima de los círculos de las secciones («Muro», «Eventos»). Ahora es **`AvisoDeAbajo`**
+      > (`components/AvisoDeAbajo.tsx`), un snackbar como los de WhatsApp o Instagram: **abajo**, nunca sobre la cabecera ni los
+      > círculos; fondo **opaco** (`cardBgAlt`), borde (`borderStrong`) y sombra suave; el ✓ dorado y el texto de 16 px; sin recibir
+      > toques. Va **encima de los botones flotantes de SER** con la cuenta del «Deshacer» de Pasar lista (`alturaDelAviso` =
+      > `ALTO_TAB_BAR + SEPARACION + DIAMETRO + 8` + borde seguro, de `renasia/components/lugarDelLanzador`): como el orbe baja con
+      > la barra de pestañas cuando se esconde al desplazar, encima de él el aviso queda a la vista con la barra a la vista o
+      > escondida. Movimiento: entra con fundido y 8 px en 200 ms con ease-out fuerte y sale en 150 ms; con «reducir movimiento», solo
+      > fundido; se va solo a los 2,5 s; un aviso nuevo con otro a la vista reinicia la cuenta. Lo usan el Muro y «Publicaciones
+      > ocultas» de Administración («Publicación devuelta al Muro»). `ConfirmacionEnLinea` no cambió. Prueba: `avisoDeAbajo`.
+    * **Errores**: un 403 dice «No tienes permiso para moderar el Muro.»; un 404 saca la publicación de la lista sin error ni
+      aviso; los demás, en un diálogo con el mensaje del servidor. El 503 de «Muro apagado» y el 403 de «solo lectura» de Soporte TI
+      siguen su camino de siempre (`apiFetch`).
+    * **Administración → Más opciones → «Publicaciones ocultas»** (`PublicacionesOcultasScreen`, vista nueva de la pila de
+      `AdminScreen`; sigue la disponibilidad del Muro, `CLAVES.muro`): la cola de `GET /wall/hidden` paginada por cursor («Ver más
+      publicaciones»). Cada una con su autor (foto o iniciales), la fecha («30 de octubre, 21:04» en la hora del teléfono), el texto
+      recortado a dos líneas (o «Sin texto») y la miniatura de su primera foto, si tiene; y dos botones de 52: **«Devolver al
+      Muro»** (`POST /wall/{id}/restore`) y **«Eliminar para siempre»** (`DELETE /wall/{id}/permanent`, con la misma confirmación).
+      Cargando, vacío («No hay publicaciones ocultas.») y error con «Reintentar» (un 403 no ofrece reintentar). Devolver una
+      publicación hace que aparezca en el Muro aunque ya esté abierto (el aviso de arriba). El atrás del sistema vuelve a «Más
+      opciones». La fila «Categorías del muro y conocimiento» de «Desde el panel web» ya no dice «Moderación» ni que «moderar exige
+      ver la publicación entera»: eso ya se hace desde la app.
+    * **Esquemas tolerantes**: la cola de ocultas valida cada fila por separado (`paginaDeOcultasTolerante`): una fila rota se pierde
+      ELLA y no la página; un cursor que no es texto significa «no hay más». Una publicación en blanco (sin texto ni fotos), que es
+      justo lo que motivó esto, es una fila válida. Las escrituras no leen el cuerpo de la respuesta (`{ id }`).
+    * **No cambian**: el diseño de la tarjeta para quien no modera, los permisos (el servidor autoriza cada llamada), el autor
+      que oculta lo suyo por otro camino (no hay botón para eso), los comentarios, Hoy, Plan, Training y Yo. **No se tocó el visor
+      «Ver publicación»** de las fichas del mentor, del líder y de Administración (`VisorDePublicacion`): es una hoja dentro de otra
+      hoja y moderar ahí obligaría a refrescar la ficha; queda para otra vez si se pide.
+    * **Pruebas**: Jest `moderacionDelMuro` (rol + servidor, el orden ocultar → borrar, los 403 y 404, la fusión de la relectura,
+      la fecha local), `moderacionDelMuroApi` (rutas, verbos y una fila rota), `usePuedeModerarElMuro` (los siete roles; ni el autor),
+      `moderarDesdeLaTarjeta` (el «…» solo con permiso, 48, nombre, `ellipsis`), `useModeracionDelMuro` (ocultar saca la
+      publicación, eliminar pide confirmación y no manda nada antes, 403 y 404), `usePublicacionesOcultas` (la lista devuelve y
+      elimina), `muroSeReleeAlModerar`, `publicacionesOcultasEnAdministracion` y `moderarElMuroEnComunidad`. Maestro, **escritos y
+      sin correr**: `.maestro/moderar-muro/01` (admin: «…» → ocultar → «Publicaciones ocultas» → devolver → «…» → eliminar) y `02`
+      (aprendiz: no hay «…»).
+    * **Hace falta un APK nuevo** (solo JavaScript: ni `package.json`, ni `app.json`, ni código nativo; la app no se actualiza por
+      aire). Backend nuevo, ninguno.
+
 ## 2. 📱 RESPONSIVIDAD UNIVERSAL (XIAOMI, ANDROID, IOS Y TABLETS)
 * **Cero Doble Scroll**: NUNCA coloques un contenedor con `maxHeight` fijo o scroll interno dentro de otro `ScrollView`. Toda pantalla debe tener UN ÚNICO contenedor de scroll fluido con `contentContainerStyle={{ flexGrow: 1, paddingBottom: 36 }}`.
 * **Adaptabilidad a Xiaomi y Pantallas Altas (20:9 / 19.5:9)**:

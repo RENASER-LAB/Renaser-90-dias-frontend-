@@ -11,6 +11,10 @@ local (nunca contra producción).
 - `regresion/`: un flujo por caso, ordenados por número. Cada uno dice arriba qué prueba y su precondición.
 - `guia-de-ser/` (issue #50): la guía de arranque de SER no se monta sobre el panel de SER y «Ahora no» responde. Pide una
   cuenta de aprendiz con el Día 1 elegido y sin el Pacto firmado; ver su `README.md`.
+- `moderar-muro/` (2026-10-31): ADMIN y ALCHEMIST ocultan, devuelven y eliminan publicaciones del Muro (el «…» de cada tarjeta y
+  Administración → Más opciones → «Publicaciones ocultas»); un aprendiz no tiene el «…». **Escritos y sin correr.** Piden una
+  publicación con el texto «Moderar-1» arriba del Muro y la cola de ocultas vacía (lo dice arriba de cada archivo); se corren de
+  a uno con `.maestro/correr.sh .maestro/moderar-muro/<flujo>.yaml`.
 - `interruptores/` (spec 002): el aviso de mantenimiento en Tribu, el Muro, Training y SER. **No corren solos**: cada uno
   necesita que antes se apague una funcionalidad por la consola Soporte TI (lo dice arriba de cada archivo) y que después
   se vuelva a prender. Se corren de a uno, `.maestro/correr.sh .maestro/interruptores/<flujo>.yaml`, con la precondición
