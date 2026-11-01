@@ -1337,6 +1337,23 @@ cambia de forma** (sus seis secciones, sus diseños y textos) y para el aprendiz
 * **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire) **y el backend de la spec 024 antes** (V137–V139). El APK 1.6.0 contra el backend
   nuevo sigue mostrando la Escuela completa sin mandar nada nuevo; el APK nuevo contra un backend anterior queda como hoy.
 
+## Cambio por pedido del dueño — 2026-10-31 — al juntar las formaciones: Ranking según los hábitos de la formación y el nombre del objetivo según la duración
+
+Dos decisiones del dueño que aparecieron al integrar las specs 022 a 034 (solo la app; el backend, sin endpoints nuevos). Lo que cambia y nada más:
+* **Ranking → «Kilómetros» y «Gimnasio» solo salen si el catálogo de hábitos de la formación que se mira tiene ese hábito** (`KILÓMETROS DIARIOS`,
+  clave `DAILY_KM`, y `GIMNASIO`, clave `WORKOUT`; spec 023 sobre el ranking de la 024). «General» y «Coherencia» salen siempre. Las demás cuentas leen
+  su propio catálogo (`GET /habits`); Administración, Alquimista y Soporte TI con una formación elegida, el de esa formación (`GET /admin/habits?formation=`,
+  solo los activos); con «Todas» salen las cuatro. **Solo se esconde una pestaña cuando el catálogo se leyó bien y de verdad no la tiene**: sin lectura, con
+  fallo o vacío (una cuenta que no hace su programa en esa formación) salen las cuatro, como antes. Si la pestaña elegida deja de ofrecerse, vuelve a «General».
+  Lógica pura en `ranking/utils/tablasQueSeOfrecen`, lectura en `ranking/hooks/useTablasDelRanking`. Pruebas: `tablasQueSeOfrecen`.
+* **El objetivo grande se nombra según la duración del programa de la persona** (`/home` `duracionDias` y `formacion`): «objetivo de 90 días» en la
+  Escuela y la Certificación, «objetivo de 3 meses» en el Diplomado de 90 días y «objetivo de 1 año» en el de 365 (`objetivos/utils/nombreDelObjetivo`,
+  puro y con pruebas). Plan y Hoy lo leen del contexto `PlazoDelObjetivoProvider` / `usePlazoDelObjetivo` (sin dato, «90 días»): «Tu objetivo de …», «Define tu
+  objetivo de …», «Revisa tus objetivos de …», «Tu dirección en …», los avisos de guardado y la tarjeta de Hoy. **No cambia** el nombre de la formación
+  («Escuela Renaser 90 días»), ni lo que dicen el onboarding y los términos del programa de 90 días de la Escuela como hecho. Los textos de error de los hooks
+  (`useRocasMaestras`, `useRocasSemanales`) no saben la duración y siguen igual.
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire).
+
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
 Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel especializado en React Native, Expo y TypeScript. Al crear, refactorizar o modificar cualquier pantalla o componente, debes cumplir OBLIGATORIAMENTE con los siguientes estándares:
