@@ -25,6 +25,12 @@ export const habitoDelProgramaSchema = z
     audienceChangedBy: z.object({ id: z.string(), name: z.string().nullish() }).passthrough().nullish(),
     /** Solo true para un CAMBIO de roles guardado hoy (la audiencia con la que nace un hábito rige ya). */
     targetRolesStartTomorrow: z.boolean().nullish(),
+    /**
+     * Spec 023: la clave de la categoría en la base (`CUERPO`, `DIPLOMADO_ESTUDIO`) y la formación a la que pertenece el hábito
+     * (`ESCUELA`, `DIPLOMADO`, `CERTIFICACION`). Opcionales: contra un backend anterior no llegan y el hábito es de la Escuela.
+     */
+    categoryKey: z.string().nullish(),
+    formation: z.string().nullish(),
   })
   .passthrough();
 
@@ -47,4 +53,6 @@ export interface CuerpoHabitoDelPrograma {
   mandatoryOnIntoxication: boolean;
   /** `[]` = para todos. */
   targetRoles: string[];
+  /** Spec 023: la formación donde se crea el hábito. En editar no viaja (un hábito no cambia de formación: se copia). */
+  formation?: string;
 }

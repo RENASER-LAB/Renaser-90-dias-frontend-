@@ -14,9 +14,9 @@ export async function leerCategoriasDeMiFormacion(): Promise<CategoriasDeLaForma
 
 // ── Administración (ADMIN y ALQUIMISTA) ─────────────────────────────────────────────────────────────────────────────────
 
-/** `GET /api/v1/admin/habit-categories?formation=`: las de una formación. */
-export async function listarCategoriasAdmin(formacion: string): Promise<CategoriaAdmin[]> {
-  const ruta = `/api/v1/admin/habit-categories?formation=${encodeURIComponent(formacion)}`;
+/** `GET /api/v1/admin/habit-categories?formation=`: las de una formación; sin `formacion`, las de las tres (cada una con la suya). */
+export async function listarCategoriasAdmin(formacion?: string | null): Promise<CategoriaAdmin[]> {
+  const ruta = formacion ? `/api/v1/admin/habit-categories?formation=${encodeURIComponent(formacion)}` : '/api/v1/admin/habit-categories';
   return leerCategoriasAdmin(await apiFetch<unknown>(ruta, { timeoutMs: 15_000 }));
 }
 
