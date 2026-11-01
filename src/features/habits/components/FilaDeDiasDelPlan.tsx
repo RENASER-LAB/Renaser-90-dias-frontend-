@@ -48,6 +48,15 @@ export interface AlarmaDeUnDiaEnLaFila {
   largo: string;
 }
 
+/**
+ * Spec 028: la marca de un día con cambio «solo esta semana». Es un punto chico en la esquina de la pastilla (no suma una fila de
+ * íconos: las siete miden lo mismo) y el lector de pantalla lo dice en la etiqueta.
+ */
+export interface MarcaDeUnDiaEnLaFila {
+  /** «Cambiado solo esta semana»: lo que dice el lector de pantalla. */
+  largo: string;
+}
+
 /** Cómo se llama cada día para el lector de pantalla (la pastilla dibuja solo su inicial). */
 const NOMBRE_COMPLETO_DEL_DIA: Record<DiaDelPlan, string> = {
   LUN: 'Lunes', MAR: 'Martes', 'MIÉ': 'Miércoles', JUE: 'Jueves', VIE: 'Viernes', 'SÁB': 'Sábado', DOM: 'Domingo',
@@ -103,6 +112,11 @@ interface FilaDeDiasDelPlanProps {
    * la de siempre.
    */
   etiquetaPropiaDelDia?: (dia: DiaDelPlan, nombreYFecha: string) => string;
+  /**
+   * Spec 028, **opcional**: marca el día que tiene un cambio «solo esta semana» (un punto en la esquina) y lo suma a la etiqueta del lector
+   * de pantalla. Solo la pasa el editor en ese alcance; Training y Plan no la pasan y la fila es exactamente la de siempre.
+   */
+  marcaDelDia?: (dia: DiaDelPlan) => MarcaDeUnDiaEnLaFila | null;
   onAlternarDia: (dia: DiaDelPlan) => void;
 }
 
@@ -121,6 +135,7 @@ export function FilaDeDiasDelPlan({
   avisoDelDia,
   alarmaDelDia,
   etiquetaPropiaDelDia,
+  marcaDelDia,
   onAlternarDia,
 }: FilaDeDiasDelPlanProps) {
   const { c, t } = useTheme();
@@ -134,6 +149,8 @@ export function FilaDeDiasDelPlan({
    */
   const conBanda = Boolean(avisoDelDia || alarmaDelDia);
   const acotado = conBanda ? ({ maxFontSizeMultiplier: MAXIMO_DE_LETRA_EN_EL_CHIP } as const) : {};
+  /** Con la marca de «solo esta semana» la pastilla también se anuncia completa. */
+  const conEtiquetaCompleta = conBanda || Boolean(marcaDelDia);
 
   return (
     <View style={estilos.fila}>
@@ -148,6 +165,7 @@ export function FilaDeDiasDelPlan({
         const bloqueado = !corriendo || !sePuede;
         const aviso = avisoDelDia && corriendo && sePuede ? avisoDelDia(dia) : null;
         const alarma = alarmaDelDia && corriendo && sePuede ? alarmaDelDia(dia) : null;
+        const marca = marcaDelDia && corriendo && sePuede ? marcaDelDia(dia) : null;
         const colorDelAviso = editando ? c.onGold : c.goldInk;
         const conAmbos = aviso !== null && alarma !== null;
         const etiquetaDelDiaPropia = etiquetaPropiaDelDia
@@ -188,10 +206,10 @@ export function FilaDeDiasDelPlan({
             key={dia}
             onPress={() => !bloqueado && onAlternarDia(dia)}
             disabled={bloqueado}
-            {...(conBanda
+            {...(conEtiquetaCompleta
               ? {
                 accessibilityRole: 'button' as const,
-                accessibilityLabel: etiquetaDelDia(dia, diasDelMes[dia], delDia, corriendo, sePuede, aviso, alarma),
+                accessibilityLabel: etiquetaDelDia(dia, diasDelMes[dia], delDia, corriendo, sePuede, aviso, alarma, marca),
                 accessibilityState: { selected: editando, disabled: bloqueado },
               }
               : etiquetaDelDiaPropia
@@ -211,6 +229,14 @@ export function FilaDeDiasDelPlan({
               },
             ]}
           >
+            {marca && (
+              <View
+                testID={`marca-solo-esta-semana-${dia}`}
+                accessible={false}
+                importantForAccessibility="no-hide-descendants"
+                style={[estilos.marca, { backgroundColor: editando ? c.onGold : c.goldInk }]}
+              />
+            )}
             <Text
               {...acotado}
               style={[t.micro, { fontSize: 12, fontFamily: fuentes.negrita, color: editando ? c.onGold : c.textSoft }]}
@@ -256,6 +282,7 @@ function etiquetaDelDia(
   sePuede: boolean,
   aviso: AvisoDeUnDiaEnLaFila | null,
   alarma: AlarmaDeUnDiaEnLaFila | null = null,
+  marca: MarcaDeUnDiaEnLaFila | null = null,
 ): string {
   const partes = [`${NOMBRE_COMPLETO_DEL_DIA[dia]} ${diaDelMes}`];
   if (!corriendo) partes.push('el hábito no corre ese día');
@@ -264,6 +291,7 @@ function etiquetaDelDia(
   else if (delDia?.hora) partes.push(delDia.hora);
   if (aviso) partes.push(aviso.largo.charAt(0).toLowerCase() + aviso.largo.slice(1));
   if (alarma) partes.push(alarma.largo.charAt(0).toLowerCase() + alarma.largo.slice(1));
+  if (marca) partes.push(marca.largo.charAt(0).toLowerCase() + marca.largo.slice(1));
   return partes.join(', ');
 }
 
@@ -292,4 +320,6 @@ const estilos = StyleSheet.create({
   filaDeLaHora: { height: 14, alignItems: 'center', justifyContent: 'center' },
   banda: { alignSelf: 'stretch', minHeight: 16, alignItems: 'center', justifyContent: 'flex-start', marginTop: 4 },
   iconos: { height: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 2 },
+  // Spec 028: el punto de «solo esta semana», en la esquina y fuera del flujo: no cambia el alto ni corre los datos de la pastilla.
+  marca: { position: 'absolute', top: 5, right: 5, width: 7, height: 7, borderRadius: 4 },
 });
