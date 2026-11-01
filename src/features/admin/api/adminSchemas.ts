@@ -196,6 +196,8 @@ export const opcionesDeAceptacionSchema = z
             durationsDays: z.array(z.number()).min(1),
             durationLabels: z.array(z.string()).catch([]),
             defaultDurationDays: z.number().nullish(),
+            /** Spec 027: `false` = la formación todavía no publicó sus términos y no recibe personas nuevas. Sin el campo (backend anterior) se asume que sí. */
+            termsPublished: z.boolean().catch(true),
           })
           .passthrough(),
       )

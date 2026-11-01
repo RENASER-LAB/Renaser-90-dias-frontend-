@@ -16,6 +16,9 @@ import { useEleccionRecordada } from '../features/formaciones/hooks/useEleccionR
 import { EleccionDeFormacionScreen } from '../features/formaciones/screens/EleccionDeFormacionScreen';
 import { SinFormacionScreen } from '../features/formaciones/screens/SinFormacionScreen';
 import { hayQueElegirAlEntrar, llaveDeLasVistas, noTieneFormacion } from '../features/formaciones/utils/vistaDeFormacion';
+import { TerminosActualizadosScreen } from '../features/onboarding/terminos/screens/TerminosActualizadosScreen';
+import { useTerminosAlAbrir } from '../features/onboarding/terminos/hooks/useTerminosAlAbrir';
+import { debeAceptarAntesDeEntrar } from '../features/onboarding/terminos/utils/pendienteDeTerminos';
 import { atenderPestanaPedida } from './navegacionAlMontar';
 import { verPestanaAlMontar } from './pestanaAlMontar';
 
@@ -44,12 +47,15 @@ function MainTabs() {
 }
 
 export function RootNavigator() {
-  const { isAuthenticated, isOnboardingCompleted, sesionCargando, onboardingResuelto, user } = useAuth();
+  const { isAuthenticated, isOnboardingCompleted, sesionCargando, onboardingResuelto, user, logout } = useAuth();
   const mapa = useMapaRenacimientoAbierto();
   /* Las formaciones (spec 022): el personal con varias elige una al entrar (una sola vez por teléfono), el que no tiene ninguna ve
      un aviso, y al cambiar de formación las pestañas se arman de nuevo (ver la `key` de abajo). Para todos los demás no cambia nada. */
   const { formacion } = useFormacionDeLaSesion();
   const eleccion = useEleccionRecordada(isAuthenticated && user ? user.id : null);
+  /* Los términos (spec 027): si Administración publicó unos y pidió aceptarlos de nuevo, o la persona entra a una formación cuyos términos no aceptó, la app
+     no se usa hasta aceptar. Solo mira a quien ya pasó el onboarding (el primer ingreso lo lleva su propio paso de Términos) y se relee al volver al frente. */
+  const terminos = useTerminosAlAbrir(isAuthenticated && isOnboardingCompleted && !!user, `${user?.id ?? ''}|${formacion?.activa?.codigo ?? ''}`);
 
   // Mientras se rehidrata la sesión guardada todavía no se sabe si hay usuario: mostrar el login
   // acá haría que parpadee para alguien que ya estaba logueado.
@@ -89,6 +95,13 @@ export function RootNavigator() {
   }
   if (hayQueElegirAlEntrar(formacion, eleccion.yaEligio)) {
     return <EleccionDeFormacionScreen onElegida={eleccion.recordar} />;
+  }
+  // Hasta leer qué se le pide (una lectura corta) no se decide: así la app no se ve un instante antes de la pantalla de aceptar.
+  if (!terminos.cargada) {
+    return null;
+  }
+  if (debeAceptarAntesDeEntrar(terminos.terminos) && terminos.terminos) {
+    return <TerminosActualizadosScreen terminos={terminos.terminos} alAceptar={() => void terminos.releer()} alCerrarSesion={logout} alCambiar={terminos.releer} />;
   }
   /* `key` por cuenta (spec 002, fase 2, «ver como»): al cambiarse a la cuenta de prueba, o al volver a la de Soporte TI,
      las pestañas se arman de nuevo, sin estado ni pantallas abiertas de la otra cuenta. Para el login de siempre no

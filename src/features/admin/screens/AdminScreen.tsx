@@ -24,6 +24,9 @@ import { GruposAdminScreen } from './GruposAdminScreen';
 import { GuiasRecepcionScreen } from './GuiasRecepcionScreen';
 import { MasOpcionesScreen } from './MasOpcionesScreen';
 import { PersonasAdminScreen } from './PersonasAdminScreen';
+import { TerminosAdminScreen } from '../../onboarding/terminos/screens/TerminosAdminScreen';
+import { TerminosDeUnaFormacionScreen } from '../../onboarding/terminos/screens/TerminosDeUnaFormacionScreen';
+import { EditorDeTerminosScreen } from '../../onboarding/terminos/screens/EditorDeTerminosScreen';
 import { PublicacionesOcultasScreen } from './PublicacionesOcultasScreen';
 import { SemaforoAdminScreen } from './SemaforoAdminScreen';
 import { SemaforoGrupoAdminScreen } from './SemaforoGrupoAdminScreen';
@@ -74,6 +77,10 @@ type Vista =
   | { nombre: 'habito-programa'; id: string | null }
   | { nombre: 'publicaciones-ocultas' }
   | { nombre: 'mas' }
+  /* Los términos y condiciones editables, uno por formación (spec 027): la lista, los de una formación y su editor. */
+  | { nombre: 'terminos' }
+  | { nombre: 'terminos-formacion'; codigo: string }
+  | { nombre: 'terminos-editor'; codigo: string }
   | { nombre: 'caja' }
   | { nombre: 'caja-detalle'; aprendizId: string }
   | { nombre: 'caja-contenido' };
@@ -176,6 +183,7 @@ export function AdminScreen({ onSalir, abrirEn = 'inicio' }: { onSalir: () => vo
           onVolver={volver}
           onVerPersonas={codigo => entrar({ nombre: 'personas', soloSinGrupo: false, formacion: codigo })}
           onVerGrupos={codigo => entrar({ nombre: 'grupos', formacion: codigo })}
+          onVerTerminos={codigo => entrar({ nombre: 'terminos-formacion', codigo })}
         />
       );
     case 'ficha':
@@ -298,6 +306,19 @@ export function AdminScreen({ onSalir, abrirEn = 'inicio' }: { onSalir: () => vo
       return <HabitoProgramaFormScreen id={vista.id} estado={habitosDelPrograma} onVolver={volver} />;
     case 'publicaciones-ocultas':
       return <PublicacionesOcultasScreen onVolver={volver} />;
+    case 'terminos':
+      return <TerminosAdminScreen onVolver={volver} onAbrir={codigo => entrar({ nombre: 'terminos-formacion', codigo })} />;
+    case 'terminos-formacion':
+      return (
+        <TerminosDeUnaFormacionScreen
+          key={vista.codigo}
+          formacion={vista.codigo}
+          onVolver={volver}
+          onEditar={codigo => entrar({ nombre: 'terminos-editor', codigo })}
+        />
+      );
+    case 'terminos-editor':
+      return <EditorDeTerminosScreen key={vista.codigo} formacion={vista.codigo} onVolver={volver} />;
     case 'mas':
       return (
         <MasOpcionesScreen
@@ -308,6 +329,7 @@ export function AdminScreen({ onSalir, abrirEn = 'inicio' }: { onSalir: () => vo
           onAbrirImagenesDeFases={() => entrar({ nombre: 'animales-fases' })}
           onAbrirHabitosDelPrograma={() => entrar({ nombre: 'habitos-programa' })}
           onAbrirPublicacionesOcultas={() => entrar({ nombre: 'publicaciones-ocultas' })}
+          onAbrirTerminos={() => entrar({ nombre: 'terminos' })}
         />
       );
     default:

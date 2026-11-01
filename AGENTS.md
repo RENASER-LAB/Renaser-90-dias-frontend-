@@ -653,6 +653,34 @@ por una y varias a la vez; **viene marcado Escuela, Aprendiz y sin diagnóstico*
   dependencias nuevas ni código nativo.
 * **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire) y el backend con la spec 025 antes.
 
+## Cambio por pedido del dueño — 2026-10-31 — Términos y condiciones editables desde la app, por formación y con versiones (spec 027)
+
+Pedido del dueño (textual): «El sistema debe poder gestionar sus propios términos y condiciones, para no estar borrando ni editando código.» Decisiones del 31/10 (todas la opción A):
+uno por formación (copia de la Escuela en borrador), Administración decide en cada publicación si se acepta de nuevo (por defecto no), el personal firma los de cada formación y Administración y
+Alquimista los de la Escuela, releer desde Yo, texto plano, editan Administración y Alquimista, sin push. Backend D-304 (`specs/027-terminos-editables/`). Lo que cambia y nada más:
+* **La pantalla de Términos del primer ingreso no cambia** (SC-006): el texto lo manda ahora el servidor —los vigentes de MI formación— y, si no los ofrece (backend anterior) o falla la lectura, se
+  usa el que la app lleva dentro (`TERMINOS_DE_LA_APP`: las 23 cláusulas de siempre). Las cláusulas se dibujan con `ContenidoDeLosTerminos` (extraído tal cual de la pantalla). Al aceptar, el hito
+  de Términos lleva la **versión que leyó** (`termsVersionId`) y deja constancia de ella; si Administración publicó mientras leía, el servidor responde 409 y la pantalla relee el texto y avisa «Los
+  términos cambiaron mientras leías: léelos de nuevo». Antes el hito se ignoraba si fallaba; ahora, como la respuesta y la firma, **no se avanza sin constancia** (FR-013).
+* **«Actualizamos nuestros términos»** (`TerminosActualizadosScreen`, montada en `RootNavigator` después de la elección de formación): si Administración publicó una versión **pidiendo aceptar de nuevo**,
+  o la persona entra a una formación cuyos términos no aceptó (personal asignado, aprendiz trasladado), al abrir la app ve la nota de lo que cambió, el texto, la casilla y la firma, y **no usa el resto
+  de la app hasta aceptar**; puede cerrar sesión (la flecha de arriba; el atrás del sistema también). Se relee al volver al frente. Si no se pidió aceptar de nuevo, nadie es interrumpido. El primer
+  ingreso no se bloquea: lo lleva su paso de Términos del onboarding. Mientras llega la primera lectura la app no se dibuja (sin parpadeo); si la lectura falla, se deja pasar.
+* **Administración → Más opciones → «Términos y condiciones»** (y, en el centro «Formaciones», la sección «Ficha y términos»): las tres formaciones con su versión vigente o «Por revisar»
+  (`TerminosAdminScreen`); los de una formación con su historial —versión, fecha, autor, nota, cuántas personas la aceptaron, si pidió aceptar de nuevo—, «Editar», «Ver el texto vigente» y
+  «Descartar el borrador» (`TerminosDeUnaFormacionScreen`); y el **editor** (`EditorDeTerminosScreen`): título, introducción, cada cláusula (escribir, subir, bajar, insertar después, quitar; la
+  numeración sale sola de la posición), texto de la casilla, **Vista previa** (la pantalla que verá la persona), «Guardar borrador» y «Publicar» (`PublicarTerminosSheet`: nota opcional e interruptor
+  «Pedir que acepten de nuevo», apagado por defecto). No se publica con cláusulas vacías, sin cláusulas, sin cambios ni si otra persona publicó antes (se relee y se avisa). Avisa si una cláusula
+  cita a otra por su número. Los marcadores `{formacion}` y `{duracion}` se muestran con el nombre y la duración de cada persona. Una versión vieja se **restaura como borrador** (no se publica sola) y
+  se puede ver **quiénes la aceptaron y quiénes faltan** (`VersionDeTerminosSheet`).
+* **La ficha de la persona** (Administración) suma «Aceptó los términos de Escuela Renaser, versión 2, el 31 oct 2026» con «Ver su firma» (`ConstanciaDeTerminos`); sin aceptar, «Todavía no aceptó los
+  términos». **La hoja «Aceptar» de la spec 025** apaga la formación que todavía no tiene términos publicados («Todavía no tiene términos publicados.»): no recibe personas nuevas.
+* **No cambian:** el diseño y los textos de la pantalla de Términos para quien entra a la Escuela sin que nadie edite, el resto del onboarding, los demás tabs, ni el Pacto. Sin dependencias nuevas.
+* **Pruebas:** Jest `borradorDeTerminos`, `terminosDeLaPersona` (la versión en el hito, la lectura tolerante, la pantalla que bloquea, la API de Administración y la lista). Maestro, escritos y sin correr:
+  `.maestro/terminos-editables/`.
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire) y el backend con la spec 027 antes; contra uno anterior la app usa el texto que lleva y la sección de Administración no
+  encuentra datos.
+
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
 Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel especializado en React Native, Expo y TypeScript. Al crear, refactorizar o modificar cualquier pantalla o componente, debes cumplir OBLIGATORIAMENTE con los siguientes estándares:

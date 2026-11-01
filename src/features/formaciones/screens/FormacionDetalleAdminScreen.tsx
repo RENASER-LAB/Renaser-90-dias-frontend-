@@ -24,11 +24,14 @@ export function FormacionDetalleAdminScreen({
   onVolver,
   onVerPersonas,
   onVerGrupos,
+  onVerTerminos,
 }: {
   codigo: string;
   onVolver: () => void;
   onVerPersonas: (codigo: string) => void;
   onVerGrupos: (codigo: string) => void;
+  /** Spec 027: abre los términos y condiciones de esta formación (la sección «Ficha y términos»). Sin ella la sección no se dibuja. */
+  onVerTerminos?: (codigo: string) => void;
 }) {
   const barraAlDesplazar = useOcultarBarraAlDesplazar();
   const { c, t } = useTheme();
@@ -105,6 +108,13 @@ export function FormacionDetalleAdminScreen({
               </View>
               <BotonSecundario etiqueta="Ver grupos" onPress={() => onVerGrupos(codigo)} />
             </View>
+
+            {onVerTerminos ? (
+              <View style={estilos.seccion}>
+                <TituloDeSeccion>Ficha y términos</TituloDeSeccion>
+                <BotonSecundario etiqueta="Términos y condiciones" onPress={() => onVerTerminos(codigo)} />
+              </View>
+            ) : null}
 
             <View style={estilos.seccion}>
               <TituloDeSeccion>Por atender</TituloDeSeccion>

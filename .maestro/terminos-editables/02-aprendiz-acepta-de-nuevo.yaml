@@ -1,0 +1,17 @@
+# Tras publicar PIDIENDO aceptar de nuevo, al abrir la app sale «Actualizamos nuestros términos» y no se entra sin aceptar (spec 027, historia 3). ESCRITO Y SIN CORRER.
+# cuenta: aprendiz  (de la Escuela, ya con los términos aceptados)
+# Precondición: antes de correr, Administración publicó la versión 2 de la Escuela con «Pedir que acepten de nuevo» ENCENDIDO y la nota «Una cláusula de prueba».
+appId: com.renaser.app
+---
+- runFlow: ../comun/despejar-capas.yaml
+- extendedWaitUntil:
+    visible: "Actualizamos nuestros términos"
+    timeout: 40000
+- assertVisible: "Lo que cambió"
+- assertVisible: "Una cláusula de prueba"
+- assertNotVisible: "TRAINING"
+- takeScreenshot: T02a-pantalla-que-bloquea
+# Sin casilla ni firma no avanza y dice cuál falta.
+- tapOn: "ACEPTAR"
+- assertVisible: "Aceptación requerida"
+- takeScreenshot: T02b-falta-la-casilla

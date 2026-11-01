@@ -43,6 +43,7 @@ import { CambiarDiaScreen } from './CambiarDiaScreen';
 import { EliminarCuentaAdminScreen } from './EliminarCuentaAdminScreen';
 import { rotuloDeFase } from '../../home/hooks/useResumenHome';
 import { FormacionDeLaPersona } from '../../formaciones/components/FormacionDeLaPersona';
+import { ConstanciaDeTerminos } from '../../onboarding/terminos/components/ConstanciaDeTerminos';
 import { useOcultarBarraAlDesplazar } from '../../../navigation/barraAlDesplazar/BarraInferior';
 
 /**
@@ -276,6 +277,9 @@ export function FichaAprendizScreen({
             void programa.recargar();
           }}
         />
+
+        {/* Qué versión de los términos aceptó, cuándo y con qué firma (spec 027). Sin servidor que lo ofrezca, no se dibuja. */}
+        <ConstanciaDeTerminos personaId={aprendiz.id} />
 
         {/* Día del programa (26/09, D-82). El botón aparece solo si el servidor entregó el detalle
             administrativo —mismo permiso que el PUT— y su programa ya empezó. */}

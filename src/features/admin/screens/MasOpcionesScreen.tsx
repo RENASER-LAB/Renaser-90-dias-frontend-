@@ -32,6 +32,7 @@ export function MasOpcionesScreen({
   onAbrirImagenesDeFases,
   onAbrirHabitosDelPrograma,
   onAbrirPublicacionesOcultas,
+  onAbrirTerminos,
 }: {
   onVolver: () => void;
   onAbrirStaff: () => void;
@@ -40,6 +41,7 @@ export function MasOpcionesScreen({
   onAbrirImagenesDeFases: () => void;
   onAbrirHabitosDelPrograma: () => void;
   onAbrirPublicacionesOcultas: () => void;
+  onAbrirTerminos: () => void;
 }) {
   const barraAlDesplazar = useOcultarBarraAlDesplazar();
   const { c, t } = useTheme();
@@ -83,6 +85,13 @@ export function MasOpcionesScreen({
       detalle: 'Devolver al Muro lo que se ocultó, o eliminarlo para siempre',
       onPress: onAbrirPublicacionesOcultas,
       clave: CLAVES.muro,
+    },
+    /* El texto legal que firma cada persona al entrar, editable y con versiones, uno por formación (pedido del dueño del 31/10, backend D-304). */
+    {
+      titulo: 'Términos y condiciones',
+      detalle: 'Editar y publicar los términos de cada formación, con su historial',
+      onPress: onAbrirTerminos,
+      clave: CLAVES.adminPersonas,
     },
     {
       titulo: 'Equipo y roles',
