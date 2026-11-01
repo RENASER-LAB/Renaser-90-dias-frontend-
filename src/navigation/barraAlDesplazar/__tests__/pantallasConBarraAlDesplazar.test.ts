@@ -53,6 +53,9 @@ const PANTALLAS: Record<string, number> = {
   'src/features/mentor/screens/MiCelulaScreen.tsx': 1,
   'src/features/mentor/screens/AlumnoScreen.tsx': 1,
   'src/features/lider-mentores/components/MarcoDelLider.tsx': 1,
+  // «Hábitos de todos» del líder (spec 029): los hábitos del día y las personas de un hábito.
+  'src/features/lider-mentores/screens/HabitosDeTodosScreen.tsx': 1,
+  'src/features/lider-mentores/screens/PersonasDeUnHabitoScreen.tsx': 1,
   'src/features/semaforo/screens/SemaforoScreen.tsx': 1,
   'src/features/semaforo/screens/SemaforoGruposScreen.tsx': 1,
   'src/features/tickets/screens/BandejaTicketsScreen.tsx': 1,

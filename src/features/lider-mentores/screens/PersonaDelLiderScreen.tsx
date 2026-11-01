@@ -85,6 +85,7 @@ export function PersonaDelLiderScreen({
   avisoSiNoSeAbre,
   alAbrirFicha,
   desdeTodos = false,
+  diaInicial,
 }: {
   /** El grupo de la persona; `null` = no tiene (solo se llega así desde «Todos los aprendices»). */
   grupoId: string | null;
@@ -109,6 +110,12 @@ export function PersonaDelLiderScreen({
    * Ausente = desde un grupo o desde Administración, por las rutas del grupo de siempre.
    */
   desdeTodos?: boolean;
+  /**
+   * El día que se abre primero (`YYYY-MM-DD`), cuando la ficha se abre desde «Hábitos de todos» (spec 029): ahí se mira un día
+   * concreto y la ficha tiene que abrir ESE día, no el más reciente con hábitos. Solo vale si el día está en la ventana leída;
+   * si no está (hoy no cabe en los 7 días hasta ayer), abre el de siempre. Ausente = el de siempre. Aditiva: nada más cambia.
+   */
+  diaInicial?: string;
 }) {
   /* La puerta de las cuatro lecturas: la del grupo, o `null` = la que no pregunta por grupo. */
   const grupoDeRuta = desdeTodos ? null : grupoId;
@@ -137,7 +144,12 @@ export function PersonaDelLiderScreen({
   const [aviso, setAviso] = useState<string | null>(null);
   const [abriendoChat, setAbriendoChat] = useState(false);
   const [eleccion, setEleccion] = useState<{ desde: string; fecha: string | null } | null>(null);
-  const diaAbierto = datos ? (eleccion?.desde === datos.desde ? eleccion.fecha : diaInicialDelDetalle(datos.dias)) : null;
+  const diaDePartida = datos
+    ? diaInicial && datos.dias.some(d => d.fecha === diaInicial)
+      ? diaInicial
+      : diaInicialDelDetalle(datos.dias)
+    : null;
+  const diaAbierto = datos ? (eleccion?.desde === datos.desde ? eleccion.fecha : diaDePartida) : null;
   const alternarDia = (fecha: string) => {
     if (datos) setEleccion({ desde: datos.desde, fecha: diaAbierto === fecha ? null : fecha });
   };

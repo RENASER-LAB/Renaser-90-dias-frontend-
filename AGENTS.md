@@ -235,6 +235,47 @@ Hasta hoy el líder llegaba a una persona solo por Hoy → «Mis mentores» → 
 > aprendices» sigue siendo una de sus filas. Donde esta entrada dice «Hoy → Mis mentores» o «estado de Hoy», léase Yo → Mis mentores. El
 > atrás sube un nivel: persona → lista → «Mis mentores» → Yo. El flujo de Maestro `lider-ve-a-todos/01` entra ahora por Yo.
 
+## Cambio por pedido del dueño — 2026-10-31 — Yo → «Mis mentores» → «Hábitos de todos»: el líder ve, hábito por hábito, quién cumplió y quién no (spec 029)
+
+Pedido del dueño del 31/10 (decisiones en `~/.config/renaser-e2e/formaciones/decisiones-del-dueno-2026-10-31.md`; spec, plan y contrato en el backend,
+`specs/029-lider-ve-todos-los-habitos/`, D-305): «que el líder de mentores vea todos los hábitos». Eligió todo A: por hábito, quién lo cumplió y quién no, con
+su hora; **un día a la vez** (hoy y hasta 7 atrás); **solo aprendices**; y **los que menos cumplen, primero**. **Solo lectura y todo del servidor**
+(`GET /leadership/habits`): la app no suma ni cuenta nada. Lo que cambia y nada más:
+* **Una fila nueva «Hábitos de todos»** en `ListaDeMisMentores` (Yo → «Mis mentores»), la última de las cuatro bajo «Resultado por grupo», con la forma de las
+  otras (`FilaDeLista`, sin ícono propio). **Solo existe si el servidor la ofrece**: Yo pregunta con la lectura de hoy (`useHabitosDeTodosDisponibles`, la misma
+  puerta que «Todos los aprendices») y la fila se dibuja únicamente con un 200; con 404 o 403 (backend anterior u otro rol), con cualquier otro fallo o mientras
+  no se sabe, no se dibuja. Se pregunta solo si la cuenta lidera mentores y tiene prendida la entrada `lider`. **Para otros roles, Yo no cambia.**
+* **`HabitosDeTodosScreen`** (estado de Yo, como las otras pantallas del líder: sin pestaña nueva; cabecera `BarraDelLider` «‹ Hábitos de todos»): ‹ día › con
+  «Hoy», «Ayer» o «Mar 27 oct» y el día completo debajo (`EncabezadoDelDia`; las flechas de 48 llegan hasta donde dice el servidor y se apagan en el límite sin
+  desaparecer; cambiar de día es instantáneo y vibra con el «tic» de selección), el resumen en una frase («118 de 120 alumnos con hábitos · 940 de 1 500
+  cumplidos»), los filtros (`FiltrosDeLosHabitos`: dimensión —con las categorías que el servidor manda, las de la formación—, **formación solo para quien ve más
+  de una a la vez**, y grupo con «Sin grupo») y una fila por hábito (`FilaDeHabito`: nombre en tipo oración, dimensión, «41 de 100 cumplidos» y su barra), del
+  que menos se cumple al que más. Deslizar hacia abajo recarga. Estados: cargando, sin hábitos («Ese día nadie tenía hábitos por cumplir.»), sin coincidencias
+  con filtros («Ningún alumno coincide con estos filtros.» y «Quitar los filtros») y error con «Reintentar» de 48. Cada lectura toma un turno y al cambiar de
+  día o de filtro no queda a la vista el dato del anterior ni por un instante.
+* **`PersonasDeUnHabitoScreen`**: las personas de ese hábito en ese día, por secciones y en este orden —«No cumplieron», «Pendientes», «Cumplieron» y, plegada,
+  «No les tocaba o en pausa»—, con buscador «Buscar por nombre» (el servidor, 300 ms después de la última tecla), páginas de 30 (la siguiente al acercarse al
+  final; si falla, lo leído se queda y hay «Reintentar») y por fila la foto o las iniciales, el nombre, el grupo, la hora planificada y, si cumplió, **a qué hora**
+  (`FilaDePersonaEnHabito`). Una persona sin datos dice **por qué** («Todavía no empezaba», «No le tocaba o en pausa») y nunca como una falta. Si cumplió con
+  evidencia, un botón de 48 abre la hoja de siempre (`EvidenciaDeObligacion`, que sí deja constancia en el servidor).
+* **Tocar a una persona abre `PersonaDelLiderScreen`** —la ficha de siempre— **en ese mismo día**, por la puerta sin grupo (`desdeTodos`, como «Todos los
+  aprendices»; «Avisar a su mentor» solo si el servidor lo permite). El rótulo es el nombre de su grupo o «Sin grupo».
+* **El atrás (sistema y flecha) sube un nivel por vez**: ficha → personas del hábito → hábitos del día → «Mis mentores» → Yo. Los niveles de abajo quedan
+  montados y ocultos (como «Todos los aprendices»): al volver conservan el día, los filtros, la búsqueda, lo leído y la posición, sin releer.
+* **Esquemas tolerantes** (`habitosDeTodosSchemas`): una fila rota se pierde sola, no la lista; un nombre vacío no esconde a la persona; un estado
+  desconocido cuenta como «sin datos». **Sin animaciones nuevas** más que `Presionable` en las filas (se toca decenas de veces por visita).
+* **Aislamiento entre formaciones**: lo decide el servidor (el líder ve a los alumnos de la formación o formaciones que tiene activas; Administración y
+  Alquimista, todas). La app no filtra ni recuerda nada entre formaciones: el filtro «formación» solo acota, y las vistas se arman de nuevo si cambia la formación
+  activa (`llaveDeLasVistas`), así que no queda a la vista nada de la anterior.
+* **No cambian**: los demás tabs y papeles, el resultado por grupo, el semáforo, «Todos los aprendices», «Mi grupo», los permisos (los decide el servidor: 403
+  para mentor, guía, aprendiz y cuenta suspendida; 404 con un backend anterior) ni la barra de pestañas. Sin dependencias nuevas ni código nativo.
+* **Pruebas:** Jest `habitosDeTodos` (la API y los esquemas, y las reglas puras: días, orden, secciones, textos), `hooksDeHabitosDeTodos` (un turno por
+  lectura, filtros, páginas, la puerta de la fila), `habitosDeTodosPantalla` (el día, los filtros, las secciones, la ficha en ese día y el atrás nivel por
+  nivel), `panelesDeRol` / `vistasDeLosPaneles` / `panelesDeRolEnYo` (la fila y el atrás). Maestro, **escritos y sin correr**: `.maestro/habitos-de-todos/`
+  (hábito → personas → ficha → atrás; ayer y los límites; un mentor no ve la fila).
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire) y **el backend con la spec 029 antes** (que a su vez pide la 023): contra uno
+  anterior la fila no se dibuja y Yo queda como estaba.
+
 ## Cambio por pedido del dueño — 2026-10-31 — diseño de Hoy, Plan y Training, y la fuente Inter en toda la app
 
 Pedidos del dueño del 31/10 con capturas; **todo es de la app, sin backend**. Cada punto es un commit aparte de la rama
