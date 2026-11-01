@@ -1,4 +1,4 @@
-import { describe, expect, it } from '@jest/globals';
+import { describe, expect, it, jest } from '@jest/globals';
 
 import {
   esHoraDePago,
@@ -7,6 +7,10 @@ import {
   PREFERENCIAS_DE_PAGOS_POR_DEFECTO,
   resumenDeLosRecordatoriosDePago,
 } from '../notificaciones/preferenciasDePagos';
+
+jest.mock('@react-native-async-storage/async-storage', () =>
+  require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
+);
 
 describe('lo que la persona eligió para sus recordatorios de pago', () => {
   it('sin nada guardado: encendidos, 3 días antes y el mismo día, a las 09:00 (decisión del dueño)', () => {

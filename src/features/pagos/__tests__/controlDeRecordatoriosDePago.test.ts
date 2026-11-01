@@ -16,7 +16,10 @@ jest.mock('../../../theme/ThemeContext', () => {
   };
 });
 const mockTacto = { seleccion: jest.fn(), error: jest.fn(), logro: jest.fn() };
-jest.mock('../../../utils/tacto', () => ({ tacto: mockTacto }));
+// Perezoso: la fábrica corre al primer require (antes de que exista `mockTacto`), así que cada método lee el doble recién al llamarse.
+jest.mock('../../../utils/tacto', () => ({
+  tacto: { seleccion: () => mockTacto.seleccion(), error: () => mockTacto.error(), logro: () => mockTacto.logro() },
+}));
 const mockLocales = { hay: true };
 jest.mock('../../habits/notificaciones/recordatoriosDeHabito', () => ({
   get HAY_RECORDATORIOS_LOCALES() {

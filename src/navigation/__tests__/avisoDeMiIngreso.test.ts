@@ -11,6 +11,10 @@ import {
   olvidarCapasObligatorias,
 } from '../capasObligatorias';
 
+jest.mock('@react-native-async-storage/async-storage', () =>
+  require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
+);
+
 /**
  * Mi ingreso (spec 032): el recordatorio de pago que programa el teléfono lleva `route: '/mi-ingreso'`. Tocarlo abre Yo con `abrirMiIngreso` y, como la Caja
  * y Mi Radar, espera a que se cierre una capa obligatoria (nada tapa el Código Renaser ni el Pacto).

@@ -1,8 +1,12 @@
-import { describe, expect, it } from '@jest/globals';
+import { describe, expect, it, jest } from '@jest/globals';
 
 import type { CuotaDePago } from '../api/pagosSchemas';
 import { diasParaVencer, diferenciaDeAlarmas, MARGEN_MS, planDeAlarmasDePago } from '../notificaciones/planDeAlarmasDePago';
 import { PREFERENCIAS_DE_PAGOS_POR_DEFECTO, type PreferenciasDePagos } from '../notificaciones/preferenciasDePagos';
+
+jest.mock('@react-native-async-storage/async-storage', () =>
+  require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
+);
 
 const nb = (texto: string): string => texto.replace(/ /g, ' ');
 const cuota = (id: string, venceEl: string, pagada = false, monto = 1000): CuotaDePago => ({ id, venceEl, monto, pagada, marcadaEn: null, marcadaPor: null });

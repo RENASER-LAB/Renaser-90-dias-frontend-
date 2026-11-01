@@ -21,7 +21,10 @@ jest.mock('react-native-safe-area-context', () => {
 jest.mock('../../renasia/components/RenasiaLauncher', () => ({ ESPACIO_PARA_LANZADOR: 0 }));
 jest.mock('../../../hooks/useSystemBackHandler', () => ({ useSystemBackHandler: () => undefined }));
 const mockTacto = { seleccion: jest.fn(), error: jest.fn(), logro: jest.fn() };
-jest.mock('../../../utils/tacto', () => ({ tacto: mockTacto }));
+// Perezoso: la fábrica corre al primer require (antes de que exista `mockTacto`), así que cada método lee el doble recién al llamarse.
+jest.mock('../../../utils/tacto', () => ({
+  tacto: { seleccion: () => mockTacto.seleccion(), error: () => mockTacto.error(), logro: () => mockTacto.logro() },
+}));
 const mockFuncion = { prendida: true, aviso: null as string | null, disponible: true };
 jest.mock('../../plataforma/estado/useFuncionalidad', () => ({ useFuncionalidad: () => mockFuncion }));
 jest.mock('../../plataforma/components/AvisoDeMantenimiento', () => {
