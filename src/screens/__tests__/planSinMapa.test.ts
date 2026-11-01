@@ -19,11 +19,13 @@ function sinComentarios(codigo: string): string {
 }
 
 const PLAN = sinComentarios(leer('screens/PlanScreen.tsx'));
+const PLAN_DEL_EJE = sinComentarios(leer('features/objetivos/components/PlanDelEje.tsx'));
+const AGENDAR = sinComentarios(leer('features/objetivos/components/AgendarAccionesModal.tsx'));
 const TARJETAS = sinComentarios(leer('features/objetivos/components/TarjetasDelPlan.tsx'));
 
 describe('Plan ya no depende del Mapa', () => {
-  it('ni Plan ni sus tarjetas nombran el Mapa, su contexto o su puerta', () => {
-    for (const fuente of [PLAN, TARJETAS]) {
+  it('ni Plan, ni el eje, ni «Agendar», ni sus tarjetas nombran el Mapa, su contexto o su puerta', () => {
+    for (const fuente of [PLAN, PLAN_DEL_EJE, AGENDAR, TARJETAS]) {
       expect(fuente).not.toMatch(/Mapa/);
       expect(fuente).not.toMatch(/mapa-renacimiento/);
       expect(fuente).not.toMatch(/PuertaDelMapa|usePuertaDeObjetivos|abrirMapa|mapaPendiente/);
@@ -64,6 +66,20 @@ describe('Plan siempre dibuja el selector de eje y todo lo del eje', () => {
     expect((PLAN.match(/<ScrollView/g) ?? []).length).toBe(2); // el de la pantalla y el de la hoja del objetivo
     const principal = PLAN.slice(0, PLAN.indexOf('<HojaDesdeAbajo'));
     expect((principal.match(/<ScrollView/g) ?? []).length).toBe(1);
+  });
+});
+
+describe('el diagnóstico ordena los ejes y sugiere la primera acción', () => {
+  it('Plan lee la prioridad y la primera acción de `usePrioridadPrincipal` y la pasa a «Agendar» solo para el eje de la prioridad', () => {
+    expect(PLAN).toMatch(/const \{ ejePrincipal, primeraAccion \} = usePrioridadPrincipal\(\);/);
+    expect(PLAN).toMatch(/ejePrincipal && primeraAccion \? \{ eje: ejePrincipal, texto: primeraAccion \} : null/);
+    expect(PLAN).toMatch(/accionSugerida=\{accionSugerida\}/);
+    expect(PLAN_DEL_EJE).toMatch(/sugerida=\{accionSugerida\}/);
+  });
+
+  it('el selector parte del eje de la prioridad principal (el primero) mientras la persona no toque otro', () => {
+    expect(PLAN).toMatch(/const ejesOrdenados = useMemo\(\(\) => conPrincipalPrimero\(EJES, ejePrincipal\), \[ejePrincipal\]\);/);
+    expect(PLAN).toMatch(/const ejeAbierto: EjeObjetivo = ejeElegido \?\? ejesOrdenados\[0\] \?\? EJE_POR_DEFECTO;/);
   });
 });
 

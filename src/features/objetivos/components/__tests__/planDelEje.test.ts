@@ -18,7 +18,6 @@ jest.mock('../../../../theme/ThemeContext', () => {
 jest.mock('../../../../context/AuthContext', () => ({ useAuth: () => ({ user: { id: 'u1' } }) }));
 const mockNavigate = jest.fn();
 jest.mock('@react-navigation/native', () => ({ useNavigation: () => ({ navigate: mockNavigate }), useFocusEffect: () => undefined }));
-jest.mock('../../../mapa-renacimiento/hooks/useAccionesDelMapa', () => ({ useAccionesDelMapa: () => ({}) }));
 // «Recordatorios de tus acciones ›» (fila + hoja) tiene su propia prueba; acá solo importa dónde y cuándo se dibuja.
 const mockRecordatorios: { userId: string; rocas?: unknown }[] = [];
 jest.mock('../RecordatoriosDeLasAcciones', () => ({

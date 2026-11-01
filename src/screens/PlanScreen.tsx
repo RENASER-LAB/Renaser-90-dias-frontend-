@@ -179,8 +179,25 @@ export default function PlanScreen() {
    */
   const objetivos = useRocasMaestras();
 
-  /** El eje que se está mirando. */
-  const [ejeAbierto, setEjeAbierto] = useState<EjeObjetivo>(EJE_POR_DEFECTO);
+  /**
+   * El eje de la prioridad principal de la persona, y los tres con ese adelante (pedido del cliente el 2026-09-14; desde la
+   * spec 026 sale de su diagnóstico). Sin prioridad —ficha estándar, sin diagnóstico o sin red—, `conPrincipalPrimero` devuelve el
+   * orden de siempre.
+   */
+  const { ejePrincipal, primeraAccion } = usePrioridadPrincipal();
+  const ejesOrdenados = useMemo(() => conPrincipalPrimero(EJES, ejePrincipal), [ejePrincipal]);
+  /* La primera acción del diagnóstico se sugiere al agendar, en el eje de la prioridad principal (no se agenda sola). */
+  const accionSugerida = useMemo(
+    () => (ejePrincipal && primeraAccion ? { eje: ejePrincipal, texto: primeraAccion } : null),
+    [ejePrincipal, primeraAccion],
+  );
+
+  /**
+   * El eje que se está mirando: el que la persona tocó, o —mientras no haya tocado ninguno— el primero del selector, que es el de
+   * su prioridad principal (antes arrancaba siempre en Cuerpo aunque la prioridad fuera otra).
+   */
+  const [ejeElegido, setEjeElegido] = useState<EjeObjetivo | null>(null);
+  const ejeAbierto: EjeObjetivo = ejeElegido ?? ejesOrdenados[0] ?? EJE_POR_DEFECTO;
   /**
    * Si se está leyendo la explicación de los tres niveles.
    *
@@ -196,12 +213,6 @@ export default function PlanScreen() {
   const objetivoFijo = rocaAbierta != null;
   /** Fijo y sin número (Relaciones, por ejemplo): no hay nada que anotar, así que no hay botón. */
   const sinAvanceQueAnotar = objetivoFijo && rocaAbierta.meta == null;
-
-  /**
-   * El eje de la prioridad principal de la persona, y los tres con ese adelante (pedido del cliente el 2026-09-14). Sin
-   * prioridad guardada, `conPrincipalPrimero` devuelve el orden de siempre.
-   */
-  const { ejePrincipal } = usePrioridadPrincipal();
 
   /* El objetivo de ESTE MES para el eje abierto, calculado por el servidor (ver la cabecera de
      `api/planMensualApi.ts`). */
@@ -221,7 +232,6 @@ export default function PlanScreen() {
     planDelEjeAbierto?.semana
       ? cifraEscrita(planDelEjeAbierto.semana.cifra, planDelEjeAbierto.unidad, planDelEjeAbierto.unidadAdelante)
       : null;
-  const ejesOrdenados = useMemo(() => conPrincipalPrimero(EJES, ejePrincipal), [ejePrincipal]);
 
   /**
    * Cambiar de eje sin salir de Objetivos (2026-10-05, decisión del dueño). Antes, para pasar de
@@ -229,7 +239,7 @@ export default function PlanScreen() {
    * se va con el eje: hablaba del otro objetivo.
    */
   const cambiarEje = (eje: EjeObjetivo) => {
-    setEjeAbierto(eje);
+    setEjeElegido(eje);
     setConfirmacion(null);
   };
 
@@ -243,7 +253,7 @@ export default function PlanScreen() {
   useEffect(() => {
     const params = route.params as { abrirObjetivosFecha?: string; abrirObjetivosEje?: EjeObjetivo | null } | undefined;
     if (!params?.abrirObjetivosFecha) return;
-    if (params.abrirObjetivosEje) setEjeAbierto(params.abrirObjetivosEje);
+    if (params.abrirObjetivosEje) setEjeElegido(params.abrirObjetivosEje);
     (navigation as unknown as { setParams: (p: Record<string, unknown>) => void })
       .setParams({ abrirObjetivosFecha: undefined, abrirObjetivosEje: undefined });
   }, [route.params, navigation]);
@@ -469,6 +479,7 @@ export default function PlanScreen() {
             diaPrograma={diaPrograma}
             ejeAbierto={ejeAbierto}
             objetivoSugeridoDe={planMensual.objetivoSugeridoDe}
+            accionSugerida={accionSugerida}
             onDefinirObjetivos={definirObjetivos}
           />
         </View>

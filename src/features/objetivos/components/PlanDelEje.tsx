@@ -5,12 +5,12 @@ import { useNavigation } from '@react-navigation/native';
 import { Alert } from '../../../components/Alerta';
 import { GoldButton } from '../../../components/GoldButton';
 import { useAuth } from '../../../context/AuthContext';
-import { useAccionesDelMapa } from '../../mapa-renacimiento/hooks/useAccionesDelMapa';
 import { useRocasDiarias } from '../hooks/useRocasDiarias';
 import { useRocasSemanales } from '../hooks/useRocasSemanales';
 import type { CierreRocaSemanal, EjeObjetivo, ItemPlanDiario, ItemPlanSemanal, RocaDiariaApi, RocaMaestraApi } from '../types/objetivos.types';
 import { EJES, ETIQUETA_EJE } from '../types/objetivos.types';
 import { accionesDelEje, avanceDeLasAcciones, unirAcciones } from '../utils/planPrincipal';
+import type { SugerenciaDeAccion } from '../utils/accionesPropias';
 import { semanaAPlanificar } from '../utils/periodoDelPrograma';
 import { AgendarAccionesModal } from './AgendarAccionesModal';
 import { PlanSemanalModal } from './PlanSemanalModal';
@@ -40,6 +40,7 @@ export function PlanDelEje({
   diaPrograma,
   ejeAbierto,
   objetivoSugeridoDe,
+  accionSugerida = null,
   onDefinirObjetivos,
 }: {
   maestras: RocaMaestraApi[];
@@ -47,6 +48,8 @@ export function PlanDelEje({
   diaPrograma: number;
   ejeAbierto: EjeObjetivo;
   objetivoSugeridoDe: (eje: EjeObjetivo) => string;
+  /** La primera acción del diagnóstico de la persona, para ofrecerla al agendar (eje de su prioridad principal). */
+  accionSugerida?: SugerenciaDeAccion | null;
   /** «Escribir mis objetivos»: la semana está bloqueada hasta tener los tres de 90 días. Abre el editor del primero que falta. */
   onDefinirObjetivos?: () => void;
 }) {
@@ -63,8 +66,6 @@ export function PlanDelEje({
   const [revisando, setRevisando] = useState<EjeObjetivo | null>(null);
   const [agendando, setAgendando] = useState(false);
   const [ochentaVeinte, setOchentaVeinte] = useState(false);
-  /* Solo cuando el planificador se abre: quien nunca lo toca no paga la lectura del Mapa. */
-  const accionesDelMapa = useAccionesDelMapa(agendando);
 
   const seArma = armaLaQueEmpieza ? queEmpieza : semanal;
   const paraAgendar = armaLaQueEmpieza ? queEmpieza : semanal;
@@ -188,7 +189,7 @@ export function PlanDelEje({
         visible={agendando}
         semanal={paraAgendar}
         fecha={diaria.objetivo.fecha}
-        accionesDelMapa={accionesDelMapa}
+        sugerida={accionSugerida}
         guardando={diaria.guardando}
         onGuardar={guardarAcciones}
         onCerrar={() => setAgendando(false)}
