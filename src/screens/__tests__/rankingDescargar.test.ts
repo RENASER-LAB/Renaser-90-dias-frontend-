@@ -106,7 +106,8 @@ async function tocarYEsperar(r: ReactTestRenderer) {
 describe('ComunidadScreen solo suma el botón', () => {
   it('monta `BotonDescargarPodio` una vez, con las filas de la tabla que se mira y la fecha del corte', () => {
     expect(COMUNIDAD.match(/<BotonDescargarPodio/g)).toHaveLength(1);
-    expect(COMUNIDAD).toMatch(/<BotonDescargarPodio entradas=\{apiRankingEntries\} tabla=\{tipoRanking\} fechaDelCorte=\{rankingData\?\.fecha\} \/>/);
+    // Spec 024: además de las filas, la tabla y la fecha del corte, recibe el nombre de la formación que se mira.
+    expect(COMUNIDAD).toMatch(/<BotonDescargarPodio\s+entradas=\{apiRankingEntries\}\s+tabla=\{tipoRanking\}\s+fechaDelCorte=\{rankingData\?\.fecha\}\s+nombreDeLaFormacion=\{formacionDeLaComunidad\.nombreDeLaQueSeMira\}\s+faltaElegirFormacion=\{formacionDeLaComunidad\.hayQueElegirParaCrear\}\s+\/>/);
   });
 
   it('no sabe de captura ni de compartir: todo eso vive en `features/ranking`', () => {
