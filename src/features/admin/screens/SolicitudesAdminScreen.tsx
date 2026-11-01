@@ -11,6 +11,7 @@ import { useResponsive } from '../../../theme/responsive';
 import { tacto } from '../../../utils/tacto';
 import { useTheme } from '../../../theme/ThemeContext';
 import { ESPACIO_PARA_LANZADOR } from '../../renasia/components/RenasiaLauncher';
+import { entradaParaElLanzador } from '../../renasia/components/lugarDelLanzador';
 import { aprobarSolicitud, listarAprendices, listarSolicitudes, rechazarSolicitud } from '../api/adminApi';
 import type { OpcionDeRol } from '../api/adminApi';
 import { useOpcionesDeRol } from '../hooks/useOpcionesDeRol';
@@ -409,14 +410,6 @@ export function SolicitudesAdminScreen({
           );
         })}
 
-        {seleccionando && vista === 'PENDING' ? (
-          <BotonPrincipal
-            etiqueta={marcadasEnLista.length === 0 ? 'Marca a quién aceptar' : `Aceptar ${marcadasEnLista.length} ${marcadasEnLista.length === 1 ? 'solicitud' : 'solicitudes'}`}
-            onPress={() => abrirLaHoja(marcadasEnLista.map(personaDe))}
-            deshabilitado={marcadasEnLista.length === 0 || !puedeAceptar}
-          />
-        ) : null}
-
         {!cargando && total !== null && quedanPorTraer(solicitudes.length, total) ? (
           <BotonSecundario
             etiqueta={cargandoMas ? 'Cargando…' : textoVerMas(solicitudes.length, total)}
@@ -425,6 +418,19 @@ export function SolicitudesAdminScreen({
           />
         ) : null}
       </ScrollView>
+      {/* Fijo abajo mientras se elige (E2E de las formaciones, 01/11/2026): al final de la lista, con 17 pendientes, había que desplazarla entera después de
+          marcar para encontrar el botón. Se corre lo justo para no quedar debajo del botón flotante de SER. */}
+      {seleccionando && vista === 'PENDING' ? (
+        <View style={[estilos.barraDeAceptar, { backgroundColor: c.bg, borderTopColor: c.border, paddingHorizontal: horizontalPadding }]}>
+          <View style={{ width: '100%', maxWidth: contentMaxWidth, alignSelf: 'center', paddingRight: entradaParaElLanzador(horizontalPadding) }}>
+            <BotonPrincipal
+              etiqueta={marcadasEnLista.length === 0 ? 'Marca a quién aceptar' : `Aceptar ${marcadasEnLista.length} ${marcadasEnLista.length === 1 ? 'solicitud' : 'solicitudes'}`}
+              onPress={() => abrirLaHoja(marcadasEnLista.map(personaDe))}
+              deshabilitado={marcadasEnLista.length === 0 || !puedeAceptar}
+            />
+          </View>
+        </View>
+      ) : null}
       <AceptarSolicitudSheet
         visible={porAceptar !== null}
         personas={porAceptar ?? []}
@@ -451,6 +457,7 @@ function textoDeLaDecision(solicitud: SolicitudApi): { titulo: string; detalle: 
 }
 
 const estilos = StyleSheet.create({
+  barraDeAceptar: { width: '100%', paddingTop: 10, paddingBottom: 12, borderTopWidth: StyleSheet.hairlineWidth },
   tarjeta: { borderRadius: 14, borderWidth: 1, padding: 16, width: '100%' },
   acciones: { flexDirection: 'row', gap: 10, marginTop: 12, flexWrap: 'wrap' },
   boton: { flexGrow: 1, flexBasis: 130 },
