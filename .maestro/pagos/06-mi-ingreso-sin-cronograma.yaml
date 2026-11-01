@@ -11,6 +11,6 @@ appId: com.renaser.app
 - assertNotVisible: "Revisé mis fechas y montos."
 - takeScreenshot: P06-tu-pago-fue-cancelado
 - back
-- assertVisible: "Tu evolución"
+- assertVisible: "Coherencia"
 # La fila de Yo dice lo mismo.
 - assertVisible: "Tu pago fue cancelado"

@@ -6,7 +6,7 @@ appId: com.renaser.app
 - runFlow: ../comun/ya-adentro.yaml
 - tapOn: "YO"
 - extendedWaitUntil:
-    visible: "Tu evolución"
+    visible: "Coherencia"
     timeout: 30000
 - scrollUntilVisible:
     element: "Tuve una emergencia"

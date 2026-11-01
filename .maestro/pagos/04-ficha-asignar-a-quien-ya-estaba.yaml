@@ -15,6 +15,9 @@ appId: com.renaser.app
     direction: DOWN
     timeout: 40000
 - tapOn: "Personas.*"
+# Personas lista a todos (más de cien en la base de prueba): se busca a la persona.
+- tapOn: "Buscar por nombre o correo"
+- inputText: "Antigua"
 - extendedWaitUntil:
     visible: "Antigua Uno"
     timeout: 30000

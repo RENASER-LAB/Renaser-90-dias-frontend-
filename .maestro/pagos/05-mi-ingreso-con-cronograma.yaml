@@ -37,9 +37,9 @@ appId: com.renaser.app
 - takeScreenshot: P05b-confirmado
 # Al volver a abrir, sigue confirmado y no se vuelve a pedir.
 - back
-- assertVisible: "Tu evolución"
+- assertVisible: "Coherencia"
 - tapOn: "Mi ingreso"
 - assertVisible: "Confirmaste tu cronograma el.*"
 - assertNotVisible: "Confirmar cronograma"
 - back
-- assertVisible: "Tu evolución"
+- assertVisible: "Coherencia"
