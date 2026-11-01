@@ -34,3 +34,17 @@ describe('la hoja «Aceptar solicitud» se desplaza por encima de su pie fijo', 
     expect(HOJA).toMatch(/cuerpo: \{ gap: 12, paddingHorizontal: 20, paddingBottom: 24 \}/);
   });
 });
+
+const HOJA_DEL_CRONOGRAMA = fs.readFileSync(path.resolve(__dirname, '../../../pagos/components/HojaDelCronograma.tsx'), 'utf8');
+
+describe('la hoja «Cronograma de pagos» de la ficha (issue #88, el mismo defecto)', () => {
+  it('el editor de cuotas va dentro de un ScrollView, por encima del pie «Guardar cronograma»', () => {
+    const abre = HOJA_DEL_CRONOGRAMA.indexOf('<ScrollView keyboardShouldPersistTaps="handled"');
+    const editor = HOJA_DEL_CRONOGRAMA.indexOf('<EditorDeCronograma');
+    const cierra = HOJA_DEL_CRONOGRAMA.indexOf('</ScrollView>');
+    expect(abre).toBeGreaterThan(0);
+    expect(editor).toBeGreaterThan(abre);
+    expect(cierra).toBeGreaterThan(editor);
+    expect(HOJA_DEL_CRONOGRAMA.indexOf('pie={')).toBeLessThan(abre);
+  });
+});

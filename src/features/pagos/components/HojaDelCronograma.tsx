@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { HojaDesdeAbajo } from '../../../components/hojaDesdeAbajo/HojaDesdeAbajo';
 import { BotonPrincipal } from '../../../components/Legible';
@@ -82,9 +82,10 @@ export function HojaDelCronograma({
         </View>
       }
     >
-      <View style={estilos.cuerpo}>
+      {/* Se desliza por encima del pie fijo (#88, el mismo defecto de #87): con varias cuotas el editor no cabe en la hoja. */}
+      <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={estilos.cuerpo}>
         <EditorDeCronograma pago={borrador} alCambiar={setBorrador} deshabilitado={guardando} />
-      </View>
+      </ScrollView>
     </HojaDesdeAbajo>
   );
 }
