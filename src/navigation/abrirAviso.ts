@@ -1,4 +1,4 @@
-import type { DestinoDeAviso } from '../features/mentor/api/avisosApi';
+import type { DestinoDeAviso, DestinoDelChat } from '../features/mentor/api/avisosApi';
 
 /**
  * Adónde lleva tocar un aviso que abre una pestaña, y cuándo se puede ir (D-218, 2026-09-28).
@@ -97,7 +97,11 @@ export function pestanaDelDestino(
     case 'cajaAdmin':
       return { pestana: PESTANA.cajaAdmin, params: { abrirCajaAprendizId: destino.aprendizId } };
     case 'chat':
-      return { pestana: PESTANA.chat, params: { abrirChatConversacionId: destino.conversacionId } };
+      return {
+        pestana: PESTANA.chat,
+        // Spec 024: si hubo que cambiar de formación para abrirlo, Comunidad lo dice en una línea (`abrirChatAviso`).
+        params: { abrirChatConversacionId: destino.conversacionId, ...(destino.aviso ? { abrirChatAviso: destino.aviso } : {}) },
+      };
     case 'semaforo':
       return { pestana: PESTANA.semaforo, params: { abrirSemaforo: true } };
     case 'alumno':
@@ -116,7 +120,22 @@ export interface DependenciasDeApertura {
   pestanaDisponible: (nombre: string) => boolean;
   consumir: (tipo: TipoQueAbreUnaPestana) => Extract<DestinoDeAviso, { tipo: TipoQueAbreUnaPestana }> | null;
   irAPestana: (nombre: string, params: Record<string, unknown>) => boolean;
+  /**
+   * Spec 024 (FR-032): la formación del chat que abre el aviso. Opcional: sin esto (las pruebas de siempre) el chat se abre como antes.
+   * `seguir` lo abre, `descartar` lo suelta sin abrir nada, y `cambiar` pide cambiar de formación primero.
+   */
+  decidirFormacionDelChat?: (destino: DestinoDelChat) => DecisionDeApertura;
+  /** Hace el cambio de formación (activa o elección de la Comunidad). `false` si no se pudo: el aviso se descarta. */
+  cambiarDeFormacion?: (decision: Extract<DecisionDeApertura, { accion: 'cambiar' }>) => Promise<boolean>;
+  /** Vuelve a dejar esperando el destino, ya con la línea de aviso, cuando el cambio terminó. */
+  volverAAnotar?: (destino: DestinoDelChat) => void;
 }
+
+/** Lo que `decidirFormacionDelChat` entrega: la decisión de `formaciones/utils/avisoDeFormacion` ya reducida a lo que importa acá. */
+export type DecisionDeApertura =
+  | { accion: 'seguir' }
+  | { accion: 'descartar' }
+  | { accion: 'cambiar'; codigo: string; aviso: string; sobre: 'activa' | 'eleccion' };
 
 /** `abierto` si navegó; `esperando` si hay algo que la frena (capa o pestaña); `nada` si no había ruta. */
 export type ResultadoDeApertura = 'abierto' | 'esperando' | 'nada';
@@ -140,6 +159,21 @@ export function intentarAbrirAvisoPendiente(deps: DependenciasDeApertura): Resul
     if (!deps.pestanaDisponible(PESTANA[tipo])) continue;
     const destino = deps.consumir(tipo);
     if (!destino) continue;
+    /* Spec 024: un chat de otra formación. El destino que vuelve de un cambio ya trae su línea de aviso (`aviso`): no se vuelve a decidir. */
+    if (destino.tipo === 'chat' && !destino.aviso && deps.decidirFormacionDelChat) {
+      const decision = deps.decidirFormacionDelChat(destino);
+      if (decision.accion === 'descartar') return 'nada';
+      if (decision.accion === 'cambiar') {
+        const chat = destino;
+        void (deps.cambiarDeFormacion?.(decision) ?? Promise.resolve(false)).then(
+          cambio => {
+            if (cambio) deps.volverAAnotar?.({ ...chat, aviso: decision.aviso });
+          },
+          () => undefined,
+        );
+        return 'esperando';
+      }
+    }
     const { pestana, params } = pestanaDelDestino(destino);
     return deps.irAPestana(pestana, params) ? 'abierto' : 'esperando';
   }

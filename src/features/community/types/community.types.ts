@@ -34,6 +34,8 @@ export interface WallPost {
   commentCount: number;
   /** Día de programa del autor al publicar (1..90). `null`/ausente = no tenía programa activo. */
   programDay?: number | null;
+  /** Spec 024: el código de la formación de la publicación (`ESCUELA`, `DIPLOMADO`, `CERTIFICACION`); ausente con un servidor anterior. */
+  formation?: string | null;
 }
 
 export interface WallFeedPage {

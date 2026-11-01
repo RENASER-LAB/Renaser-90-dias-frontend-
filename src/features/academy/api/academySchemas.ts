@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { formacionTolerante } from '../../formaciones/api/formacionTolerante';
+
 /**
  * Validación en runtime de lo que responde el backend para Academia (cursos/lecciones).
  *
@@ -36,6 +38,8 @@ const cursoSchema = z
     rolesPermitidos: z.array(z.string()),
     creadoEn: z.string(),
     actualizadoEn: z.string(),
+    // Spec 024: la formación del curso. Opcional y tolerante (un servidor anterior no la manda).
+    formation: formacionTolerante,
   })
   .passthrough();
 
@@ -63,6 +67,7 @@ const cursoBloqueadoSchema = z
     orden: z.number(),
     diaDesbloqueo: z.number(),
     programDayActual: z.number(),
+    formation: formacionTolerante,
   })
   .passthrough();
 

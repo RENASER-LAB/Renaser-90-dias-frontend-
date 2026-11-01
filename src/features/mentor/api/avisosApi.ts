@@ -140,6 +140,14 @@ export interface DestinoDeCajaAdmin {
 export interface DestinoDelChat {
   tipo: 'chat';
   conversacionId: string;
+  /**
+   * Spec 024: la formación del chat (`/chat/{id}?formacion=DIPLOMADO`). El servidor solo la pone cuando NO es la Escuela, así que
+   * su ausencia significa «la Escuela». Solo la usa el personal con varias formaciones (para cambiar a la del chat antes de abrirlo);
+   * para las demás cuentas se ignora. Ausente (no `null`) cuando la ruta no la trae.
+   */
+  formacion?: string;
+  /** Spec 024: la línea que Comunidad dice al abrir el chat si hubo que cambiar de formación («Cambiamos a Diplomado Renaser.»). */
+  aviso?: string;
 }
 
 /**
@@ -199,10 +207,12 @@ const RUTA_DE_MI_CAJA = /^\/caja\/?$/;
 /** Spec 012: Mi Radar. Con la barra final tolerada. */
 const RUTA_DE_MI_RADAR = /^\/mi-radar\/?$/;
 const RUTA_DE_LA_CAJA_ADMIN = /^\/admin\/caja\/([^/?]+)\/?$/;
-/** D-221: el chat de un aviso de mensaje. Con la barra final tolerada. */
-const RUTA_DEL_CHAT = /^\/chat\/([^/?]+)\/?$/;
+/** D-221: el chat de un aviso de mensaje. Con la barra final tolerada; desde la spec 024 puede traer `?formacion=…`. */
+const RUTA_DEL_CHAT = /^\/chat\/([^/?]+)\/?(?:\?(.*))?$/;
 /** Spec 031: el aviso de «tu análisis está listo»: Plan → Tu 80/20, en la semana o el mes. */
 const RUTA_DEL_OCHENTA_VEINTE = /^\/plan\/80-20\/?(?:\?(.*))?$/;
+/** Un código de formación tal como lo manda el servidor (`DIPLOMADO`, `CERTIFICACION`); cualquier otra cosa se ignora. */
+const CODIGO_DE_FORMACION = /^[A-Z][A-Z0-9_]{1,31}$/;
 
 /**
  * Saca el destino de la ruta de un aviso: la ficha de un alumno
@@ -241,7 +251,11 @@ export function destinoDeRuta(ruta: unknown): DestinoDeAviso | null {
   const delChat = RUTA_DEL_CHAT.exec(ruta);
   if (delChat) {
     const conversacionId = decodificar(delChat[1]);
-    return conversacionId ? { tipo: 'chat', conversacionId } : null;
+    if (!conversacionId) return null;
+    const formacion = parametro(delChat[2], 'formacion')?.trim().toUpperCase();
+    return formacion && CODIGO_DE_FORMACION.test(formacion)
+      ? { tipo: 'chat', conversacionId, formacion }
+      : { tipo: 'chat', conversacionId };
   }
   const delEvento = RUTA_DEL_EVENTO.exec(ruta);
   if (delEvento) {

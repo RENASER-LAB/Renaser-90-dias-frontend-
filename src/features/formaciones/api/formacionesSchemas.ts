@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { DURACION_POR_DEFECTO, type DetalleDeFormacion, type FormacionDeLaSesion, type FormacionDeUnaPersona, type ResumenDeFormacion, type TarjetaDeFormacion } from '../types/formaciones.types';
+import { DURACION_POR_DEFECTO, TIPOS_DE_COMUNIDAD, type ComunidadDeLaFormacion, type DetalleDeFormacion, type FormacionDeLaSesion, type FormacionDeUnaPersona, type ResumenDeFormacion, type TarjetaDeFormacion } from '../types/formaciones.types';
 import { fasesDeLaDuracion } from '../utils/fasesDeLaDuracion';
 import { etiquetaDeDuracion } from '../utils/etiquetaDeDuracion';
 
@@ -194,4 +194,38 @@ export function leerFormacionDeUnaPersona(dato: unknown): FormacionDeUnaPersona 
       ];
     }),
   };
+}
+
+/* ── La comunidad de una formación (spec 024) ─────────────────────────────────────────────────────────────────────────── */
+
+const tipoDeComunidadSchema = z
+  .object({
+    tipo: z.string(),
+    prendido: z.boolean().catch(true),
+    conversaciones: z.number().nullish().transform(n => (typeof n === 'number' && n > 0 ? Math.round(n) : 0)),
+  })
+  .passthrough();
+
+const comunidadSchema = z.object({ formation: z.string().nullish(), tipos: z.array(z.unknown()) }).passthrough();
+
+/**
+ * Los tipos de comunidad de una formación, en el orden fijo de la app (general, grupo, soporte, directos). Un tipo que esta versión no
+ * conoce se descarta (no hay con qué explicarlo) y una fila rota se pierde ELLA. `null` si la respuesta no es lo que se espera.
+ */
+export function leerComunidadDeLaFormacion(dato: unknown, codigo: string): ComunidadDeLaFormacion | null {
+  const lectura = comunidadSchema.safeParse(dato);
+  if (!lectura.success) return null;
+  const porTipo = new Map<string, { tipo: (typeof TIPOS_DE_COMUNIDAD)[number]; prendido: boolean; conversaciones: number }>();
+  for (const fila of lectura.data.tipos) {
+    const tipo = tipoDeComunidadSchema.safeParse(fila);
+    if (!tipo.success) continue;
+    const conocido = TIPOS_DE_COMUNIDAD.find(t => t === tipo.data.tipo);
+    if (!conocido) continue;
+    porTipo.set(conocido, { tipo: conocido, prendido: tipo.data.prendido, conversaciones: tipo.data.conversaciones });
+  }
+  const tipos = TIPOS_DE_COMUNIDAD.flatMap(t => {
+    const dato = porTipo.get(t);
+    return dato ? [dato] : [];
+  });
+  return { formacion: lectura.data.formation?.trim() || codigo, tipos };
 }

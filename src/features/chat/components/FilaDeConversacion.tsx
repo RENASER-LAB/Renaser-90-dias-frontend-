@@ -7,6 +7,7 @@ import { Presionable } from '../../../components/Presionable';
 import type { ChatConversation } from '../../../screens/ComunidadScreen';
 import { useTheme } from '../../../theme/ThemeContext';
 import { horaDeLaLista } from '../utils/formatoChat';
+import { RotuloDeFormacion } from '../../formaciones/components/RotuloDeFormacion';
 import { AvatarDeChat } from './AvatarDeChat';
 
 /**
@@ -64,6 +65,8 @@ export function FilaDeConversacion({
             </Text>
           )}
         </View>
+        {/* Spec 024: la formación del chat, solo cuando Administración lee «Todas». */}
+        <RotuloDeFormacion formation={conversacion.formacion} />
         <View style={styles.renglon}>
           <Text
             numberOfLines={1}

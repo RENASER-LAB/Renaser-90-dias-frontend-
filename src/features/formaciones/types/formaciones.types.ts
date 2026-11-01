@@ -95,3 +95,21 @@ export type DatosDeTraslado = {
   darPorTerminada: boolean;
   motivo: string | null;
 };
+
+/** Los cuatro tipos de comunidad que cada formación puede prender o apagar (spec 024). */
+export const TIPOS_DE_COMUNIDAD = ['GENERAL', 'GRUPO', 'SOPORTE', 'DIRECTO'] as const;
+
+export type TipoDeComunidad = (typeof TIPOS_DE_COMUNIDAD)[number];
+
+/** Un tipo de comunidad de una formación: si está prendido y cuántas conversaciones esconde si se apaga. */
+export type TipoDeComunidadDeLaFormacion = {
+  tipo: TipoDeComunidad;
+  prendido: boolean;
+  conversaciones: number;
+};
+
+/** `GET /api/v1/admin/formaciones/{codigo}/comunidad`. */
+export type ComunidadDeLaFormacion = {
+  formacion: string;
+  tipos: TipoDeComunidadDeLaFormacion[];
+};

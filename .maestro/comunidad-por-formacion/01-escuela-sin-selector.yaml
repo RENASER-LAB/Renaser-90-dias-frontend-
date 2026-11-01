@@ -1,0 +1,29 @@
+# Comunidad vista por un aprendiz de la Escuela (spec 024). ESCRITO Y SIN CORRER.
+# cuenta: aprendiz  (la ranura apunta a un aprendiz de la ESCUELA)
+# Precondición: existen publicaciones, eventos y cursos del Diplomado; esta cuenta no debe ver ninguno ni la palabra «formación».
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "COMUNIDAD"
+- extendedWaitUntil:
+    visible: "Muro"
+    timeout: 30000
+# Ni selector ni rótulos: Comunidad es la de siempre.
+- assertNotVisible: "Todas"
+- assertNotVisible: "Todas las formaciones"
+- assertNotVisible: "Diplomado"
+- assertNotVisible: "Certificación"
+- takeScreenshot: C01a-muro-de-la-escuela
+- tapOn: "Tribu"
+- extendedWaitUntil:
+    visible: "Formación Renaser Global"
+    timeout: 30000
+- assertNotVisible: "Diplomado Renaser Global"
+- assertNotVisible: "Certificación Renaser Global"
+- takeScreenshot: C01b-tribu-de-la-escuela
+- tapOn: "Ranking"
+- extendedWaitUntil:
+    visible: "Tu posición"
+    timeout: 30000
+- assertNotVisible: "Diplomado Renaser"
+- takeScreenshot: C01c-ranking-de-la-escuela

@@ -1,4 +1,5 @@
 import { apiFetch } from '../../../services/http/apiClient';
+import { agregarLaFormacion } from '../../formaciones/estado/formacionDeLaComunidad';
 import type {
   CursoBloqueadoApi,
   CursoDetalleApi,
@@ -15,8 +16,9 @@ import { academySchemas, validarRespuesta } from './academySchemas';
  */
 
 /** GET /api/v1/cursos — catálogo YA accesible del actor (rol + día de programa), con su progreso. */
-export async function obtenerMisCursos(): Promise<MiCursoApi[]> {
-  const r = await apiFetch<unknown>('/api/v1/cursos');
+export async function obtenerMisCursos(formation?: string | null): Promise<MiCursoApi[]> {
+  // Spec 024: `formation` solo lo pasa la Comunidad cuando quien ve todas las formaciones eligió una; los demás reciben la suya.
+  const r = await apiFetch<unknown>(agregarLaFormacion('/api/v1/cursos', formation));
   return validarRespuesta(academySchemas.misCursos, r, 'GET /api/v1/cursos');
 }
 
@@ -27,8 +29,8 @@ export async function obtenerMisCursos(): Promise<MiCursoApi[]> {
  * por `orden` — decisión del dueño del producto (2026-09-01): el aprendiz debe ver qué le falta
  * desbloquear, no solo lo ya accesible. Ver `academyMappers.mapearCursoBloqueado`.
  */
-export async function obtenerCursosBloqueados(): Promise<CursoBloqueadoApi[]> {
-  const r = await apiFetch<unknown>('/api/v1/cursos/bloqueados');
+export async function obtenerCursosBloqueados(formation?: string | null): Promise<CursoBloqueadoApi[]> {
+  const r = await apiFetch<unknown>(agregarLaFormacion('/api/v1/cursos/bloqueados', formation));
   return validarRespuesta(academySchemas.cursosBloqueados, r, 'GET /api/v1/cursos/bloqueados');
 }
 

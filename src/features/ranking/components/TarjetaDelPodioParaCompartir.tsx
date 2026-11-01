@@ -72,7 +72,10 @@ export const TarjetaDelPodioParaCompartir = forwardRef<View, { podio: PodioParaC
               accessible={false}
             />
           </View>
-          <Text style={estilos.marca}>Renaser · 90 días</Text>
+          {/* Spec 024: con formación conocida, su nombre («Diplomado Renaser»); si no, la línea de siempre. */}
+          <Text style={estilos.marca} numberOfLines={1}>
+            {podio.formacion ?? 'Renaser · 90 días'}
+          </Text>
           <Text style={estilos.titulo} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
             {podio.titulo}
           </Text>
