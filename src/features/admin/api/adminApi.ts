@@ -273,6 +273,8 @@ export async function listarAprendices(opciones: {
   rol?: RolAsignable;
   /** Spec 022: solo las personas de esa formación (código). Sin él vienen las de todas. */
   formacion?: string | null;
+  /** Solo las cuentas activas: sin las solicitudes que esperan aprobación (el padrón las trae, inactivas y sin programa). */
+  soloActivas?: boolean;
 }): Promise<PaginaAprendicesApi> {
   const params = new URLSearchParams({
     page: String(opciones.pagina ?? 0),
@@ -282,6 +284,7 @@ export async function listarAprendices(opciones: {
   if (opciones.soloSinGrupo) params.set('withoutGroup', 'true');
   if (opciones.rol) params.set('role', opciones.rol);
   if (opciones.formacion) params.set('formation', opciones.formacion);
+  if (opciones.soloActivas) params.set('activeOnly', 'true');
 
   return validarRespuesta<PaginaAprendicesApi>(
     paginaAprendicesSchema,

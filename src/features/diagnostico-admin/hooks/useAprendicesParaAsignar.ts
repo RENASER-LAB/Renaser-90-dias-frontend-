@@ -36,7 +36,8 @@ export function useAprendicesParaAsignar() {
     setCargando(true);
     setError(null);
     try {
-      const respuesta = await listarAprendices({ pagina, tamano: POR_PAGINA, busqueda: aplicada, formacion });
+      /* Solo quien ya está dentro: las solicitudes que esperan aprobación no tienen ficha que asignar (spec 026). */
+      const respuesta = await listarAprendices({ pagina, tamano: POR_PAGINA, busqueda: aplicada, formacion, soloActivas: true });
       if (mio !== turno.current) return;
       setPersonas(previas => (pagina === 0 ? respuesta.content : [...previas, ...respuesta.content]));
       setTotal(respuesta.total);

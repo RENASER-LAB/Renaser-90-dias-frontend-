@@ -64,7 +64,7 @@ afterEach(async () => {
 describe('asignar el diagnóstico a varias personas', () => {
   it('lista a las personas como «Personas», sin botón de asignar hasta marcar a alguien', async () => {
     await montar();
-    expect(mockListar).toHaveBeenCalledWith({ pagina: 0, tamano: 20, busqueda: '', formacion: null });
+    expect(mockListar).toHaveBeenCalledWith({ pagina: 0, tamano: 20, busqueda: '', formacion: null, soloActivas: true });
     expect(hay('Ana Pérez')).toBe(true);
     expect(hay('Día 12 · Diplomado')).toBe(true);
     expect(hay('Marca a las personas que quieres incluir')).toBe(true);
@@ -114,7 +114,7 @@ describe('asignar el diagnóstico a varias personas', () => {
     await escribir('Buscar personas', 'beto');
     expect(mockListar).toHaveBeenCalledTimes(1);
     await esperar(400);
-    expect(mockListar).toHaveBeenLastCalledWith({ pagina: 0, tamano: 20, busqueda: 'beto', formacion: null });
+    expect(mockListar).toHaveBeenLastCalledWith({ pagina: 0, tamano: 20, busqueda: 'beto', formacion: null, soloActivas: true });
     expect(hay('Beto Luna')).toBe(true);
     expect(hay('1 persona marcada')).toBe(true);
     await marcar('Beto Luna');
@@ -126,7 +126,7 @@ describe('asignar el diagnóstico a varias personas', () => {
   it('el filtro de formación va al servidor', async () => {
     await montar();
     await tocarPorEtiqueta('Diplomado');
-    expect(mockListar).toHaveBeenLastCalledWith({ pagina: 0, tamano: 20, busqueda: '', formacion: 'DIPLOMADO' });
+    expect(mockListar).toHaveBeenLastCalledWith({ pagina: 0, tamano: 20, busqueda: '', formacion: 'DIPLOMADO', soloActivas: true });
   });
 
   it('«Ver más» trae la página siguiente y las suma', async () => {
@@ -135,7 +135,7 @@ describe('asignar el diagnóstico a varias personas', () => {
     expect(hay('Ver más (1 de 2)')).toBe(true);
     mockListar.mockResolvedValueOnce({ content: [persona('u2', 'Luis Rojas')], total: 2, page: 1, size: 20 });
     await tocar('Ver más (1 de 2)');
-    expect(mockListar).toHaveBeenLastCalledWith({ pagina: 1, tamano: 20, busqueda: '', formacion: null });
+    expect(mockListar).toHaveBeenLastCalledWith({ pagina: 1, tamano: 20, busqueda: '', formacion: null, soloActivas: true });
     expect(hay('Luis Rojas')).toBe(true);
     expect(hay('Ana Pérez')).toBe(true);
   });
