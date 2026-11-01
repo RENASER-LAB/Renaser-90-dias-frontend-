@@ -11,9 +11,13 @@ const ESTADO_VACIO = fs.readFileSync(path.resolve(__dirname, '../../features/pro
  * muestra un estado con cuerpo centrado en el alto que sobra; el selector de eje, el objetivo, «Esta semana» y las acciones no se dibujan.
  */
 describe('Plan sin programa propio', () => {
-  it('lo decide `/home` (no estar inscrito), no el día 0: quien tiene programa sin Día 1 ve Plan como siempre', () => {
-    expect(PLAN).toContain('const sinProgramaPropio = resumen?.inscrito === false;');
+  it('lo decide `/home` (no estar inscrito) o, para el PERSONAL, tener la fila sin haber elegido su Día 1 (#83); el aprendiz con la fila ve Plan como siempre', () => {
+    expect(PLAN).toContain(
+      "const sinProgramaPropio = resumen?.inscrito === false || (programaPropio.vista?.tipo === 'elegir' && programaPropio.delPersonal);",
+    );
+    // Quién es del personal lo dice el servidor (`canStartProgram`), no el nombre del rol en el teléfono; y no se decide por el día 0.
     expect(PLAN).not.toMatch(/sinProgramaPropio = .*diaPrograma/);
+    expect(PLAN).not.toMatch(/sinProgramaPropio = .*user\?\.role/);
   });
 
   it('muestra el estado vacío con cuerpo y todo lo demás solo se dibuja con programa', () => {

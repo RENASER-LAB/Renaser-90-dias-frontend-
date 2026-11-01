@@ -160,10 +160,6 @@ export default function PlanScreen() {
     duracionDias: resumen?.duracionDias,
     formacion: resumen?.formacion,
   });
-  /* Sin programa propio (el personal que todavía no hizo el suyo) no hay objetivos que leer: el servidor responde 404 «Participante no encontrado»
-     a todo `/rocks/*` y se veía ese texto, con el id, en dos tarjetas (E2E de las formaciones, 01/11/2026, issue #81). Quien tiene programa, aunque
-     no haya elegido su Día 1, ve Plan como siempre. */
-  const sinProgramaPropio = resumen?.inscrito === false;
 
   /**
    * La fase del aprendiz, **la que dice el backend**, no una calculada acá.
@@ -229,6 +225,11 @@ export default function PlanScreen() {
    * El eje de cada acción pendiente de la hoja sale de las acciones de hoy (el servidor no lo manda en el cierre).
    */
   const { user } = useAuth();
+  /* Sin programa propio andando no hay objetivos que operar. El servidor responde a todo `/rocks/*`: 404 «Participante no encontrado: <id>» a quien
+     no tiene fila (issues #81 y #82) y 403 «Solo un aprendiz opera sus propias rocas» al PERSONAL que tiene la fila pero todavía no eligió su Día 1
+     (#83, `AccesoARocas`); se veía ese texto en rojo en dos tarjetas. Plan muestra entonces su estado vacío con el botón «Elegir mi Día 1». El
+     aprendiz con la fila y sin Día 1 sí opera sus rocas (el servidor lo deja): ve Plan como siempre. */
+  const sinProgramaPropio = resumen?.inscrito === false || (programaPropio.vista?.tipo === 'elegir' && programaPropio.delPersonal);
   /* La memoria de las lecturas del cierre (hoy y días anteriores) se separa por cuenta Y formación: el cierre de una no es el de la otra (spec 022). */
   const { formacion: formacionDeLaSesion } = useFormacionDeLaSesion();
   const { rocas: rocasDeHoy } = useAccionesDeHoy();

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import { mensajeDeError } from '../../../services/http/apiClient';
+import { mensajeDeObjetivos } from '../utils/mensajeDeObjetivos';
 import * as objetivosApi from '../api/objetivosApi';
 import { esRocaMaestraFija } from '../utils/objetivoFijo';
 import type { DefinicionRocaMaestra, EjeObjetivo, RocaMaestraApi } from '../types/objetivos.types';
@@ -36,7 +36,7 @@ export function useRocasMaestras() {
     try {
       setRocas(await objetivosApi.obtenerRocasMaestras());
     } catch (e) {
-      setError(mensajeDeError(e, 'No pudimos cargar tu objetivo de 90 días.'));
+      setError(mensajeDeObjetivos(e, 'No pudimos cargar tu objetivo de 90 días.'));
     } finally {
       setCargando(false);
     }
@@ -75,7 +75,7 @@ export function useRocasMaestras() {
       if (esRocaMaestraFija(e)) void cargar();
       return {
         ok: false as const,
-        mensaje: mensajeDeError(e, 'No pudimos guardar tu objetivo.'),
+        mensaje: mensajeDeObjetivos(e, 'No pudimos guardar tu objetivo.'),
       };
     } finally {
       setGuardando(false);
@@ -103,7 +103,7 @@ export function useRocasMaestras() {
             ok: false,
             confirmados,
             falloEn: item.eje,
-            mensaje: mensajeDeError(e, 'No pudimos confirmar tu objetivo.'),
+            mensaje: mensajeDeObjetivos(e, 'No pudimos confirmar tu objetivo.'),
           };
         }
       }

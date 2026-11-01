@@ -67,6 +67,8 @@ export function useFilaDelProgramaPropio({
 
   return {
     vista,
+    /** Es de quienes pueden tener un programa propio OPCIONAL (el personal; lo dice el servidor, no el rol). El aprendiz no. */
+    delPersonal: activo,
     error: hayError ? { mensaje: diaUno.mensaje, reintentar } : null,
     /** Algo que dibujar: la fila o el aviso de que no se pudo comprobar. */
     visible: Boolean(vista) || hayError,

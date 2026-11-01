@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { ApiError, mensajeDeError } from '../../../services/http/apiClient';
+import { ApiError } from '../../../services/http/apiClient';
+import { mensajeDeObjetivos } from '../utils/mensajeDeObjetivos';
 import * as objetivosApi from '../api/objetivosApi';
 import type {
   CierreRocaSemanal,
@@ -76,7 +77,7 @@ export function useRocasSemanales(maestras: RocaMaestraApi[], semana?: number, a
         setBloqueada(true);
         setRocas([]);
       } else {
-        setError(mensajeDeError(e, 'No pudimos cargar tu plan de la semana.'));
+        setError(mensajeDeObjetivos(e, 'No pudimos cargar tu plan de la semana.'));
       }
     } finally {
       setCargando(false);
@@ -140,7 +141,7 @@ export function useRocasSemanales(maestras: RocaMaestraApi[], semana?: number, a
       return {
         ok: false as const,
         motivo: 'error' as const,
-        mensaje: mensajeDeError(e, 'No pudimos guardar tu plan de la semana.'),
+        mensaje: mensajeDeObjetivos(e, 'No pudimos guardar tu plan de la semana.'),
       };
     } finally {
       setGuardando(false);
@@ -165,7 +166,7 @@ export function useRocasSemanales(maestras: RocaMaestraApi[], semana?: number, a
           mensaje: 'La ventana para corregir esta semana ya cerró. Vas a poder replanificar el domingo.',
         };
       }
-      return { ok: false as const, motivo: 'error' as const, mensaje: mensajeDeError(e, 'No pudimos guardar el cambio.') };
+      return { ok: false as const, motivo: 'error' as const, mensaje: mensajeDeObjetivos(e, 'No pudimos guardar el cambio.') };
     } finally {
       setGuardando(false);
     }
@@ -178,7 +179,7 @@ export function useRocasSemanales(maestras: RocaMaestraApi[], semana?: number, a
       reemplazar(await objetivosApi.cerrarSemana(id, cierre));
       return { ok: true as const };
     } catch (e) {
-      return { ok: false as const, mensaje: mensajeDeError(e, 'No pudimos guardar tu revisión.') };
+      return { ok: false as const, mensaje: mensajeDeObjetivos(e, 'No pudimos guardar tu revisión.') };
     } finally {
       setGuardando(false);
     }
