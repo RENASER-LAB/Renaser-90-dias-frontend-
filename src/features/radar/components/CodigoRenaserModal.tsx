@@ -22,6 +22,7 @@ import { useSystemBackHandler } from '../../../hooks/useSystemBackHandler';
 import { ahoraConfiable } from '../../../services/http/relojServidor';
 import { useResponsive } from '../../../theme/responsive';
 import { useTheme } from '../../../theme/ThemeContext';
+import { tacto } from '../../../utils/tacto';
 import {
   CONFIG_RADAR,
   ENERGIA_MAXIMA,
@@ -31,9 +32,23 @@ import {
   type CampoRadar,
 } from '../config/configRadar';
 import { borrarBorrador, guardarBorrador, leerBorrador, limpiarBorradoresViejos } from '../storage/borradorRadar';
+import { useDictadoDelRadar } from '../hooks/useDictadoDelRadar';
+import { useEscucharPregunta } from '../hooks/useEscucharPregunta';
 import type { CheckInRadarApi } from '../types/radar.types';
+import {
+  huboDictado,
+  marcarDictado,
+  marcasDelBorrador,
+  soltarCamposVacios,
+  sumarDictado,
+  textoMientrasDicta,
+  type MarcasDeDictado,
+} from '../utils/dictadoDelRadar';
 import { faltantesDelRadar, textoDeLoQueFalta, type PiezaDelRadar } from '../utils/faltantesDelRadar';
 import type { SlotRadar } from '../utils/slotsDelRadar';
+import { VozDeLaPregunta } from './VozDeLaPregunta';
+
+const CAMPOS_DEL_RADAR: readonly CampoRadar[] = PREGUNTAS_RADAR.map(p => p.campo);
 
 /**
  * Las cinco preguntas del Código Renaser, a PANTALLA COMPLETA.
@@ -55,6 +70,14 @@ import type { SlotRadar } from '../utils/slotsDelRadar';
  * Bloquear el retroceso es exactamente lo que `useSystemBackHandler` permite: devolver `true` sin
  * hacer nada consume el evento, así que el gesto lateral de Android y el botón físico no sacan a
  * nadie de acá ni cierran la app.
+ *
+ * ## La voz (spec 030, 2026-10-31)
+ *
+ * Cada pregunta de texto tiene «Escuchar» (la voz Dora grabada, sin red) y «Dictar» (el reconocimiento de voz del teléfono,
+ * el mismo del chat de SER; si el teléfono no lo tiene, el botón no está). Lo dictado se SUMA a lo que ya había y queda
+ * editable: nada se registra solo, solo «Registrar» con las reglas de siempre. Es el MISMO formulario en las cuatro entradas
+ * (pantalla obligatoria, Hoy, Mi Radar y el aviso), así que la voz se ve y funciona igual en todas. La energía no se dicta.
+ * Si algo de lo dictado queda en el texto, el registro viaja con `dictado: true` y quien acompaña lo ve (decisión 030-2).
  */
 export function CodigoRenaserModal({
   visible,
@@ -94,6 +117,29 @@ export function CodigoRenaserModal({
   });
   const [energia, setEnergia] = useState<number | null>(null);
   const [intentoEnvio, setIntentoEnvio] = useState(false);
+  /** Qué respuestas llevan algo dictado (spec 030): es lo que declara el registro. */
+  const [dictados, setDictados] = useState<MarcasDeDictado>([]);
+  const respuestasActuales = useRef(respuestas);
+  respuestasActuales.current = respuestas;
+
+  /* Lo dictado se suma al campo que tenía el micrófono cuando este se cierra. Si no agregó nada (el campo ya estaba en el
+     tope de 2 000), no cuenta como dictado. */
+  const alDictar = useCallback((campo: CampoRadar, texto: string) => {
+    if (sumarDictado(respuestasActuales.current[campo], texto) === respuestasActuales.current[campo]) return;
+    setRespuestas(previas => ({ ...previas, [campo]: sumarDictado(previas[campo], texto) }));
+    setDictados(marcas => marcarDictado(marcas, campo));
+  }, []);
+  const dictado = useDictadoDelRadar(alDictar);
+  const voz = useEscucharPregunta();
+  const detenerDictado = dictado.detener;
+  const detenerVoz = voz.detener;
+
+  /* Al cerrarse el formulario no queda ni el micrófono abierto ni una pregunta sonando. */
+  useEffect(() => {
+    if (visible) return;
+    detenerDictado();
+    detenerVoz();
+  }, [visible, detenerDictado, detenerVoz]);
 
   /* Se empieza en blanco AL ABRIR, y sólo al abrir.
 
@@ -114,6 +160,7 @@ export function CodigoRenaserModal({
     if (!seAcabaDeAbrir) return;
     setRespuestas({ whatAmIDoing: '', whatAmIThinking: '', whatAmIFeeling: '', whatAmIAvoiding: '' });
     setEnergia(null);
+    setDictados([]);
     setIntentoEnvio(false);
     onLimpiarError();
 
@@ -128,6 +175,7 @@ export function CodigoRenaserModal({
       if (!vigente || !borrador) return;
       setRespuestas(borrador.respuestas);
       setEnergia(borrador.energia);
+      setDictados(marcasDelBorrador(borrador.dictados, CAMPOS_DEL_RADAR));
     });
     return () => {
       vigente = false;
@@ -139,10 +187,10 @@ export function CodigoRenaserModal({
   useEffect(() => {
     if (!visible || !usuarioId) return;
     const id = setTimeout(() => {
-      void guardarBorrador(usuarioId, ahoraConfiable(), { respuestas, energia });
+      void guardarBorrador(usuarioId, ahoraConfiable(), { respuestas, energia, dictados: [...dictados] });
     }, 1_000);
     return () => clearTimeout(id);
-  }, [visible, usuarioId, respuestas, energia]);
+  }, [visible, usuarioId, respuestas, energia, dictados]);
 
   /* Devolver `true` SIN cerrar consume el evento: ni el botón físico ni el gesto lateral sacan de
      acá, y tampoco cierran la app (que es lo que pasaría si devolviéramos `false`). */
@@ -152,8 +200,32 @@ export function CodigoRenaserModal({
   }, visible);
 
   const escribir = useCallback((campo: CampoRadar, texto: string) => {
-    setRespuestas(previas => ({ ...previas, [campo]: texto.slice(0, MAXIMO_CARACTERES) }));
+    const recortado = texto.slice(0, MAXIMO_CARACTERES);
+    setRespuestas(previas => ({ ...previas, [campo]: recortado }));
+    // Un campo que la persona dejó vacío ya no lleva nada dictado.
+    if (recortado.trim().length === 0) {
+      setDictados(marcas => soltarCamposVacios(marcas, { ...respuestasActuales.current, [campo]: recortado }));
+    }
   }, []);
+
+  /* Escuchar y dictar nunca a la vez: abrir el micrófono detiene la lectura ANTES de pedirlo (para que no capte la voz de la
+     app), y escuchar una pregunta cierra el micrófono. Un toque, una vibración. */
+  const dictarEn = useCallback(
+    (campo: CampoRadar) => {
+      voz.detener();
+      dictado.alternar(campo);
+      tacto.seleccion();
+    },
+    [voz, dictado],
+  );
+  const escucharEn = useCallback(
+    (campo: CampoRadar) => {
+      dictado.detener();
+      voz.alternar(campo);
+      tacto.seleccion();
+    },
+    [voz, dictado],
+  );
 
   const faltan = useMemo(() => faltantesDelRadar(respuestas, energia), [respuestas, energia]);
   const completo = faltan.length === 0;
@@ -171,6 +243,13 @@ export function CodigoRenaserModal({
   );
 
   const enviar = useCallback(async () => {
+    /* Con el micrófono abierto, «Registrar» lo cierra y no registra: el texto dictado llega al cerrarse, y registrar antes lo
+       dejaría afuera sin que la persona lo viera. Un segundo toque registra. */
+    if (dictado.dictandoEn) {
+      dictado.detener();
+      return;
+    }
+    voz.detener();
     setIntentoEnvio(true);
     if (!completo || energia === null) {
       const y = faltan.length > 0 ? posiciones.current[faltan[0].pieza] : undefined;
@@ -183,12 +262,14 @@ export function CodigoRenaserModal({
       whatAmIFeeling: respuestas.whatAmIFeeling.trim(),
       energyLevel: energia,
       whatAmIAvoiding: respuestas.whatAmIAvoiding.trim(),
+      // Solo viaja si es cierto: el pedido de quien escribe es idéntico al de siempre.
+      ...(huboDictado(dictados, respuestas) ? { dictado: true } : {}),
     });
     if (ok) {
       if (usuarioId) void borrarBorrador(usuarioId, ahoraConfiable());
       onCerrar();
     }
-  }, [completo, faltan, energia, respuestas, usuarioId, onEnviar, onCerrar]);
+  }, [completo, faltan, energia, respuestas, dictados, dictado, voz, usuarioId, onEnviar, onCerrar]);
 
   return (
     <Modal
@@ -247,17 +328,28 @@ export function CodigoRenaserModal({
             {PREGUNTAS_RADAR.map(pregunta => {
               const valor = respuestas[pregunta.campo];
               const vacioYMarcado = intentoEnvio && valor.trim().length === 0;
+              const dictandoAqui = dictado.dictandoEn === pregunta.campo;
               return (
                 <View key={pregunta.campo} style={{ gap: 6 }} onLayout={anotarPosicion(pregunta.campo)}>
                   <Text style={[t.cardTitle, { color: c.text, fontSize: 15.5 }]}>{pregunta.titulo}</Text>
                   <Text style={[t.micro, { color: c.micro, fontSize: 11.5 }]}>{pregunta.ayuda}</Text>
+                  <VozDeLaPregunta
+                    pregunta={pregunta.titulo}
+                    puedeDictar={dictado.disponible}
+                    leyendo={voz.leyendo === pregunta.campo}
+                    dictando={dictandoAqui}
+                    deshabilitado={enviando}
+                    fallo={dictado.fallo?.campo === pregunta.campo ? dictado.fallo.mensaje : null}
+                    alEscuchar={() => escucharEn(pregunta.campo)}
+                    alDictar={() => dictarEn(pregunta.campo)}
+                  />
                   <TextInput
-                    value={valor}
+                    value={dictandoAqui ? textoMientrasDicta(valor, dictado.parcial) : valor}
                     onChangeText={texto => escribir(pregunta.campo, texto)}
-                    placeholder={pregunta.marcador}
+                    placeholder={dictandoAqui ? 'Te escucho…' : pregunta.marcador}
                     placeholderTextColor={c.micro}
                     multiline
-                    editable={!enviando}
+                    editable={!enviando && !dictandoAqui}
                     style={[
                       styles.campo,
                       {
@@ -298,7 +390,7 @@ export function CodigoRenaserModal({
               </View>
             ) : null}
             <GoldButton
-              label={enviando ? 'Guardando…' : 'Registrar'}
+              label={enviando ? 'Guardando…' : dictado.dictandoEn ? 'Terminar de dictar' : 'Registrar'}
               onPress={() => void enviar()}
               loading={enviando}
               disabled={enviando}

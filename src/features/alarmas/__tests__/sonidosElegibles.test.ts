@@ -33,6 +33,7 @@ import {
   type TipoDeAlarma,
 } from '../sonidoDeAlarma';
 import { CANAL_DE_MENSAJES } from '../../chat/avisos/canalDeMensajes';
+import { ARCHIVOS_DE_VOZ_DEL_RADAR } from '../../radar/config/vozDelRadar';
 import { leerMp3 } from './leerMp3';
 
 const RAIZ = path.resolve(__dirname, '../../../..');
@@ -123,8 +124,10 @@ describe('los ocho sonidos, en dos grupos', () => {
 describe('los archivos que van en el APK', () => {
   const enAppJson = sonidosDeAppJson();
   const enCarpeta = fs.readdirSync(CARPETA).sort();
-  /* Los de las alarmas y, desde D-221 (2026-09-29), el del canal de mensajes del chat. */
-  const NOMBRADOS = [...ARCHIVOS_DE_SONIDO, CANAL_DE_MENSAJES.sonido];
+  /* Los de las alarmas, el del canal de mensajes del chat (D-221, 2026-09-29) y, desde la spec 030 (2026-10-31), las cuatro
+     voces con que el Código Renaser lee sus preguntas: no son de un canal, se reproducen dentro de la app, pero el dueño pidió
+     que vayan también en `sounds` de `app.json` y esta prueba las vigila igual que a las demás. */
+  const NOMBRADOS = [...ARCHIVOS_DE_SONIDO, CANAL_DE_MENSAJES.sonido, ...ARCHIVOS_DE_VOZ_DEL_RADAR];
 
   it('cada archivo que el código puede nombrar está en assets/sonidos y en `sounds` de app.json', () => {
     for (const archivo of NOMBRADOS) {
@@ -166,7 +169,7 @@ describe('los archivos que van en el APK', () => {
     expect(leerMp3(path.join(CARPETA, 'voz_objetivos.mp3')).segundos).toBeLessThan(4);
   });
 
-  it('el peso que suman los sonidos al APK no pasa de 2 MB (hoy ~1,6 MB; subirlo tiene que ser a propósito)', () => {
+  it('el peso que suman los sonidos al APK no pasa de 2 MB (hoy ~1,8 MB con las voces del Código Renaser; subirlo tiene que ser a propósito)', () => {
     const bytes = enCarpeta.reduce((suma, a) => suma + fs.statSync(path.join(CARPETA, a)).size, 0);
     expect(bytes).toBeLessThan(2 * 1024 * 1024);
   });

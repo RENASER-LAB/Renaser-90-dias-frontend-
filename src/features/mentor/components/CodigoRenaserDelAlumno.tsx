@@ -21,6 +21,10 @@ import { diaLargo } from '../utils/fechasLegibles';
  * ninguna cifra que resuma o puntúe a la persona. Se muestra agrupado por día y ordenado por
  * hora, y nada más — leerlo es el objetivo, no medirlo. Solo se lee: acá nadie registra, enciende ni apaga.
  *
+ * Spec 030: un registro dictado (`dictado`) lo dice en una línea, para que quien lee sepa que pudo haber errores de transcripción.
+ * Si el interruptor de Código Renaser para mentor/líder/Administración (spec 034) lo oculta, esta sección ni se dibuja: el dato
+ * viaja en las mismas filas, no por otro camino.
+ *
  * Las cuatro preguntas salen de `PREGUNTAS_RADAR`, las mismas constantes con las que se le
  * preguntaron. Copiarlas acá con otras palabras haría que quien lee vea un enunciado distinto
  * del que la persona contestó.
@@ -125,6 +129,14 @@ function RegistroDeHora({ registro, hora }: { registro: RegistroRadarApi; hora: 
           Energía {registro.energyLevel} / {ENERGIA_MAXIMA}
         </Text>
       </View>
+
+      {/* Spec 030 (decisión 030-2): si la persona lo habló con el reconocimiento de voz de su teléfono, quien lee lo sabe: el
+          texto pudo traer errores de transcripción. Es una línea de texto, como el resto de la sección: sin ícono ni color de estado. */}
+      {registro.dictado ? (
+        <Text style={[t.micro, { color: c.textSoft, fontSize: 14 /* metadato */, lineHeight: 20 }]}>
+          Dictado por voz. Puede haber errores de transcripción.
+        </Text>
+      ) : null}
 
       {PREGUNTAS_RADAR.map(pregunta => {
         const texto = registro[pregunta.campo]?.trim();
