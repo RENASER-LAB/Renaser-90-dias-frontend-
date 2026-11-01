@@ -285,6 +285,9 @@ export const detalleAprendizSchema = z
     /** D-243: cerró su cuenta y se borra en esa fecha (ISO). Ausente o `null` = nada pendiente. */
     deletionScheduledFor: z.string().nullish(),
     rolPersonalizado: rolPersonalizadoDeLaPersonaSchema,
+    /** Spec 022: su formación (código) y los días de su programa. Un backend anterior no los manda: Escuela y 90. */
+    formation: z.string().nullish(),
+    programDuration: z.number().nullish(),
   })
   .passthrough();
 
