@@ -34,7 +34,9 @@ const montar = async (activo = true) => {
   await act(async () => { raiz = TestRenderer.create(React.createElement(Sonda, { activo })); });
 };
 
-beforeEach(() => mockLeer.mockReset());
+beforeEach(() => {
+  mockLeer.mockReset();
+});
 afterEach(async () => {
   if (raiz) await act(async () => { raiz!.unmount(); });
   raiz = null;

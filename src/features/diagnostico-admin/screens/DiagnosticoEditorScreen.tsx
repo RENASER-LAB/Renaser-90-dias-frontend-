@@ -21,19 +21,23 @@ import {
   editarSeccion,
   moverPregunta,
   ordenarSecciones,
+  publicarDiagnostico,
   quitarPreguntas,
   restaurarPregunta,
 } from '../api/diagnosticoAdminApi';
 import { BarraDeQuitar } from '../components/BarraDeQuitar';
 import { EditorDePreguntaSheet } from '../components/EditorDePreguntaSheet';
 import { EditorDeSeccionSheet } from '../components/EditorDeSeccionSheet';
+import { HojaDeVersiones } from '../components/HojaDeVersiones';
+import { HojaDeVistaPrevia } from '../components/HojaDeVistaPrevia';
+import { PanelDePublicar } from '../components/PanelDePublicar';
 import { Aviso, BotonDeAccion } from '../components/piezas';
 import { PreguntasRetiradas } from '../components/PreguntasRetiradas';
 import { PortadaDelEditor, SeccionDelEditor } from '../components/SeccionDelEditor';
 import type { EstadoDelDiagnosticoAdmin } from '../hooks/useDiagnosticoAdmin';
 import type { PreguntaAdmin, PreguntaRequest, SeccionAdmin } from '../types/diagnosticoAdmin.types';
 import { destinoAlMover, ordenNuevoDeSecciones, puedeMoverPregunta, puedeMoverSeccion, type Direccion } from '../utils/reordenar';
-import { textoDeLaPublicacion } from '../utils/publicar';
+import { AVISO_OTRA_PERSONA_PUBLICO, CONFIRMACION_DE_PUBLICAR, textoDeLaPublicacion } from '../utils/publicar';
 import {
   alternarMarca,
   resumenDeLaSeleccion,
@@ -43,7 +47,9 @@ import {
   textoDeLosDependientes,
   textoDeQuitarSeccion,
 } from '../utils/quitarPreguntas';
-import { cantidad, codigoDelError, dependientesDelError, mensajeDeGuardar, textoDelFallo } from '../utils/textos';
+import { cantidad, codigoDelError, dependientesDelError, mensajeDeGuardar, motivosDelError, textoDelFallo } from '../utils/textos';
+import type { ParametrosDeLaVistaPrevia } from '../utils/vistaPrevia';
+import { VistaPreviaDelDiagnosticoScreen } from './VistaPreviaDelDiagnosticoScreen';
 
 /**
  * El editor del diagnóstico (Administración → Fichas → Diagnóstico inicial; spec 026): la portada y los pasos con sus preguntas, en el
@@ -63,7 +69,7 @@ export function DiagnosticoEditorScreen({ estado, onVolver }: { estado: EstadoDe
   const barraAlDesplazar = useOcultarBarraAlDesplazar();
   const { c, t } = useTheme();
   const { horizontalPadding, contentMaxWidth } = useResponsive();
-  const { borrador, cargando, fallo, desactualizado, otraPersona, recargar, ejecutar } = estado;
+  const { borrador, cargando, fallo, desactualizado, otraPersona, versionBase, recargar, ejecutar } = estado;
 
   const [pregunta, setPregunta] = useState<{ pregunta: PreguntaAdmin | null; seccionId: number }>({ pregunta: null, seccionId: 0 });
   const [preguntaAbierta, setPreguntaAbierta] = useState(false);
@@ -73,18 +79,22 @@ export function DiagnosticoEditorScreen({ estado, onVolver }: { estado: EstadoDe
   const [ocupado, setOcupado] = useState(false);
   const [modoQuitar, setModoQuitar] = useState(false);
   const [marcadas, setMarcadas] = useState<number[]>([]);
+  const [hojaDeVistaPrevia, setHojaDeVistaPrevia] = useState(false);
+  const [vistaPrevia, setVistaPrevia] = useState<ParametrosDeLaVistaPrevia | null>(null);
+  const [hojaDeVersiones, setHojaDeVersiones] = useState(false);
 
-  const hojaAbierta = preguntaAbierta || seccionAbierta;
+  const hojaAbierta = preguntaAbierta || seccionAbierta || hojaDeVistaPrevia || hojaDeVersiones;
   const salirDelModo = useCallback(() => {
     setModoQuitar(false);
     setMarcadas([]);
   }, []);
   /* El atrás sube un nivel: del modo «Quitar preguntas» al editor, y del editor a la lista de fichas. */
   const atras = useCallback(() => {
-    if (modoQuitar) salirDelModo();
+    if (vistaPrevia) setVistaPrevia(null);
+    else if (modoQuitar) salirDelModo();
     else onVolver();
     return true;
-  }, [modoQuitar, onVolver, salirDelModo]);
+  }, [modoQuitar, onVolver, salirDelModo, vistaPrevia]);
   useSystemBackHandler(atras, !hojaAbierta);
 
   const secciones = useMemo(() => borrador?.secciones ?? [], [borrador]);
@@ -190,6 +200,34 @@ export function DiagnosticoEditorScreen({ estado, onVolver }: { estado: EstadoDe
     });
   };
 
+  const publicar = async () => {
+    if (!borrador || ocupado) return;
+    const siguiente = versionBase + 1;
+    if (!(await confirmar(`¿Publicar la versión ${siguiente}?`, CONFIRMACION_DE_PUBLICAR, { ok: 'Publicar' }))) return;
+    if (ocupado) return;
+    setOcupado(true);
+    try {
+      const publicada = await ejecutar(() => publicarDiagnostico(versionBase), { reiniciarBase: true });
+      avisarListo(`Publicada la versión ${publicada?.version ?? siguiente}.`);
+    } catch (e) {
+      tacto.error();
+      const codigo = codigoDelError(e);
+      if (codigo === 'OTRA_PERSONA_PUBLICO') {
+        // Se carga lo vigente (y se toma como nueva base) antes de decirlo: lo que se ve ya es lo que hay que revisar.
+        await recargar();
+        avisar('Otra persona publicó cambios mientras editabas', AVISO_OTRA_PERSONA_PUBLICO);
+      } else if (codigo === 'NO_SE_PUEDE_PUBLICAR') {
+        await recargar();
+        const motivos = motivosDelError(e);
+        avisar('Todavía no se puede publicar', motivos.length > 0 ? motivos.join('\n') : mensajeDeGuardar(e, 'Revisa la ficha y vuelve a intentar.'));
+      } else {
+        avisar('No se pudo publicar', mensajeDeGuardar(e, 'No se pudo publicar. Vuelve a intentar.'));
+      }
+    } finally {
+      setOcupado(false);
+    }
+  };
+
   const restaurar = (p: PreguntaAdmin) => {
     void correr('No se pudo restaurar', 'No se pudo restaurar la pregunta. Vuelve a intentar.', async () => {
       await ejecutar(() => restaurarPregunta(p.id));
@@ -198,6 +236,8 @@ export function DiagnosticoEditorScreen({ estado, onVolver }: { estado: EstadoDe
   };
 
   const cuerpo = [t.body, { color: c.textSoft, fontSize: 16, lineHeight: 23 }];
+
+  if (vistaPrevia) return <VistaPreviaDelDiagnosticoScreen parametros={vistaPrevia} onSalir={() => setVistaPrevia(null)} />;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
@@ -259,9 +299,14 @@ export function DiagnosticoEditorScreen({ estado, onVolver }: { estado: EstadoDe
               ) : null}
 
               {modoQuitar ? null : (
-                <View style={estilos.acciones}>
-                  <BotonDeAccion etiqueta="Quitar preguntas" icono="trash" peligro onPress={() => setModoQuitar(true)} deshabilitado={ocupado} />
-                </View>
+                <>
+                  <PanelDePublicar borrador={borrador} ocupado={ocupado} onPublicar={() => void publicar()} />
+                  <View style={estilos.acciones}>
+                    <BotonDeAccion etiqueta="Vista previa" icono="eye" onPress={() => setHojaDeVistaPrevia(true)} />
+                    <BotonDeAccion etiqueta="Versiones" icono="clock" onPress={() => setHojaDeVersiones(true)} />
+                    <BotonDeAccion etiqueta="Quitar preguntas" icono="trash" peligro onPress={() => setModoQuitar(true)} deshabilitado={ocupado} />
+                  </View>
+                </>
               )}
 
               {portada ? <PortadaDelEditor seccion={portada} onEditar={() => abrirSeccion(portada)} /> : null}
@@ -312,6 +357,15 @@ export function DiagnosticoEditorScreen({ estado, onVolver }: { estado: EstadoDe
         alGuardar={guardarPregunta}
         alDuplicar={duplicar}
       />
+      <HojaDeVistaPrevia
+        visible={hojaDeVistaPrevia}
+        alCerrar={() => setHojaDeVistaPrevia(false)}
+        alVer={parametros => {
+          setHojaDeVistaPrevia(false);
+          setVistaPrevia(parametros);
+        }}
+      />
+      <HojaDeVersiones visible={hojaDeVersiones} versionVigente={borrador?.publicada?.version ?? null} alCerrar={() => setHojaDeVersiones(false)} />
       <EditorDeSeccionSheet visible={seccionAbierta} seccion={seccion} alCerrar={() => setSeccionAbierta(false)} alGuardar={guardarSeccion} />
     </SafeAreaView>
   );

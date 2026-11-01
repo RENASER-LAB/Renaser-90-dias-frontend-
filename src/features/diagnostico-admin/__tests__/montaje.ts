@@ -33,8 +33,10 @@ export function crearAyudas(raiz: () => ReactTestRenderer) {
   }
 
   const apagado = (n: ReactTestInstance) => n.props.disabled === true || n.props.accessibilityState?.disabled === true;
-  const tocar = (texto: string) => act(async () => { await tocableCon(texto).props.onPress(); });
-  const tocarPorEtiqueta = (etiqueta: string) => act(async () => { await tocablePorEtiqueta(etiqueta).props.onPress(); });
+  /** Toca como un dedo: un tocable apagado no responde (en la prueba, `onPress` existe aunque `disabled` sea verdadero). */
+  const tocarNodo = (n: ReactTestInstance) => act(async () => { if (!apagado(n)) await n.props.onPress(); });
+  const tocar = (texto: string) => tocarNodo(tocableCon(texto));
+  const tocarPorEtiqueta = (etiqueta: string) => tocarNodo(tocablePorEtiqueta(etiqueta));
   const campo = (etiqueta: string): ReactTestInstance => {
     const n = raiz().root.findAll(x => x.props.accessibilityLabel === etiqueta && typeof x.props.onChangeText === 'function')[0];
     if (!n) throw new Error(`No hay un campo «${etiqueta}»`);
@@ -42,5 +44,5 @@ export function crearAyudas(raiz: () => ReactTestRenderer) {
   };
   const escribir = (etiqueta: string, valor: string) => act(async () => { campo(etiqueta).props.onChangeText(valor); });
 
-  return { textos, hay, tocableCon, tocablePorEtiqueta, apagado, tocar, tocarPorEtiqueta, campo, escribir };
+  return { textos, hay, tocableCon, tocablePorEtiqueta, apagado, tocar, tocarPorEtiqueta, tocarNodo, campo, escribir };
 }
