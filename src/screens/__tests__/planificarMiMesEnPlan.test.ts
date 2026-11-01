@@ -35,7 +35,10 @@ describe('Plan: «Planificar mi mes»', () => {
   });
 
   it('muestra el mes en curso del programa (y ninguno mientras `/home` no llegó) y abre la hoja', () => {
-    expect(PLAN).toMatch(/<BotonPlanificarMes mesEnCurso=\{resumen \? etiquetaDelMes\(mesDe\(diaPrograma\)\) : null\} onPress=\{\(\) => setPlanificandoMes\(true\)\} \/>/);
+    // El mes en curso se cuenta con la duración del programa de la persona: 12 meses en 365 días (E2E de las formaciones, J2-6).
+    expect(PLAN).toMatch(
+      /<BotonPlanificarMes mesEnCurso=\{resumen \? etiquetaDelMes\(mesDe\(diaPrograma, undefined, resumen\?\.duracionDias\), resumen\?\.duracionDias\) : null\} onPress=\{\(\) => setPlanificandoMes\(true\)\} \/>/,
+    );
   });
 
   it('la hoja recibe el eje abierto, el día del programa, las maestras y el MISMO plan mensual que la tarjeta (una sola lectura)', () => {
@@ -44,6 +47,7 @@ describe('Plan: «Planificar mi mes»', () => {
     expect(hoja).toContain('alCerrar={() => setPlanificandoMes(false)}');
     expect(hoja).toContain('eje={ejeAbierto}');
     expect(hoja).toContain('diaPrograma={diaPrograma}');
+    expect(hoja).toContain('duracionDias={resumen?.duracionDias}');
     expect(hoja).toContain('maestras={objetivos.rocas}');
     expect(hoja).toContain('planMensual={planMensual}');
     expect((PLAN.match(/usePlanMensual\(\)/g) ?? []).length).toBe(1);
