@@ -2,7 +2,7 @@ import { describe, expect, it, jest } from '@jest/globals';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import React from 'react';
-import TestRenderer, { act } from 'react-test-renderer';
+import TestRenderer, { act, type ReactTestRenderer } from 'react-test-renderer';
 import { Text } from 'react-native';
 
 jest.mock('../../../../theme/ThemeContext', () => {
@@ -27,7 +27,7 @@ const ACEPTACION = {
   withDiagnosis: true,
 };
 
-const textos = (r: TestRenderer.ReactTestRenderer) => r.root.findAll(n => n.type === Text).map(n => [n.props.children].flat().join(''));
+const textos = (r: ReactTestRenderer) => r.root.findAll(n => n.type === Text).map(n => [n.props.children].flat().join(''));
 
 /**
  * Spec 025, US4 escenario 1: la ficha de la persona en Administración dice lo que se decidió al aceptarla, con las mismas palabras que la lista de
@@ -51,7 +51,7 @@ describe('la ficha dice cómo entró la persona', () => {
   });
 
   it('dibuja quién la aceptó, cuándo, y la formación, la duración, el rol personalizado y el diagnóstico', () => {
-    let r!: TestRenderer.ReactTestRenderer;
+    let r!: ReactTestRenderer;
     act(() => {
       r = TestRenderer.create(React.createElement(AceptacionDeLaPersona, { aceptacion: ACEPTACION, aceptadaPor: 'Luis', aceptadaEn: '2026-10-31T15:00:00Z' }));
     });
@@ -59,7 +59,7 @@ describe('la ficha dice cómo entró la persona', () => {
   });
 
   it('sin aceptación no dibuja nada', () => {
-    let r!: TestRenderer.ReactTestRenderer;
+    let r!: ReactTestRenderer;
     act(() => {
       r = TestRenderer.create(React.createElement(AceptacionDeLaPersona, { aceptacion: null, aceptadaPor: null, aceptadaEn: null }));
     });
