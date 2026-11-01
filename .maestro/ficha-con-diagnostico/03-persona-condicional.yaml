@@ -1,0 +1,53 @@
+# Spec 026 — preguntas condicionales y obligatorias: con «Sí.» en «¿Actualmente tienes un negocio…?» aparecen las preguntas del
+# negocio; con «No.» se saltan sin dejar un paso vacío; las casillas con máximo no pasan de 2; el consentimiento bloquea el final.
+# ESCRITO Y SIN CORRER. Precondición y cuenta: las del 01.
+# cuenta: aprendiz
+appId: com.renaser.app
+---
+- extendedWaitUntil:
+    visible: "Tiempo estimado: 15 minutos"
+    timeout: 60000
+- tapOn: "EMPEZAR"
+# Hasta llegar a la pregunta del negocio, con «No.» (por defecto) y sin pasar de ella.
+- repeat:
+    while:
+      notVisible: "¿Actualmente tienes un negocio.*"
+    times: 40
+    commands:
+      - runFlow: ../comun/diagnostico-responder-el-paso.yaml
+      - tapOn: "SIGUIENTE"
+      - waitForAnimationToEnd:
+          timeout: 3000
+- tapOn: "Sí\\."
+- tapOn: "SIGUIENTE"
+- extendedWaitUntil:
+    visible: "¿A qué se dedica tu negocio\\?"
+    timeout: 20000
+- takeScreenshot: D03a-con-negocio
+# Atrás vuelve a la pregunta; con «No.» las del negocio desaparecen y sigue «Tu mente…».
+- back
+- extendedWaitUntil:
+    visible: "¿Actualmente tienes un negocio.*"
+    timeout: 20000
+- tapOn: "No\\."
+- tapOn: "SIGUIENTE"
+- extendedWaitUntil:
+    visible: "Cuando sabes que necesitas hacer algo importante.*"
+    timeout: 20000
+- assertNotVisible: "¿A qué se dedica tu negocio\\?"
+- takeScreenshot: D03b-sin-negocio
+# Casillas con máximo 2: la tercera no se marca y un texto breve lo dice.
+- assertVisible: "Puedes elegir hasta 2\\."
+- tapOn: "Lo postergo aunque tenga tiempo\\."
+- tapOn: "Pienso demasiado y termino sin decidir\\."
+- tapOn: "Tengo miedo de equivocarme o fracasar\\."
+- assertVisible: "Elige como máximo 2\\."
+- takeScreenshot: D03c-maximo-de-casillas
+# Una obligatoria sin responder marca ESA pregunta y no deja avanzar (la 15 es un párrafo obligatorio).
+- tapOn: "SIGUIENTE"
+- extendedWaitUntil:
+    visible: "Piensa en una situación real de los últimos 30 días.*"
+    timeout: 20000
+- tapOn: "SIGUIENTE"
+- assertVisible: "Escribe tu respuesta para continuar\\."
+- takeScreenshot: D03d-falta-un-parrafo
