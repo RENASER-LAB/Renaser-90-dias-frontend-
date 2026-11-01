@@ -71,7 +71,9 @@ describe('el listado de solicitudes', () => {
 });
 
 describe('las opciones de la hoja «Aceptar»', () => {
-  beforeEach(() => mockApiFetch.mockReset());
+  beforeEach(() => {
+    mockApiFetch.mockReset();
+  });
 
   it('las lee tal como las manda el servidor', async () => {
     mockApiFetch.mockResolvedValue({
