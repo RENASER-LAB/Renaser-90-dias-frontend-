@@ -7,6 +7,7 @@ import { PersonaDelLiderScreen } from '../../lider-mentores/screens/PersonaDelLi
 import { CajaContenidoScreen } from '../../caja/screens/CajaContenidoScreen';
 import { CajaDetalleScreen } from '../../caja/screens/CajaDetalleScreen';
 import { CajaListaScreen } from '../../caja/screens/CajaListaScreen';
+import { FichasAdminScreen } from '../../diagnostico-admin/screens/FichasAdminScreen';
 import { FormacionDetalleAdminScreen } from '../../formaciones/screens/FormacionDetalleAdminScreen';
 import { FormacionesAdminScreen } from '../../formaciones/screens/FormacionesAdminScreen';
 import { AdminInicioScreen } from './AdminInicioScreen';
@@ -73,6 +74,7 @@ type Vista =
   | { nombre: 'habitos-programa' }
   | { nombre: 'habito-programa'; id: string | null }
   | { nombre: 'publicaciones-ocultas' }
+  | { nombre: 'fichas' }
   | { nombre: 'mas' }
   | { nombre: 'caja' }
   | { nombre: 'caja-detalle'; aprendizId: string }
@@ -298,6 +300,8 @@ export function AdminScreen({ onSalir, abrirEn = 'inicio' }: { onSalir: () => vo
       return <HabitoProgramaFormScreen id={vista.id} estado={habitosDelPrograma} onVolver={volver} />;
     case 'publicaciones-ocultas':
       return <PublicacionesOcultasScreen onVolver={volver} />;
+    case 'fichas':
+      return <FichasAdminScreen onBack={volver} />;
     case 'mas':
       return (
         <MasOpcionesScreen
@@ -307,6 +311,7 @@ export function AdminScreen({ onSalir, abrirEn = 'inicio' }: { onSalir: () => vo
           onAbrirBienvenida={() => entrar({ nombre: 'bienvenida' })}
           onAbrirImagenesDeFases={() => entrar({ nombre: 'animales-fases' })}
           onAbrirHabitosDelPrograma={() => entrar({ nombre: 'habitos-programa' })}
+          onAbrirFichas={() => entrar({ nombre: 'fichas' })}
           onAbrirPublicacionesOcultas={() => entrar({ nombre: 'publicaciones-ocultas' })}
         />
       );

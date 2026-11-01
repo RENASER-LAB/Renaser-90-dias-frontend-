@@ -31,6 +31,7 @@ export function MasOpcionesScreen({
   onAbrirBienvenida,
   onAbrirImagenesDeFases,
   onAbrirHabitosDelPrograma,
+  onAbrirFichas,
   onAbrirPublicacionesOcultas,
 }: {
   onVolver: () => void;
@@ -39,6 +40,7 @@ export function MasOpcionesScreen({
   onAbrirBienvenida: () => void;
   onAbrirImagenesDeFases: () => void;
   onAbrirHabitosDelPrograma: () => void;
+  onAbrirFichas: () => void;
   onAbrirPublicacionesOcultas: () => void;
 }) {
   const barraAlDesplazar = useOcultarBarraAlDesplazar();
@@ -75,6 +77,14 @@ export function MasOpcionesScreen({
       detalle: 'Crear y editar los hábitos de todos, y elegir a qué roles llega cada uno',
       onPress: onAbrirHabitosDelPrograma,
       clave: CLAVES.adminHabitos,
+    },
+    /* Las fichas de ingreso: el diagnóstico (armarlo, publicarlo y asignarlo) y la estándar, que solo se nombra (spec 026). Sigue la
+       disponibilidad de las personas: asignar una ficha es decidir cómo entra alguien. */
+    {
+      titulo: 'Fichas',
+      detalle: 'El diagnóstico inicial: armarlo, publicarlo y asignarlo a las personas',
+      onPress: onAbrirFichas,
+      clave: CLAVES.adminPersonas,
     },
     /* Lo que se ocultó del Muro, para devolverlo o eliminarlo para siempre (pedido del dueño del 31/10). Sigue al Muro:
        si el Muro no le toca a esta cuenta, la fila tampoco. */
