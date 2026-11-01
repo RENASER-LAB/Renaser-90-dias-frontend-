@@ -499,8 +499,9 @@ export default function PlanScreen() {
           {/* d a g: «Esta semana», «Acciones que mueven la meta», «Tu 80/20» y «Organizar mi semana ›». */}
           <PlanDelEje
             maestras={objetivos.rocas}
-            numeroSemana={semanaDe(diaPrograma)}
+            numeroSemana={semanaDe(diaPrograma, undefined, resumen?.duracionDias)}
             diaPrograma={diaPrograma}
+            duracionDias={resumen?.duracionDias}
             ejeAbierto={ejeAbierto}
             objetivoSugeridoDe={planMensual.objetivoSugeridoDe}
             accionSugerida={accionSugerida}

@@ -38,6 +38,7 @@ export function PlanDelEje({
   maestras,
   numeroSemana,
   diaPrograma,
+  duracionDias,
   ejeAbierto,
   objetivoSugeridoDe,
   accionSugerida = null,
@@ -46,6 +47,8 @@ export function PlanDelEje({
   maestras: RocaMaestraApi[];
   numeroSemana: number;
   diaPrograma: number;
+  /** La duración del programa de esta persona (90 o 365): de ella sale la última semana. Sin dato, la de siempre. */
+  duracionDias?: number | null;
   ejeAbierto: EjeObjetivo;
   objetivoSugeridoDe: (eje: EjeObjetivo) => string;
   /** La primera acción del diagnóstico de la persona, para ofrecerla al agendar (eje de su prioridad principal). */
@@ -57,7 +60,7 @@ export function PlanDelEje({
   const navigation = useNavigation();
   const semanal = useRocasSemanales(maestras);
   // El domingo se arma la semana que EMPIEZA (D-203): se lee aparte, y solo ese día.
-  const semanaQueSeArma = semanaAPlanificar(diaPrograma);
+  const semanaQueSeArma = semanaAPlanificar(diaPrograma, undefined, duracionDias);
   const armaLaQueEmpieza = semanaQueSeArma !== numeroSemana;
   const queEmpieza = useRocasSemanales(maestras, semanaQueSeArma, armaLaQueEmpieza);
   const diaria = useRocasDiarias();
