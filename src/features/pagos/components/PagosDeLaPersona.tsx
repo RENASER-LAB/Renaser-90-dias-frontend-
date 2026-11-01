@@ -131,10 +131,8 @@ export function PagosDeLaPersona({
                 <View key={cuota.id} style={[estilos.cuota, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}>
                   <View accessible accessibilityLabel={visible.etiqueta} style={estilos.cuotaFila}>
                     <Icon name="calendar" size={20} color={c.textSoft} />
-                    <Text style={[t.body, { color: c.textStrong, fontSize: 17, fontFamily: fuentes.negrita, minWidth: 70 }]}>{visible.fecha}</Text>
-                    <Text style={[t.body, { color: c.textStrong, fontSize: 17, flex: 1 }]}>
-                      {visible.monto}
-                    </Text>
+                    <Text style={[t.body, estilos.cuotaFecha, { color: c.textStrong }]}>{visible.fecha}</Text>
+                    <Text style={[t.body, estilos.cuotaMonto, { color: c.textStrong }]}>{visible.monto}</Text>
                     <View style={[estilos.pildora, { backgroundColor: cuota.pagada ? c.successWash : c.goldWash }]}>
                       <Icon name={cuota.pagada ? 'check' : 'clock'} size={16} color={cuota.pagada ? c.success : c.goldInk} />
                       <Text style={[t.body, { color: cuota.pagada ? c.success : c.goldInk, fontSize: 16, fontFamily: fuentes.media }]}>{visible.estado}</Text>
@@ -252,8 +250,11 @@ function quienYCuando(cuota: CuotaDePago): string {
 const estilos = StyleSheet.create({
   tarjeta: { borderRadius: 14, borderWidth: 1, padding: 14, gap: 12, width: '100%' },
   cuota: { borderWidth: 1, borderRadius: 14, padding: 12, gap: 10 },
-  cuotaFila: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  pildora: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 36, paddingHorizontal: 10, borderRadius: 18 },
+  /* Si la fila no cabe (360 dp, monto de cuatro cifras), baja el estado a un segundo renglón; el monto no se encoge ni se parte dentro del número (#91). */
+  cuotaFila: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: 10, rowGap: 8 },
+  cuotaFecha: { fontSize: 17, fontFamily: fuentes.negrita, minWidth: 58, flexShrink: 0 },
+  cuotaMonto: { fontSize: 17, flexGrow: 1, flexShrink: 0 },
+  pildora: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 36, paddingHorizontal: 10, borderRadius: 18, flexShrink: 0, marginLeft: 'auto' },
   acciones: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
   icono: { width: 52, height: 52, borderWidth: 1.5, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
 });

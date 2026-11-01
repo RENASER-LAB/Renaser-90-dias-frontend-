@@ -22,9 +22,7 @@ export function FilaDeCuota({ cuota }: { cuota: CuotaVisible }) {
       <Icon name="calendar" size={20} color={c.textSoft} />
       <View style={estilos.datos}>
         <Text style={[t.body, estilos.fecha, { color: c.textStrong }]}>{cuota.fecha}</Text>
-        <Text style={[t.body, estilos.monto, { color: c.textStrong }]}>
-          {cuota.monto}
-        </Text>
+        <Text style={[t.body, estilos.monto, { color: c.textStrong }]}>{cuota.monto}</Text>
       </View>
       <View style={[estilos.estado, { backgroundColor: cuota.pagada ? c.successWash : c.goldWash }]}>
         <Icon name={cuota.pagada ? 'check' : 'clock'} size={16} color={cuota.pagada ? c.success : c.goldInk} />
@@ -35,10 +33,11 @@ export function FilaDeCuota({ cuota }: { cuota: CuotaVisible }) {
 }
 
 const estilos = StyleSheet.create({
-  fila: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 64, paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1, borderRadius: 14 },
-  datos: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 16, minWidth: 0 },
-  fecha: { fontSize: 17, fontFamily: fuentes.negrita, minWidth: 64 },
+  /* Si la fila no cabe (360 dp, monto de cuatro cifras), el estado baja a un segundo renglón, a la derecha; el monto no se encoge ni se parte dentro del número (#91). */
+  fila: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: 12, rowGap: 8, minHeight: 64, paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1, borderRadius: 14 },
+  datos: { flexGrow: 1, flexShrink: 0, flexDirection: 'row', alignItems: 'center', columnGap: 12 },
+  fecha: { fontSize: 17, fontFamily: fuentes.negrita, minWidth: 58, flexShrink: 0 },
   /* Sin `adjustsFontSizeToFit` ni `numberOfLines`: en Android el texto conservaba el ancho anterior cuando la fila crecía y se recortaba («US$ 1 00»; #89). */
-  monto: { fontSize: 17, flexShrink: 1 },
-  estado: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 36, paddingHorizontal: 12, borderRadius: 18 },
+  monto: { fontSize: 17, flexShrink: 0 },
+  estado: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 36, paddingHorizontal: 12, borderRadius: 18, flexShrink: 0, marginLeft: 'auto' },
 });
