@@ -1504,6 +1504,19 @@ ni mueve dinero: solo anota.** Backend D-307 (`specs/032-cronograma-de-pagos/`, 
 * **Sin comprobar en pantalla** (solo se ve con el emulador): el aspecto de «Mi ingreso» contra la maqueta, el editor de cuotas en un teléfono de 360 dp, el aviso de la alarma con el teléfono en reposo y el permiso de avisos.
 * **Hace falta un APK nuevo** (solo JavaScript: ni `package.json`, ni `app.json`, ni código nativo; la app no se actualiza por aire) **y el backend con la spec 032 antes** (V158).
 
+## Decisión del dueño — 2026-11-01 — Administración: la cabecera en dos renglones, y el espacio libre de las pantallas cortas
+
+Del E2E de la segunda jornada. Con la letra del sistema grande, la cabecera de la ficha cortaba con «…» el nombre («Diana Diplomado T…») y
+el correo, junto a «Escribirle». El dueño respondió: «cambia la cabecera a dos líneas». Lo que cambia y nada más:
+* **`CabeceraAdmin`** (la de toda Administración, del líder y de las sub-vistas de Yo): el título y el subtítulo llegan a **dos renglones**
+  (`numberOfLines={2}`), y ya no a uno. Con nombres cortos se ve igual que antes.
+* **No cambian:** el botón de volver, la acción de la derecha ni las medidas.
+* **Prueba:** `admin/components/__tests__/cabeceraAdminEnDosLineas.test.ts`.
+* **También decidido, sin cambios en el código.** En «Mi ingreso» sin cronograma y en Plan sin programa propio, la tarjeta va arriba y
+  debajo queda la pantalla libre. **Se deja así**: es donde termina el contenido, no un hueco entre bloques, y rellenarlo sería inventar
+  información. El dueño respondió: «sí, déjalas así».
+* **Hace falta un APK nuevo** (solo JavaScript).
+
 
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
