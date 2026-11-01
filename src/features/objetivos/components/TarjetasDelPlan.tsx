@@ -130,7 +130,7 @@ export function TarjetaEstaSemana({
   queEmpieza,
   alArmar,
   alRevisar,
-  alIrAlMapa,
+  alDefinirObjetivos,
   alArmarLaQueEmpieza,
 }: {
   estado: EstadoDeLaSemana;
@@ -146,7 +146,8 @@ export function TarjetaEstaSemana({
   queEmpieza?: { numeroSemana: number; titulo: string | null; cargando: boolean };
   alArmar: () => void;
   alRevisar: () => void;
-  alIrAlMapa?: () => void;
+  /** Con la semana bloqueada: abre el editor del primer objetivo de 90 días que falta. */
+  alDefinirObjetivos?: () => void;
   alArmarLaQueEmpieza: () => void;
 }) {
   const { c, t } = useTheme();
@@ -169,8 +170,8 @@ export function TarjetaEstaSemana({
       {estado === 'bloqueada' ? (
         <View style={estilos.bloque}>
           <Text style={[t.body, { color: c.textSoft }]}>Primero define tus tres objetivos de 90 días: la semana se arma a partir de ellos.</Text>
-          {alIrAlMapa ? (
-            <GoldButton label="Ir al Mapa de Renacimiento" onPress={alIrAlMapa} variant="outline" icon="chevron" textStyle={TEXTO_DEL_BOTON} />
+          {alDefinirObjetivos ? (
+            <GoldButton label="Escribir mis objetivos" onPress={alDefinirObjetivos} variant="outline" icon="chevron" textStyle={TEXTO_DEL_BOTON} />
           ) : null}
         </View>
       ) : null}

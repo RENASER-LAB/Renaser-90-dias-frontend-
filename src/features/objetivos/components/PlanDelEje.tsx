@@ -40,14 +40,15 @@ export function PlanDelEje({
   diaPrograma,
   ejeAbierto,
   objetivoSugeridoDe,
-  onIrAlMapa,
+  onDefinirObjetivos,
 }: {
   maestras: RocaMaestraApi[];
   numeroSemana: number;
   diaPrograma: number;
   ejeAbierto: EjeObjetivo;
   objetivoSugeridoDe: (eje: EjeObjetivo) => string;
-  onIrAlMapa?: () => void;
+  /** «Escribir mis objetivos»: la semana está bloqueada hasta tener los tres de 90 días. Abre el editor del primero que falta. */
+  onDefinirObjetivos?: () => void;
 }) {
   const { user } = useAuth();
   const navigation = useNavigation();
@@ -107,7 +108,7 @@ export function PlanDelEje({
   /** «Organizar mi semana ›»: lo que ya existía para armarla; y con el eje armado, repartir sus acciones. */
   const organizarMiSemana = () => {
     if (semanal.estado === 'bloqueada') {
-      onIrAlMapa?.();
+      onDefinirObjetivos?.();
       return;
     }
     if (ejeSinObjetivoDeLaSemana || !puedeAgendar) setArmando(true);
@@ -138,7 +139,7 @@ export function PlanDelEje({
         }
         alArmar={() => setArmando(true)}
         alRevisar={() => setRevisando(ejeAbierto)}
-        alIrAlMapa={onIrAlMapa}
+        alDefinirObjetivos={onDefinirObjetivos}
         alArmarLaQueEmpieza={() => setArmando(true)}
       />
 

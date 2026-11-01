@@ -3,7 +3,7 @@ import type { DefinicionRocaMaestra, RocaMaestraApi } from '../types/objetivos.t
 
 /**
  * El objetivo de 90 días queda fijo una vez definido (D-234 del backend, decisión del dueño del
- * 2026-09-30). Nace del Mapa de Renacimiento y no se cambia: lo que se ajusta son los objetivos
+ * 2026-09-30). Se escribe una vez (o se confirma, si nació del diagnóstico) y no se cambia: lo que se ajusta son los objetivos
  * semanales y las acciones diarias. Lo único que la persona sigue moviendo es cuánto lleva.
  *
  * El backend responde `409` con `codigo: "ROCA_MAESTRA_FIJA"` a cualquier cambio del objetivo, la
@@ -17,7 +17,7 @@ import type { DefinicionRocaMaestra, RocaMaestraApi } from '../types/objetivos.t
 export const CODIGO_ROCA_MAESTRA_FIJA = 'ROCA_MAESTRA_FIJA';
 
 /** Una línea, la que se muestra en el modal cuando el objetivo ya está definido. */
-export const LINEA_OBJETIVO_FIJO = 'Tu objetivo de 90 días quedó fijo en tu Mapa. Aquí solo anotas cuánto llevas.';
+export const LINEA_OBJETIVO_FIJO = 'Tu objetivo de 90 días quedó fijo. Aquí solo anotas cuánto llevas.';
 
 /** `true` cuando el servidor rechazó el cambio porque el objetivo de 90 días ya está fijo. */
 export function esRocaMaestraFija(error: unknown): boolean {

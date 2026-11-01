@@ -3,7 +3,6 @@ import { useCallback, useEffect, useState } from 'react';
 import { mensajeDeError } from '../../../services/http/apiClient';
 import * as objetivosApi from '../api/objetivosApi';
 import { esRocaMaestraFija } from '../utils/objetivoFijo';
-import { esMapaPendiente } from '../utils/mapaPendiente';
 import type { DefinicionRocaMaestra, EjeObjetivo, RocaMaestraApi } from '../types/objetivos.types';
 
 /**
@@ -50,9 +49,8 @@ export function useRocasMaestras() {
    *
    * > **Corregido 2026-09-30.** Decía «Define o corrige el objetivo de un eje»: ya no se corrige.
    *
-   * Si el servidor responde que todavía no hay Mapa activo (`MAPA_PENDIENTE`, issue #37), el resultado trae
-   * `mapaPendiente: true` además del mensaje del servidor, para que quien llama ofrezca abrir el Mapa. Contra un
-   * backend que no lo conoce nunca aparece.
+   * > **Corregido 2026-10-31 (spec 026).** Ya no hay Mapa de Renacimiento: el servidor dejó de responder
+   * > `MAPA_PENDIENTE` y no exige nada previo para escribir el objetivo (se quitó `mapaPendiente` del resultado).
    *
    * La respuesta del servidor reemplaza a la roca de ese eje en memoria, en vez de recargar la
    * lista entera: el backend devuelve la roca ya guardada, con su porcentaje recalculado, así que
@@ -72,7 +70,6 @@ export function useRocasMaestras() {
       return {
         ok: false as const,
         mensaje: mensajeDeError(e, 'No pudimos guardar tu objetivo.'),
-        mapaPendiente: esMapaPendiente(e),
       };
     } finally {
       setGuardando(false);
