@@ -14,6 +14,7 @@ emulador libre y cuentas sembradas en la base **local** (nunca producción). Cad
 | `11-admin-quitar-preguntas` | `admin` | el modo «Quitar preguntas» y cancelar sin tocar nada |
 | `12-admin-publicar-pide-la-declaracion` | `admin` | publicar bloqueado hasta que la declaración deje de ser de relleno |
 | `13-admin-asigna-el-diagnostico-a-varias` | `admin` | «Asignar a varias personas»: buscar, marcar y volver |
+| `05-persona-responde-la-meta-y-plan-saca-la-cifra` | una cuenta ya dentro con el diagnóstico asignado después, y el borrador SEMBRADO (V157) publicado | contesta la meta medible de cada eje; Plan trae el objetivo con su meta y la cifra del mes, y confirmar solo con el texto no la borra |
 | `20-plan-objetivos-por-confirmar` … `22-sin-diagnostico-escribe-objetivos-en-plan` | `aprendiz` | Plan con los objetivos por confirmar, Hoy sin el Mapa y escribir los objetivos sin diagnóstico |
 
 `comun/diagnostico-responder-el-paso.yaml` contesta lo que se ve con la respuesta más corta válida (reconoce cada pregunta por su
