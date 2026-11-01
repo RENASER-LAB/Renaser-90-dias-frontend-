@@ -1,3 +1,4 @@
+import { formatearFechaLarga } from '../hooks/useArranqueDelPrograma';
 import type { EntradaAlProgramaPropio } from './entradaAlProgramaPropio';
 
 /**
@@ -10,14 +11,17 @@ import type { EntradaAlProgramaPropio } from './entradaAlProgramaPropio';
  *    «Haz tu programa de 90 días · Elige tu Día 1 ›». Es la invitación de siempre, sin el párrafo «Puedes recorrerlo tú también…».
  *    Es la única que lleva «Ahora no» (una ✕ chica a la derecha).
  *  - `elegir`: tiene fila pero nunca eligió su Día 1 (`activated: false`). «Todavía no elegiste tu Día 1 · Elige cuándo empiezas ›».
+ *  - `esperando` (issue #72): ya eligió su Día 1 y la fecha todavía no llega (día 0). «Tu programa empieza el martes 3 de noviembre», sin
+ *    chevron porque no lleva a nada. El Día 1 nunca puede ser hoy, así que todo aprendiz recién activado pasa por aquí al menos un día. Si el
+ *    servidor no mandó la fecha: «Tu programa empieza pronto» (no se inventa ninguna).
  *
- * Las dos abren el MISMO selector del Día 1 que ya abría «Elegir mi Día 1» (`ActivarProgramaScreen`).
+ * `empezar` y `elegir` abren el MISMO selector del Día 1 que ya abría «Elegir mi Día 1» (`ActivarProgramaScreen`).
  *
  * `plazo` es el de SU programa («90 días», «3 meses», «1 año»; `plazoDelObjetivo`), el mismo con que se nombra el objetivo grande.
  * Qué entrada corresponde (`entrada`) lo decide `entradaAlProgramaPropio`; esto solo redacta.
  */
 export type VistaDeLaFilaDelPrograma = {
-  tipo: 'empezar' | 'elegir';
+  tipo: 'empezar' | 'elegir' | 'esperando';
   titulo: string;
   /** Una línea corta debajo del título. */
   linea: string | null;
@@ -41,11 +45,18 @@ function vista(
 export function vistaDeLaFilaDelPrograma({
   entrada,
   plazo,
+  fechaInicio,
 }: {
   entrada: EntradaAlProgramaPropio;
   plazo: string;
+  /** `YYYY-MM-DD`, el Día 1 que eligió. Solo importa con `ESPERANDO_INICIO`. */
+  fechaInicio?: string | null;
 }): VistaDeLaFilaDelPrograma | null {
   switch (entrada) {
+    case 'ESPERANDO_INICIO': {
+      const titulo = fechaInicio ? `Tu programa empieza el ${formatearFechaLarga(fechaInicio)}` : 'Tu programa empieza pronto';
+      return vista('esperando', titulo, null, { abreElSelector: false, conAhoraNo: false });
+    }
     case 'ELEGIR_DIA_UNO':
       return vista('elegir', 'Todavía no elegiste tu Día 1', 'Elige cuándo empiezas', { abreElSelector: true, conAhoraNo: false });
     case 'EMPEZAR':

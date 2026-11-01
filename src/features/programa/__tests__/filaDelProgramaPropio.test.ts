@@ -34,6 +34,9 @@ jest.mock('../../../utils/tacto', () => ({
 }));
 jest.mock('../../../services/http/apiClient', () => ({
   mensajeDeError: (_e: unknown, porDefecto: string) => porDefecto,
+  ApiError: class ApiError extends Error {
+    status = 0;
+  },
 }));
 jest.mock('../../../context/AuthContext', () => ({
   useAuth: () => ({ user: { id: 'usuario-1', role: mockRol } }),
@@ -49,6 +52,7 @@ jest.mock('../../mentor/api/mentorApi', () => ({
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FilaDelProgramaPropio } from '../components/FilaDelProgramaPropio';
 import { useFilaDelProgramaPropio } from '../hooks/useFilaDelProgramaPropio';
+import { formatearFechaLarga } from '../hooks/useArranqueDelPrograma';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -182,6 +186,86 @@ describe('la cuenta con fila pero sin Día 1', () => {
     expect(iconos(r)).not.toContain('close');
     await pulsar(porEtiqueta(r, 'Todavía no elegiste tu Día 1. Elige cuándo empiezas.'));
     expect(modal(r).props.visible).toBe(true);
+  });
+});
+
+/** `YYYY-MM-DD` a `n` días de hoy, en el día civil del teléfono (el mismo que usa el hook para comparar). */
+function enDias(n: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + n);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/**
+ * Issue #72: quien ya eligió su Día 1 y está esperando (día 0) no veía NINGUNA fecha en Hoy. El Día 1 nunca puede ser hoy, así que todo
+ * aprendiz recién activado pasa al menos un día así. Contra el código anterior falla: ningún texto decía «empieza el…».
+ */
+describe('quien ya eligió su Día 1 y espera (día 0)', () => {
+  it('«Tu programa empieza el <fecha>», con la fecha en español y sin chevron, ✕ ni botón', async () => {
+    mockConsultarActivacion.mockResolvedValue({ activated: true, validStartDates: [], startDate: enDias(3) });
+    const r = await montar({ inscrito: true, diaPrograma: 0 }, { canStartProgram: false });
+    expect(textos(r)).toEqual([`Tu programa empieza el ${formatearFechaLarga(enDias(3))}`]);
+    expect(iconos(r)).toEqual(['calendarRange']);
+    expect(r.root.findAll(n => n.props?.accessibilityRole === 'button')).toHaveLength(0);
+    expect(modal(r)?.props.visible ?? false).toBe(false);
+  });
+
+  it('también cuando empieza MAÑANA (el programa ya cuenta como «en curso» para planificar, pero la fecha se dice)', async () => {
+    mockConsultarActivacion.mockResolvedValue({ activated: true, validStartDates: [], startDate: enDias(1) });
+    const r = await montar({ inscrito: true, diaPrograma: 0 }, { canStartProgram: false });
+    expect(textos(r)).toEqual([`Tu programa empieza el ${formatearFechaLarga(enDias(1))}`]);
+  });
+
+  it('es igual para el aprendiz y para todo el personal (no depende del rol)', async () => {
+    mockConsultarActivacion.mockResolvedValue({ activated: true, validStartDates: [], startDate: enDias(2) });
+    for (const rol of ['TRAINEE', 'MENTOR', 'TRAINEE_GUIDE', 'MENTOR_LEAD', 'ADMIN', 'ALCHEMIST']) {
+      mockRol = rol;
+      const r = await montar({ inscrito: true, diaPrograma: 0 }, { canStartProgram: false, canAdminister: rol === 'ADMIN' || rol === 'ALCHEMIST' });
+      expect(textos(r)).toEqual([`Tu programa empieza el ${formatearFechaLarga(enDias(2))}`]);
+      act(() => raiz?.unmount());
+    }
+  });
+
+  it('es igual en cualquier formación (90 días, 3 meses, 1 año)', async () => {
+    mockConsultarActivacion.mockResolvedValue({ activated: true, validStartDates: [], startDate: enDias(2) });
+    for (const [duracionDias, formacion] of [[90, 'ESCUELA'], [90, 'DIPLOMADO'], [365, 'DIPLOMADO']] as const) {
+      const r = await montar({ inscrito: true, diaPrograma: 0, duracionDias, formacion }, { canStartProgram: false });
+      expect(textos(r)).toEqual([`Tu programa empieza el ${formatearFechaLarga(enDias(2))}`]);
+      act(() => raiz?.unmount());
+    }
+  });
+
+  it('si el servidor no manda la fecha: «Tu programa empieza pronto» (no se inventa ninguna)', async () => {
+    mockConsultarActivacion.mockResolvedValue({ activated: true, validStartDates: [], startDate: null });
+    const r = await montar({ inscrito: true, diaPrograma: 0 }, { canStartProgram: false });
+    expect(textos(r)).toEqual(['Tu programa empieza pronto']);
+  });
+
+  it('con una fecha de hoy o ya pasada no dice una fecha que ya llegó: «Tu programa empieza pronto»', async () => {
+    for (const startDate of [enDias(0), enDias(-2)]) {
+      mockConsultarActivacion.mockResolvedValue({ activated: true, validStartDates: [], startDate });
+      const r = await montar({ inscrito: true, diaPrograma: 0 }, { canStartProgram: false });
+      expect(textos(r)).toEqual(['Tu programa empieza pronto']);
+      act(() => raiz?.unmount());
+    }
+  });
+
+  it('mientras se consulta no dibuja nada (sin parpadeo) y con un fallo ofrece reintentar', async () => {
+    mockConsultarActivacion.mockReturnValue(new Promise(() => undefined));
+    let r = await montar({ inscrito: true, diaPrograma: 0 }, { canStartProgram: false });
+    expect(textos(r)).toEqual([]);
+    act(() => raiz?.unmount());
+
+    mockConsultarActivacion.mockRejectedValue(new Error('sin red'));
+    r = await montar({ inscrito: true, diaPrograma: 0 }, { canStartProgram: false });
+    expect(textos(r)).toContain('No pudimos comprobar tu Día 1');
+    expect(textos(r)).not.toContain('Tu programa empieza pronto');
+  });
+
+  it('al empezar el programa (día 1 en adelante) la fila se va', async () => {
+    const r = await montar({ inscrito: true, diaPrograma: 1 }, { canStartProgram: false });
+    expect(textos(r)).toEqual([]);
+    expect(mockConsultarActivacion).not.toHaveBeenCalled();
   });
 });
 

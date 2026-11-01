@@ -41,11 +41,15 @@ export function useFilaDelProgramaPropio({
   const programa = useProgramaPersonal(activo, usuarioId);
   const diaUno = useDiaUnoPorElegir(inscrito, diaPrograma, usuarioId);
 
-  const entrada = entradaAlProgramaPropio({ diaUnoPorElegir: diaUno.porElegir, puedeEmpezar: programa.visible });
+  const entrada = entradaAlProgramaPropio({
+    diaUnoPorElegir: diaUno.porElegir,
+    puedeEmpezar: programa.visible,
+    esperandoInicio: diaUno.esperando,
+  });
   const plazo = plazoDelObjetivo(duracionDias, formacion);
   const vista: VistaDeLaFilaDelPrograma | null = useMemo(
-    () => vistaDeLaFilaDelPrograma({ entrada, plazo }),
-    [entrada, plazo],
+    () => vistaDeLaFilaDelPrograma({ entrada, plazo, fechaInicio: diaUno.fechaInicio }),
+    [entrada, plazo, diaUno.fechaInicio],
   );
 
   /* No saber no equivale a no tener nada que elegir: si falló alguna lectura se avisa y se ofrece reintentar. Quien tiene la fila sin Día 1
