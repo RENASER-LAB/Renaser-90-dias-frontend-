@@ -1,0 +1,22 @@
+# Un aprendiz del Diplomado ve SUS categorías y SUS hábitos en Training (spec 023, historias 1 y 4). ESCRITO Y SIN CORRER.
+# cuenta: aprendiz  (aprendiz del Diplomado con su Día 1 elegido y el día de hoy dentro del programa)
+# Precondición: el flujo 01 corrió (categoría «Estudio E2E» y hábito «Leer treinta minutos E2E» en el Diplomado) y el hábito le toca hoy.
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- runFlow: ../comun/abrir-training.yaml
+- extendedWaitUntil:
+    visible: "(?i).*Leer treinta minutos E2E.*"
+    timeout: 60000
+- takeScreenshot: H02a-training-del-diplomado
+# Nada de la Escuela: ni sus hábitos de siempre ni sus dimensiones.
+- assertNotVisible: "(?i).*Despertar.*"
+- assertNotVisible: "(?i).*Agua tibia.*"
+# «Tus prácticas» (el engranaje) lista las dimensiones de SU formación.
+- tapOn: "Tus prácticas"
+- extendedWaitUntil:
+    visible: "Estudio E2E.*"
+    timeout: 30000
+- assertNotVisible: "Emociones.*"
+- takeScreenshot: H02b-practicas-del-diplomado
+- back

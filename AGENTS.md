@@ -619,6 +619,57 @@ Muro, cursos, ranking— llega con las siguientes):
   (V125–V128). Con el APK nuevo contra un backend anterior todo queda como hoy; con el APK anterior contra el backend nuevo también (la formación
   por defecto es la Escuela).
 
+## Cambio por pedido del dueño — 2026-10-31 — hábitos y categorías por formación (spec 023)
+
+Pedido del dueño del 31/10 (decisiones en `~/.config/renaser-e2e/formaciones/decisiones-del-dueno-2026-10-31.md`; spec, plan y contrato en el backend,
+`specs/023-habitos-por-formacion/`, D-300): «el sistema debe configurarse las categorías de hábito por formación» y «debe mostrar los hábitos por formación».
+Cada formación (Escuela, Diplomado, Certificación) tiene **sus categorías** y **sus hábitos**; una persona ve solo los de la formación en que hace su
+programa. Lo decide y filtra **siempre el servidor**; la app solo lo dibuja. Lo que cambia y nada más:
+* **Autorizado en Training, Hoy y Administración, y nada más que esto:** (1) las **dimensiones de Training** (nombre, ícono y orden) salen de las
+  categorías de la formación; (2) en **Hoy**, «Hábitos de hoy» no se dibuja si la formación todavía no tiene hábitos para la persona; (3) la línea de
+  **«Mi programa» en otra formación**; (4) **Administración → Más opciones → «Hábitos del programa»** gana el selector de formación, «Categorías» y «Copiar a
+  otra formación». Plan, Yo, Comunidad, la barra y los diseños de Training y Hoy **no cambian**; el aprendiz de la Escuela ve **exactamente lo mismo**.
+* **Las categorías llegan del servidor** (`habits/categorias/`: `GET /api/v1/habit-categories`, esquema zod tolerante —una categoría rota se pierde ella,
+  no la lista—, `useCategoriasDeHabito` con UNA lectura por cuenta y formación compartida por todas las pantallas, y `estado/estadoDeCategorias`). Sin
+  respuesta (backend anterior, 404, sin red) valen **las cuatro de la Escuela de siempre**, con su orden, nombre e ícono. `DimensionDeTraining` pasó de una
+  unión cerrada a `string`: las cuatro de la Escuela conservan su clave (`CUERPO`, `MENTE`, `EMOCIONES`, `ESPÍRITU`, que usan Planificar, los avisos con
+  `?dimension=` y las pruebas); cualquier otra categoría usa su `code` (`DIPLOMADO_ESTUDIO`). «Vida y negocio» sigue siendo de las acciones de los
+  objetivos, no una categoría de hábito. El campo `category` de los hábitos es ahora un texto abierto y llega además `categoryKey`.
+* **Training** dibuja las categorías **activas** de la formación en el orden del servidor, y una categoría sin hábitos que le toquen a la persona **no se
+  dibuja** (`dimensionesQueSeDibujan`). Un **hábito propio** cuya categoría no está entre las de la formación vigente se agrupa en **«Mis hábitos»**
+  (dimensión virtual `MIS_HABITOS`, ícono `listChecks`). Si la formación no tiene ningún hábito para la persona, Training dice «Tu formación todavía no
+  tiene hábitos.» (nunca un error ni una pantalla vacía) y Hoy no dibuja «Hábitos de hoy» (`sinHabitosEnLaFormacion`).
+* **«Mi programa» solo en la formación del programa** (`programaEnOtraFormacion`, `AvisoDeProgramaEnOtraFormacion`): si el servidor dice que los hábitos
+  de la persona son de una formación distinta de la que tiene activa y puede elegir, Training y Hoy muestran **una línea** —«Tu programa propio está en
+  Escuela Renaser. Cámbiate a ella para verlo.»— con «Cambiar de formación» (el selector de la spec 022) en lugar de la lista. Para quien tiene una sola
+  formación, o ve las tres, no hay nada nuevo (ni selector ni la palabra «formación»). El servidor sigue entregando esos hábitos propios del programa; es
+  la app la que no los muestra.
+* **Las alarmas de otra formación no suenan** (FR-018): la puesta al día de alarmas (`ajustarRecordatoriosAlServidor`) **retira** las alarmas locales,
+  el puente de «cumplido hoy» (issue #33) y las repeticiones de un hábito que el servidor ya no lista —los de la formación anterior tras un traslado—,
+  solo cuando la lista llegó bien (una lectura fallida no borra nada; una lista vacía legítima sí retira todo). No cambia sonido, canales ni «cómo suena».
+* **Administración → «Hábitos del programa»** (solo Administración y Alquimista): el selector de formación (`FiltroDeFormacion`: Todas · Escuela ·
+  Diplomado · Certificación; sin `formation` el servidor responde la Escuela, que es lo que el cliente anterior esperaba, y la app pide `ALL` para «Todas»)
+  decide la lista, los filtros por rol y los activos/inactivos. En **«Todas»** cada fila nombra su formación y **no se crea** (crear y editar son siempre
+  dentro de una formación concreta). El formulario ofrece **solo las categorías activas de la formación del hábito**. **«Copiar a otra formación»**: elegir la
+  formación destino y una categoría de ELLA; la copia es independiente (mismo contenido, horarios, guía y audiencia por rol) y los motivos del servidor
+  (título o función repetidos, categoría desactivada) se muestran tal cual. **«Categorías»** (`CategoriasDeHabitoAdminScreen`, vista de la pila de
+  `AdminScreen`): la lista de la formación con ícono, nombre, activa/inactiva y cuántos hábitos tiene; «Nueva categoría», renombrar, el ícono (entre los 16
+  que la app ya dibuja), subir/bajar (botones de 48, sin arrastrar), activar/desactivar y eliminar (con confirmación). Una categoría con hábitos activos no se
+  desactiva ni se elimina y una con historial solo se desactiva: lo dice el servidor con su motivo. El atrás sube un nivel por vez (categorías → hábitos del
+  programa → más opciones).
+* **Sin animaciones nuevas** (pantallas de consulta y configuración): `Presionable`, `HojaDesdeAbajo`, `tacto.seleccion()` al elegir y `tacto.logro()` al
+  quedar guardado. Textos en tipo oración y tuteo; toques de 48 o más; un solo scroll por pantalla; la fuente solo por los roles de `theme/fuentes.ts`.
+  Sin íconos, dependencias ni código nativo nuevos.
+* **Compatibilidad:** contra un backend anterior no hay categorías por formación (404): valen las cuatro de siempre y todo queda como hoy; con el APK
+  anterior contra el backend nuevo, la Escuela sigue igual (`category` conserva `BODY`, `MIND`, `CONSCIENCE`, `SPIRIT`).
+* **Pruebas:** Jest en `habits/categorias/__tests__` (esquema tolerante, dimensiones, estado, hook), `training/hooks/__tests__/categoriasPorFormacion`
+  (un aprendiz del Diplomado ve sus categorías y nada de la Escuela, «Mis hábitos», formación sin hábitos), `dimensionesQueSeDibujan`,
+  `formaciones/__tests__/programaEnOtraFormacion`, `home/__tests__/sinHabitosEnLaFormacion`, `alarmas/__tests__/retirarLasAlarmasDeHabitosAjenos`
+  y las de Administración (`habitosPorFormacionEnAdministracion`, `categoriasDeHabito`, `habitosProgramaPorFormacion`, `habitosProgramaApi`). Maestro,
+  escritos y sin correr: `.maestro/habitos-por-formacion/` (`README.md` explica las cuentas).
+* **Hace falta un APK nuevo** (solo JavaScript: no hay código nativo nuevo, pero la app no se actualiza por aire) **y el backend de la spec 023 antes**
+  (V134–V136, y la 022).
+
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
 Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel especializado en React Native, Expo y TypeScript. Al crear, refactorizar o modificar cualquier pantalla o componente, debes cumplir OBLIGATORIAMENTE con los siguientes estándares:
