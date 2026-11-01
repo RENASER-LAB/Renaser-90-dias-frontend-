@@ -1008,17 +1008,6 @@ export default function YoScreen() {
                 onPress={() => setEnEmergencia(true)}
               />
             ) : null}
-            {/* MI DIAGNÓSTICO (spec 026): solo para quien tiene la ficha con diagnóstico. Reemplaza al Mapa de Renacimiento, que se retiró. */}
-            {filaDelDiagnostico ? (
-              <FilaDeAjuste
-                key="mi-diagnostico"
-                icono="fileText"
-                titulo={filaDelDiagnostico.titulo}
-                detalle={filaDelDiagnostico.detalle}
-                etiqueta={`${filaDelDiagnostico.titulo}. ${filaDelDiagnostico.detalle}`}
-                onPress={() => setEnDiagnostico(filaDelDiagnostico.pantalla)}
-              />
-            ) : null}
             {/* MI RADAR (spec 012): desde el día 8, justo debajo de la emergencia. Su estado en una línea. */}
             {veMiRadar ? (
               <FilaDeAjuste
@@ -1032,6 +1021,17 @@ export default function YoScreen() {
                   setMiRadarSinPrograma(!enMarchaMiRadar);
                   setEnMiRadar(true);
                 }}
+              />
+            ) : null}
+            {/* MI DIAGNÓSTICO (spec 026): solo para quien tiene la ficha con diagnóstico. Reemplaza al Mapa de Renacimiento, que se retiró. */}
+            {filaDelDiagnostico ? (
+              <FilaDeAjuste
+                key="mi-diagnostico"
+                icono="fileText"
+                titulo={filaDelDiagnostico.titulo}
+                detalle={filaDelDiagnostico.detalle}
+                etiqueta={`${filaDelDiagnostico.titulo}. ${filaDelDiagnostico.detalle}`}
+                onPress={() => setEnDiagnostico(filaDelDiagnostico.pantalla)}
               />
             ) : null}
           </GrupoDeAjustes>

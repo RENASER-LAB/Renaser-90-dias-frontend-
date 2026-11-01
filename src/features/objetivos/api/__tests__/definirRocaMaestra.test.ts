@@ -12,7 +12,7 @@ jest.mock('../../../../services/http/apiClient', () => ({
 import { definirRocaMaestra } from '../objetivosApi';
 
 const ROCA = {
-  id: 'r1', eje: 'CUERPO', objetivo: 'Bajar a 80 kg', meta: 80, avance: 90, unidad: 'kg', lineaBase: 90,
+  id: 'r1', eje: 'CUERPO', objetivo: 'Bajar a 80 kg', meta: 80, avance: 90, unidad: 'kg', lineaBase: 90, porcentaje: null,
   creadoEn: '2026-10-27T12:00:00Z', actualizadoEn: '2026-10-27T12:00:00Z',
 };
 

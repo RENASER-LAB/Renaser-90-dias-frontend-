@@ -3,6 +3,10 @@
  * 409 de las dependientes con su salida, el resultado en palabras y restaurar con el 409 del destino ocupado.
  */
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
+
+jest.mock('@react-native-async-storage/async-storage', () =>
+  require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
+);
 import React from 'react';
 import TestRenderer, { act, type ReactTestRenderer } from 'react-test-renderer';
 
