@@ -625,6 +625,47 @@ Muro, cursos, ranking— llega con las siguientes):
   (V125–V128). Con el APK nuevo contra un backend anterior todo queda como hoy; con el APK anterior contra el backend nuevo también (la formación
   por defecto es la Escuela).
 
+## Cambio por pedido del dueño — 2026-10-31 — la Comunidad de cada formación (spec 024)
+
+Pedido del dueño del 31/10 (decisiones en `~/.config/renaser-e2e/formaciones/decisiones-del-dueno-2026-10-31.md`; spec, plan y contrato en el backend,
+`specs/024-comunidad-por-formacion/`, D-301). Cada formación tiene **su** comunidad: el Muro, los testimonios, los eventos, los cursos, la Tribu y el
+ranking de una no se ven ni se escriben desde otra. **Lo filtra siempre el servidor**; la app solo avisa qué formación mira quien las ve todas. **Comunidad no
+cambia de forma** (sus seis secciones, sus diseños y textos) y para el aprendiz, el mentor, la guía y el líder **no cambia nada**: ni un selector ni la palabra
+«formación». Lo que cambia y nada más:
+* **Selector de formación** (`formaciones/components/SelectorDeFormacionDeLaComunidad`), **solo para Administración, Alquimista y Soporte TI** (`veTodas`):
+  una fila de 52 con el `ControlSegmentado` «Todas · Escuela · Diplomado · Certificación» arriba de Comunidad. Cambiarlo es instantáneo y vuelve a leer las
+  seis secciones; se recuerda por cuenta en este teléfono (`formaciones/estado/formacionDeLaComunidad`, fuera de React porque lo leen las funciones de las
+  APIs; lo mantiene `SincronizadorDeLaFormacionDeLaComunidad`, montado en `App.tsx`). **Un código de formación solo sale en un pedido si la cuenta ve todas y
+  eligió una**: `?formation=` en las lecturas del Muro, las ocultas, los testimonios, los eventos, los cursos, la Tribu (lista, integrantes y renombre de la
+  comunidad general) y el ranking. Para las demás cuentas cada pedido sale **exactamente como antes**.
+* **«Todas»**: cada fila (publicación, testimonio, evento, curso, chat, entrada del ranking) lleva un rótulo chico con el nombre de su formación
+  (`RotuloDeFormacion`, solo texto con borde, no se toca) y el ranking se agrupa por formación, cada una con su podio y su tabla
+  (`ranking/components/RankingPorFormacion`, `agruparPorFormacion`: las posiciones son las que manda el servidor, dentro de cada formación; no se recalcula nada).
+* **Crear exige elegir**: publicar en el Muro y crear un evento con «Todas» no envían nada y dicen «Elige una formación arriba para publicar.» / «…para
+  crear.» (`AvisoDeFormacionPorElegir`, una línea en el lugar de la acción, no un diálogo); con una elegida viaja `formation` en el cuerpo. El servidor igual
+  responde 400 si faltara. Nada se crea «para todas» ni «sin formación».
+* **Administración → Formaciones → el detalle de una formación → «Comunidad»** (`SeccionComunidadDeLaFormacion`): los cuatro tipos —comunidad general, grupo
+  con mentor, soporte y directos— con un interruptor cada uno (`GET /admin/formaciones/{codigo}/comunidad`, `PUT …/comunidad/{tipo}`). Apagar uno **esconde**
+  sus conversaciones para toda la formación sin borrar un mensaje y pide confirmación diciendo cuántas esconde («Esto esconde 12 conversaciones para toda
+  la formación…»); prender guarda al instante. Rige al instante y sin app nueva. Contra un backend anterior (404/403 al leer) la sección no se dibuja.
+* **El aviso de un mensaje** (`navigation/abrirAviso`, `formaciones/utils/avisoDeFormacion`): la ruta es `/chat/{id}` en la Escuela y
+  `/chat/{id}?formacion=CÓDIGO` en las demás. El personal con varias formaciones **cambia su formación activa** a la del chat antes de abrirlo y se avisa en una
+  línea («Cambiamos a Diplomado Renaser.»); si no la tiene asignada, el aviso se descarta. Administración pasa su elección a la del chat (solo local). Quien
+  tiene una sola formación ignora el parámetro.
+* **La imagen del podio** (`ranking/components/BotonDescargarPodio`) lleva el nombre de la formación que se mira (la elegida por Administración; la propia en
+  las demás cuentas); sin dato, como hoy. Las pestañas **Kilómetros y Gimnasio salen siempre**: ocultarlas según los hábitos de la formación es de la spec 023
+  (`// spec 023` en el código).
+* **Esquemas tolerantes** (`formaciones/api/formacionTolerante`): `formation` en las filas de la Comunidad es opcional; un valor roto se pierde él, no la fila ni la
+  página, y un servidor anterior (sin el campo) se lee como la Escuela.
+* **No cambian**: los permisos (los decide el servidor), los diseños y textos de las seis secciones, la barra de pestañas, ni los otros tabs. Sin animaciones,
+  íconos ni dependencias nuevas (`Presionable`, `HojaDesdeAbajo`, `tacto.seleccion()` y `tacto.logro()`). Textos en tipo oración y tuteo; áreas táctiles de 48 o
+  más; un solo scroll por pantalla; la fuente solo por los roles de `theme/fuentes.ts`.
+* **Pruebas:** Jest en `src/features/formaciones/__tests__` (`formacionDeLaComunidad`, `selectorYRotulosDeLaComunidad`, `comunidadMandaLaFormacion`,
+  `esquemasConFormacion`, `seccionComunidadDeLaFormacion`, `avisoDeUnChatDeOtraFormacion`) y en `ranking` (`rankingPorFormacion`,
+  `botonDescargarPodioConFormacion`). Maestro, escritos y sin correr: `.maestro/comunidad-por-formacion/`.
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire) **y el backend de la spec 024 antes** (V137–V139). El APK 1.6.0 contra el backend
+  nuevo sigue mostrando la Escuela completa sin mandar nada nuevo; el APK nuevo contra un backend anterior queda como hoy.
+
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
 Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel especializado en React Native, Expo y TypeScript. Al crear, refactorizar o modificar cualquier pantalla o componente, debes cumplir OBLIGATORIAMENTE con los siguientes estándares:

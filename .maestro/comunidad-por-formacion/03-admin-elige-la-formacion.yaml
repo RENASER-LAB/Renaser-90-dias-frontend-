@@ -1,0 +1,39 @@
+# Comunidad vista por Administración: el selector y los rótulos (spec 024). ESCRITO Y SIN CORRER.
+# cuenta: admin  (Administración o Alquimista)
+# Precondición: hay publicaciones «Solo para la Escuela» y «Solo para el Diplomado».
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "COMUNIDAD"
+- extendedWaitUntil:
+    visible: "Todas"
+    timeout: 30000
+# «Todas» (lo recordado por defecto): las dos publicaciones, cada una con el nombre de su formación.
+- assertVisible: "Solo para la Escuela"
+- assertVisible: "Solo para el Diplomado"
+- assertVisible: "Diplomado"
+- takeScreenshot: C03a-todas
+# Una formación: solo lo suyo y sin rótulos.
+- tapOn: "Diplomado"
+- extendedWaitUntil:
+    visible: "Solo para el Diplomado"
+    timeout: 30000
+- assertNotVisible: "Solo para la Escuela"
+- takeScreenshot: C03b-solo-el-diplomado
+# La elección se recuerda: al volver a Comunidad sigue en el Diplomado.
+- tapOn: "HOY"
+- tapOn: "COMUNIDAD"
+- extendedWaitUntil:
+    visible: "Solo para el Diplomado"
+    timeout: 30000
+- assertNotVisible: "Solo para la Escuela"
+# Con «Todas» no se publica: se dice qué falta y no se envía nada.
+- tapOn: "Todas"
+- extendedWaitUntil:
+    visible: "Solo para la Escuela"
+    timeout: 30000
+- tapOn: "Crear una publicación.*"
+- extendedWaitUntil:
+    visible: "Elige una formación arriba para publicar."
+    timeout: 20000
+- takeScreenshot: C03c-elige-una-formacion-para-publicar
