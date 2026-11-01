@@ -17,7 +17,12 @@ import type { DefinicionRocaMaestra, RocaMaestraApi } from '../types/objetivos.t
 export const CODIGO_ROCA_MAESTRA_FIJA = 'ROCA_MAESTRA_FIJA';
 
 /** Una línea, la que se muestra en el modal cuando el objetivo ya está definido. */
-export const LINEA_OBJETIVO_FIJO = 'Tu objetivo de 90 días quedó fijo. Aquí solo anotas cuánto llevas.';
+export function lineaObjetivoFijo(plazo: string = '90 días'): string {
+  return `Tu objetivo de ${plazo} quedó fijo. Aquí solo anotas cuánto llevas.`;
+}
+
+/** La de siempre (90 días); la pantalla usa `lineaObjetivoFijo` con el plazo de la persona. */
+export const LINEA_OBJETIVO_FIJO = lineaObjetivoFijo();
 
 /** `true` cuando el servidor rechazó el cambio porque el objetivo de 90 días ya está fijo. */
 export function esRocaMaestraFija(error: unknown): boolean {

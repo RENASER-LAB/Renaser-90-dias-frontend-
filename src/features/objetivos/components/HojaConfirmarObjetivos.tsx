@@ -18,6 +18,7 @@ import {
   problemaDelObjetivo,
   type ObjetivoParaConfirmar,
 } from '../utils/objetivosPorConfirmar';
+import { usePlazoDelObjetivo } from '../context/PlazoDelObjetivo';
 
 export const AVISO_DE_UNA_VEZ = 'Puedes reescribirlos una vez. Después quedan fijos.';
 
@@ -47,6 +48,7 @@ export function HojaConfirmarObjetivos({
   alConfirmar: (items: ObjetivoParaConfirmar[]) => Promise<ResultadoDeConfirmar>;
 }) {
   const { c, t } = useTheme();
+  const plazo = usePlazoDelObjetivo();
   /* Lo que la persona escribió; el eje sin tocar muestra lo que dijo el diagnóstico. Se limpia al cerrar la hoja. */
   const [borradores, setBorradores] = useState<Partial<Record<EjeObjetivo, string>>>({});
   const [fallo, setFallo] = useState<{ eje: EjeObjetivo; mensaje: string; ya: EjeObjetivo[] } | null>(null);
@@ -82,7 +84,7 @@ export function HojaConfirmarObjetivos({
     <HojaDesdeAbajo
       visible={visible}
       alCerrar={alCerrar}
-      titulo="Revisa tus objetivos de 90 días"
+      titulo={`Revisa tus objetivos de ${plazo}`}
       tamano="grande"
       pie={
         <GoldButton
@@ -120,7 +122,7 @@ export function HojaConfirmarObjetivos({
                 }}
                 multiline
                 // Sin `maxLength`: cortar lo escrito (o lo que trajo el diagnóstico) en silencio no es una opción. El contador avisa.
-                accessibilityLabel={`Tu objetivo de 90 días en ${ETIQUETA_EJE[roca.eje]}`}
+                accessibilityLabel={`Tu objetivo de ${plazo} en ${ETIQUETA_EJE[roca.eje]}`}
                 placeholder="Escribe a dónde quieres llegar"
                 placeholderTextColor={c.tabInactive}
                 style={[

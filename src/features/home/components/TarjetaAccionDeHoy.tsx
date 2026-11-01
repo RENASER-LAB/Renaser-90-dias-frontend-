@@ -8,6 +8,7 @@ import { Presionable } from '../../../components/Presionable';
 import { useTheme } from '../../../theme/ThemeContext';
 import { rangoDeHoraDeLaAccion } from '../../objetivos/utils/accionesDeHoy';
 import type { VistaDeLaAccionDeHoy } from '../utils/vistaDeLaAccionDeHoy';
+import { usePlazoDelObjetivo } from '../../objetivos/context/PlazoDelObjetivo';
 
 /**
  * La tarjeta de acciones de Hoy (2026-10-31, pedido del dueño con una referencia: «mismo diseño, no las mismas palabras»).
@@ -35,12 +36,13 @@ export function TarjetaAccionDeHoy({
   alAgendar: () => void;
 }) {
   const { c, t } = useTheme();
+  const plazo = usePlazoDelObjetivo();
 
   /* Sin objetivos de 90 días, o con los del diagnóstico por confirmar (spec 026; antes aquí iba «Haz tu Mapa de Renacimiento»):
      una fila compacta, toda tocable, del alto que tenía Coherencia / Racha (corregido 2026-10-31, el dueño: «no tan grande»),
      en lugar de la tarjeta con botón dorado. Lleva a Plan. */
   if (vista.tipo === 'sin-objetivos' || vista.tipo === 'por-confirmar') {
-    const titulo = vista.tipo === 'sin-objetivos' ? 'Define tu objetivo de 90 días en Plan' : 'Confirma tus objetivos de 90 días';
+    const titulo = vista.tipo === 'sin-objetivos' ? `Define tu objetivo de ${plazo} en Plan` : `Confirma tus objetivos de ${plazo}`;
     const accion = vista.tipo === 'sin-objetivos' ? 'Escribir mi objetivo' : 'Confirmar';
     return (
       <Presionable

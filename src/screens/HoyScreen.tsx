@@ -43,6 +43,7 @@ import { useObjetivosDeNoventaDias } from '../features/objetivos/hooks/useObjeti
 import { useAccionesDeHoy } from '../features/objetivos/hooks/useAccionesDeHoy';
 import { useMetaDeLaAccion } from '../features/objetivos/hooks/useMetaDeLaAccion';
 import { TarjetaAccionDeHoy } from '../features/home/components/TarjetaAccionDeHoy';
+import { PlazoDelObjetivoProvider } from '../features/objetivos/context/PlazoDelObjetivo';
 import { vistaDeLaAccionDeHoy } from '../features/home/utils/vistaDeLaAccionDeHoy';
 import { minutosDeAhora } from '../features/training/utils/listaDelDia';
 import { ESPACIO_PARA_LANZADOR } from '../features/renasia/components/RenasiaLauncher';
@@ -319,13 +320,15 @@ export default function HoyScreen() {
             de «Tu acompañante», va la tarjeta de «Acciones y objetivos» con el diseño nuevo: la que sigue hoy, su meta y un
             botón que lleva a Training. Mientras no se sabe qué mostrar no se dibuja nada (sin parpadeo). */}
         {vistaDeLaAccion && metaDeLaAccion.lista ? (
-          <TarjetaAccionDeHoy
-            vista={vistaDeLaAccion}
-            meta={metaDeLaAccion.meta}
-            alEmpezar={accionId => (navigation as any).navigate('Training', { abrirAccionId: accionId })}
-            alIrAPlan={() => (navigation as any).navigate('Plan')}
-            alAgendar={() => (navigation as any).navigate('Plan')}
-          />
+          <PlazoDelObjetivoProvider duracionDias={resumen?.duracionDias} formacion={resumen?.formacion}>
+            <TarjetaAccionDeHoy
+              vista={vistaDeLaAccion}
+              meta={metaDeLaAccion.meta}
+              alEmpezar={accionId => (navigation as any).navigate('Training', { abrirAccionId: accionId })}
+              alIrAPlan={() => (navigation as any).navigate('Plan')}
+              alAgendar={() => (navigation as any).navigate('Plan')}
+            />
+          </PlazoDelObjetivoProvider>
         ) : null}
 
         {errorResumen && (

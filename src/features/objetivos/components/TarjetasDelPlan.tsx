@@ -19,6 +19,7 @@ import { primeraClausula } from '../utils/cifraDelObjetivo';
 import { estaPorConfirmar } from '../utils/objetivosPorConfirmar';
 import { iconoDelEje } from '../utils/iconoDelEje';
 import { colorDePareto, etiquetaDeLaAccion, lineaDelObjetivo, NOMBRE_DEL_COLOR } from '../utils/planPrincipal';
+import { usePlazoDelObjetivo } from '../context/PlazoDelObjetivo';
 
 /**
  * Las tarjetas de la pantalla principal de Plan (2026-10-31, pedido del dueño: «en Plan replica este formato de acuerdo a lo que
@@ -53,11 +54,12 @@ export function TarjetaDelObjetivo({
   const { c, t } = useTheme();
   const linea = roca ? lineaDelObjetivo(roca) : null;
   const porConfirmar = estaPorConfirmar(roca);
+  const plazo = usePlazoDelObjetivo();
   return (
     <View style={[estilos.tarjeta, { borderColor: c.border, backgroundColor: c.cardBg }]}>
       <View style={estilos.fila}>
         <Icon name="flag" size={TAMANO_ICONO.chico} color={c.goldInk} />
-        <Text style={[t.small, estilos.rotulo, { color: c.goldInk, flex: 1 }]}>Tu objetivo de 90 días</Text>
+        <Text style={[t.small, estilos.rotulo, { color: c.goldInk, flex: 1 }]}>Tu objetivo de {plazo}</Text>
         {alAbrirOpciones ? (
           <Presionable
             onPress={alAbrirOpciones}
@@ -171,6 +173,7 @@ export function TarjetaEstaSemana({
   alArmarLaQueEmpieza: () => void;
 }) {
   const { c, t } = useTheme();
+  const plazo = usePlazoDelObjetivo();
   const hayTitulo = (estado === 'planificada' || estado === 'cerrada') && titulo !== null;
   const proporcion = avance.total > 0 ? avance.cumplidas / avance.total : 0;
   return (
@@ -189,7 +192,7 @@ export function TarjetaEstaSemana({
 
       {estado === 'bloqueada' ? (
         <View style={estilos.bloque}>
-          <Text style={[t.body, { color: c.textSoft }]}>Primero define tus tres objetivos de 90 días: la semana se arma a partir de ellos.</Text>
+          <Text style={[t.body, { color: c.textSoft }]}>{`Primero define tus tres objetivos de ${plazo}: la semana se arma a partir de ellos.`}</Text>
           {alDefinirObjetivos ? (
             <GoldButton label="Escribir mis objetivos" onPress={alDefinirObjetivos} variant="outline" icon="chevron" textStyle={TEXTO_DEL_BOTON} />
           ) : null}

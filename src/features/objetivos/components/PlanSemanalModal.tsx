@@ -12,6 +12,7 @@ import { textoVentanaSemanal } from '../utils/ventanasDePlanificacion';
 import { HojaDesdeAbajo } from '../../../components/hojaDesdeAbajo/HojaDesdeAbajo';
 import { Presionable } from '../../../components/Presionable';
 import { tacto } from '../../../utils/tacto';
+import { usePlazoDelObjetivo } from '../context/PlazoDelObjetivo';
 
 /**
  * Armar el plan de la semana: **un eje por pantalla**.
@@ -102,6 +103,7 @@ export function PlanSemanalModal({
   onCerrar,
 }: PlanSemanalModalProps) {
   const { c, t } = useTheme();
+  const plazo = usePlazoDelObjetivo();
   const [paso, setPaso] = useState(0);
   const [borradores, setBorradores] = useState<Record<EjeObjetivo, BorradorDeEje>>(() => ({
     CUERPO: { ...BORRADOR_VACIO },
@@ -365,7 +367,7 @@ export function PlanSemanalModal({
           <>
             {objetivoDelEje ? (
               <View style={[estilos.recordatorio, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}>
-                <Text style={[t.small, { color: c.textSoft, fontSize: 13 }]}>Tu objetivo de 90 días</Text>
+                <Text style={[t.small, { color: c.textSoft, fontSize: 13 }]}>{`Tu objetivo de ${plazo}`}</Text>
                 <Text style={[t.body, { color: c.textStrong, fontSize: 15, marginTop: 4, lineHeight: 21 }]}>
                   {objetivoDelEje}
                 </Text>

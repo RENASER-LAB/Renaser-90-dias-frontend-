@@ -6,6 +6,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { BORDES_DE_UNA_PESTANA } from '../navigation/bordesDeUnaPestana';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
+import { PlazoDelObjetivoProvider } from '../features/objetivos/context/PlazoDelObjetivo';
+import { plazoDelObjetivo } from '../features/objetivos/utils/nombreDelObjetivo';
 import { useTheme } from '../theme/ThemeContext';
 import { space } from '../theme/tokens';
 import { useResponsive } from '../theme/responsive';
@@ -35,7 +37,7 @@ import { useRocasMaestras } from '../features/objetivos/hooks/useRocasMaestras';
 import type { EjeObjetivo, RocaMaestraApi } from '../features/objetivos/types/objetivos.types';
 import { EJES, ETIQUETA_CORTA_EJE, ETIQUETA_EJE } from '../features/objetivos/types/objetivos.types';
 import { conPrincipalPrimero, usePrioridadPrincipal } from '../features/objetivos/hooks/usePrioridadPrincipal';
-import { definicionConAvance, LINEA_OBJETIVO_FIJO } from '../features/objetivos/utils/objetivoFijo';
+import { definicionConAvance, lineaObjetivoFijo } from '../features/objetivos/utils/objetivoFijo';
 import { iconoDelEje } from '../features/objetivos/utils/iconoDelEje';
 import { etiquetaDelMes, mesDe, semanaDe } from '../features/objetivos/utils/periodoDelPrograma';
 import { estaPorConfirmar, rocasPorConfirmar, type ObjetivoParaConfirmar } from '../features/objetivos/utils/objetivosPorConfirmar';
@@ -141,6 +143,8 @@ export default function PlanScreen() {
    * > El Ciclo Alquímico». Ahora las dos pestañas leen el mismo hook y la misma cuenta (`faseEnCurso`).
    */
   const { resumen } = useResumenHome();
+  /* El plazo con el que se nombra el objetivo de ESTA persona («90 días», «3 meses», «1 año»); el resto de Plan lo lee del contexto. */
+  const plazo = plazoDelObjetivo(resumen?.duracionDias, resumen?.formacion);
   const diaPrograma = resumen?.diaPrograma ?? 0;
 
   /**
@@ -268,7 +272,7 @@ export default function PlanScreen() {
     const resultado = await objetivos.confirmar(items);
     if (resultado.ok) {
       setRevisando(false);
-      confirmar('Tus objetivos de 90 días quedaron confirmados.');
+      confirmar(`Tus objetivos de ${plazo} quedaron confirmados.`);
     }
     return resultado;
   };
@@ -445,7 +449,7 @@ export default function PlanScreen() {
       return;
     }
     setEditGoalModalVisible(false);
-    confirmar('Tu objetivo de 90 días quedó guardado.');
+    confirmar(`Tu objetivo de ${plazo} quedó guardado.`);
   };
 
   /**
@@ -506,11 +510,12 @@ export default function PlanScreen() {
   ];
 
   return (
+    <PlazoDelObjetivoProvider duracionDias={resumen?.duracionDias} formacion={resumen?.formacion}>
     <SafeAreaView edges={BORDES_DE_UNA_PESTANA} style={{ flex: 1, backgroundColor: c.bg }}>
       {/* Cabecera (2026-10-31, pedido del dueño: «en Plan replica este formato»): «Plan» grande y debajo, en dorado, la dirección
           de los 90 días. La maqueta traía una diana arriba a la derecha: no se dibuja, no tiene una acción clara. */}
       <ScreenHeader title="Plan" />
-      <Text style={[t.body, { color: c.goldInk, paddingHorizontal: horizontalPadding, marginTop: -2 }]}>Tu dirección en 90 días</Text>
+      <Text style={[t.body, { color: c.goldInk, paddingHorizontal: horizontalPadding, marginTop: -2 }]}>{`Tu dirección en ${plazo}`}</Text>
 
       <ScrollView
         {...barraAlDesplazar}
@@ -592,7 +597,7 @@ export default function PlanScreen() {
       <HojaDesdeAbajo
         visible={editGoalModalVisible}
         alCerrar={() => setEditGoalModalVisible(false)}
-        titulo={objetivoFijo ? 'Tu objetivo de 90 días' : 'Define tu objetivo de 90 días'}
+        titulo={objetivoFijo ? `Tu objetivo de ${plazo}` : `Define tu objetivo de ${plazo}`}
         subtitulo={ETIQUETA_EJE[ejeAbierto]}
         tamano="grande"
         pie={
@@ -609,7 +614,7 @@ export default function PlanScreen() {
           showsVerticalScrollIndicator={false}
         >
           {objetivoFijo && (
-            <Text style={[t.small, { color: c.textSoft }]}>{LINEA_OBJETIVO_FIJO}</Text>
+            <Text style={[t.small, { color: c.textSoft }]}>{lineaObjetivoFijo(plazo)}</Text>
           )}
           <View style={{ gap: 6 }}>
             <Text style={[t.small, styles.etiquetaDeCampo, { color: c.textSoft }]}>Tu objetivo</Text>
@@ -719,6 +724,7 @@ export default function PlanScreen() {
         }}
       />
     </SafeAreaView>
+    </PlazoDelObjetivoProvider>
   );
 }
 

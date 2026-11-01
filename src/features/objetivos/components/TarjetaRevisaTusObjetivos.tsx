@@ -5,6 +5,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { GoldButton } from '../../../components/GoldButton';
 import { Icon, TAMANO_ICONO } from '../../../components/Icon';
 import { useTheme } from '../../../theme/ThemeContext';
+import { usePlazoDelObjetivo } from '../context/PlazoDelObjetivo';
 
 /**
  * «Revisa tus objetivos de 90 días» (spec 026): va arriba de Plan mientras haya objetivos que nacieron del diagnóstico y la
@@ -16,6 +17,7 @@ import { useTheme } from '../../../theme/ThemeContext';
  */
 export function TarjetaRevisaTusObjetivos({ cantidad, alRevisar }: { cantidad: number; alRevisar: () => void }) {
   const { c, t } = useTheme();
+  const plazo = usePlazoDelObjetivo();
   return (
     <View style={[estilos.tarjeta, { borderColor: c.gold, backgroundColor: c.cardBg }]}>
       <View style={estilos.fila}>
@@ -24,7 +26,7 @@ export function TarjetaRevisaTusObjetivos({ cantidad, alRevisar }: { cantidad: n
           {cantidad === 1 ? '1 objetivo por confirmar' : `${cantidad} objetivos por confirmar`}
         </Text>
       </View>
-      <Text style={[t.cardTitle, estilos.titulo, { color: c.textStrong }]}>Revisa tus objetivos de 90 días</Text>
+      <Text style={[t.cardTitle, estilos.titulo, { color: c.textStrong }]}>{`Revisa tus objetivos de ${plazo}`}</Text>
       <Text style={[t.body, estilos.linea, { color: c.textSoft }]}>
         Salieron de tu diagnóstico. Léelos, cámbialos si quieres y confírmalos: después quedan fijos.
       </Text>
