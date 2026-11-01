@@ -1,10 +1,14 @@
 import { apiFetch } from '../../../services/http/apiClient';
 import type {
   AltaHabitoPersonal,
+  CambioDeFechaApi,
   DiaDeLaSemanaApi,
   HabitoCatalogoApi,
+  OfertaDeRepetirApi,
   PlanDesbloqueosApi,
   PreferenciaHabitoApi,
+  ResultadoDeRepetirApi,
+  SemanaDelHabitoApi,
   TrackDelDiaApi,
 } from '../types/habits.types';
 import { habitsSchemas, validarRespuesta } from './habitsSchemas';
@@ -286,4 +290,64 @@ export async function agregarHabitoAlPlan(habitId: string): Promise<void> {
 /** `DELETE /api/v1/habit-unlocks/{habitId}` — lo saca del plan. Idempotente (D-87). */
 export async function quitarHabitoDelPlan(habitId: string): Promise<void> {
   await apiFetch<unknown>(`/api/v1/habit-unlocks/${habitId}`, { method: 'DELETE' });
+}
+
+/* ----------------------------------------------------------------------------------------------------------
+ * Spec 028 — «Solo esta semana» y repetir la semana. Contrato: `specs/028-planificacion-semana-y-mes/contracts/`
+ * (repositorio del backend).
+ * -------------------------------------------------------------------------------------------------------- */
+
+/**
+ * `GET /api/v1/habit-preferences/{habitId}/week?weekStart=` — los siete días de una semana (lunes a domingo) de UN hábito, con el plan de
+ * siempre y lo «solo esta semana» encima, ya resueltos por el servidor. `weekStart` es el lunes (`YYYY-MM-DD`).
+ */
+export async function obtenerSemanaDelHabito(habitId: string, weekStart: string): Promise<SemanaDelHabitoApi> {
+  const r = await apiFetch<unknown>(
+    `/api/v1/habit-preferences/${habitId}/week?weekStart=${encodeURIComponent(weekStart)}`,
+  );
+  return validarRespuesta(habitsSchemas.semanaDelHabito, r, 'GET /api/v1/habit-preferences/{id}/week');
+}
+
+/**
+ * `PUT /api/v1/habit-preferences/{habitId}/week` — guarda SOLO LO TOCADO de varias fechas de esa semana, todo o nada. Un día con `reset`
+ * vuelve al plan de siempre. Solo fechas posteriores a hoy; 409 si se apaga un hábito obligatorio.
+ */
+export async function guardarSemanaDelHabito(habitId: string, weekStart: string, days: CambioDeFechaApi[]): Promise<void> {
+  await apiFetch<unknown>(`/api/v1/habit-preferences/${habitId}/week`, { method: 'PUT', body: { weekStart, days } });
+}
+
+/** `DELETE /api/v1/habit-preferences/{habitId}/week?weekStart=` — vuelve al plan de siempre en esa semana (solo fechas posteriores a hoy). */
+export async function volverAlPlanDeSiempreDelHabito(habitId: string, weekStart: string): Promise<void> {
+  await apiFetch<unknown>(`/api/v1/habit-preferences/${habitId}/week?weekStart=${encodeURIComponent(weekStart)}`, {
+    method: 'DELETE',
+  });
+}
+
+/** `GET /api/v1/habit-preferences/week-repeat` — la oferta de repetir la semana en curso en la siguiente, o `null` (204: no hay oferta). */
+export async function obtenerOfertaDeRepetir(): Promise<OfertaDeRepetirApi | null> {
+  const r = await apiFetch<unknown>('/api/v1/habit-preferences/week-repeat');
+  if (r === null || r === undefined || r === '') return null;
+  return validarRespuesta(habitsSchemas.ofertaDeRepetir, r, 'GET /api/v1/habit-preferences/week-repeat');
+}
+
+/**
+ * `POST /api/v1/habit-preferences/week-repeat` — aplica la repetición. Todo o nada, idempotente. 409 si reemplazaría cambios propios y `replace`
+ * es `false`: la pantalla pide confirmación y vuelve a mandar con `true`.
+ */
+export async function repetirLaSemana(
+  sourceWeekStart: string,
+  targetWeekStart: string,
+  replace: boolean,
+): Promise<ResultadoDeRepetirApi> {
+  const r = await apiFetch<unknown>('/api/v1/habit-preferences/week-repeat', {
+    method: 'POST',
+    body: { sourceWeekStart, targetWeekStart, replace },
+  });
+  return validarRespuesta(habitsSchemas.resultadoDeRepetir, r, 'POST /api/v1/habit-preferences/week-repeat');
+}
+
+/** `DELETE /api/v1/habit-preferences/weeks/{weekStart}` — «Deshacer»: TODA esa semana vuelve al plan de siempre. Idempotente. */
+export async function deshacerLaSemana(weekStart: string): Promise<number> {
+  const r = await apiFetch<unknown>(`/api/v1/habit-preferences/weeks/${encodeURIComponent(weekStart)}`, { method: 'DELETE' });
+  return validarRespuesta(habitsSchemas.semanaDeshecha, r, 'DELETE /api/v1/habit-preferences/weeks/{weekStart}').removedDays;
 }

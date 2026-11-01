@@ -1,5 +1,5 @@
 import { fuentes } from '../../../theme/fuentes';
-import React from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { ScrollView, StyleSheet, Text, View, type ScrollViewProps, type StyleProp, type ViewStyle } from 'react-native';
 
 import { ConfirmacionEnLinea } from '../../../components/ConfirmacionEnLinea';
@@ -13,9 +13,12 @@ import { CabeceraAdmin } from '../../admin/components/CabeceraAdmin';
 import type { useRenombreLocal } from '../../habits/hooks/useRenombreDeHabito';
 import * as recordatorios from '../../habits/notificaciones/recordatoriosDeHabito';
 import { DIMENSIONES_CONFIG, type DimensionConfig } from '../data/dimensiones';
+import { useOfertaDeRepetirSemana } from '../hooks/useOfertaDeRepetirSemana';
 import { useRepasoSemanal } from '../hooks/useRepasoSemanal';
+import { reprogramarLasAlarmasConElServidor } from '../utils/reprogramarLasAlarmas';
 import { iconoDeLaDimension } from '../utils/iconoDeLaDimension';
 import { PRACTICAS_ABIERTAS, PRACTICAS_CERRADAS, alRetroceder, type EstadoDePracticas } from '../utils/navegacionDePracticas';
+import { OfertaDeRepetirSemana } from './OfertaDeRepetirSemana';
 import { PlanificarDimensionModal } from './PlanificarDimensionModal';
 
 /**
@@ -75,6 +78,26 @@ export function PracticasDeTraining({
   const { c, t } = useTheme();
   const repaso = useRepasoSemanal(userId);
 
+  /* Repetir la semana (spec 028): la oferta vive acá, arriba de las dimensiones, porque repetir toca a los hábitos de TODAS
+     (una oferta por dimensión diría lo mismo cinco veces). Tras repetir o deshacer, las alarmas de este teléfono se ponen al
+     día con lo que dice el servidor. Solo donde hay lista que planificar: sin programa o sin confirmar, ni se pide. */
+  const dimensionDe = useCallback(
+    (id: string): string | null => planHabits.find(h => h.habitoId === id)?.dimension ?? null,
+    [planHabits],
+  );
+  const alCambiarLaSemana = useCallback(
+    () => (userId ? reprogramarLasAlarmasConElServidor(userId, { dimensionDe }) : Promise.resolve(null)),
+    [userId, dimensionDe],
+  );
+  const oferta = useOfertaDeRepetirSemana(userId, Boolean(userId) && !deshabilitada && !sinLista, alCambiarLaSemana);
+  /* Al cerrar la hoja de una dimensión (pudo haberse cambiado esta semana «solo esta semana») la oferta se vuelve a leer. */
+  const dimensionAbierta = useRef<string | null>(estado.dimension);
+  const recargarOferta = oferta.recargar;
+  useEffect(() => {
+    if (dimensionAbierta.current && !estado.dimension) void recargarOferta();
+    dimensionAbierta.current = estado.dimension;
+  }, [estado.dimension, recargarOferta]);
+
   const dimension: DimensionConfig | null = DIMENSIONES_CONFIG.find(d => d.key === estado.dimension) ?? null;
   const volver = () => onEstado(alRetroceder(estado) ?? PRACTICAS_CERRADAS);
   const delaDimension = dimension ? planHabits.filter(h => h.dimension === dimension.key) : [];
@@ -94,6 +117,9 @@ export function PracticasDeTraining({
           <Text style={[t.body, { color: c.textSoft }]}>
             Planifica cada dimensión: la hora, los días, el recordatorio y cómo suena.
           </Text>
+
+          {/* Repetir la semana (spec 028). No dibuja nada mientras no se sabe, ni si no hay oferta. */}
+          {!cargando && !error && !sinLista && !deshabilitada ? <OfertaDeRepetirSemana uso={oferta} /> : null}
 
           {/* Aviso de los domingos. Solo donde puede sonar de verdad. */}
           {recordatorios.HAY_RECORDATORIOS_LOCALES && repaso.valor !== null && !deshabilitada ? (

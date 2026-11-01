@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 
@@ -41,6 +41,7 @@ export function PlanDelEje({
   ejeAbierto,
   objetivoSugeridoDe,
   onIrAlMapa,
+  pedidoDeOrganizar = 0,
 }: {
   maestras: RocaMaestraApi[];
   numeroSemana: number;
@@ -48,6 +49,11 @@ export function PlanDelEje({
   ejeAbierto: EjeObjetivo;
   objetivoSugeridoDe: (eje: EjeObjetivo) => string;
   onIrAlMapa?: () => void;
+  /**
+   * Un contador: cada vez que sube, se abre «Organizar mi semana» como si se hubiera tocado el botón (spec 028: «Planificar mi mes» lo
+   * pide al tocar la semana de ahora). Sin él, o en 0, no hace nada.
+   */
+  pedidoDeOrganizar?: number;
 }) {
   const { user } = useAuth();
   const navigation = useNavigation();
@@ -113,6 +119,16 @@ export function PlanDelEje({
     if (ejeSinObjetivoDeLaSemana || !puedeAgendar) setArmando(true);
     else setAgendando(true);
   };
+
+  /* El pedido de afuera se atiende una vez por cada subida del contador, con el estado de ese momento. */
+  const organizarRef = useRef(organizarMiSemana);
+  organizarRef.current = organizarMiSemana;
+  const pedidoAtendido = useRef(pedidoDeOrganizar);
+  useEffect(() => {
+    if (pedidoDeOrganizar === pedidoAtendido.current) return;
+    pedidoAtendido.current = pedidoDeOrganizar;
+    organizarRef.current();
+  }, [pedidoDeOrganizar]);
 
   const tocarUna = (accion: RocaDiariaApi, esDeHoy: boolean) => {
     if (esDeHoy) {

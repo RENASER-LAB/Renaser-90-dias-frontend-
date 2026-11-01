@@ -631,6 +631,63 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
 
 ---
 
+## Cambio por pedido del dueño — 2026-10-31 — Training → Planificar y Plan: «Solo esta semana», repetir la semana y planificar el mes (spec 028)
+
+Pedido textual: «si una persona planifica una semana, ofrecerle la misma planificación la siguiente semana; y, a la par, que pueda hacer la
+planificación de cada mes, si lo desea». Spec, plan, contratos y decisión **D-296** en el backend (`specs/028-planificacion-semana-y-mes/`).
+Decisiones del dueño del mismo día: **028-1 A** «todas las semanas» sigue como base y se suma «Solo esta semana», con la oferta de repetir la
+semana anterior; **028-2** «planificar el mes» es el **plan de OBJETIVOS de Plan** (el mes del programa, Mes 1 = semanas 1 a 4), no el calendario;
+**028-3** repetir la semana es de los **hábitos** y el mes es de los **objetivos**; **028-4 A**, **028-5 A**; y «lo único bueno que ya está es la
+planificación de hábitos»: se reutiliza el editor de Planificar (specs 008 a 011) y no se reescribe. Lo que cambia y nada más:
+
+* **El editor de un hábito** (`PlanificarDimensionModal`): un `ControlSegmentado` «Todas las semanas | Solo esta semana» arriba del bloque de los
+  días. Por defecto «Todas las semanas», con **los mismos textos, pedidos y alarmas de siempre** (las pruebas de las specs 008 a 011 siguen
+  sin modificarse). Solo se ofrece si el servidor sabe de esto (`GET /habit-preferences` manda `dateOverrides`).
+  * En «Solo esta semana» los siete días salen de `GET /habit-preferences/{id}/week?weekStart=` (el lunes de la semana que el editor ya dibuja;
+    el domingo, la siguiente), mapeados al mismo `DiaDelEditor` con el que ya funcionan las pastillas, el aviso y «Cómo suena». Vienen marcados
+    los días que faltan y que el plan de siempre no apaga; **nunca queda ninguno sin marcar** (acá «sin días» no significaría «general»).
+    Hoy y los días pasados siguen con candado. Los días con cambio propio de esa fecha llevan un punto (`marcaDelDia`, prop **opcional** nueva de
+    `FilaDeDiasDelPlan`) con su etiqueta accesible, y una línea dice «Cambiado solo esta semana: sáb, dom».
+  * **Se guarda solo lo tocado** (`utils/alcanceDeLaSemana.ts`, puro): hora si se movió la rueda, aviso si se tocó, «Cómo suena» si se tocó y
+    apagar si se pidió, en un solo `PUT …/week` todo o nada. «Guardar … · solo esta semana» se apaga si no se tocó nada. «Volver al plan de siempre
+    los …» devuelve esas fechas (`reset`; si son todas las que tenían cambio, `DELETE …/week`). Un hábito obligatorio no se apaga (409).
+  * No cobra cupo, no cambia el plan de siempre ni las demás semanas.
+* **«Tus prácticas»** (`PracticasDeTraining`) muestra arriba de las dimensiones la tarjeta **«Repetir tu semana»** («Tu semana del 26 oct al 1 nov, en la
+  del 2 al 8 nov»), solo cuando el servidor la ofrece (`GET …/week-repeat`: la semana en curso tiene cambios propios y repetirla cambiaría la siguiente).
+  «Repetir», «Ahora no» y «Ver qué se repite» (una `HojaDesdeAbajo` con el resumen por hábito: hora, aviso, «no va» o «cómo suena», y los hábitos que se
+  dejan afuera con su motivo). Si la semana siguiente ya tiene cambios propios, dice «Reemplaza lo que ya cambiaste esa semana» y pide **un segundo toque**
+  antes de mandar `replace: true`. Al repetir sale «Tu semana del 2 al 8 nov quedó como esta» con **«Deshacer»** (`DELETE …/weeks/{lunes}`); otro día queda
+  «Volver al plan de siempre», con pregunta. «Ahora no» se recuerda **por cuenta en el teléfono** (`renaser.habitos.repetirSemana.descartada.<cuenta>` =
+  `{ modelo, siguiente, huella }`): no reaparece mientras la huella de la semana modelo sea la misma; en otro teléfono puede salir una vez más. No hay
+  notificación nueva: el recordatorio de los domingos abre Planificar como siempre. Mientras no se sabe no se dibuja nada (sin parpadeo); un fallo o un 204 no
+  muestran nada. Doble toque: un solo envío.
+* **Las alarmas del teléfono respetan lo «solo esta semana»** (`habits/notificaciones/**`, solo JavaScript). Una alarma `DAILY`/`WEEKLY` no puede saltarse una fecha
+  (el mismo problema del #33), así que el hábito con fechas propias vigentes pasa al esquema por día y los **días de la semana afectados** dejan la alarma semanal por
+  **alarmas de fecha** —una por aviso y por ocurrencia de ese día, desde hoy hasta la última fecha propia más dos semanas de cola, con el valor propio donde hay fila y el
+  de siempre donde no—; los demás días siguen semanales. Identificadores: el primer aviso de cada día afectado conserva `habito-{id}-d{iso}-0` (la etiqueta del push de
+  respaldo, spec 007) y el resto `habito-{id}-f{AAAAMMDD}-{n}`. Tope de 48 alarmas de fecha por hábito por esta vía (las más próximas primero). **Se revierte solo**: cuando
+  ya no quedan fechas propias vigentes, la puesta al día (al abrir la app y al volver a primer plano) deja las `DAILY`/`WEEKLY` de siempre; guardar o deshacer en el
+  editor y repetir reprograman en el acto (`utils/reprogramarLasAlarmas.ts` → `ajustarRecordatoriosAlServidor`). El puente del #33 y las repeticiones de la spec 009 leen
+  la misma cuenta (`valoresDelDia`), así que respetan la hora, el aviso y «Cómo suena» de la fecha. `programar` sin `opciones.fechas` conserva las que el teléfono
+  recordaba (`EsquemaGuardado.fechas`): guardar «todas las semanas» no las pierde. Sin fechas propias vigentes todo es **idéntico a hoy** (mismos identificadores y firma).
+  **Límites aceptados**: (1) si la persona no abre la app en las dos semanas siguientes a la última fecha propia, ese día de la semana queda sin alarma hasta que la
+  abra; (2) cuando suena una alarma de fecha, la siguiente puesta al día rehace el hábito; (3) un APK anterior no conoce las fechas propias (sus alarmas locales siguen como
+  el plan de siempre; el push del servidor sí las respeta).
+* **Plan → «Planificar mi mes»** (solo con el Mapa activo; `BotonPlanificarMes` debajo del objetivo de 90 días, `PlanDelMesModal`, `utils/mesDelPrograma.ts`): una hoja opcional
+  con los **tres meses del programa** (`ControlSegmentado`, abre en el actual; semanas como las cuenta el servidor, D-203: lunes a domingo, trece, la 1 desde el Día 1 y la 13
+  hasta el día 90), el **objetivo del mes del eje abierto** (cifra «Propuesta» o «Tu cifra», o el motivo si no hay cifra) y las **semanas del mes** con sus fechas, su estado
+  («Revisada», «Esta semana», «Se arma el domingo», «Todavía no llega») y su objetivo semanal. «Cambiar» abre el mismo `EditarObjetivoDelMesModal` y guarda con
+  `PUT /rocks/monthly/{eje}/{mes}` **para cualquiera de los tres meses** (hoy Plan solo ofrecía el mes en curso; el servidor ya lo aceptaba). Tocar la semana de ahora cierra la
+  hoja y abre «Organizar mi semana» de siempre. **No se arman objetivos semanales de semanas que no llegaron**: la ventana del domingo no cambia. Nada lo exige ni lo
+  recuerda. Sin backend nuevo.
+* **No cambian**: Hoy, Comunidad y Yo; la hoja de cada dimensión salvo el control de alcance; las alarmas de Despertar de Yo → Alarmas; «Arma tu semana los domingos»; Plan salvo el botón y la
+  hoja; las acciones de los objetivos (no se repiten); lo ya registrado, los puntos, la racha ni el semáforo; las pausas (no se repiten). Hoy y los días pasados nunca se cambian.
+* **Hace falta publicar primero el backend** (V130 y V131 y los endpoints nuevos) **y un APK nuevo** (solo JavaScript: la app no se actualiza por aire). La app nueva contra el backend anterior
+  no ofrece «Solo esta semana» ni la oferta (le falta `dateOverrides`) y Plan funciona igual; el APK anterior contra el backend nuevo sigue como hoy.
+* **Pruebas**: Jest — `alcanceDeLaSemana`, `ofertaDeRepetir`, `useOfertaDeRepetirSemana`, `ofertaDeRepetirSemana`, `soloEstaSemana`, `fechasPropiasDeAlarmas`, `fechasPropiasEnElTelefono`,
+  `mesDelPrograma`, `objetivoDelMesEnPalabras`, `planDelMes`, `botonPlanificarMes`, `useObjetivosSemanalesDelMes` y `planificarMiMesEnPlan`. Maestro, **escritos y sin correr** (sin emulador en esta
+  entrega): `.maestro/planificacion/solo-esta-semana.yaml`, `repetir-la-semana.yaml` y `planificar-el-mes.yaml`.
+
 ## 1. 🏗️ ARQUITECTURA LIMPIA Y SEPARACIÓN DE RESPONSABILIDADES
 * **Estructura Modular por Feature**: Agrupa el código bajo `src/features/<nombre_modulo>/`:
   * `screens/`: Coordinadores y pantallas completas.

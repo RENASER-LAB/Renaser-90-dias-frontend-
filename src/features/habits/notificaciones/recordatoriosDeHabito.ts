@@ -23,11 +23,14 @@ import {
 } from './utils/combinacionDeAlarma';
 import {
   diasPropiosDe,
+  fechasPropiasDe,
   firmaDelPlan,
+  hayFechasVigentes,
   horaCorta,
   planDeAlarmas,
   usaEsquemaPorDia,
   type DiaPropio,
+  type FechaPropia,
   type PedidoDeAlarmaDelDia,
   type PlanDeAlarmas,
 } from './utils/alarmasPorDia';
@@ -118,6 +121,20 @@ import type * as TipoNotificaciones from 'expo-notifications';
  * de hoy) la puesta al día vuelve al esquema normal. Mientras haya nota de cumplido de hoy, cualquier `programar` del hábito
  * —Plan, Training, Yo → Alarmas— lo respeta. Los ids del puente se guardan con los del hábito, así que `cancelar`, el
  * cambio de sonido, el aviso agrupado y el rearmado lo tratan como cualquier otra alarma.
+ *
+ * ## «SOLO ESTA SEMANA»: LAS FECHAS PROPIAS (spec 028, 2026-10-31)
+ *
+ * Una fecha concreta puede tener su propia hora, aviso o «cómo suena», o estar apagada (`dateOverrides` de `GET /habit-preferences`,
+ * `fechasPropiasDe`). Por el mismo motivo del #33, una alarma semanal no puede saltarse esa fecha: el día de la semana afectado
+ * deja de llevar la semanal y lleva alarmas de FECHA —una por aviso y por ocurrencia, hasta la última fecha propia más dos
+ * semanas de cola, con el tope de `TOPE_DE_ALARMAS_DE_FECHA`—, con los identificadores `habito-{id}-d{iso}-0` (la etiqueta del push
+ * de respaldo, la primera) y `habito-{id}-f{AAAAMMDD}-{n}`. Los demás días siguen semanales. Se guardan con los ids del hábito, así
+ * que `cancelar`, el cambio de sonido, el aviso agrupado, el rearmado y cerrar sesión las tratan como al puente. La puesta al día
+ * (`ajustarRecordatoriosAlServidor`) lo arma, lo deja mientras la firma coincida y lo revierte solo cuando el servidor ya no manda
+ * ninguna fecha vigente. Quien reprograma sin saber de fechas (`programar` sin `opciones.fechas`) conserva las que el teléfono
+ * tenía; la puesta al día, que sí sabe, manda `fechas: []` o las del servidor. Límite aceptado: si la persona no abre la app en las
+ * dos semanas que siguen a la última fecha propia, ese día se queda sin alarma hasta que la abra; un APK anterior no las conoce.
+ * El puente del #33 y las repeticiones de la spec 009 leen la misma cuenta por día (`valoresDelDia`) y la respetan.
  *
  * ## POR QUÉ SE GUARDA EL IDENTIFICADOR
  *
@@ -390,14 +407,17 @@ function claveDe(userId: string, habitoId: string): string {
 /**
  * Lo que el teléfono recuerda de un hábito con alarmas POR DÍA (spec 008): la firma del plan que programó (para
  * saber, sin tocar la librería, si ya es lo que corresponde) y lo propio de cada día (para que quien cambia la
- * hora general sin saber de días —Plan— no deje el hábito en el esquema diario). Sin esta clave, el hábito está
- * en el esquema diario, como siempre.
+ * hora general sin saber de días —Plan— no deje el hábito en el esquema diario). Desde la spec 028 también recuerda las
+ * fechas propias («solo esta semana») con las que se programó. Sin esta clave, el hábito está en el esquema diario,
+ * como siempre.
  */
 const PREFIJO_ESQUEMA = 'renaser.habitos.esquema.';
 
 interface EsquemaGuardado {
   firma: string;
   dias: DiaPropio[];
+  /** Spec 028: las fechas propias con las que se programó (para reprogramar sin leer el servidor). Ausente = ninguna. */
+  fechas?: FechaPropia[];
 }
 
 function claveEsquema(userId: string, habitoId: string): string {
@@ -409,8 +429,16 @@ async function esquemaGuardado(userId: string, habitoId: string): Promise<Esquem
     const crudo = await AsyncStorage.getItem(claveEsquema(userId, habitoId));
     if (!crudo) return null;
     const leido = JSON.parse(crudo) as Partial<EsquemaGuardado>;
-    return typeof leido.firma === 'string' && Array.isArray(leido.dias) ? { firma: leido.firma, dias: leido.dias } : null;
+    if (typeof leido.firma !== 'string' || !Array.isArray(leido.dias)) return null;
+    return Array.isArray(leido.fechas) && leido.fechas.length > 0
+      ? { firma: leido.firma, dias: leido.dias, fechas: leido.fechas }
+      : { firma: leido.firma, dias: leido.dias };
   }, null);
+}
+
+/** Spec 028: las fechas propias con las que este teléfono programó el hábito, o `null` si no tenía ninguna. */
+async function fechasGuardadas(userId: string, habitoId: string): Promise<FechaPropia[] | null> {
+  return (await esquemaGuardado(userId, habitoId))?.fechas ?? null;
 }
 
 /**
@@ -454,6 +482,7 @@ async function sincronizarLasRepeticiones(
     horaGeneral: string | null;
     avisosGenerales: readonly number[];
     dias: readonly DiaPropio[] | null | undefined;
+    fechas?: readonly FechaPropia[] | null;
     alarmaGeneral: CombinacionDeAlarma | null | undefined;
     cambio?: CambioDiferido | null;
     dimension?: string | null;
@@ -560,6 +589,14 @@ export interface OpcionesDelAviso {
    * Despertar) no lo pasa: el hábito vuelve al esquema diario hasta la próxima puesta al día, que lo corrige.
    */
   dias?: readonly DiaPropio[] | null;
+  /**
+   * Spec 028: las fechas con cambio «solo esta semana» (`fechasPropiasDe(dateOverrides)`). Con alguna vigente el hábito va por
+   * día y los días de la semana afectados llevan alarmas de FECHA en lugar de las semanales, que no pueden saltarse una fecha.
+   * Sin ninguna vigente el plan es el de siempre. `undefined` = las que este teléfono ya tenía para el hábito (quien reprograma sin
+   * saber de fechas —el editor de Training al guardar «todas las semanas», Yo → Alarmas con Despertar— no las pierde); `[]` o
+   * `null` = ninguna (la puesta al día, cuando el servidor ya no manda ninguna).
+   */
+  fechas?: readonly FechaPropia[] | null;
   /**
    * Spec 009: «cómo suena» la alarma general del hábito (la de los días que no tienen la suya). `undefined` = la que
    * este teléfono ya tenía para el hábito (quien reprograma sin saber de «Cómo suena» no la pierde); `null` = la de
@@ -689,7 +726,11 @@ async function ponerLasAlarmasPorDia(
     await AsyncStorage.setItem(CLAVE_ANTELACIONES + `${userId}.${habitoId}`, JSON.stringify(antelacionesGenerales));
   }
   await AsyncStorage.setItem(claveHora(userId, habitoId), JSON.stringify(horaAnotada));
-  const guardado: EsquemaGuardado = { firma: firmaDelPlan({ esquema: 'porDia', pedidos: [...pedidos] }), dias: [...(opciones.dias ?? [])] };
+  const guardado: EsquemaGuardado = {
+    firma: firmaDelPlan({ esquema: 'porDia', pedidos: [...pedidos] }),
+    dias: [...(opciones.dias ?? [])],
+    ...((opciones.fechas?.length ?? 0) > 0 ? { fechas: [...(opciones.fechas as readonly FechaPropia[])] } : {}),
+  };
   await AsyncStorage.setItem(claveEsquema(userId, habitoId), JSON.stringify(guardado));
   await guardarCombinacionGeneral(userId, habitoId, opciones.alarma ?? null);
   return true;
@@ -751,7 +792,11 @@ async function ponerElPuenteSiHoyYaSeCumplio(
   }
   await AsyncStorage.setItem(claveHora(userId, habitoId), JSON.stringify(horaAnotada));
   if (planNormal.esquema === 'porDia') {
-    const guardado: EsquemaGuardado = { firma: firmaDelPlan(planNormal), dias: [...(opciones.dias ?? [])] };
+    const guardado: EsquemaGuardado = {
+      firma: firmaDelPlan(planNormal),
+      dias: [...(opciones.dias ?? [])],
+      ...((opciones.fechas?.length ?? 0) > 0 ? { fechas: [...(opciones.fechas as readonly FechaPropia[])] } : {}),
+    };
     await AsyncStorage.setItem(claveEsquema(userId, habitoId), JSON.stringify(guardado));
   }
   await guardarCombinacionGeneral(userId, habitoId, opciones.alarma ?? null);
@@ -802,9 +847,12 @@ export async function programar(
   const ahora = opciones.ahora ?? new Date();
   // Spec 009: «cómo suena» la general. Se lee ANTES de `cancelar`, que borra lo que el teléfono recordaba del hábito.
   const alarma = opciones.alarma !== undefined ? opciones.alarma : await combinacionGeneralGuardada(userId, habitoId);
-  const opcionesConAlarma: OpcionesDelAviso = { ...opciones, alarma };
+  // Spec 028: y las fechas propias que el teléfono ya tenía, si quien llama no sabe de ellas (también antes de `cancelar`).
+  const fechas = opciones.fechas !== undefined ? opciones.fechas : await fechasGuardadas(userId, habitoId);
+  const opcionesConAlarma: OpcionesDelAviso = { ...opciones, alarma, fechas };
   const plan = planDeAlarmas({
     habitoId, horaGeneral: horaCorta(horaHHmm), avisosGenerales: antelaciones, dias: opciones.dias, alarmaGeneral: alarma,
+    fechas, ahora,
   });
   const sinAvisos = plan.esquema === 'porDia' ? plan.pedidos.length === 0 : antelaciones.length === 0;
   if (HAY_RECORDATORIOS_WEB) {
@@ -833,6 +881,7 @@ export async function programar(
     // Issue #33: un hábito ya cumplido hoy no suena el resto del día (el esquema que se repite no sabe saltarse un día).
     const entradaDelPuente: EntradaDeRepeticiones = {
       habitoId, horaGeneral: horaCorta(horaHHmm), avisosGenerales: antelaciones, dias: opciones.dias, alarmaGeneral: alarma,
+      fechas,
     };
     if (await ponerElPuenteSiHoyYaSeCumplio(
       N, userId, habitoId, titulo, entradaDelPuente, antelaciones, { hora: horaHHmm }, opcionesConAlarma, plan, ahora,
@@ -877,7 +926,8 @@ export async function programar(
   }, false);
   if (ok) {
     await sincronizarLasRepeticiones(userId, habitoId, titulo, {
-      horaGeneral: horaHHmm, avisosGenerales: antelaciones, dias: opciones.dias, alarmaGeneral: alarma, dimension: opciones.dimension,
+      horaGeneral: horaHHmm, avisosGenerales: antelaciones, dias: opciones.dias, fechas, alarmaGeneral: alarma,
+      dimension: opciones.dimension,
     });
     await reagrupar(userId);
   }
@@ -917,14 +967,23 @@ export async function reprogramarTrasCambioDeHora(
   const antelaciones = await antelacionesDe(userId, habitoId);
   // Spec 008: si el hábito tenía alarmas por día, se vuelven a armar con lo propio de cada día (un día con hora
   // propia no se mueve con la general). Sin días, o sin ninguna alarma, es lo de siempre.
-  const dias = sinHorasResueltas((await esquemaGuardado(userId, habitoId))?.dias ?? null);
-  if (sinNingunAviso(habitoId, horaHHmm, antelaciones, dias)) return null;
-  return programar(userId, habitoId, titulo, horaHHmm, antelaciones, { dimension, dias });
+  const recordado = await esquemaGuardado(userId, habitoId);
+  const dias = sinHorasResueltas(recordado?.dias ?? null);
+  // Spec 028: y las fechas propias que tenía, para que cambiar la hora general no le devuelva el sábado a la hora de siempre.
+  const fechas = recordado?.fechas ?? null;
+  if (sinNingunAviso(habitoId, horaHHmm, antelaciones, dias, fechas)) return null;
+  return programar(userId, habitoId, titulo, horaHHmm, antelaciones, { dimension, dias, fechas });
 }
 
 /** `true` si con estos avisos generales y estos días el hábito no tendría ninguna alarma que mover. */
-function sinNingunAviso(habitoId: string, horaGeneral: string, antelaciones: readonly number[], dias: readonly DiaPropio[] | null): boolean {
-  const plan = planDeAlarmas({ habitoId, horaGeneral: horaCorta(horaGeneral), avisosGenerales: antelaciones, dias });
+function sinNingunAviso(
+  habitoId: string,
+  horaGeneral: string,
+  antelaciones: readonly number[],
+  dias: readonly DiaPropio[] | null,
+  fechas?: readonly FechaPropia[] | null,
+): boolean {
+  const plan = planDeAlarmas({ habitoId, horaGeneral: horaCorta(horaGeneral), avisosGenerales: antelaciones, dias, fechas });
   return plan.esquema === 'porDia' ? plan.pedidos.length === 0 : antelaciones.length === 0;
 }
 
@@ -942,9 +1001,11 @@ export async function reprogramarTrasCambioDiferido(
 ): Promise<boolean | null> {
   if (!HAY_RECORDATORIOS_LOCALES) return null;
   const antelaciones = await antelacionesDe(userId, habitoId);
-  const dias = sinHorasResueltas((await esquemaGuardado(userId, habitoId))?.dias ?? null);
-  if (sinNingunAviso(habitoId, cambio.horaNueva, antelaciones, dias)) return null;
-  return programarConCambioDiferido(userId, habitoId, titulo, cambio, antelaciones, { dimension, ahora, dias });
+  const recordado = await esquemaGuardado(userId, habitoId);
+  const dias = sinHorasResueltas(recordado?.dias ?? null);
+  const fechas = recordado?.fechas ?? null;
+  if (sinNingunAviso(habitoId, cambio.horaNueva, antelaciones, dias, fechas)) return null;
+  return programarConCambioDiferido(userId, habitoId, titulo, cambio, antelaciones, { dimension, ahora, dias, fechas });
 }
 
 /** `true` si esta persona tiene puesto el repaso semanal en ESTE teléfono. */
@@ -1089,12 +1150,13 @@ export async function programarConCambioDiferido(
   const ahora = opciones.ahora ?? new Date();
   // Spec 009: «cómo suena» la general; se lee antes de `cancelar` (ver `programar`).
   const alarma = opciones.alarma !== undefined ? opciones.alarma : await combinacionGeneralGuardada(userId, habitoId);
-  const opcionesConAlarma = { ...opciones, alarma };
+  const fechas = opciones.fechas !== undefined ? opciones.fechas : await fechasGuardadas(userId, habitoId);
+  const opcionesConAlarma = { ...opciones, alarma, fechas };
   // Spec 008: con algún día distinto, el hábito va por día (alarmas semanales); los días que siguen la hora
   // general esperan la fecha del cambio con una alarma de fecha cada uno (`planDeAlarmas`).
   const plan = planDeAlarmas({
     habitoId, horaGeneral: horaCorta(cambio.horaNueva), avisosGenerales: antelaciones, dias: opciones.dias, cambio, ahora,
-    alarmaGeneral: alarma,
+    alarmaGeneral: alarma, fechas,
   });
   const sinAvisos = plan.esquema === 'porDia' ? plan.pedidos.length === 0 : antelaciones.length === 0;
   if (HAY_RECORDATORIOS_WEB) return sinAvisos ? true : registrarSuscripcionWebPush();
@@ -1110,6 +1172,7 @@ export async function programarConCambioDiferido(
   // Issue #33: la misma entrada que el plan, para el puente de un hábito ya cumplido hoy.
   const entradaDelPuente: EntradaDeRepeticiones = {
     habitoId, horaGeneral: horaCorta(cambio.horaNueva), avisosGenerales: antelaciones, dias: opciones.dias, alarmaGeneral: alarma, cambio,
+    fechas,
   };
   if (plan.esquema === 'porDia') {
     const hecho = await sinRomper(async () => {
@@ -1124,8 +1187,8 @@ export async function programarConCambioDiferido(
     }, false);
     if (hecho) {
       await sincronizarLasRepeticiones(userId, habitoId, titulo, {
-        horaGeneral: cambio.horaNueva, avisosGenerales: antelaciones, dias: opciones.dias, alarmaGeneral: alarma, cambio,
-        dimension: opciones.dimension,
+        horaGeneral: cambio.horaNueva, avisosGenerales: antelaciones, dias: opciones.dias, fechas,
+        alarmaGeneral: alarma, cambio, dimension: opciones.dimension,
       });
       await reagrupar(userId);
     }
@@ -1182,8 +1245,8 @@ export async function programarConCambioDiferido(
   }, false);
   if (ok) {
     await sincronizarLasRepeticiones(userId, habitoId, titulo, {
-      horaGeneral: cambio.horaNueva, avisosGenerales: antelaciones, dias: opciones.dias, alarmaGeneral: alarma, cambio,
-      dimension: opciones.dimension,
+      horaGeneral: cambio.horaNueva, avisosGenerales: antelaciones, dias: opciones.dias, fechas,
+      alarmaGeneral: alarma, cambio, dimension: opciones.dimension,
     });
     await reagrupar(userId);
   }
@@ -1295,6 +1358,9 @@ export function avisosSegunElServidor(p: PreferenciaHabitoApi, delTelefono: read
  *   puesta al día lo compara con lo que corresponde (`hayQueConciliarElPuente`) y lo arma, lo deja o vuelve al esquema
  *   normal —cuando el día pasó, o ya sonaron todos los avisos de hoy—, aunque nada más haya cambiado. Converge: no se
  *   rehace en cada apertura mientras esté como debe.
+ * - **Spec 028 (2026-10-31): las fechas propias.** Un hábito con alguna fecha con cambio «solo esta semana» vigente (`dateOverrides`)
+ *   va por día y sus días afectados llevan alarmas de fecha en lugar de las semanales. Esta puesta al día lo arma, lo deja si la
+ *   firma coincide y lo revierte solo —al esquema diario o al semanal de siempre— cuando ya no queda ninguna vigente.
  * - **No pide permiso**: corre al abrir la app. Sin permiso de avisos no arma nada (sí cancela).
  */
 export async function ajustarRecordatoriosAlServidor(
@@ -1311,9 +1377,12 @@ export async function ajustarRecordatoriosAlServidor(
     const tieneAlarma = (conAlarma.get(p.habitId)?.length ?? 0) > 0;
     // Spec 008: un hábito con algún día distinto va por día. Se decide ANTES del aviso general, porque un día
     // puede tener aviso propio aunque el general esté apagado.
+    // Spec 028: y también el que tiene alguna fecha con cambio «solo esta semana» todavía vigente. Cuando la última pasa, ya no
+    // entra acá y cae en `ajustarUno` (que ve que venía por día y lo deja diario), igual que cuando desaparecen los días distintos.
     const dias = diasPropiosDe(p.weekdays);
-    if (usaEsquemaPorDia(dias)) {
-      if (await ajustarPorDia(userId, p, dias as DiaPropio[], tieneAlarma, permiso, opciones)) tocados++;
+    const fechas = fechasPropiasDe(p.dateOverrides);
+    if (usaEsquemaPorDia(dias) || hayFechasVigentes(fechas, opciones.ahora ?? new Date())) {
+      if (await ajustarPorDia(userId, p, dias ?? [], fechas, tieneAlarma, permiso, opciones)) tocados++;
       continue;
     }
     // Venía por día y ya no hay ningún día distinto: aunque los avisos y la hora coincidan, las alarmas
@@ -1370,6 +1439,7 @@ async function renovarLasRepeticiones(
         horaGeneral: hora,
         avisosGenerales,
         dias: diasPropiosDe(p.weekdays),
+        fechas: fechasPropiasDe(p.dateOverrides),
         alarmaGeneral: combinacionDeLaApi(p.alarm) ?? (await combinacionGeneralGuardada(userId, p.habitId)),
         cambio,
         permiso,
@@ -1413,10 +1483,12 @@ async function ajustarUno(
   }
   const dimension = opciones.dimensionDe?.(p.habitId) ?? null;
   const alarma = alarmaDelServidor ?? undefined;
+  // Spec 028: acá el servidor no manda ninguna fecha propia vigente (si no, el hábito iría por `ajustarPorDia`): `fechas: []` y no
+  // «las que el teléfono recordaba», que pueden ser de un cambio que ya se deshizo.
   return cambio
     ? programarConCambioDiferido(userId, p.habitId, p.title,
-      { horaDeHoy: hora, horaNueva: cambio.horaNueva, desde: cambio.desde }, avisos, { dimension, ahora: opciones.ahora, alarma })
-    : programar(userId, p.habitId, p.title, hora, avisos, { dimension, alarma, ahora: opciones.ahora });
+      { horaDeHoy: hora, horaNueva: cambio.horaNueva, desde: cambio.desde }, avisos, { dimension, ahora: opciones.ahora, alarma, fechas: [] })
+    : programar(userId, p.habitId, p.title, hora, avisos, { dimension, alarma, ahora: opciones.ahora, fechas: [] });
 }
 
 /**
@@ -1433,6 +1505,7 @@ async function ajustarPorDia(
   userId: string,
   p: PreferenciaHabitoApi,
   dias: readonly DiaPropio[],
+  fechas: readonly FechaPropia[],
   tieneAlarma: boolean,
   permiso: boolean,
   opciones: { ahora?: Date; dimensionDe?: (habitoId: string) => string | null },
@@ -1449,7 +1522,7 @@ async function ajustarPorDia(
   // Spec 009: la general según el servidor; sin ella (backend anterior), la que este teléfono ya tenía.
   const alarmaGeneral = combinacionDeLaApi(p.alarm) ?? (await combinacionGeneralGuardada(userId, p.habitId));
   const plan = planDeAlarmas({
-    habitoId: p.habitId, horaGeneral: hora, avisosGenerales, dias, cambio, ahora: opciones.ahora, alarmaGeneral,
+    habitoId: p.habitId, horaGeneral: hora, avisosGenerales, dias, fechas, cambio, ahora: opciones.ahora, alarmaGeneral,
   });
   const pedidos = plan.esquema === 'porDia' ? plan.pedidos : [];
   if (pedidos.length === 0) {
@@ -1464,14 +1537,14 @@ async function ajustarPorDia(
   if (tieneAlarma && (await esquemaGuardado(userId, p.habitId))?.firma === firmaDelPlan(plan)) {
     // Issue #33: aunque las alarmas sean las que corresponden, el puente de un hábito cumplido hoy puede no estarlo.
     const hayQueConciliar = await hayQueConciliarElPuente(userId, {
-      habitoId: p.habitId, horaGeneral: hora, avisosGenerales, dias, alarmaGeneral, cambio,
+      habitoId: p.habitId, horaGeneral: hora, avisosGenerales, dias, fechas, alarmaGeneral, cambio,
     }, opciones.ahora ?? new Date());
     if (!hayQueConciliar) return false;
   }
   const dimension = opciones.dimensionDe?.(p.habitId) ?? null;
   return cambio
     ? programarConCambioDiferido(userId, p.habitId, p.title, cambio, avisosGenerales, {
-      dimension, ahora: opciones.ahora, dias, alarma: alarmaGeneral,
+      dimension, ahora: opciones.ahora, dias, fechas, alarma: alarmaGeneral,
     })
-    : programar(userId, p.habitId, p.title, hora, avisosGenerales, { dimension, dias, alarma: alarmaGeneral, ahora: opciones.ahora });
+    : programar(userId, p.habitId, p.title, hora, avisosGenerales, { dimension, dias, fechas, alarma: alarmaGeneral, ahora: opciones.ahora });
 }

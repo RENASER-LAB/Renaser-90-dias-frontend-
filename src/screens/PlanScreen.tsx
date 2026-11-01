@@ -22,7 +22,9 @@ import { useMapaRenacimientoAbierto } from '../features/mapa-renacimiento/MapaRe
 import { cifraEscrita } from '../features/objetivos/api/planMensualApi';
 import { EditarObjetivoDelMesModal } from '../features/objetivos/components/EditarObjetivoDelMesModal';
 import { usePlanMensual } from '../features/objetivos/hooks/usePlanMensual';
+import { BotonPlanificarMes } from '../features/objetivos/components/BotonPlanificarMes';
 import { PlanDelEje } from '../features/objetivos/components/PlanDelEje';
+import { PlanDelMesModal } from '../features/objetivos/components/PlanDelMesModal';
 import { TarjetaDelObjetivo } from '../features/objetivos/components/TarjetasDelPlan';
 import { PuertaDelMapa } from '../features/objetivos/components/PuertaDelMapa';
 import { usePuertaDeObjetivos } from '../features/objetivos/hooks/usePuertaDeObjetivos';
@@ -32,7 +34,7 @@ import { EJES, ETIQUETA_CORTA_EJE, ETIQUETA_EJE } from '../features/objetivos/ty
 import { conPrincipalPrimero, usePrioridadPrincipal } from '../features/objetivos/hooks/usePrioridadPrincipal';
 import { definicionConAvance, LINEA_OBJETIVO_FIJO } from '../features/objetivos/utils/objetivoFijo';
 import { iconoDelEje } from '../features/objetivos/utils/iconoDelEje';
-import { semanaDe } from '../features/objetivos/utils/periodoDelPrograma';
+import { etiquetaDelMes, mesDe, semanaDe } from '../features/objetivos/utils/periodoDelPrograma';
 import { ESPACIO_PARA_LANZADOR } from '../features/renasia/components/RenasiaLauncher';
 import { useOcultarBarraAlDesplazar } from '../navigation/barraAlDesplazar/BarraInferior';
 
@@ -231,6 +233,10 @@ export default function PlanScreen() {
   const mesDelEjeAbierto = planMensual.mesEnCursoDe(ejeAbierto);
   const planDelEjeAbierto = planMensual.porEje.get(ejeAbierto);
   const [editandoMes, setEditandoMes] = useState(false);
+  /* «Planificar mi mes» (spec 028): una hoja opcional con los tres meses del programa. `pedidoDeOrganizar` le avisa a `PlanDelEje` que la
+     persona tocó su semana ahí adentro: abre «Organizar mi semana» de siempre cuando la hoja ya se fue. */
+  const [planificandoMes, setPlanificandoMes] = useState(false);
+  const [pedidoDeOrganizar, setPedidoDeOrganizar] = useState(0);
 
   const cifraDelMesAbierto =
     mesDelEjeAbierto?.cifra != null && planDelEjeAbierto
@@ -491,6 +497,8 @@ export default function PlanScreen() {
               alCambiarElMes={() => setEditandoMes(true)}
             />
 
+            <BotonPlanificarMes mesEnCurso={resumen ? etiquetaDelMes(mesDe(diaPrograma)) : null} onPress={() => setPlanificandoMes(true)} />
+
             {confirmacion && (
               <ConfirmacionEnLinea key={confirmacion.clave} texto={confirmacion.texto} onTerminar={() => setConfirmacion(null)} />
             )}
@@ -503,6 +511,7 @@ export default function PlanScreen() {
               ejeAbierto={ejeAbierto}
               objetivoSugeridoDe={planMensual.objetivoSugeridoDe}
               onIrAlMapa={abrirMapa}
+              pedidoDeOrganizar={pedidoDeOrganizar}
             />
           </View>
         )}
@@ -611,6 +620,17 @@ export default function PlanScreen() {
           )}
         </ScrollView>
       </HojaDesdeAbajo>
+
+      {/* HOJA: PLANIFICAR MI MES (spec 028): el objetivo de cada mes del programa y sus semanas */}
+      <PlanDelMesModal
+        visible={planificandoMes}
+        alCerrar={() => setPlanificandoMes(false)}
+        eje={ejeAbierto}
+        diaPrograma={diaPrograma}
+        maestras={objetivos.rocas}
+        planMensual={planMensual}
+        onOrganizarSemana={() => setPedidoDeOrganizar(n => n + 1)}
+      />
 
       {/* HOJA: CORREGIR A MANO EL OBJETIVO DEL MES */}
       <EditarObjetivoDelMesModal
