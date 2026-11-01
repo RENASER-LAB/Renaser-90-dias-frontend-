@@ -1,0 +1,44 @@
+# AV02 — El periodo cerrado con su análisis: las cuatro partes en orden, los pasos para el próximo periodo y de dónde viene (spec 031).
+# ESCRITO Y SIN CORRER. Precondición: la semana ANTERIOR de la cuenta tiene un análisis en estado LISTO (sembrado en la base local con
+# las cuatro partes y de 1 a 3 pasos, o generado por el barrido con la IA en doble de prueba). Los títulos de las partes son fijos; el
+# texto lo escribe la IA y este flujo no depende de él.
+# Se corre con: .maestro/correr.sh .maestro/analisis-80-20/02-el-analisis-listo.yaml
+# cuenta: aprendiz
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "PLAN"
+- extendedWaitUntil:
+    visible: "Acciones que mueven la meta"
+    timeout: 30000
+- scrollUntilVisible:
+    element: "Tu 80/20"
+    direction: DOWN
+    timeout: 60000
+- tapOn: "Tu 80/20"
+- extendedWaitUntil:
+    visible: "Semana"
+    timeout: 30000
+- tapOn: "Semana"
+- extendedWaitUntil:
+    visible: "Semana .*"
+    timeout: 30000
+# La semana en curso solo trae cifras y cuándo llega el análisis.
+- assertVisible: "Tu análisis llega cuando cierre la semana."
+- tapOn: "Tu 80/20: periodo anterior"
+- extendedWaitUntil:
+    visible: "Lo que más movió"
+    timeout: 30000
+- assertVisible: "Lo que se te fue"
+- assertVisible: "Cómo estuviste"
+- scrollUntilVisible:
+    element: "Para la próxima semana"
+    direction: DOWN
+    timeout: 30000
+- assertVisible: "• .*"
+- scrollUntilVisible:
+    element: "Análisis de SER · .*"
+    direction: DOWN
+    timeout: 30000
+- assertVisible: ".*No cambia tu plan: lo que sugiere lo decides tú."
+- takeScreenshot: AV02-analisis-listo

@@ -964,6 +964,57 @@ Alquimista los de la Escuela, releer desde Yo, texto plano, editan Administraci�
 * **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire) y el backend con la spec 027 antes; contra uno anterior la app usa el texto que lleva y la sección de Administración no
   encuentra datos.
 
+## Cambio por pedido del dueño — 2026-10-31 — Plan → «Tu 80/20»: tus cifras y el análisis de SER por semana y por mes (spec 031)
+
+Textual del pedido: un análisis 80/20 con IA de lo que la persona hizo. Spec, decisiones y contrato en
+`Renaser-90-dias-backend/specs/031-analisis-80-20-con-ia/` (D-306, V153 y V154). Decisiones del dueño del mismo día: **031-1 A y B** (el 20 % son las
+acciones verdes **y también** el 20 % de las cumplidas con más impacto), **031-2 A** (lo ve quien ve su Código Renaser, respetando el interruptor de la
+spec 034), **031-3 A** (patrones y cifras; nunca cita frases ni nombra emociones o cuadros), **031-4 B** («Cierra tu día» entra al análisis), **031-5 A**
+(NO se une con el Espejo de la Sombra), **031-6 A** (el mes es el del programa: semanas 1–4, 5–8, 9–13), **031-7 A** (solo se genera solo, al cerrar el
+periodo; no se pide antes), **031-8 B** (sigue después del día 90 mientras use la app: la app no corta nada por un 90 fijo) y **031-9 A** (la persona no
+borra análisis sueltos; se borran con la cuenta). Lo que cambia y nada más:
+* **La hoja «Tu 80/20» de Plan** (`HojaOchentaVeinte`, la que abre el botón «Tu 80/20» de `PlanDelEje`): suma un `ControlSegmentado` **Hoy · Semana · Mes**.
+  «Hoy» es la hoja de siempre, sin tocar (la regla de Pareto, los candados y las acciones de hoy del eje). «Semana» y «Mes» (`PeriodoDelOchentaVeinte`)
+  muestran, de **todos los ejes**: arriba el periodo con flechas ‹ › («Semana 10 · Del 26 de octubre al 1 de noviembre»), «9 de 12 acciones cumplidas · 75 %»
+  con su barra, las dos reglas del 20 % («Acciones verdes: 3 de 5 cumplidas · el 55 % del impacto…» y «El 20 % que más movió: 2 acciones…»), los ejes, la
+  semana a semana (en el mes) y la línea del Código Renaser (solo cuenta: «12 respuestas · energía promedio 6.4»). **Cuando el periodo cierra y el análisis
+  está listo**: las cuatro partes en este orden y con estos títulos, «Lo que más movió», «Lo que se te fue», «Cómo estuviste» y «Para la próxima semana» /
+  «Para el próximo mes» (de 1 a 3 pasos), y «Análisis de SER · 2 de noviembre. No cambia tu plan: lo que sugiere lo decides tú.» Sin texto de la IA, las
+  listas de lo que movió y de lo que se fue se dicen en cifras (sin frases). Un periodo sin acciones **no dibuja un tablero de ceros**: «Todavía no
+  planificaste acciones en este periodo…» con **«Agendar mis acciones»**, que cierra la hoja y abre el planificador.
+* **Por qué todavía no hay análisis, sin culpa** (`avisoDelEstado`): en curso («Tu análisis llega cuando cierre la semana»), pendiente («estará listo en cuanto
+  podamos generarlo»), sin datos («Con al menos 5 acciones planificadas analizamos la semana», «Reparte tus acciones en más días…»; el mínimo lo manda el
+  servidor, `minimoDeAcciones`) y sin análisis («No pudimos generar el análisis… Tus cifras de arriba siguen siendo las tuyas»). Nunca se inventa uno: un
+  «LISTO» sin texto legible se lee como pendiente, y el texto solo se conserva con el estado LISTO.
+* **Solo si el servidor ofrece las vistas**: la hoja lee la semana en curso al abrirse (la misma lectura que la vista «Semana» reusa) y dibuja el control
+  únicamente con un 200. **Contra un backend anterior** (404) la hoja es exactamente la de siempre. Cerrada no pide nada. Cada periodo se lee una sola vez
+  mientras la hoja está abierta (`useOchentaVeinte`, un almacén por función `cargar` estable, como `useCierresDeLaSemana`) y **ninguna lectura llama a la IA**
+  (el servidor lo hace en su barrido horario). Un 403 o un 404 no dibujan nada; los demás fallos se dicen con «Reintentar» de 48.
+* **Soporte TI**: el texto del análisis tiene su propio interruptor, `ia.analisis` (hijo de `ia`, nuevo en el catálogo). Con él apagado las cifras se ven
+  igual y el texto se cambia por el aviso de mantenimiento; con él no disponible para el rol no se dibuja nada del análisis (`CLAVES.iaAnalisis`).
+* **El aviso «Tu análisis de la semana/del mes está listo»** (tipo `ANALISIS_80_20`, texto fijo «Entra a Plan y míralo.»: **el aviso nunca lleva el
+  análisis**): su ruta es `/plan/80-20?periodo=SEMANA|MES&inicio=AAAA-MM-DD`. Tocarlo abre Plan con la hoja «Tu 80/20» directo en esa vista, sin
+  parpadear en «Hoy», y espera —como los avisos de hábitos y de la Caja— a que se cierre una capa obligatoria (`abrirOchentaVeinte`, que `PlanScreen`
+  consume una sola vez). **Yo → Notificaciones** suma el interruptor «Análisis de tu 80/20» (`ANALISIS_80_20`), al final, solo si el servidor lo lista.
+* **Las fichas de quien acompaña** (`OchentaVeinteDeLaFicha`, debajo de «Cierres del día» en `AlumnoScreen` —mentor o guía—, `PersonaDelLiderScreen` —líder— y
+  `FichaAprendizScreen` —Administración y Alquimista, solo con grupo—): «Tu 80/20» en solo lectura, con el control **Semana · Mes** y el mismo periodo. Rutas:
+  `GET /mentor/groups/{g}/learners/{u}/analisis-80-20` y `GET /leadership/groups/{g}/people/{p}/analisis-80-20` (o `/leadership/people/{p}/analisis-80-20`,
+  sin grupo). **Respeta el interruptor de la spec 034** (`radar.fichas`): apagado o no disponible para el rol, la sección ni se dibuja ni se pide, igual
+  que «Código Renaser» (el análisis resume lo que la persona respondió ahí). Un 403 o un 404 la esconden sin error; mientras llega la primera lectura no
+  hay marco. Administración y Alquimista la ven siempre. Cada lectura de líder, Administración o Alquimista deja constancia en el servidor, como las demás.
+* **No cambian**: la regla de Pareto, los candados, los puntos, el registro de acciones, las otras secciones de las fichas, Hoy, Training, Yo (salvo el
+  interruptor de avisos), Comunidad ni la barra. Sin dependencias nuevas ni código nativo. La app solo lee: nada del análisis se edita ni se borra desde
+  aquí, y nada del texto de la IA ni de las cifras personales se escribe en el registro de la app (lo frena una prueba).
+* **Pruebas:** Jest `ochentaVeinteSchemas` (tolerante por partes, nunca inventa un análisis), `ochentaVeinteApi` (las tres puertas y sus rutas),
+  `textosDelOchentaVeinte`, `almacenDelOchentaVeinte` (un pedido por periodo, 403/404 esconden, «Reintentar»), `ochentaVeinteDeLaFicha` (el periodo, los
+  estados, `ia.analisis`, `radar.fichas`), `hojaOchentaVeinte` (las vistas, el aviso, el servidor anterior), `fichasConOchentaVeinte` (las tres fichas),
+  `avisoDelOchentaVeinte` (la ruta y la espera a las capas) y `avisoDelAnalisis` (el interruptor de avisos); se ajustó `planDelEje`. Maestro, escritos
+  y sin correr: `.maestro/analisis-80-20/`.
+* **La Política de Privacidad** (`public/privacidad/index.html`) dice ahora que las respuestas del Código Renaser y de «Cierra tu día» se usan también para
+  este análisis. Sale con el deploy de Vercel.
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire) **y el backend con la spec 031 antes** (V153 y V154). Contra un backend
+  anterior no aparece nada nuevo: la hoja «Tu 80/20» y las fichas quedan como estaban.
+
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
 Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel especializado en React Native, Expo y TypeScript. Al crear, refactorizar o modificar cualquier pantalla o componente, debes cumplir OBLIGATORIAMENTE con los siguientes estándares:

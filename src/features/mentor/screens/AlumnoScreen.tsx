@@ -23,6 +23,9 @@ import { VerPublicacion } from '../../lider-mentores/components/VisorDePublicaci
 import { obtenerRadarDeAlumno } from '../api/mentorApi';
 import { obtenerCierresDeAlumno } from '../../cierre/api/cierreApi';
 import { CierresDelDia } from '../../cierre/components/CierresDelDia';
+import { obtenerOchentaVeinteDeUnAlumno } from '../../ochenta-veinte/api/ochentaVeinteApi';
+import { OchentaVeinteDeLaFicha } from '../../ochenta-veinte/components/OchentaVeinteDeLaFicha';
+import type { CargarOchentaVeinte } from '../../ochenta-veinte/types/ochentaVeinte.types';
 import type { CargarCierres } from '../../cierre/types/cierre.types';
 import { obtenerHuecosDeAlumno } from '../../huecos/api/huecosApi';
 import { TiempoLibreDeLaSemana } from '../../huecos/components/TiempoLibreDeLaSemana';
@@ -84,6 +87,12 @@ export function AlumnoScreen({
   /* Spec 017: lo que dijo al cerrar cada día, por la ruta del mentor. También estable por persona. */
   const cargarCierres = useMemo<CargarCierres | null>(
     () => (grupoId ? (lunes?: string | null) => obtenerCierresDeAlumno(grupoId, alumno.participanteId, lunes) : null),
+    [grupoId, alumno.participanteId],
+  );
+
+  /* Spec 031: su 80/20 y el análisis de la semana y del mes, por la ruta del mentor. También estable por persona. */
+  const cargarOchentaVeinte = useMemo<CargarOchentaVeinte | null>(
+    () => (grupoId ? (tipo, inicio) => obtenerOchentaVeinteDeUnAlumno(grupoId, alumno.participanteId, tipo, inicio) : null),
     [grupoId, alumno.participanteId],
   );
 
@@ -366,6 +375,8 @@ export function AlumnoScreen({
         <TiempoLibreDeLaSemana cargar={cargarHuecos} />
         {/* Spec 017: lo que dijo al cerrar cada día, de lunes a domingo (solo lectura). */}
         <CierresDelDia cargar={cargarCierres} />
+        {/* Spec 031: su 80/20 y el análisis de SER, por semana y por mes (solo lectura). */}
+        <OchentaVeinteDeLaFicha cargar={cargarOchentaVeinte} />
 
       </ScrollView>
     </SafeAreaView>

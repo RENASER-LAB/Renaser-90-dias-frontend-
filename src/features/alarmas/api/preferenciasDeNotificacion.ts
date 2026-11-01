@@ -21,6 +21,7 @@ import { apiFetch } from '../../../services/http/apiClient';
  *
  * | Mensajes         | `MENSAJE_CHAT`                            |
  * | Revisiones de tu líder | `REVISION_DEL_LIDER` (spec 005, solo quien acompaña un grupo) |
+ * | Análisis de tu 80/20 | `ANALISIS_80_20` (spec 031, para todos los que hacen su programa) |
  *
  * > **Corregido 2026-09-29 (D-221 del backend).** Decía: «"Mi grupo y mensajes" (`MENSAJE_CHAT`,
  * > `MENSAJE_MENTOR`) no está: al 26/09 ningún código del backend emite esos tipos». Desde D-221 el
@@ -40,7 +41,7 @@ import { apiFetch } from '../../../services/http/apiClient';
  */
 
 export interface TemaDeAviso {
-  clave: 'eventos' | 'logros' | 'resumen' | 'mensajes' | 'revisiones';
+  clave: 'eventos' | 'logros' | 'resumen' | 'mensajes' | 'revisiones' | 'analisis';
   nombre: string;
   detalle: string;
   tipos: readonly string[];
@@ -79,6 +80,14 @@ export const TEMAS: readonly TemaDeAviso[] = [
     detalle: 'Un aviso a las 8 de la noche si tu líder revisó a alguien de tu grupo',
     tipos: ['REVISION_DEL_LIDER'],
     soloParaQuienAcompana: true,
+  },
+  /* Spec 031 (FR-024): el aviso de que el análisis de la semana o del mes está listo. Encendido de fábrica; el texto del aviso es fijo y
+     nunca lleva el análisis. Contra un servidor anterior (sin `ANALISIS_80_20`) el interruptor no se ofrece. */
+  {
+    clave: 'analisis',
+    nombre: 'Análisis de tu 80/20',
+    detalle: 'Cuando el análisis de tu semana o de tu mes está listo',
+    tipos: ['ANALISIS_80_20'],
   },
 ];
 

@@ -295,6 +295,15 @@ export default function PlanScreen() {
    */
   const route = useRoute();
   const navigation = useNavigation();
+  /* Spec 031: el aviso «tu análisis está listo» deja `abrirOchentaVeinte` (SEMANA o MES). Se consume una vez; la hoja se abre en cuanto
+     el Plan del eje está montado (con el Mapa activo). */
+  const [ochentaVeinteAlAbrir, setOchentaVeinteAlAbrir] = useState<'SEMANA' | 'MES' | null>(null);
+  useEffect(() => {
+    const params = route.params as { abrirOchentaVeinte?: 'SEMANA' | 'MES' } | undefined;
+    if (!params?.abrirOchentaVeinte) return;
+    setOchentaVeinteAlAbrir(params.abrirOchentaVeinte === 'MES' ? 'MES' : 'SEMANA');
+    (navigation as unknown as { setParams: (p: Record<string, unknown>) => void }).setParams({ abrirOchentaVeinte: undefined });
+  }, [route.params, navigation]);
   useEffect(() => {
     const params = route.params as { abrirObjetivosFecha?: string; abrirObjetivosEje?: EjeObjetivo | null } | undefined;
     if (!params?.abrirObjetivosFecha) return;
@@ -555,6 +564,8 @@ export default function PlanScreen() {
               pedidoDeOrganizar={pedidoDeOrganizar}
               cierre={cierreDelDia}
               registrarLasAcciones={accionesRef}
+              abrirOchentaVeinte={ochentaVeinteAlAbrir}
+              alAbrirOchentaVeinte={() => setOchentaVeinteAlAbrir(null)}
             />
           </View>
         )}

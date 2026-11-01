@@ -1,0 +1,32 @@
+# AV04 — La ficha del aprendiz muestra «Tu 80/20» al mentor, debajo de «Cierres del día», con «Código Renaser en las fichas» ENCENDIDO
+# (spec 034); con el interruptor apagado la sección no se dibuja (el análisis resume lo que la persona respondió en el Código Renaser).
+# ESCRITO Y SIN CORRER. Precondición: el interruptor `radar.fichas` ENCENDIDO (flujo 01 de `codigo-renaser-en-fichas`) y el aprendiz con
+# alguna acción esta semana. Cuenta: el MENTOR del grupo (ranura E2E_ADMIN_*). E2E_PERSONA = parte del nombre del aprendiz.
+# Se corre con: .maestro/correr.sh .maestro/analisis-80-20/04-el-mentor-lo-ve-en-la-ficha.yaml
+# cuenta: admin
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "YO"
+- scrollUntilVisible:
+    element: "Mi grupo"
+    direction: DOWN
+    timeout: 40000
+- tapOn: "Mi grupo"
+- extendedWaitUntil:
+    visible: ".*${PERSONA}.*Abrir su detalle.*"
+    timeout: 30000
+- tapOn: ".*${PERSONA}.*Abrir su detalle.*"
+- scrollUntilVisible:
+    element: "Tu 80/20"
+    direction: DOWN
+    timeout: 60000
+- assertVisible: "Semana"
+- assertVisible: "Mes"
+- tapOn: "Mes"
+- extendedWaitUntil:
+    visible: "Mes .*"
+    timeout: 30000
+# Solo lectura: la ficha no ofrece agendar ni cambiar nada.
+- assertNotVisible: "Agendar mis acciones"
+- takeScreenshot: AV04-mentor-ve-el-80-20
