@@ -21,7 +21,9 @@ import { TrainingPorHora } from '../features/training/components/TrainingPorHora
 import { PracticasDeTraining } from '../features/training/components/PracticasDeTraining';
 import { nombreDeLaDimension } from '../features/training/data/dimensiones';
 import { AvisoDeProgramaEnOtraFormacion } from '../features/habits/components/AvisoDeProgramaEnOtraFormacion';
+import { useFormacionDeLaSesion } from '../features/formaciones/context/FormacionContext';
 import { useProgramaEnOtraFormacion } from '../features/formaciones/hooks/useProgramaEnOtraFormacion';
+import { llaveDeLasVistas } from '../features/formaciones/utils/vistaDeFormacion';
 import { PRACTICAS_ABIERTAS, PRACTICAS_CERRADAS, alRetroceder, type EstadoDePracticas } from '../features/training/utils/navegacionDePracticas';
 import { EvidenciaHabitoModal } from '../features/habits/components/EvidenciaHabitoModal';
 import { RegistroConFotoModal } from '../features/habits/components/RegistroConFotoModal';
@@ -250,6 +252,8 @@ export default function TrainingScreen() {
   /* D-260: tras «Elegir mi Día 1» se vuelve a preguntar, y el aviso de abajo se va solo. */
   const [versionArranque, setVersionArranque] = useState(0);
   const { user } = useAuth();
+  /* Las lecturas guardadas de Training (eventos, días cerrados, plan de la semana) se separan por cuenta Y formación (spec 022). */
+  const { formacion: formacionDeLaSesion } = useFormacionDeLaSesion();
   const arranque = useArranqueDelPrograma(!cargandoDiaPrograma && diaPrograma === 0, versionArranque, user?.id);
   const programaSinArrancar =
     arranque.estado === 'PENDIENTE_ELEGIR' || arranque.estado === 'ESPERANDO_INICIO';
@@ -1051,7 +1055,7 @@ export default function TrainingScreen() {
                 estado={estadoDeLaLista}
                 mensajeDeError={errorBackend}
                 onReintentar={() => void recargarEntrenamiento(true)}
-                cuentaId={user?.id ?? 'anon'}
+                cuentaId={llaveDeLasVistas(user?.id ?? 'anon', formacionDeLaSesion)}
                 habits={habits}
                 planHabits={planHabits}
                 hoyIso={hoyIso}

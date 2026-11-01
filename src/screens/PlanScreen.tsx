@@ -6,6 +6,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { BORDES_DE_UNA_PESTANA } from '../navigation/bordesDeUnaPestana';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
+import { useFormacionDeLaSesion } from '../features/formaciones/context/FormacionContext';
+import { llaveDeLasVistas } from '../features/formaciones/utils/vistaDeFormacion';
 import { PlazoDelObjetivoProvider } from '../features/objetivos/context/PlazoDelObjetivo';
 import { plazoDelObjetivo } from '../features/objetivos/utils/nombreDelObjetivo';
 import { useTheme } from '../theme/ThemeContext';
@@ -211,6 +213,8 @@ export default function PlanScreen() {
    * El eje de cada acción pendiente de la hoja sale de las acciones de hoy (el servidor no lo manda en el cierre).
    */
   const { user } = useAuth();
+  /* La memoria de las lecturas del cierre (hoy y días anteriores) se separa por cuenta Y formación: el cierre de una no es el de la otra (spec 022). */
+  const { formacion: formacionDeLaSesion } = useFormacionDeLaSesion();
   const { rocas: rocasDeHoy } = useAccionesDeHoy();
   const ejeDeLaAccion = useMemo(() => ejeDeLasAcciones(rocasDeHoy), [rocasDeHoy]);
   const scrollRef = useRef<React.ComponentRef<typeof ScrollView>>(null);
@@ -485,7 +489,7 @@ export default function PlanScreen() {
 
   const cierreDelDia = user?.id ? (
     <CierreEnPlan
-      cuentaId={user.id}
+      cuentaId={llaveDeLasVistas(user.id, formacionDeLaSesion)}
       diaPrograma={diaPrograma > 0 ? diaPrograma : null}
       habitosHoy={resumen?.habitosHoy ?? null}
       ejeDe={ejeDeLaAccion}
