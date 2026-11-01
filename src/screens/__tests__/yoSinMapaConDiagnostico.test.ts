@@ -35,10 +35,10 @@ describe('Yo: la fila «Mi diagnóstico»', () => {
     expect(YO).toMatch(/\{filaDelDiagnostico \? \(\s*<FilaDeAjuste\s+key="mi-diagnostico"\s+icono="fileText"/);
   });
 
-  it('va en la lista de Yo, junto a «Tuve una emergencia» y «Mi Radar», no en Ajustes', () => {
+  it('va en la lista de Yo, después de «Tuve una emergencia» y de «Mi Radar» (que sigue justo debajo de la emergencia), no en Ajustes', () => {
     const fila = YO.indexOf('key="mi-diagnostico"');
     expect(fila).toBeGreaterThan(YO.indexOf('key="emergencia"'));
-    expect(fila).toBeLessThan(YO.indexOf('key="mi-radar"'));
+    expect(fila).toBeGreaterThan(YO.indexOf('key="mi-radar"'));
   });
 
   it('completado abre su lectura y en curso o pendiente abre el recorrido, ambos a pantalla completa con su «volver»', () => {
