@@ -8,7 +8,10 @@ import { useTheme } from '../../../theme/ThemeContext';
 import { ESPACIO_PARA_LANZADOR } from '../../renasia/components/RenasiaLauncher';
 import { CabeceraAdmin } from '../components/CabeceraAdmin';
 import { EstadoDeGrupo } from '../components/EstadoDeGrupo';
-import { useGruposAdmin, type FiltroGrupos } from '../hooks/useGruposAdmin';
+import { FiltroDeFormacion } from '../../formaciones/components/FiltroDeFormacion';
+import { FORMACION_POR_DEFECTO } from '../../formaciones/types/formaciones.types';
+import { nombreCortoDeFormacion } from '../../formaciones/utils/nombreDeFormacion';
+import { formacionDelGrupo, useGruposAdmin, type FiltroGrupos } from '../hooks/useGruposAdmin';
 import { rangoDeFechas } from '../utils/fechas';
 import { useOcultarBarraAlDesplazar } from '../../../navigation/barraAlDesplazar/BarraInferior';
 
@@ -33,15 +36,18 @@ export function GruposAdminScreen({
   onVolver,
   onAbrirGrupo,
   onCrear,
+  formacionAlEntrar = null,
 }: {
   onVolver: () => void;
   onAbrirGrupo: (grupoId: string) => void;
   onCrear: () => void;
+  /** Spec 022: desde el centro «Formaciones» se entra ya filtrado por esa formación. */
+  formacionAlEntrar?: string | null;
 }) {
   const barraAlDesplazar = useOcultarBarraAlDesplazar();
   const { c, t } = useTheme();
   const { horizontalPadding, contentMaxWidth } = useResponsive();
-  const { grupos, cargando, error, filtro, setFiltro, recargar } = useGruposAdmin();
+  const { grupos, cargando, error, filtro, setFiltro, formacion, setFormacion, recargar } = useGruposAdmin(formacionAlEntrar);
 
   useSystemBackHandler(() => {
     onVolver();
@@ -97,6 +103,8 @@ export function GruposAdminScreen({
           })}
         </View>
 
+        <FiltroDeFormacion valor={formacion} onCambiar={setFormacion} />
+
         {cargando ? <ActivityIndicator color={c.goldInk} style={{ marginTop: 24 }} /> : null}
 
         {error ? (
@@ -137,6 +145,7 @@ export function GruposAdminScreen({
             <Text style={[t.body, { color: c.textSoft, fontSize: 16, marginTop: 2 }]}>
               {grupo.mentorNombre ? `Mentor: ${grupo.mentorNombre}` : 'Sin mentor asignado'}
               {grupo.tipo === 'RECEPCION' ? ' · Bienvenida' : ''}
+              {formacionDelGrupo(grupo) !== FORMACION_POR_DEFECTO ? ` · ${nombreCortoDeFormacion(formacionDelGrupo(grupo))}` : ''}
             </Text>
           </Pressable>
         ))}

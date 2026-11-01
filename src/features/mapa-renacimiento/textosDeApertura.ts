@@ -1,14 +1,14 @@
 import { diasQueQuedanSiSeSabe, lapsoQueQueda } from '../home/utils/diasQueQuedan';
 
 /** Lo que devuelve `useProgramaDia` (de `GET /api/v1/home`, el mismo dato que lee Hoy). */
-export type ProgramaParaElMapa = { diaPrograma: number; inscrito: boolean; loading: boolean };
+export type ProgramaParaElMapa = { diaPrograma: number; inscrito: boolean; loading: boolean; duracionDias?: number };
 
 /**
  * Los días que quedan del programa para el Mapa, o `null` mientras no se sabe el día (cargando, o
  * la lectura falló: `useProgramaDia` deja `inscrito` en `false`). Es la cuenta de Hoy.
  */
-export function diasQueQuedanDelMapa({ diaPrograma, inscrito, loading }: ProgramaParaElMapa): number | null {
-  return diasQueQuedanSiSeSabe({ diaPrograma, inscrito, cargando: loading });
+export function diasQueQuedanDelMapa({ diaPrograma, inscrito, loading, duracionDias }: ProgramaParaElMapa): number | null {
+  return diasQueQuedanSiSeSabe({ diaPrograma, inscrito, cargando: loading, duracionDias });
 }
 
 /**

@@ -42,6 +42,7 @@ import { grupoParaVerSusDias } from '../utils/susDiasYEvidencias';
 import { CambiarDiaScreen } from './CambiarDiaScreen';
 import { EliminarCuentaAdminScreen } from './EliminarCuentaAdminScreen';
 import { rotuloDeFase } from '../../home/hooks/useResumenHome';
+import { FormacionDeLaPersona } from '../../formaciones/components/FormacionDeLaPersona';
 import { useOcultarBarraAlDesplazar } from '../../../navigation/barraAlDesplazar/BarraInferior';
 
 /**
@@ -197,6 +198,7 @@ export function FichaAprendizScreen({
         aprendizId={aprendiz.id}
         nombre={nombre}
         diaActual={programa.detalle.programDay}
+        duracionDias={programa.detalle.programDuration}
         onVolver={() => setCambiandoDia(false)}
         onCambiado={diaNuevo => {
           setCambiandoDia(false);
@@ -262,6 +264,18 @@ export function FichaAprendizScreen({
             ))}
           </View>
         ) : null}
+
+        {/* Su formación, lo que cursó antes y, para un aprendiz, «Pasar a otra formación» (spec 022). Si el servidor no la
+            ofrece (backend anterior), no se dibuja. */}
+        <FormacionDeLaPersona
+          personaId={aprendiz.id}
+          nombre={nombre}
+          esAprendiz={programa.detalle?.role === 'TRAINEE'}
+          alTrasladar={destino => {
+            setAvisoFinal(`Listo: ${nombre} pasó a ${destino}.`);
+            void programa.recargar();
+          }}
+        />
 
         {/* Día del programa (26/09, D-82). El botón aparece solo si el servidor entregó el detalle
             administrativo —mismo permiso que el PUT— y su programa ya empezó. */}

@@ -7,6 +7,8 @@ import { PersonaDelLiderScreen } from '../../lider-mentores/screens/PersonaDelLi
 import { CajaContenidoScreen } from '../../caja/screens/CajaContenidoScreen';
 import { CajaDetalleScreen } from '../../caja/screens/CajaDetalleScreen';
 import { CajaListaScreen } from '../../caja/screens/CajaListaScreen';
+import { FormacionDetalleAdminScreen } from '../../formaciones/screens/FormacionDetalleAdminScreen';
+import { FormacionesAdminScreen } from '../../formaciones/screens/FormacionesAdminScreen';
 import { AdminInicioScreen } from './AdminInicioScreen';
 import { AnimalDeFaseDetalleScreen } from './AnimalDeFaseDetalleScreen';
 import { AnimalesDeFaseAdminScreen } from './AnimalesDeFaseAdminScreen';
@@ -41,10 +43,12 @@ import { StaffRolesScreen } from './StaffRolesScreen';
  */
 type Vista =
   | { nombre: 'inicio' }
-  | { nombre: 'grupos' }
+  | { nombre: 'grupos'; formacion?: string | null }
+  | { nombre: 'formaciones' }
+  | { nombre: 'formacion'; codigo: string }
   | { nombre: 'grupo'; grupoId: string }
   | { nombre: 'grupo-form'; grupoId: string | null }
-  | { nombre: 'personas'; soloSinGrupo: boolean }
+  | { nombre: 'personas'; soloSinGrupo: boolean; formacion?: string | null }
   | { nombre: 'ficha'; aprendiz: PersonaDeFicha }
   | { nombre: 'solicitudes' }
   | { nombre: 'semaforo' }
@@ -128,6 +132,7 @@ export function AdminScreen({ onSalir, abrirEn = 'inicio' }: { onSalir: () => vo
     case 'grupos':
       return (
         <GruposAdminScreen
+          formacionAlEntrar={vista.formacion ?? null}
           onVolver={volver}
           onAbrirGrupo={grupoId => entrar({ nombre: 'grupo', grupoId })}
           onCrear={() => entrar({ nombre: 'grupo-form', grupoId: null })}
@@ -158,7 +163,19 @@ export function AdminScreen({ onSalir, abrirEn = 'inicio' }: { onSalir: () => vo
         <PersonasAdminScreen
           onVolver={volver}
           soloSinGrupoAlEntrar={vista.soloSinGrupo}
+          formacionAlEntrar={vista.formacion ?? null}
           onAbrirFicha={aprendiz => entrar({ nombre: 'ficha', aprendiz })}
+        />
+      );
+    case 'formaciones':
+      return <FormacionesAdminScreen onVolver={volver} onAbrir={codigo => entrar({ nombre: 'formacion', codigo })} />;
+    case 'formacion':
+      return (
+        <FormacionDetalleAdminScreen
+          codigo={vista.codigo}
+          onVolver={volver}
+          onVerPersonas={codigo => entrar({ nombre: 'personas', soloSinGrupo: false, formacion: codigo })}
+          onVerGrupos={codigo => entrar({ nombre: 'grupos', formacion: codigo })}
         />
       );
     case 'ficha':
@@ -303,6 +320,7 @@ export function AdminScreen({ onSalir, abrirEn = 'inicio' }: { onSalir: () => vo
             else if (seccion === 'personas') entrar({ nombre: 'personas', soloSinGrupo: false });
             else if (seccion === 'solicitudes') entrar({ nombre: 'solicitudes' });
             else if (seccion === 'semaforo') entrar({ nombre: 'semaforo' });
+            else if (seccion === 'formaciones') entrar({ nombre: 'formaciones' });
             else if (seccion === 'mas') entrar({ nombre: 'mas' });
             else if (seccion === 'caja') entrar({ nombre: 'caja' });
           }}

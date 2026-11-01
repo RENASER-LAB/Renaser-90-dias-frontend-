@@ -269,6 +269,8 @@ export async function listarAprendices(opciones: {
   soloSinGrupo?: boolean;
   /** Solo las cuentas de ese rol (backend E-605). Sin él vienen todas, staff incluido (D-138). */
   rol?: RolAsignable;
+  /** Spec 022: solo las personas de esa formación (código). Sin él vienen las de todas. */
+  formacion?: string | null;
 }): Promise<PaginaAprendicesApi> {
   const params = new URLSearchParams({
     page: String(opciones.pagina ?? 0),
@@ -277,6 +279,7 @@ export async function listarAprendices(opciones: {
   if (opciones.busqueda && opciones.busqueda.trim()) params.set('q', opciones.busqueda.trim());
   if (opciones.soloSinGrupo) params.set('withoutGroup', 'true');
   if (opciones.rol) params.set('role', opciones.rol);
+  if (opciones.formacion) params.set('formation', opciones.formacion);
 
   return validarRespuesta<PaginaAprendicesApi>(
     paginaAprendicesSchema,

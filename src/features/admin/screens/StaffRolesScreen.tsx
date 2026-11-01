@@ -1,3 +1,4 @@
+import { FormacionesDelPersonal } from '../../formaciones/components/FormacionesDelPersonal';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -76,6 +77,9 @@ const DONDE_QUEDA: Record<RolAsignable, string> = {
 
 
 type Persona = PersonaDelPadron;
+
+/** Los roles a quienes Administración les asigna las formaciones en las que trabajan (spec 022). */
+const ROLES_CON_FORMACIONES: ReadonlySet<string> = new Set(['MENTOR', 'TRAINEE_GUIDE', 'MENTOR_LEAD']);
 
 /**
  * Una persona con su rol desplegable.
@@ -156,6 +160,8 @@ function FilaDePersona({
               </Pressable>
             );
           })}
+          {/* Spec 022: el personal con formaciones asignadas (mentor, guía, líder) se marca en cuáles trabaja. */}
+          {ROLES_CON_FORMACIONES.has(persona.rol) ? <FormacionesDelPersonal personaId={persona.id} nombre={persona.nombre} /> : null}
         </View>
       ) : null}
     </View>
