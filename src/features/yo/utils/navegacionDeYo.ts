@@ -20,7 +20,6 @@ export type VistaDeYo =
   | 'evidencias'
   | 'onboarding'
   | 'pacto'
-  | 'mapa_renacimiento'
   | 'metodo'
   | 'notificaciones'
   | 'alarmas'
@@ -33,14 +32,14 @@ export type OrigenDeYo = 'main' | 'hub';
 export function vistaDeRegreso(vista: VistaDeYo, origen: OrigenDeYo): VistaDeYo | null {
   if (vista === 'main') return null;
   if (vista === 'hub') return 'main';
-  // El Pacto y el Mapa son etapas de «Mi onboarding»: se vuelve a la lista de etapas.
-  if (vista === 'pacto' || vista === 'mapa_renacimiento') return 'onboarding';
+  // El Pacto es una etapa de «Mi onboarding»: se vuelve a la lista de etapas.
+  if (vista === 'pacto') return 'onboarding';
   return origen;
 }
 
 /**
  * El origen después de pasar de `previa` a otra vista: cambia solo cuando se sale de Yo o de
- * Ajustes; entrar a una etapa (Pacto, Mapa) y volver a la lista no lo pierde.
+ * Ajustes; entrar a una etapa (el Pacto) y volver a la lista no lo pierde.
  */
 export function origenTrasCambio(previa: VistaDeYo, origenActual: OrigenDeYo): OrigenDeYo {
   return previa === 'main' || previa === 'hub' ? previa : origenActual;
@@ -50,7 +49,7 @@ export function origenTrasCambio(previa: VistaDeYo, origenActual: OrigenDeYo): O
  * El título de la cabecera «‹ título» de cada sub-vista: el de la fila que la abre, en tipo
  * oración. Antes cada una tenía «← VOLVER A AJUSTES» y una píldora con el nombre en versales.
  */
-export const TITULO_DE_VISTA: Record<Exclude<VistaDeYo, 'main' | 'mapa_renacimiento'>, string> = {
+export const TITULO_DE_VISTA: Record<Exclude<VistaDeYo, 'main'>, string> = {
   hub: 'Ajustes',
   editar_perfil: 'Editar perfil',
   info_perfil: 'Información',
