@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 
@@ -43,6 +43,8 @@ export function PlanDelEje({
   onIrAlMapa,
   cierre,
   registrarLasAcciones,
+  abrirOchentaVeinte = null,
+  alAbrirOchentaVeinte,
 }: {
   maestras: RocaMaestraApi[];
   numeroSemana: number;
@@ -57,6 +59,9 @@ export function PlanDelEje({
   cierre?: React.ReactNode;
   /** El lugar de «Acciones que mueven la meta», para que «Ver mañana en Plan» lleve el scroll hasta ahí. */
   registrarLasAcciones?: React.Ref<View>;
+  /** Spec 031: el aviso «tu análisis está listo» pide abrir «Tu 80/20» en la semana o el mes. Se consume una vez (`alAbrirOchentaVeinte`). */
+  abrirOchentaVeinte?: 'SEMANA' | 'MES' | null;
+  alAbrirOchentaVeinte?: () => void;
 }) {
   const { user } = useAuth();
   const navigation = useNavigation();
@@ -71,6 +76,13 @@ export function PlanDelEje({
   const [revisando, setRevisando] = useState<EjeObjetivo | null>(null);
   const [agendando, setAgendando] = useState(false);
   const [ochentaVeinte, setOchentaVeinte] = useState(false);
+  const [vistaInicialDeLaHoja, setVistaInicialDeLaHoja] = useState<'SEMANA' | 'MES' | undefined>(undefined);
+  useEffect(() => {
+    if (!abrirOchentaVeinte) return;
+    setVistaInicialDeLaHoja(abrirOchentaVeinte);
+    setOchentaVeinte(true);
+    alAbrirOchentaVeinte?.();
+  }, [abrirOchentaVeinte, alAbrirOchentaVeinte]);
   /* Solo cuando el planificador se abre: quien nunca lo toca no paga la lectura del Mapa. */
   const accionesDelMapa = useAccionesDelMapa(agendando);
 
@@ -170,11 +182,23 @@ export function PlanDelEje({
 
       {cierre}
 
-      <TarjetaOchentaVeinte alAbrir={() => setOchentaVeinte(true)} />
+      <TarjetaOchentaVeinte
+        alAbrir={() => {
+          setVistaInicialDeLaHoja(undefined);
+          setOchentaVeinte(true);
+        }}
+      />
 
       <GoldButton label="Organizar mi semana" onPress={organizarMiSemana} icon="chevron" textStyle={estilos.textoDelBoton} />
 
-      <HojaOchentaVeinte visible={ochentaVeinte} alCerrar={() => setOchentaVeinte(false)} eje={ejeAbierto} deHoy={deHoyDelEje} />
+      <HojaOchentaVeinte
+        visible={ochentaVeinte}
+        alCerrar={() => setOchentaVeinte(false)}
+        eje={ejeAbierto}
+        deHoy={deHoyDelEje}
+        vistaInicial={vistaInicialDeLaHoja}
+        alAgendar={() => setAgendando(true)}
+      />
 
       {/* Arma la semana que se arma HOY (`seArma`): el domingo, la que empieza, con su número. */}
       <PlanSemanalModal

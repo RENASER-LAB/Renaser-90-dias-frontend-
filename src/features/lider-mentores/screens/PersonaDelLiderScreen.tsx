@@ -15,6 +15,9 @@ import { PALABRA_NO_SE_MIDE, palabraParaQuienAcompana, rolEnPalabras } from '../
 import { formatearPorcentaje } from '../../semaforo/utils/lecturaDelSemaforo';
 import { obtenerCierresDePersona } from '../../cierre/api/cierreApi';
 import { CierresDelDia } from '../../cierre/components/CierresDelDia';
+import { obtenerOchentaVeinteDeUnaPersona } from '../../ochenta-veinte/api/ochentaVeinteApi';
+import { OchentaVeinteDeLaFicha } from '../../ochenta-veinte/components/OchentaVeinteDeLaFicha';
+import type { CargarOchentaVeinte } from '../../ochenta-veinte/types/ochentaVeinte.types';
 import type { CargarCierres } from '../../cierre/types/cierre.types';
 import { obtenerHuecosDePersona } from '../../huecos/api/huecosApi';
 import { TiempoLibreDeLaSemana } from '../../huecos/components/TiempoLibreDeLaSemana';
@@ -131,6 +134,12 @@ export function PersonaDelLiderScreen({
     [grupoDeRuta, personaId],
   );
 
+  /* Spec 031: su 80/20 y el análisis de la semana y del mes, por la misma puerta del liderazgo (con o sin grupo). */
+  const cargarOchentaVeinte = useMemo<CargarOchentaVeinte>(
+    () => (tipo, inicio) => obtenerOchentaVeinteDeUnaPersona(grupoDeRuta, personaId, tipo, inicio),
+    [grupoDeRuta, personaId],
+  );
+
   /* El día abierto se guarda junto con la semana a la que pertenece: al cambiar de semana vuelve solo al día
      más reciente con hábitos, sin un efecto que corra un render tarde. */
   const [observando, setObservando] = useState(false);
@@ -199,6 +208,7 @@ export function PersonaDelLiderScreen({
       <CodigoRenaserDelAlumno cargar={cargarRadar} />
       <TiempoLibreDeLaSemana cargar={cargarHuecos} />
       <CierresDelDia cargar={cargarCierres} />
+      <OchentaVeinteDeLaFicha cargar={cargarOchentaVeinte} />
 
       <View style={estilos.acciones}>
         <BotonPrincipal

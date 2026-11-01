@@ -143,6 +143,16 @@ export interface DestinoDelChat {
 }
 
 /**
+ * «Tu análisis está listo» (spec 031): `/plan/80-20?periodo=SEMANA|MES&inicio=…`. Abre Plan con la hoja «Tu 80/20» en esa vista. El
+ * `inicio` no se usa para abrir: la hoja arranca en el periodo en curso y el análisis nuevo está a una flecha. Que la ruta llegue no
+ * autoriza nada: el servidor lee solo a quien pregunta.
+ */
+export interface DestinoDelOchentaVeinte {
+  tipo: 'ochentaVeinte';
+  periodo: 'SEMANA' | 'MES';
+}
+
+/**
  * Destino de un aviso, extraído de su ruta. `null` si la ruta no tiene una forma que esta versión
  * de la app sepa abrir — entonces el toque solo abre la app, que es lo que el contrato espera de
  * una app instalada ante una ruta nueva (§4.5).
@@ -158,7 +168,8 @@ export type DestinoDeAviso =
   | DestinoDeMiCaja
   | DestinoDeMiRadar
   | DestinoDeCajaAdmin
-  | DestinoDelChat;
+  | DestinoDelChat
+  | DestinoDelOchentaVeinte;
 
 export async function obtenerAvisosDeAcompanamiento(): Promise<AvisoApi[]> {
   const bandeja = validarRespuesta<z.infer<typeof bandejaSchema>>(
@@ -190,6 +201,8 @@ const RUTA_DE_MI_RADAR = /^\/mi-radar\/?$/;
 const RUTA_DE_LA_CAJA_ADMIN = /^\/admin\/caja\/([^/?]+)\/?$/;
 /** D-221: el chat de un aviso de mensaje. Con la barra final tolerada. */
 const RUTA_DEL_CHAT = /^\/chat\/([^/?]+)\/?$/;
+/** Spec 031: el aviso de «tu análisis está listo»: Plan → Tu 80/20, en la semana o el mes. */
+const RUTA_DEL_OCHENTA_VEINTE = /^\/plan\/80-20\/?(?:\?(.*))?$/;
 
 /**
  * Saca el destino de la ruta de un aviso: la ficha de un alumno
@@ -216,6 +229,10 @@ export function destinoDeRuta(ruta: unknown): DestinoDeAviso | null {
   if (RUTA_DEL_SEMAFORO_POR_GRUPOS.test(ruta)) return { tipo: 'semaforoGrupos' };
   if (RUTA_DE_MI_CAJA.test(ruta)) return { tipo: 'caja' };
   if (RUTA_DE_MI_RADAR.test(ruta)) return { tipo: 'miRadar' };
+  const delOchentaVeinte = RUTA_DEL_OCHENTA_VEINTE.exec(ruta);
+  if (delOchentaVeinte) {
+    return { tipo: 'ochentaVeinte', periodo: parametro(delOchentaVeinte[1], 'periodo') === 'MES' ? 'MES' : 'SEMANA' };
+  }
   const deLaCaja = RUTA_DE_LA_CAJA_ADMIN.exec(ruta);
   if (deLaCaja) {
     const aprendizId = decodificar(deLaCaja[1]);

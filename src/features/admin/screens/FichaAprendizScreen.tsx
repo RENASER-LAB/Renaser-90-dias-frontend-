@@ -18,6 +18,9 @@ import { obtenerRadarDePersona } from '../../lider-mentores/api/cumplimientoDelL
 import { CodigoRenaserDelAlumno } from '../../mentor/components/CodigoRenaserDelAlumno';
 import { obtenerCierresDePersona } from '../../cierre/api/cierreApi';
 import { CierresDelDia } from '../../cierre/components/CierresDelDia';
+import { obtenerOchentaVeinteDeUnaPersona } from '../../ochenta-veinte/api/ochentaVeinteApi';
+import { OchentaVeinteDeLaFicha } from '../../ochenta-veinte/components/OchentaVeinteDeLaFicha';
+import type { CargarOchentaVeinte } from '../../ochenta-veinte/types/ochentaVeinte.types';
 import type { CargarCierres } from '../../cierre/types/cierre.types';
 import { obtenerHuecosDePersona } from '../../huecos/api/huecosApi';
 import { TiempoLibreDeLaSemana } from '../../huecos/components/TiempoLibreDeLaSemana';
@@ -132,6 +135,11 @@ export function FichaAprendizScreen({
   /* Spec 017: lo que dijo al cerrar cada día, por la misma lectura del liderazgo y con el mismo grupo. */
   const cargarCierres = useMemo<CargarCierres | null>(
     () => (grupoDelRadar ? (lunes?: string | null) => obtenerCierresDePersona(grupoDelRadar, aprendiz.id, lunes) : null),
+    [grupoDelRadar, aprendiz.id],
+  );
+  /* Spec 031: su 80/20 y el análisis de la semana y del mes, por la misma lectura del liderazgo y con el mismo grupo. */
+  const cargarOchentaVeinte = useMemo<CargarOchentaVeinte | null>(
+    () => (grupoDelRadar ? (tipo, inicio) => obtenerOchentaVeinteDeUnaPersona(grupoDelRadar, aprendiz.id, tipo, inicio) : null),
     [grupoDelRadar, aprendiz.id],
   );
   const nombre = aprendiz.fullName?.trim() || 'Aprendiz sin nombre';
@@ -465,6 +473,7 @@ export function FichaAprendizScreen({
 
         {/* Spec 017: lo que dijo al cerrar cada día, de lunes a domingo (solo lectura). */}
         <CierresDelDia cargar={cargarCierres} />
+        <OchentaVeinteDeLaFicha cargar={cargarOchentaVeinte} />
 
         {/* D-243: solo ADMIN o ALQUIMISTA, nunca sobre sí mismo; sobre un ADMIN o ALQUIMISTA, solo un ADMIN. */}
         {ofrecerEliminar ? (

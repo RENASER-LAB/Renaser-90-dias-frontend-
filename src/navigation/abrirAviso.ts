@@ -33,7 +33,8 @@ export type TipoQueAbreUnaPestana =
   | 'semaforo'
   | 'alumno'
   | 'semaforoGrupo'
-  | 'semaforoGrupos';
+  | 'semaforoGrupos'
+  | 'ochentaVeinte';
 
 export const TIPOS_QUE_ABREN_UNA_PESTANA: readonly TipoQueAbreUnaPestana[] = [
   'evento',
@@ -48,6 +49,8 @@ export const TIPOS_QUE_ABREN_UNA_PESTANA: readonly TipoQueAbreUnaPestana[] = [
   'alumno',
   'semaforoGrupo',
   'semaforoGrupos',
+  // Spec 031: el aviso de «tu análisis está listo» abre Plan con la hoja «Tu 80/20».
+  'ochentaVeinte',
 ];
 
 /**
@@ -73,6 +76,7 @@ const PESTANA: Record<TipoQueAbreUnaPestana, string> = {
   alumno: 'Yo',
   semaforoGrupo: 'Yo',
   semaforoGrupos: 'Yo',
+  ochentaVeinte: 'Plan',
 };
 
 /** La pestaña y los parámetros que cada pantalla ya sabe consumir una vez. */
@@ -102,6 +106,8 @@ export function pestanaDelDestino(
       return { pestana: PESTANA.semaforoGrupo, params: { abrirSemaforoDelGrupo: destino.grupoId } };
     case 'semaforoGrupos':
       return { pestana: PESTANA.semaforoGrupos, params: { abrirSemaforoPorGrupos: true } };
+    case 'ochentaVeinte':
+      return { pestana: PESTANA.ochentaVeinte, params: { abrirOchentaVeinte: destino.periodo } };
   }
 }
 
@@ -121,7 +127,7 @@ export type ResultadoDeApertura = 'abierto' | 'esperando' | 'nada';
  * Código Renaser ni el Pacto.
  */
 /* D-221: el chat también espera. Un mensaje del grupo no puede tapar el Código Renaser ni el Pacto. */
-const ESPERAN_A_LAS_CAPAS: ReadonlySet<TipoQueAbreUnaPestana> = new Set(['habito', 'objetivo', 'caja', 'miRadar', 'cajaAdmin', 'chat']);
+const ESPERAN_A_LAS_CAPAS: ReadonlySet<TipoQueAbreUnaPestana> = new Set(['habito', 'objetivo', 'caja', 'miRadar', 'cajaAdmin', 'chat', 'ochentaVeinte']);
 // Los de rol y el semáforo del sábado NO esperan: no esperaban cuando los atendía Hoy.
 
 export function intentarAbrirAvisoPendiente(deps: DependenciasDeApertura): ResultadoDeApertura {

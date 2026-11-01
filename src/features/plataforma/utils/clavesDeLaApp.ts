@@ -8,6 +8,8 @@ export const CLAVES = {
   iaChat: 'ia.chat',
   iaVoz: 'ia.voz',
   iaPropuestas: 'ia.propuestas',
+  /* El análisis 80/20 con IA de «Tu 80/20» (spec 031): se apaga aparte de SER y las cifras se siguen viendo. */
+  iaAnalisis: 'ia.analisis',
   chat: 'chat',
   chatAudio: 'chat.audio',
   chatFotos: 'chat.fotos',

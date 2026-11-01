@@ -28,6 +28,8 @@ jest.mock('../RecordatoriosDeLasAcciones', () => ({
   },
 }));
 jest.mock('../../../../components/Alerta', () => ({ Alert: { alert: jest.fn() } }));
+// Las vistas «Semana» y «Mes» de la hoja «Tu 80/20» (spec 031) tienen su propia prueba (`hojaOchentaVeinte`): acá la lectura nunca llega y la hoja es la de siempre.
+jest.mock('../../../ochenta-veinte/api/ochentaVeinteApi', () => ({ obtenerOchentaVeinteDeLaPersona: () => new Promise(() => undefined) }));
 
 type PropsDeHoja = { visible?: boolean; titulo?: string; children?: React.ReactNode };
 jest.mock('../../../../components/hojaDesdeAbajo/HojaDesdeAbajo', () => {
