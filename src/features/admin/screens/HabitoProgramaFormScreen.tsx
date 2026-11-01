@@ -60,6 +60,18 @@ const ENTRADA_DE_LOS_ROLES = FadeIn.duration(180).easing(CURVA_SALIDA).reduceMot
  * **Spec 023:** el hábito es de UNA formación (la de la lista que se estaba mirando, o la suya al editar) y solo ofrece las categorías ACTIVAS de
  * esa formación. «Copiar a otra formación» crea el mismo hábito allá, ya independiente: elegir la formación, elegir una categoría de ELLA y copiar.
  */
+/**
+ * Lo que falta para que «Copiar» se pueda tocar, dicho con palabras (E2E de las formaciones, 01/11/2026): el botón se queda apagado hasta
+ * elegir la formación y la categoría de destino, y antes no decía por qué. `null` = no falta nada (o ya hay un aviso propio: la formación de
+ * destino no tiene categorías).
+ */
+export function textoDeLoQueFaltaParaCopiar(destino: string | null, categoriaDestino: string | null, categoriasDelDestino: number): string | null {
+  if (!destino) return 'Elige la formación a la que quieres copiarlo.';
+  if (categoriasDelDestino === 0) return null;
+  if (!categoriaDestino) return `Elige la categoría en ${nombreCortoDeFormacion(destino)} para poder copiar.`;
+  return null;
+}
+
 export function HabitoProgramaFormScreen({
   id,
   estado,
@@ -87,6 +99,8 @@ export function HabitoProgramaFormScreen({
   const [error, setError] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState<'guardar' | 'activar' | 'eliminar' | 'copiar' | null>(null);
   const [confirmacion, setConfirmacion] = useState<{ clave: number; texto: string } | null>(null);
+  /* El aviso de «Copiado a …» va DENTRO de la sección de copiar: el de arriba (junto a «Guardar») queda fuera de la vista cuando se copia desde abajo. */
+  const [copiada, setCopiada] = useState<{ clave: number; texto: string } | null>(null);
   const cambiado = hayCambios(formulario, original);
   const scroll = useRef<ScrollView>(null);
   const campoNombre = useRef<TextInput>(null);
@@ -148,6 +162,7 @@ export function HabitoProgramaFormScreen({
   };
 
   const categoriasDelDestino = destino ? categoriasParaElegir(destino, estado.categorias, estado.categoriasDelServidor) : [];
+  const queFaltaParaCopiar = textoDeLoQueFaltaParaCopiar(destino, categoriaDestino, categoriasDelDestino.length);
 
   const copiar = async () => {
     if (!habito || !destino || !categoriaDestino) return;
@@ -157,7 +172,8 @@ export function HabitoProgramaFormScreen({
       const copia = await copiarHabitoDelPrograma(habito.id, { formacion: destino, categoria: categoriaDestino });
       // En «Todas» la copia también se ve en la lista; en una formación concreta no es de esa lista.
       if (estado.formacion === TODAS_LAS_FORMACIONES) estado.reemplazar(copia);
-      avisarListo(`Copiado a ${nombreLargoDeFormacion(destino)}. Desde ahora son dos hábitos independientes.`);
+      tacto.logro();
+      setCopiada({ clave: Date.now(), texto: `Copiado a ${nombreLargoDeFormacion(destino)}. Desde ahora son dos hábitos independientes.` });
       setDestino(null);
       setCategoriaDestino(null);
     } catch (e) {
@@ -362,6 +378,7 @@ export function HabitoProgramaFormScreen({
                   onPress={() => {
                     setDestino(f);
                     setCategoriaDestino(null);
+                    setCopiada(null);
                     setError(null);
                   }}
                   deshabilitado={ocupado !== null}
@@ -385,6 +402,8 @@ export function HabitoProgramaFormScreen({
               )
             ) : null}
             {cambiado ? <Text style={ayuda}>Guarda los cambios antes de copiar: se copia lo guardado.</Text> : null}
+            {queFaltaParaCopiar ? <Text style={ayuda}>{queFaltaParaCopiar}</Text> : null}
+            {copiada ? <ConfirmacionEnLinea key={copiada.clave} texto={copiada.texto} onTerminar={() => setCopiada(null)} /> : null}
             <BotonSecundario
               etiqueta={destino ? `Copiar a ${nombreCortoDeFormacion(destino)}` : 'Copiar'}
               onPress={() => void copiar()}

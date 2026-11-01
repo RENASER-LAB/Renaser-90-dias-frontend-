@@ -332,6 +332,30 @@ describe('«Copiar a otra formación» desde el hábito', () => {
     expect(reemplazar).not.toHaveBeenCalled();
   });
 
+  it('E2E 01/11: el botón apagado dice qué falta (la formación, y luego la categoría de ESA formación) y desaparece al completarlo', async () => {
+    const r = formulario(estado());
+    expect(textos(r)).toContain('Elige la formación a la que quieres copiarlo.');
+    expect(botonesPorTexto(r, 'Copiar').props.disabled).toBe(true);
+    await pulsar(chip(r, 'Certificación'));
+    expect(textos(r)).not.toContain('Elige la formación a la que quieres copiarlo.');
+    expect(textos(r)).toContain('Elige la categoría en Certificación para poder copiar.');
+    expect(botonesPorTexto(r, 'Copiar a Certificación').props.disabled).toBe(true);
+    await pulsar(chip(r, 'Ética'));
+    expect(textos(r)).not.toContain('Elige la categoría en Certificación para poder copiar.');
+    expect(botonesPorTexto(r, 'Copiar a Certificación').props.disabled).toBe(false);
+  });
+
+  it('E2E 01/11: «Copiado a …» sale dentro de la misma sección, junto al botón, no solo arriba', async () => {
+    mockCopiar.mockResolvedValue(habito('h9', 'Lectura diaria', 'CERTIFICACION', 'CERTIFICACION_ETICA'));
+    const r = formulario(estado());
+    await pulsar(chip(r, 'Certificación'));
+    await pulsar(chip(r, 'Ética'));
+    await pulsar(botonesPorTexto(r, 'Copiar a Certificación'));
+    const seccion = r.root.findAll(n => n.props.accessibilityRole === 'radiogroup' && n.props.accessibilityLabel === 'Formación de la copia')[0];
+    expect(seccion).toBeDefined();
+    expect(textos(r).split('Copiado a Certificación Renaser.').length - 1).toBe(1);
+  });
+
   it('un 409 («ya hay uno con ese título») se dice con el motivo del servidor', async () => {
     mockCopiar.mockRejectedValue(new ApiError(409, 'Ya hay un hábito con ese título en la formación elegida.', { message: 'Ya hay un hábito con ese título en la formación elegida.' }));
     const r = formulario(estado());
