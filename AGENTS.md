@@ -887,6 +887,14 @@ Administración → «Fichas» son de otras entradas de la 026. Lo que cambia y 
 * **Hace falta un APK nuevo** (solo JavaScript: ni `package.json`, ni `app.json`, ni código nativo; la app no se actualiza por aire).
   **Hace falta el backend de la 026** para los objetivos por confirmar y la primera acción.
 
+### Las semanas y los meses del plan siguen la duración de la persona (spec 026, tras la 022)
+
+* `objetivos/utils/periodoDelPrograma` cuenta las semanas y los bloques de cuatro semanas con la **duración propia** (`semanasDelProgramaDe`, `mesesDelProgramaDe`): con 90 días son
+  13 semanas y 3 bloques (como siempre); con 365, **53** semanas y 13 bloques (el último se lleva la 53). `semanaDe`, `semanaAPlanificar`, `mesDe`, `semanasDelMes`,
+  `mesDeLaSemana` y `etiquetaDelMes` reciben `duracionDias` (opcional: sin dato, la de 90). Plan la pasa desde `GET /home` (`resumen.duracionDias`), igual que Yo.
+  Es la misma cuenta de `SemanaPrograma` del backend (V156 sube los topes de la base a la semana 53 y el mes 12); prueba `periodoDelProgramaSegunLaDuracion`.
+* **No cambia** el texto «objetivo de 90 días» (es el nombre del objetivo en toda la app); decidir si en el Diplomado de 1 año se llama de otra forma es del dueño.
+
 ### Entradas anteriores que esta deja obsoletas
 
 Donde una entrada de este documento nombra el Mapa de Renacimiento (el flujo de diez pasos, su tarjeta en Hoy, `PuertaDelMapa` /
