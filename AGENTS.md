@@ -1433,6 +1433,27 @@ eligió su Día 1: «¿y por qué no le salió cuándo empezar? eso es un bug».
   (`ESTADO` = `sin-programa` | `sin-dia-1` | `esperando`).
 * **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
 
+## Corrección — 2026-11-01 — lo que salió en la segunda jornada del E2E de las formaciones (issues #73 a #80; backend #53 y #54)
+
+Pedido del dueño: corregir todo lo que salió, también lo menor. Solo JavaScript en la app y un parámetro opcional en el backend. Un commit por error. Lo que cambia y nada más:
+* **#73 «Asignar a varias personas» (Fichas)** pide solo las cuentas activas: `listarAprendices({ soloActivas: true })` manda `activeOnly=true` y el padrón del servidor deja fuera las
+  solicitudes que esperan aprobación (cuentas INACTIVAS, sin programa) y las suspendidas, en la lista y en el total (`u.estado = 'ACTIVO'`). «Personas» no lo pide y sigue viendo todo (D-138).
+* **#74 «Planificar mi mes» según la duración.** Los meses del programa son los del servidor, `duración / 30` (`MesPrograma.mesesDe`): 3 en 90 días y **12 en 365** (antes la app contaba 13 bloques de
+  cuatro semanas en 365 y ofrecía solo 3 en la hoja). Las semanas (53 en 365) se reparten parejo entre los meses: 4 + 4 + 5 en 90 días, exactamente como siempre; en 365, meses de 4 o 5 semanas hasta la 53
+  (`periodoDelPrograma.mesesDelProgramaDe` / `semanasDelMes` / `mesDeLaSemana`). `mesDelPrograma` y `PlanDelMesModal` reciben `duracionDias`; con 12 meses el selector son chips que se deslizan
+  de lado (con 3, el control de siempre). El número de mes es el que viaja al servidor en `PUT /rocks/monthly/{eje}/{mes}`. **Límite conocido:** el mes de la hoja es un bloque de semanas y el «mes actual» del
+  servidor se cuenta por días (30, 60, …): pueden decir meses distintos unos días al año, igual que ya pasaba en 90 días (decisión del dueño 028-2).
+* **#75 «Elige tu Día 1»** nombra el programa de la persona (`introduccionDelDiaUno`: «90 días», «3 meses», «1 año», con `plazoDelObjetivo`) en vez de «90 días» fijo.
+* **#76 El 80/20 de la ficha** habla en tercera persona para quien acompaña (`voz="ficha"`): «Su 80/20», «Sus cifras al día. Su análisis llega cuando cierre la semana.», flechas, avisos, «Lo que se le fue» y
+  el pie del análisis. Plan (la propia persona) no cambia. Los textos de las dos voces viven en `textosDelOchentaVeinte` (`textosDeLaVoz`, `avisoDelEstado(vista, voz)`).
+* **#77 Editor del diagnóstico:** las tarjetas muestran `[formación]` y `[duración]` en vez de `{formacion}` y `{duracion}` (`verLasMarcas`, solo para mostrar; al editar se conserva el texto con sus marcas).
+* **#78 Copiar un hábito a otra formación** dice qué falta para poder copiar («Elige la formación…», «Elige la categoría en … para poder copiar.») y el aviso «Copiado a …» sale dentro de la misma sección.
+* **#79 «Aceptar N solicitudes»** queda fijo abajo mientras se elige (fuera de la lista que se desliza), corrido lo justo para no quedar debajo del botón de SER (`entradaParaElLanzador`).
+* **#80 Solicitudes aceptadas:** la Escuela y la Certificación (90 días, una sola duración) ya no dicen «3 meses»; la duración se dice solo en el Diplomado o cuando no es la de 90 días.
+* **Backend #53:** mensajes del servidor con sus tildes (repetir la semana, chats directos apagados, plan de la semana, copiar un hábito).
+* **No cambian:** los textos de Plan, los demás tabs, el resto de «Personas» ni las reglas de las formaciones. **No hace falta APK nuevo** más allá del que ya llevan las formaciones; sí el backend con `activeOnly`
+  para #73 (con uno anterior la lista trae todas las cuentas, como antes).
+
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
 Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel especializado en React Native, Expo y TypeScript. Al crear, refactorizar o modificar cualquier pantalla o componente, debes cumplir OBLIGATORIAMENTE con los siguientes estándares:
