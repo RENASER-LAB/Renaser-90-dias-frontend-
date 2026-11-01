@@ -20,6 +20,7 @@ import { RenombrarHabitoOverlay } from './src/features/habits/components/Renombr
 import { AbridorDeEventos } from './src/features/eventos/components/AbridorDeEventos';
 import { AbridorDeAvisos } from './src/features/alarmas/components/AbridorDeAvisos';
 import { RearmadorDeAlarmas } from './src/features/alarmas/components/RearmadorDeAlarmas';
+import { CargadorDeCategoriasDeHabito } from './src/features/habits/categorias/components/CargadorDeCategoriasDeHabito';
 import { SincronizadorDeAcciones } from './src/features/objetivos/components/SincronizadorDeAcciones';
 import { AnfitrionDeCelebraciones } from './src/features/fenix/components/AnfitrionDeCelebraciones';
 import { FormacionProvider } from './src/features/formaciones/context/FormacionContext';
@@ -70,6 +71,8 @@ function Shell() {
           teléfono borró al cerrar la app vuelven, en silencio (2026-10-31: sin hoja ni aviso). No pinta nada.
           Ver `features/alarmas/rearmarAlarmas.ts`. */}
       <RearmadorDeAlarmas />
+      {/* Las categorías de hábito (las dimensiones de Training) de la formación de la sesión, spec 023: una lectura, compartida. No pinta nada. */}
+      <CargadorDeCategoriasDeHabito />
       {/* Pone al dia las alarmas de las acciones con hora (hoy y manana) al abrir y al volver a
           primer plano, solo si la persona pidio ese aviso. No pinta nada. Ver
           `features/objetivos/notificaciones/recordatoriosDeAcciones.ts`. */}
