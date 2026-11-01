@@ -21,17 +21,29 @@ import {
   editarSeccion,
   moverPregunta,
   ordenarSecciones,
+  quitarPreguntas,
+  restaurarPregunta,
 } from '../api/diagnosticoAdminApi';
+import { BarraDeQuitar } from '../components/BarraDeQuitar';
 import { EditorDePreguntaSheet } from '../components/EditorDePreguntaSheet';
 import { EditorDeSeccionSheet } from '../components/EditorDeSeccionSheet';
 import { Aviso, BotonDeAccion } from '../components/piezas';
+import { PreguntasRetiradas } from '../components/PreguntasRetiradas';
 import { PortadaDelEditor, SeccionDelEditor } from '../components/SeccionDelEditor';
 import type { EstadoDelDiagnosticoAdmin } from '../hooks/useDiagnosticoAdmin';
 import type { PreguntaAdmin, PreguntaRequest, SeccionAdmin } from '../types/diagnosticoAdmin.types';
 import { destinoAlMover, ordenNuevoDeSecciones, puedeMoverPregunta, puedeMoverSeccion, type Direccion } from '../utils/reordenar';
 import { textoDeLaPublicacion } from '../utils/publicar';
-import { textoDelResultado, textoDeQuitarSeccion } from '../utils/quitarPreguntas';
-import { cantidad, mensajeDeGuardar, textoDelFallo } from '../utils/textos';
+import {
+  alternarMarca,
+  resumenDeLaSeleccion,
+  sePuedeMarcar,
+  textoDeLaConfirmacion,
+  textoDelResultado,
+  textoDeLosDependientes,
+  textoDeQuitarSeccion,
+} from '../utils/quitarPreguntas';
+import { cantidad, codigoDelError, dependientesDelError, mensajeDeGuardar, textoDelFallo } from '../utils/textos';
 
 /**
  * El editor del diagnóstico (Administración → Fichas → Diagnóstico inicial; spec 026): la portada y los pasos con sus preguntas, en el
@@ -59,12 +71,20 @@ export function DiagnosticoEditorScreen({ estado, onVolver }: { estado: EstadoDe
   const [seccionAbierta, setSeccionAbierta] = useState(false);
   const [aviso, setAviso] = useState<{ clave: number; texto: string } | null>(null);
   const [ocupado, setOcupado] = useState(false);
+  const [modoQuitar, setModoQuitar] = useState(false);
+  const [marcadas, setMarcadas] = useState<number[]>([]);
 
   const hojaAbierta = preguntaAbierta || seccionAbierta;
+  const salirDelModo = useCallback(() => {
+    setModoQuitar(false);
+    setMarcadas([]);
+  }, []);
+  /* El atrás sube un nivel: del modo «Quitar preguntas» al editor, y del editor a la lista de fichas. */
   const atras = useCallback(() => {
-    onVolver();
+    if (modoQuitar) salirDelModo();
+    else onVolver();
     return true;
-  }, [onVolver]);
+  }, [modoQuitar, onVolver, salirDelModo]);
   useSystemBackHandler(atras, !hojaAbierta);
 
   const secciones = useMemo(() => borrador?.secciones ?? [], [borrador]);
@@ -143,15 +163,54 @@ export function DiagnosticoEditorScreen({ estado, onVolver }: { estado: EstadoDe
     });
   };
 
+  const resumenDeQuitar = resumenDeLaSeleccion(marcadas, secciones);
+
+  const quitarLasMarcadas = async () => {
+    if (!borrador || resumenDeQuitar.marcadas === 0 || ocupado) return;
+    const texto = textoDeLaConfirmacion(resumenDeQuitar, borrador.publicada !== null);
+    if (!(await confirmar(texto.titulo, texto.mensaje, { ok: 'Quitar', destructivo: true }))) return;
+    await correr('No se pudieron quitar', 'No se pudieron quitar las preguntas. Vuelve a intentar.', async () => {
+      const ids = marcadas;
+      let resultado;
+      try {
+        resultado = await ejecutar(() => quitarPreguntas(ids, false));
+      } catch (e) {
+        if (codigoDelError(e) !== 'TIENE_DEPENDIENTES') throw e;
+        const aviso = textoDeLosDependientes(ids, secciones, dependientesDelError(e));
+        const plural = ids.length > 1;
+        const tambien = await confirmar('Otras preguntas dependen de ' + (plural ? 'estas' : 'esta'), aviso, {
+          ok: `Quitar también las que dependen de ${plural ? 'ellas' : 'ella'}`,
+          destructivo: true,
+        });
+        if (!tambien) return;
+        resultado = await ejecutar(() => quitarPreguntas(ids, true));
+      }
+      salirDelModo();
+      avisarListo(textoDelResultado(resultado));
+    });
+  };
+
+  const restaurar = (p: PreguntaAdmin) => {
+    void correr('No se pudo restaurar', 'No se pudo restaurar la pregunta. Vuelve a intentar.', async () => {
+      await ejecutar(() => restaurarPregunta(p.id));
+      avisarListo('Pregunta restaurada.');
+    });
+  };
+
   const cuerpo = [t.body, { color: c.textSoft, fontSize: 16, lineHeight: 23 }];
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
       <CabeceraAdmin
-        titulo="Diagnóstico inicial"
-        subtitulo={borrador ? textoDeLaPublicacion(borrador.publicada) : null}
-        onVolver={onVolver}
+        titulo={modoQuitar ? 'Quitar preguntas' : 'Diagnóstico inicial'}
+        subtitulo={modoQuitar ? 'Marca las que ya no quieres' : borrador ? textoDeLaPublicacion(borrador.publicada) : null}
+        onVolver={atras}
       />
+      {modoQuitar ? (
+        <View style={{ paddingHorizontal: horizontalPadding, width: '100%', maxWidth: contentMaxWidth, alignSelf: 'center' }}>
+          <BarraDeQuitar resumen={resumenDeQuitar} ocupado={ocupado} onCancelar={salirDelModo} onQuitar={() => void quitarLasMarcadas()} />
+        </View>
+      ) : null}
       <View style={{ flex: 1 }}>
         <ScrollView
           {...barraAlDesplazar}
@@ -199,6 +258,12 @@ export function DiagnosticoEditorScreen({ estado, onVolver }: { estado: EstadoDe
                 />
               ) : null}
 
+              {modoQuitar ? null : (
+                <View style={estilos.acciones}>
+                  <BotonDeAccion etiqueta="Quitar preguntas" icono="trash" peligro onPress={() => setModoQuitar(true)} deshabilitado={ocupado} />
+                </View>
+              )}
+
               {portada ? <PortadaDelEditor seccion={portada} onEditar={() => abrirSeccion(portada)} /> : null}
 
               {pasos.map(s => (
@@ -210,23 +275,27 @@ export function DiagnosticoEditorScreen({ estado, onVolver }: { estado: EstadoDe
                   puedeSubir={puedeMoverSeccion(secciones, s.id, 'arriba')}
                   puedeBajar={puedeMoverSeccion(secciones, s.id, 'abajo')}
                   puedeMoverPregunta={(id, direccion) => !ocupado && puedeMoverPregunta(secciones, id, direccion)}
-                  modoQuitar={false}
-                  marcadas={[]}
+                  modoQuitar={modoQuitar}
+                  marcadas={marcadas}
                   onEditar={() => abrirSeccion(s)}
                   onMover={direccion => moverSeccion(s, direccion)}
                   onQuitar={() => void quitarSeccion(s)}
                   onAnadirPregunta={() => abrirPregunta(null, s.id)}
                   onAbrirPregunta={p => abrirPregunta(p, s.id)}
                   onMoverPregunta={mover}
-                  onMarcar={() => undefined}
+                  onMarcar={p => sePuedeMarcar(p) && setMarcadas(m => alternarMarca(m, p.id))}
                 />
               ))}
 
               {pasos.length === 0 ? <Text style={cuerpo}>La ficha todavía no tiene pasos. Añade una sección para empezar.</Text> : null}
 
-              <View style={estilos.acciones}>
-                <BotonDeAccion etiqueta="Añadir sección" icono="plus" onPress={() => abrirSeccion(null)} />
-              </View>
+              {modoQuitar ? null : (
+                <View style={estilos.acciones}>
+                  <BotonDeAccion etiqueta="Añadir sección" icono="plus" onPress={() => abrirSeccion(null)} />
+                </View>
+              )}
+
+              {modoQuitar ? null : <PreguntasRetiradas retiradas={retiradas} secciones={secciones} ocupado={ocupado} onRestaurar={restaurar} />}
             </>
           ) : null}
         </ScrollView>
