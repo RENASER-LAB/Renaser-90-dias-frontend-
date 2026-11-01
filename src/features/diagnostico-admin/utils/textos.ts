@@ -6,6 +6,16 @@ export function cantidad(n: number, singular: string, plural: string): string {
   return `${n} ${n === 1 ? singular : plural}`;
 }
 
+/**
+ * El texto de la plantilla tal como se LEE en las tarjetas del editor: las marcas `{formacion}` y `{duracion}` se escriben «[formación]» y
+ * «[duración]». El servidor las cambia por la formación y la duración de cada persona al servirle la ficha; en el editor no hay una persona, y la
+ * marca literal («Diagnóstico inicial · {formacion}») parecía un error (E2E de las formaciones, 01/11/2026). Solo para mostrar: al editar, el campo
+ * conserva el texto original con sus marcas.
+ */
+export function verLasMarcas(texto: string): string {
+  return texto.replace(/\{formacion\}/g, '[formación]').replace(/\{duracion\}/g, '[duración]');
+}
+
 /** «1 marcada», «3 marcadas»: concuerda el adjetivo con el número. */
 export function conGenero(n: number, singular: string, plural: string): string {
   return n === 1 ? singular : plural;

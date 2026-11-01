@@ -9,6 +9,7 @@ import { tacto } from '../../../utils/tacto';
 import type { PreguntaAdmin, SeccionAdmin } from '../types/diagnosticoAdmin.types';
 import { describirLaCondicion } from '../utils/condiciones';
 import { etiquetaDelDestino, etiquetaDelTipo, textoDeFormaciones } from '../utils/tiposDePregunta';
+import { verLasMarcas } from '../utils/textos';
 import { BotonDeIcono } from './piezas';
 
 /** Las líneas de apoyo de una pregunta, una por cosa, en el orden en que se leen. Aparte del componente para probarlas. */
@@ -60,7 +61,7 @@ export function FilaDePregunta({
   const { c, t } = useTheme();
   const lineas = lineasDeLaPregunta(pregunta, secciones, retiradas);
   const bloqueada = modoQuitar && pregunta.protegida;
-  const etiqueta = `${pregunta.texto}. ${lineas.map(l => l.texto).join('. ')}${pregunta.protegida ? '. Protegida: no se puede quitar' : ''}`;
+  const etiqueta = `${verLasMarcas(pregunta.texto)}. ${lineas.map(l => l.texto).join('. ')}${pregunta.protegida ? '. Protegida: no se puede quitar' : ''}`;
 
   return (
     <View style={[estilos.fila, { backgroundColor: marcada ? c.goldWash : c.cardBg, borderColor: marcada ? c.gold : c.border }]}>
@@ -93,7 +94,7 @@ export function FilaDePregunta({
           </View>
         ) : null}
         <View style={{ flex: 1, flexShrink: 1, gap: 2 }}>
-          <Text style={[t.body, { color: c.textStrong, fontSize: 16, lineHeight: 22, fontFamily: fuentes.media }]}>{pregunta.texto}</Text>
+          <Text style={[t.body, { color: c.textStrong, fontSize: 16, lineHeight: 22, fontFamily: fuentes.media }]}>{verLasMarcas(pregunta.texto)}</Text>
           {lineas.map(linea => (
             <Text key={linea.texto} style={[t.body, { color: linea.destacada ? c.goldInk : c.textSoft, fontSize: 16, lineHeight: 22 }]}>
               {linea.texto}

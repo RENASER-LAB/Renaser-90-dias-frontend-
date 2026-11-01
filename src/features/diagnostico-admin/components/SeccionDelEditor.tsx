@@ -5,7 +5,7 @@ import { fuentes } from '../../../theme/fuentes';
 import { useTheme } from '../../../theme/ThemeContext';
 import type { PreguntaAdmin, SeccionAdmin } from '../types/diagnosticoAdmin.types';
 import type { Direccion } from '../utils/reordenar';
-import { cantidad } from '../utils/textos';
+import { cantidad, verLasMarcas } from '../utils/textos';
 import { FilaDePregunta } from './FilaDePregunta';
 import { BotonDeAccion, Tarjeta } from './piezas';
 
@@ -15,9 +15,9 @@ export function PortadaDelEditor({ seccion, onEditar }: { seccion: SeccionAdmin;
   return (
     <Tarjeta>
       <Text style={[t.body, { color: c.textSoft, fontSize: 16 }]}>Portada</Text>
-      <Text style={[t.cardTitle, { color: c.textStrong }]}>{seccion.titulo}</Text>
+      <Text style={[t.cardTitle, { color: c.textStrong }]}>{verLasMarcas(seccion.titulo)}</Text>
       {seccion.descripcion ? (
-        <Text style={[t.body, { color: c.text, fontSize: 16, lineHeight: 23 }]}>{seccion.descripcion}</Text>
+        <Text style={[t.body, { color: c.text, fontSize: 16, lineHeight: 23 }]}>{verLasMarcas(seccion.descripcion)}</Text>
       ) : (
         <Text style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 23 }]}>Todavía sin mensaje.</Text>
       )}
@@ -70,10 +70,10 @@ export function SeccionDelEditor({
     <Tarjeta>
       <View style={{ gap: 2 }}>
         <Text accessibilityRole="header" style={[t.cardTitle, { color: c.textStrong }]}>
-          {seccion.titulo}
+          {verLasMarcas(seccion.titulo)}
         </Text>
         <Text style={[t.body, { color: c.textSoft, fontSize: 16 }]}>{cantidad(seccion.preguntas.length, 'pregunta', 'preguntas')}</Text>
-        {seccion.descripcion ? <Text style={[t.body, { color: c.text, fontSize: 16, lineHeight: 22, fontFamily: fuentes.regular }]}>{seccion.descripcion}</Text> : null}
+        {seccion.descripcion ? <Text style={[t.body, { color: c.text, fontSize: 16, lineHeight: 22, fontFamily: fuentes.regular }]}>{verLasMarcas(seccion.descripcion)}</Text> : null}
       </View>
 
       {modoQuitar ? null : (
