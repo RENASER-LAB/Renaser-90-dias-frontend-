@@ -1,7 +1,8 @@
 # Plan con el formato de la referencia del dueño (2026-10-31). ESCRITO Y SIN CORRER. Sin «Arquitectura de tiempo», sin «Fase actual»,
 # sin las «Prioridades clave» en lista ni la sub-vista de Objetivos; con «Plan» / «Tu dirección en 90 días», el selector de eje con
 # ícono, el objetivo de 90 días, «Esta semana», «Acciones que mueven la meta», «Tu 80/20» y «Organizar mi semana ›».
-# Precondición: Mapa activo y la semana armada con acciones agendadas. cuenta: aprendiz
+# Precondición: los tres objetivos de 90 días confirmados y la semana armada con acciones agendadas. cuenta: aprendiz
+# (Spec 026: el Mapa se retiró; sin objetivos, Plan se escribe directo: ver `ficha-con-diagnostico/22`.)
 appId: com.renaser.app
 ---
 - runFlow: ../comun/ya-adentro.yaml

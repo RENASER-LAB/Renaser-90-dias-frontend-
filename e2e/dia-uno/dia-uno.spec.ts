@@ -5,8 +5,9 @@ declare function require(modulo: string): unknown;
 declare const process: { env: Record<string, string | undefined> };
 const { readFileSync } = require('node:fs') as { readFileSync(ruta: string, encoding: string): string };
 const API = process.env.E2E_API_URL?.replace(/\/+$/, '');
-const archivo = process.env.E2E_MAPA_ACTORES;
-if (!API || !archivo) throw new Error('Faltan E2E_API_URL o E2E_MAPA_ACTORES.');
+// `E2E_MAPA_ACTORES` es el nombre de antes (cuando esta suite vivía con el recorrido del Mapa, que se retiró): se sigue aceptando.
+const archivo = process.env.E2E_ACTORES ?? process.env.E2E_MAPA_ACTORES;
+if (!API || !archivo) throw new Error('Faltan E2E_API_URL o E2E_ACTORES.');
 type Actor = { id: string; email: string; role: string; case: string };
 const semilla = JSON.parse(readFileSync(archivo, 'utf8')) as { password: string; dayOneActors: Actor[] };
 if (semilla.dayOneActors?.length !== 35) throw new Error('Preparar cuentas con --con-casos-dia-uno.');

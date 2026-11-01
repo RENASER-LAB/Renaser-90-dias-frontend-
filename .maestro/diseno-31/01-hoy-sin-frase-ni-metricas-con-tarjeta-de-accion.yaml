@@ -2,7 +2,8 @@
 # Sin la frase del día ni Coherencia / Racha; la cabecera queda con la fase, «Día N de 90», los puntos y la raya; la tarjeta de
 # acciones va antes de «Tu acompañante» («Empezar ahora ›» lleva a Training con la acción abierta); «Hábitos de hoy» y el Radar
 # sin la línea de detalle; y el semáforo ya no está en Hoy.
-# Precondición: aprendiz con una acción agendada hoy (Plan → Agendar) y el Mapa activo; `reset-hoy.sql`.
+# Precondición: aprendiz con una acción agendada hoy (Plan → Agendar) y sus tres objetivos de 90 días; `reset-hoy.sql`.
+# (Spec 026: el Mapa de Renacimiento se retiró; ya no hay tarjeta del Mapa en Hoy.)
 # cuenta: aprendiz
 appId: com.renaser.app
 ---

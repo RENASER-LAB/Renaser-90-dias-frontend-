@@ -1,4 +1,4 @@
-"""Crea cinco cuentas nuevas solo en el Postgres aislado de Testcontainers.
+"""Crea cinco cuentas base (y, con `--con-casos-dia-uno`, 35 de recuperación del Día 1) solo en el Postgres aislado de Testcontainers.
 
 La contraseña aleatoria y los identificadores quedan en un archivo privado fuera del repo.
 El onboarding inicial está completado en el fixture: el recorrido que se mide empieza en Hoy.
@@ -73,13 +73,13 @@ def main():
 
     def cuenta(role, db_role, caso=None):
         actor_id = str(uuid.uuid4())
-        email = f"mapa-{actor_id}@renaser.test"
+        email = f"base-{actor_id}@renaser.test"
         actor = {"id": actor_id, "email": email, "role": role}
         if caso:
             actor["case"] = caso
         sql.append(f"""
             INSERT INTO renaser.usuarios (id, email, nombre_completo, rol, estado, hash_contrasena)
-            VALUES ('{actor_id}', '{email}', 'Mapa E2E {role}', '{db_role}', 'ACTIVO',
+            VALUES ('{actor_id}', '{email}', 'Base E2E {role}', '{db_role}', 'ACTIVO',
                     '{{bcrypt}}' || crypt('{password}', gen_salt('bf', 10)));
             INSERT INTO renaser.estado_onboarding (usuario_id, completado, completado_en)
             VALUES ('{actor_id}', true, now());
