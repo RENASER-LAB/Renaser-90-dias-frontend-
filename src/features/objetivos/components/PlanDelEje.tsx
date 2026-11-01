@@ -42,6 +42,8 @@ export function PlanDelEje({
   objetivoSugeridoDe,
   onIrAlMapa,
   pedidoDeOrganizar = 0,
+  cierre,
+  registrarLasAcciones,
 }: {
   maestras: RocaMaestraApi[];
   numeroSemana: number;
@@ -54,6 +56,13 @@ export function PlanDelEje({
    * pide al tocar la semana de ahora). Sin él, o en 0, no hace nada.
    */
   pedidoDeOrganizar?: number;
+  /**
+   * «Cierra tu día» (spec 033): una tarjeta del día completo que Plan dibuja justo bajo «Acciones que mueven la meta», porque
+   * cerrar es lo último que se hace con ellas. No depende del eje elegido. Plan la dibuja sola cuando no hay Mapa activo.
+   */
+  cierre?: React.ReactNode;
+  /** El lugar de «Acciones que mueven la meta», para que «Ver mañana en Plan» lleve el scroll hasta ahí. */
+  registrarLasAcciones?: React.Ref<View>;
 }) {
   const { user } = useAuth();
   const navigation = useNavigation();
@@ -158,20 +167,24 @@ export function PlanDelEje({
         alArmarLaQueEmpieza={() => setArmando(true)}
       />
 
-      <AccionesQueMuevenLaMeta
-        acciones={delEje}
-        hoyIso={hoyIso}
-        nombreDelEje={ETIQUETA_EJE[ejeAbierto]}
-        hayPlanSemanal={hayPlanSemanal}
-        puedeAgendar={puedeAgendar}
-        error={diaria.error}
-        alTocarUna={tocarUna}
-        alAgendar={() => setAgendando(true)}
-      >
-        {/* Recordatorios de las acciones (2026-09-26): con TODAS las de hoy y mañana, no solo las del eje abierto —las
-            alarmas son de todas—. Desde el 2026-10-31 es una fila que abre una hoja con el mismo control que Yo → Alarmas. */}
-        {hayPlanSemanal && user?.id ? <RecordatoriosDeLasAcciones userId={user.id} rocas={rocasParaAlarmas} /> : null}
-      </AccionesQueMuevenLaMeta>
+      <View ref={registrarLasAcciones} collapsable={false}>
+        <AccionesQueMuevenLaMeta
+          acciones={delEje}
+          hoyIso={hoyIso}
+          nombreDelEje={ETIQUETA_EJE[ejeAbierto]}
+          hayPlanSemanal={hayPlanSemanal}
+          puedeAgendar={puedeAgendar}
+          error={diaria.error}
+          alTocarUna={tocarUna}
+          alAgendar={() => setAgendando(true)}
+        >
+          {/* Recordatorios de las acciones (2026-09-26): con TODAS las de hoy y mañana, no solo las del eje abierto —las
+              alarmas son de todas—. Desde el 2026-10-31 es una fila que abre una hoja con el mismo control que Yo → Alarmas. */}
+          {hayPlanSemanal && user?.id ? <RecordatoriosDeLasAcciones userId={user.id} rocas={rocasParaAlarmas} /> : null}
+        </AccionesQueMuevenLaMeta>
+      </View>
+
+      {cierre}
 
       <TarjetaOchentaVeinte alAbrir={() => setOchentaVeinte(true)} />
 

@@ -1,0 +1,62 @@
+# CF01 — «Código Renaser en las fichas» (spec 034, D-299): Administración (o Alquimista) enciende y apaga si el mentor, la guía
+# y el líder ven el Código Renaser de los aprendices. De fábrica está APAGADO. Cambiarlo pide una confirmación que dice qué
+# va a pasar (sin motivo) y rige en el acto. Termina como empezó: apagado.
+# ESCRITO Y SIN CORRER: necesita el backend con la spec 034 y un emulador libre (base clonada, nunca producción).
+# Precondición: la cuenta E2E_ADMIN es ADMIN o ALCHEMIST y el interruptor está apagado (el valor de fábrica).
+# Se corre con: .maestro/correr.sh .maestro/codigo-renaser-en-fichas/01-admin-enciende-y-apaga.yaml
+# cuenta: admin
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "YO"
+- scrollUntilVisible:
+    element: "Abrir Administración"
+    direction: DOWN
+- tapOn: "Abrir Administración"
+- extendedWaitUntil:
+    visible: "Operación del programa"
+    timeout: 15000
+- scrollUntilVisible:
+    element: "Más opciones"
+    direction: DOWN
+- tapOn: "Más opciones"
+- scrollUntilVisible:
+    element: "Código Renaser en las fichas"
+    direction: DOWN
+    timeout: 30000
+- tapOn: "Código Renaser en las fichas"
+- extendedWaitUntil:
+    visible: "Quién ve el Código Renaser de los aprendices"
+    timeout: 30000
+# De fábrica: apagado, y la frase dice quién lo sigue viendo.
+- assertVisible: "El mentor, la guía y el líder no lo ven. Tú, Alquimista y la propia persona lo siguen viendo."
+- takeScreenshot: CF01a-apagado
+# Encender: la confirmación dice qué pasa y que no se avisa a nadie; no pide motivo.
+- tapOn: "El mentor y el líder ven el Código Renaser"
+- extendedWaitUntil:
+    visible: "Mostrar el Código Renaser"
+    timeout: 15000
+- assertVisible: ".*No se avisa a nadie.*"
+- takeScreenshot: CF01b-confirmacion
+- tapOn: "Mostrar"
+- extendedWaitUntil:
+    visible: "Listo: el mentor y el líder ya ven el Código Renaser."
+    timeout: 30000
+- assertVisible: "El mentor, la guía y el líder lo ven en la ficha de cada aprendiz."
+- assertVisible: "Último cambio: .*"
+- takeScreenshot: CF01c-encendido
+# Apagar de nuevo: queda como estaba (así los otros flujos de las fichas parten de lo mismo).
+- tapOn: "El mentor y el líder ven el Código Renaser"
+- extendedWaitUntil:
+    visible: "Ocultar el Código Renaser"
+    timeout: 15000
+- tapOn: "Ocultar"
+- extendedWaitUntil:
+    visible: "Listo: el mentor y el líder ya no ven el Código Renaser."
+    timeout: 30000
+- takeScreenshot: CF01d-apagado-otra-vez
+# El atrás vuelve a «Más opciones».
+- back
+- extendedWaitUntil:
+    visible: "Código Renaser en las fichas"
+    timeout: 15000

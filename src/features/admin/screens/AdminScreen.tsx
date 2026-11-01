@@ -24,6 +24,7 @@ import { GruposAdminScreen } from './GruposAdminScreen';
 import { GuiasRecepcionScreen } from './GuiasRecepcionScreen';
 import { MasOpcionesScreen } from './MasOpcionesScreen';
 import { PersonasAdminScreen } from './PersonasAdminScreen';
+import { CodigoRenaserEnFichasAdminScreen } from './CodigoRenaserEnFichasAdminScreen';
 import { PublicacionesOcultasScreen } from './PublicacionesOcultasScreen';
 import { SemaforoAdminScreen } from './SemaforoAdminScreen';
 import { SemaforoGrupoAdminScreen } from './SemaforoGrupoAdminScreen';
@@ -73,6 +74,7 @@ type Vista =
   | { nombre: 'habitos-programa' }
   | { nombre: 'habito-programa'; id: string | null }
   | { nombre: 'publicaciones-ocultas' }
+  | { nombre: 'codigo-renaser-en-fichas' }
   | { nombre: 'mas' }
   | { nombre: 'caja' }
   | { nombre: 'caja-detalle'; aprendizId: string }
@@ -298,6 +300,8 @@ export function AdminScreen({ onSalir, abrirEn = 'inicio' }: { onSalir: () => vo
       return <HabitoProgramaFormScreen id={vista.id} estado={habitosDelPrograma} onVolver={volver} />;
     case 'publicaciones-ocultas':
       return <PublicacionesOcultasScreen onVolver={volver} />;
+    case 'codigo-renaser-en-fichas':
+      return <CodigoRenaserEnFichasAdminScreen onVolver={volver} />;
     case 'mas':
       return (
         <MasOpcionesScreen
@@ -308,6 +312,7 @@ export function AdminScreen({ onSalir, abrirEn = 'inicio' }: { onSalir: () => vo
           onAbrirImagenesDeFases={() => entrar({ nombre: 'animales-fases' })}
           onAbrirHabitosDelPrograma={() => entrar({ nombre: 'habitos-programa' })}
           onAbrirPublicacionesOcultas={() => entrar({ nombre: 'publicaciones-ocultas' })}
+          onAbrirCodigoRenaserEnFichas={() => entrar({ nombre: 'codigo-renaser-en-fichas' })}
         />
       );
     default:

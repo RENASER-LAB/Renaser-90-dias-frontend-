@@ -16,7 +16,7 @@ export const CLAVES = {
   muroComentarios: 'muro.comentarios',
   muroReacciones: 'muro.reacciones',
   habitos: 'habitos',
-  /* Rocas y objetivos (las acciones del día). También tapa «Cierra tu día» de Training (spec 017). */
+  /* Rocas y objetivos (las acciones del día). También tapa «Cierra tu día», que desde la spec 033 vive en Plan. */
   plan: 'plan',
   eventos: 'eventos',
   eventosGestion: 'eventos.gestion',
@@ -29,6 +29,8 @@ export const CLAVES = {
   cuentaEliminar: 'cuenta.eliminar',
   notificaciones: 'notificaciones',
   perfil: 'perfil',
+  /* El Código Renaser en las fichas del mentor, la guía y el líder (spec 034): nace apagado para ellos y se esconde. */
+  radarFichas: 'radar.fichas',
   mentorMiGrupo: 'mentor.mi_grupo',
   lider: 'lider',
   tickets: 'tickets',
