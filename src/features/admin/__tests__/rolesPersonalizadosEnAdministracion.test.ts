@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import React from 'react';
-import { Alert as AlertNativo, Text } from 'react-native';
+import { Text } from 'react-native';
 import TestRenderer, { act, type ReactTestRenderer } from 'react-test-renderer';
 
 jest.mock('../../../theme/ThemeContext', () => {
@@ -144,28 +144,37 @@ describe('Solicitudes con roles personalizados', () => {
     });
   }
   const chips = () => raiz!.root.findAll(n => n.props.accessibilityRole === 'radio' && typeof n.props.onPress === 'function').map(n => n.props.accessibilityLabel as string);
-
-  it('ofrece los personalizados y aprueba con su id después de confirmar', async () => {
-    jest.spyOn(AlertNativo, 'alert').mockImplementation((_t, _m, botones) => {
-      botones?.find(b => b.style !== 'cancel')?.onPress?.();
+  /** Spec 025: los roles se eligen en la hoja «Aceptar» de cada solicitud, no en chips sueltos sobre la tarjeta. */
+  const abrirLaHoja = async () => {
+    const [aceptar] = raiz!.root.findAll(n => n.props.accessibilityLabel === 'Aceptar a Lucía Ramos' && typeof n.props.onPress === 'function');
+    await act(async () => {
+      aceptar.props.onPress();
     });
+  };
+
+  it('ofrece los personalizados en la hoja y acepta con su id', async () => {
     await montar({ status: 200, cuerpo: [JUNIOR] });
+    await abrirLaHoja();
     expect(chips()).toContain('Mentor junior · hereda de Mentor');
     const [junior] = raiz!.root.findAll(n => n.props.accessibilityLabel === 'Mentor junior · hereda de Mentor' && typeof n.props.onPress === 'function');
     await act(async () => {
       junior.props.onPress();
     });
-    const [aprobar] = raiz!.root.findAll(n => n.props.accessibilityLabel === 'Aprobar a Lucía Ramos como Mentor junior' && typeof n.props.onPress === 'function');
+    const [aceptar] = raiz!.root.findAll(n => n.props.accessibilityLabel === 'Aceptar' && typeof n.props.onPress === 'function');
     await act(async () => {
-      aprobar.props.onPress();
+      aceptar.props.onPress();
+    });
+    await act(async () => {
+      await new Promise(r => setImmediate(r));
     });
     const aprobacion = pedidos.find(p => ruta(p).includes('/approve'))!;
     expect(aprobacion.body).toEqual({ role: 'MENTOR', rolPersonalizadoId: 'r-1' });
-    expect(raiz!.root.findAll(n => n.type === Text).map(n => [n.props.children].flat().join(''))).toContain('Cuenta aprobada: Lucía Ramos entró como Mentor junior.');
+    expect(raiz!.root.findAll(n => n.type === Text).map(n => [n.props.children].flat().join(''))).toContain('Lucía Ramos entró como Mentor junior.');
   });
 
   it('sin el endpoint (404), los seis de siempre', async () => {
     await montar({ status: 404, cuerpo: { message: 'No' } });
+    await abrirLaHoja();
     expect([...new Set(chips())]).toEqual(['Aprendiz', 'Guía de aprendiz', 'Mentor', 'Líder de mentores', 'Administrador', 'Alquimista']);
   });
 });

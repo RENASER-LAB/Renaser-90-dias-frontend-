@@ -75,7 +75,7 @@ export function alElegirRol(borrador: BorradorDeAceptacion, rol: OpcionDeRol, op
   const conservadas = borrador.formaciones.filter(codigo => formacionDe(opciones, codigo));
   const base = conservadas.length > 0 ? conservadas : borradorInicial(opciones).formaciones;
   const formaciones = modo === 'una' ? base.slice(0, 1) : base;
-  return { ...siguiente, formaciones, duracionDias: duracionAlCambiarDeFormacion(formaciones, borrador.duracionDias, modo, opciones) };
+  return { ...siguiente, formaciones, duracionDias: duracionAlCambiarDeFormacion(formaciones, borrador, modo, opciones) };
 }
 
 /** Marca una formación: elige la única (aprendiz) o suma o quita (personal). */
@@ -92,20 +92,24 @@ export function alMarcarFormacion(
       : borrador.formaciones.includes(codigo)
         ? borrador.formaciones.filter(f => f !== codigo)
         : opciones.formations.map(f => f.code).filter(f => f === codigo || borrador.formaciones.includes(f));
-  return { ...borrador, formaciones, duracionDias: duracionAlCambiarDeFormacion(formaciones, borrador.duracionDias, modo, opciones) };
+  return { ...borrador, formaciones, duracionDias: duracionAlCambiarDeFormacion(formaciones, borrador, modo, opciones) };
 }
 
-/** Solo el aprendiz elige duración. Si la que tenía ya no se ofrece, se vuelve a pedir; si hay una sola, se aplica. */
+/**
+ * Solo el aprendiz elige duración. Si cambia de formación se vuelve a pedir (o se aplica sola si la nueva ofrece una única): una duración que quedó de la
+ * formación anterior no se arrastra en silencio, porque aceptar a alguien por un año cuando se quería por tres meses no se arregla con un toque.
+ */
 function duracionAlCambiarDeFormacion(
   formaciones: string[],
-  actual: number | null,
+  anterior: BorradorDeAceptacion,
   modo: ModoDeFormacion,
   opciones: OpcionesDeAceptacionApi,
 ): number | null {
   if (modo !== 'una' || formaciones.length !== 1) return null;
   const formacion = formacionDe(opciones, formaciones[0]);
   if (!formacion) return null;
-  if (actual !== null && formacion.durationsDays.includes(actual)) return actual;
+  const sigueEnLaMisma = anterior.formaciones.length === 1 && anterior.formaciones[0] === formaciones[0];
+  if (sigueEnLaMisma && anterior.duracionDias !== null && formacion.durationsDays.includes(anterior.duracionDias)) return anterior.duracionDias;
   return duracionUnica(formacion);
 }
 
