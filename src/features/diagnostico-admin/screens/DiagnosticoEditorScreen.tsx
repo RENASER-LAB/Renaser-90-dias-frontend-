@@ -14,6 +14,7 @@ import { CabeceraAdmin } from '../../admin/components/CabeceraAdmin';
 import { avisar, confirmar } from '../../admin/utils/dialogo';
 import {
   borrarSeccion,
+  confirmarImportacion,
   crearPregunta,
   crearSeccion,
   duplicarPregunta,
@@ -26,6 +27,7 @@ import {
   restaurarPregunta,
 } from '../api/diagnosticoAdminApi';
 import { BarraDeQuitar } from '../components/BarraDeQuitar';
+import { HojaDeImportar } from '../components/HojaDeImportar';
 import { EditorDePreguntaSheet } from '../components/EditorDePreguntaSheet';
 import { EditorDeSeccionSheet } from '../components/EditorDeSeccionSheet';
 import { HojaDeVersiones } from '../components/HojaDeVersiones';
@@ -34,8 +36,10 @@ import { PanelDePublicar } from '../components/PanelDePublicar';
 import { Aviso, BotonDeAccion } from '../components/piezas';
 import { PreguntasRetiradas } from '../components/PreguntasRetiradas';
 import { PortadaDelEditor, SeccionDelEditor } from '../components/SeccionDelEditor';
+import { ARCHIVO_DE_LA_FICHA, useDescargaDeFicha } from '../hooks/useDescargaDeFicha';
 import type { EstadoDelDiagnosticoAdmin } from '../hooks/useDiagnosticoAdmin';
 import type { PreguntaAdmin, PreguntaRequest, SeccionAdmin } from '../types/diagnosticoAdmin.types';
+import { textoDelResultado as textoDelResultadoDeImportar } from '../utils/importacion';
 import { destinoAlMover, ordenNuevoDeSecciones, puedeMoverPregunta, puedeMoverSeccion, type Direccion } from '../utils/reordenar';
 import { AVISO_OTRA_PERSONA_PUBLICO, CONFIRMACION_DE_PUBLICAR, textoDeLaPublicacion } from '../utils/publicar';
 import {
@@ -82,8 +86,10 @@ export function DiagnosticoEditorScreen({ estado, onVolver }: { estado: EstadoDe
   const [hojaDeVistaPrevia, setHojaDeVistaPrevia] = useState(false);
   const [vistaPrevia, setVistaPrevia] = useState<ParametrosDeLaVistaPrevia | null>(null);
   const [hojaDeVersiones, setHojaDeVersiones] = useState(false);
+  const [hojaDeImportar, setHojaDeImportar] = useState(false);
+  const descarga = useDescargaDeFicha();
 
-  const hojaAbierta = preguntaAbierta || seccionAbierta || hojaDeVistaPrevia || hojaDeVersiones;
+  const hojaAbierta = preguntaAbierta || seccionAbierta || hojaDeVistaPrevia || hojaDeVersiones || hojaDeImportar;
   const salirDelModo = useCallback(() => {
     setModoQuitar(false);
     setMarcadas([]);
@@ -304,6 +310,13 @@ export function DiagnosticoEditorScreen({ estado, onVolver }: { estado: EstadoDe
                   <View style={estilos.acciones}>
                     <BotonDeAccion etiqueta="Vista previa" icono="eye" onPress={() => setHojaDeVistaPrevia(true)} />
                     <BotonDeAccion etiqueta="Versiones" icono="clock" onPress={() => setHojaDeVersiones(true)} />
+                    <BotonDeAccion etiqueta="Importar preguntas" icono="fileText" onPress={() => setHojaDeImportar(true)} />
+                    <BotonDeAccion
+                      etiqueta={descarga.descargando ? 'Preparando…' : 'Descargar la ficha'}
+                      icono="share"
+                      deshabilitado={descarga.descargando}
+                      onPress={() => void descarga.descargar(ARCHIVO_DE_LA_FICHA)}
+                    />
                     <BotonDeAccion etiqueta="Quitar preguntas" icono="trash" peligro onPress={() => setModoQuitar(true)} deshabilitado={ocupado} />
                   </View>
                 </>
@@ -363,6 +376,17 @@ export function DiagnosticoEditorScreen({ estado, onVolver }: { estado: EstadoDe
         alVer={parametros => {
           setHojaDeVistaPrevia(false);
           setVistaPrevia(parametros);
+        }}
+      />
+      <HojaDeImportar
+        visible={hojaDeImportar}
+        hayPublicada={borrador?.publicada != null}
+        alCerrar={() => setHojaDeImportar(false)}
+        alImportar={async (modo, texto) => {
+          const resultado = await ejecutar(() => confirmarImportacion(texto, modo));
+          setHojaDeImportar(false);
+          avisarListo(textoDelResultadoDeImportar(resultado));
+          return resultado;
         }}
       />
       <HojaDeVersiones visible={hojaDeVersiones} versionVigente={borrador?.publicada?.version ?? null} alCerrar={() => setHojaDeVersiones(false)} />

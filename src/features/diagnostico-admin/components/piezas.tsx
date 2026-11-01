@@ -195,6 +195,36 @@ function Redondo({ texto, etiqueta, onPress, apagado }: { texto: string; etiquet
   );
 }
 
+/** Una opción en una fila entera (título y explicación) para elegir UNA entre pocas: el modo de importar, a quién se asigna. */
+export function OpcionEnFila({
+  etiqueta,
+  detalle,
+  marcada,
+  onPress,
+}: {
+  etiqueta: string;
+  detalle?: string;
+  marcada: boolean;
+  onPress: () => void;
+}) {
+  const { c, t } = useTheme();
+  return (
+    <Presionable
+      onPress={() => {
+        tacto.seleccion();
+        onPress();
+      }}
+      accessibilityRole="radio"
+      accessibilityState={{ selected: marcada }}
+      accessibilityLabel={detalle ? `${etiqueta}. ${detalle}` : etiqueta}
+      style={[estilos.opcionEnFila, { borderColor: marcada ? c.gold : c.border, backgroundColor: marcada ? c.goldWash : c.cardBg }]}
+    >
+      <Text style={[t.body, { color: c.textStrong, fontSize: 16, fontFamily: fuentes.media }]}>{etiqueta}</Text>
+      {detalle ? <Text style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 22 }]}>{detalle}</Text> : null}
+    </Presionable>
+  );
+}
+
 /** Una tarjeta con borde, el contenedor de casi todo lo que se agrupa en estas pantallas. */
 export function Tarjeta({ children, advertencia = false }: { children: React.ReactNode; advertencia?: boolean }) {
   const { c } = useTheme();
@@ -225,4 +255,5 @@ const estilos = StyleSheet.create({
   redondo: { width: 48, height: 48, borderRadius: 24, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
   tarjeta: { borderWidth: 1, borderRadius: 16, padding: 14, gap: 8, width: '100%' },
   aviso: { borderWidth: 1, borderRadius: 14, padding: 14, gap: 10 },
+  opcionEnFila: { minHeight: 56, borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, gap: 2, justifyContent: 'center' },
 });
