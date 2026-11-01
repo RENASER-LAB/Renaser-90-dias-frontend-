@@ -47,6 +47,8 @@ export interface FormularioDePregunta {
   etiquetaMin: string;
   etiquetaMax: string;
   condicion: CondicionDeLaPregunta | null;
+  /** La persona eligió «Se muestra solo si…». Con ella prendida y la condición incompleta, falta elegir la pregunta o la respuesta. */
+  condicionActiva: boolean;
   alimenta: DestinoDeLaPregunta | null;
   /** Los códigos de formación marcados; vacío = en todas. */
   formaciones: string[];
@@ -76,6 +78,7 @@ export function formularioNuevo(seccionId: number): FormularioDePregunta {
     etiquetaMin: '',
     etiquetaMax: '',
     condicion: null,
+    condicionActiva: false,
     alimenta: null,
     formaciones: [],
     precarga: null,
@@ -98,6 +101,7 @@ export function formularioDesde(p: PreguntaAdmin): FormularioDePregunta {
     etiquetaMin: p.escala?.etiquetaMin ?? '',
     etiquetaMax: p.escala?.etiquetaMax ?? '',
     condicion: p.seMuestraSi,
+    condicionActiva: p.seMuestraSi !== null,
     alimenta: p.alimenta,
     formaciones: p.formaciones ?? [],
     precarga: p.precarga,
@@ -159,6 +163,16 @@ export function pasarMaximo(actual: number | null, direccion: 1 | -1, cantidadDe
   return actual <= 1 ? null : actual - 1;
 }
 
+/** Mueve un extremo de la escala de a uno sin cruzarse con el otro ni pasarse de 0 a 10. */
+export function pasarLimiteDeLaEscala(form: Pick<FormularioDePregunta, 'escalaMin' | 'escalaMax'>, extremo: 'min' | 'max', direccion: 1 | -1) {
+  if (extremo === 'min') {
+    const min = Math.max(0, Math.min(form.escalaMin + direccion, form.escalaMax - 1));
+    return { escalaMin: min, escalaMax: form.escalaMax };
+  }
+  const max = Math.min(ESCALA_TOPE, Math.max(form.escalaMax + direccion, form.escalaMin + 1));
+  return { escalaMin: form.escalaMin, escalaMax: max };
+}
+
 export function textoDelMaximo(maximo: number | null): string {
   return maximo === null ? 'Sin límite' : `${maximo}`;
 }
@@ -211,7 +225,9 @@ export function faltasDeLaPregunta(form: FormularioDePregunta, ctx: ContextoDeLa
     else if (form.escalaMin < 0 || form.escalaMax > ESCALA_TOPE) faltas.escala = `La escala va entre 0 y ${ESCALA_TOPE}.`;
   }
 
-  if (form.condicion && !condicionEsValida(form.condicion, ctx.secciones, ctx.preguntaId, form.seccionId)) {
+  if (form.condicionActiva && !form.condicion) {
+    faltas.condicion = 'Elige la pregunta y la respuesta que hacen que esta se muestre.';
+  } else if (form.condicionActiva && form.condicion && !condicionEsValida(form.condicion, ctx.secciones, ctx.preguntaId, form.seccionId)) {
     faltas.condicion = 'La pregunta de la que depende ya no está antes que esta. Elige otra o quita la condición.';
   }
 
@@ -271,7 +287,7 @@ export function cuerpoDesde(form: FormularioDePregunta, original: PreguntaAdmin 
           etiquetaMax: form.etiquetaMax.trim() ? form.etiquetaMax.trim() : null,
         }
       : null,
-    seMuestraSi: form.condicion,
+    seMuestraSi: form.condicionActiva ? form.condicion : null,
     alimenta: form.alimenta,
     formaciones: marcadas.length === 0 || marcadas.length === FORMACIONES_ELEGIBLES.length ? null : marcadas,
     precarga: form.precarga === 'NOMBRE_COMPLETO' || original?.precarga === 'NOMBRE_COMPLETO' ? 'NOMBRE_COMPLETO' : null,
@@ -291,7 +307,7 @@ function firma(form: FormularioDePregunta): string {
     form.escalaMax,
     form.etiquetaMin,
     form.etiquetaMax,
-    form.condicion,
+    form.condicionActiva ? form.condicion : null,
     form.alimenta,
     [...form.formaciones].sort(),
   ]);

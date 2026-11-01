@@ -12,6 +12,7 @@ import {
   hayCambios,
   motivoParaNoCambiarElTipo,
   opcionNueva,
+  pasarLimiteDeLaEscala,
   pasarMaximo,
   primeraFalta,
   textoDelMaximo,
@@ -69,10 +70,20 @@ describe('qué falta antes de guardar', () => {
     // La pregunta 12 (sección 3) depende de la 11: bien. Pero la 10 (antes de la 11) no puede depender de ella.
     const ok = { ...formularioDesde(SECCIONES[2].preguntas[0]) };
     expect(faltasDeLaPregunta(ok, { secciones: SECCIONES, preguntaId: 12 })).toEqual({});
-    const posterior = { ...formularioDesde(SECCIONES[1].preguntas[0]), condicion: { preguntaId: 11, valor: 'Sí.' } };
+    const posterior = { ...formularioDesde(SECCIONES[1].preguntas[0]), condicionActiva: true, condicion: { preguntaId: 11, valor: 'Sí.' } };
     expect(faltasDeLaPregunta(posterior, { secciones: SECCIONES, preguntaId: 10 }).condicion).toMatch(/ya no está antes/);
     const sinOpcion = { ...ok, condicion: { preguntaId: 11, valor: 'Quizás' } };
     expect(faltasDeLaPregunta(sinOpcion, { secciones: SECCIONES, preguntaId: 12 }).condicion).toBeDefined();
+  });
+
+  it('«Se muestra solo si» prendido sin elegir pregunta y respuesta es una falta; apagado, la condición vieja no cuenta ni viaja', () => {
+    const pendiente = nueva({ condicionActiva: true });
+    expect(faltasDeLaPregunta(pendiente, ctxNueva).condicion).toMatch(/Elige la pregunta y la respuesta/);
+    const apagada = nueva({ condicionActiva: false, condicion: { preguntaId: 999, valor: 'x' } });
+    expect(faltasDeLaPregunta(apagada, ctxNueva)).toEqual({});
+    expect(cuerpoDesde(apagada, null).seMuestraSi).toBeNull();
+    const activa = nueva({ condicionActiva: true, condicion: { preguntaId: 11, valor: 'Sí.' } });
+    expect(cuerpoDesde(activa, null).seMuestraSi).toEqual({ preguntaId: 11, valor: 'Sí.' });
   });
 
   it('un destino ocupado por otra pregunta avisa cuál; el de esta misma no', () => {
@@ -214,6 +225,15 @@ describe('cambios, tipo y destino', () => {
     expect(alternarFormacion([], 'DIPLOMADO')).toEqual(['DIPLOMADO']);
     expect(alternarFormacion(['DIPLOMADO'], 'ESCUELA')).toEqual(['ESCUELA', 'DIPLOMADO']);
     expect(alternarFormacion(['ESCUELA', 'DIPLOMADO'], 'DIPLOMADO')).toEqual(['ESCUELA']);
+  });
+
+  it('los extremos de la escala se mueven de a uno sin cruzarse ni pasar de 0 a 10', () => {
+    expect(pasarLimiteDeLaEscala({ escalaMin: 1, escalaMax: 5 }, 'max', 1)).toEqual({ escalaMin: 1, escalaMax: 6 });
+    expect(pasarLimiteDeLaEscala({ escalaMin: 1, escalaMax: 10 }, 'max', 1)).toEqual({ escalaMin: 1, escalaMax: 10 });
+    expect(pasarLimiteDeLaEscala({ escalaMin: 1, escalaMax: 2 }, 'max', -1)).toEqual({ escalaMin: 1, escalaMax: 2 });
+    expect(pasarLimiteDeLaEscala({ escalaMin: 1, escalaMax: 5 }, 'min', -1)).toEqual({ escalaMin: 0, escalaMax: 5 });
+    expect(pasarLimiteDeLaEscala({ escalaMin: 0, escalaMax: 5 }, 'min', -1)).toEqual({ escalaMin: 0, escalaMax: 5 });
+    expect(pasarLimiteDeLaEscala({ escalaMin: 4, escalaMax: 5 }, 'min', 1)).toEqual({ escalaMin: 4, escalaMax: 5 });
   });
 
   it('el máximo sube y baja entre «sin límite» y el número de opciones', () => {

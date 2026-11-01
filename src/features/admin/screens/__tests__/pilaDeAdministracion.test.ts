@@ -25,6 +25,7 @@ jest.mock('../../../caja/screens/CajaContenidoScreen', () => ({}));
 jest.mock('../../../caja/screens/CajaDetalleScreen', () => ({}));
 jest.mock('../../../caja/screens/CajaListaScreen', () => ({}));
 jest.mock('../../../lider-mentores/screens/PersonaDelLiderScreen', () => ({}));
+jest.mock('../../../diagnostico-admin/screens/FichasAdminScreen', () => ({}));
 jest.mock('../../../formaciones/screens/FormacionDetalleAdminScreen', () => ({}));
 jest.mock('../../../formaciones/screens/FormacionesAdminScreen', () => ({}));
 
