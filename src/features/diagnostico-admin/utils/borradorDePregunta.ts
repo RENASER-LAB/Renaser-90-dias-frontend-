@@ -3,6 +3,7 @@ import type { PreguntaAdmin, PreguntaRequest, SeccionAdmin } from '../types/diag
 import { condicionEsValida, quienAlimenta, recortarTexto } from './condiciones';
 import {
   destinoCuadraConElTipo,
+  esParteDeUnaMeta,
   destinoLlevaCodigos,
   etiquetaDelDestino,
   esConsentimiento,
@@ -323,5 +324,13 @@ export function dejaDeAlimentarUnObjetivo(original: PreguntaAdmin | null, form: 
   const eraObjetivo = original.alimenta === 'OBJETIVO_CUERPO' || original.alimenta === 'OBJETIVO_NEGOCIO' || original.alimenta === 'OBJETIVO_RELACIONES';
   return eraObjetivo && form.alimenta !== original.alimenta;
 }
+
+/** ¿Dejó de alimentar la meta medible de un eje (meta, unidad o punto de partida)? Su objetivo quedará solo en palabras, sin cifra del mes. */
+export function dejaDeAlimentarUnaMeta(original: PreguntaAdmin | null, form: FormularioDePregunta): boolean {
+  if (!original?.alimenta) return false;
+  return esParteDeUnaMeta(original.alimenta) && form.alimenta !== original.alimenta;
+}
+
+export const AVISO_AL_QUITAR_UNA_META = 'Su objetivo de ese eje quedará solo en palabras: Plan no podrá sacar la cifra de cada mes.';
 
 export const AVISO_AL_QUITAR_UN_OBJETIVO = 'Las personas ya no tendrán ese objetivo preparado: lo escribirán en Plan.';

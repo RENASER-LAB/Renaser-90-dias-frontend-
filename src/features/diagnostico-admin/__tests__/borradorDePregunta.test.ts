@@ -5,6 +5,7 @@ import {
   conDestino,
   conTipo,
   cuerpoDesde,
+  dejaDeAlimentarUnaMeta,
   dejaDeAlimentarUnObjetivo,
   faltasDeLaPregunta,
   formularioDesde,
@@ -90,6 +91,25 @@ describe('qué falta antes de guardar', () => {
     const f = nueva({ tipo: 'AREA_TEXTO', alimenta: 'OBJETIVO_CUERPO' });
     expect(faltasDeLaPregunta(f, ctxNueva).alimenta).toMatch(/Ya lo alimenta «¿Qué quieres lograr con tu cuerpo\?»/);
     expect(faltasDeLaPregunta(f, { secciones: SECCIONES, preguntaId: 13 })).toEqual({});
+  });
+
+  it('la meta y el punto de partida piden un número; la unidad, un texto corto', () => {
+    expect(faltasDeLaPregunta(nueva({ tipo: 'NUMERO', alimenta: 'META_CUERPO' }), ctxNueva)).toEqual({});
+    expect(faltasDeLaPregunta(nueva({ tipo: 'TEXTO', alimenta: 'META_CUERPO' }), ctxNueva).alimenta).toMatch(/no se puede alimentar/);
+    expect(faltasDeLaPregunta(nueva({ tipo: 'TEXTO', alimenta: 'UNIDAD_NEGOCIO' }), ctxNueva)).toEqual({});
+    expect(faltasDeLaPregunta(nueva({ tipo: 'NUMERO', alimenta: 'UNIDAD_NEGOCIO' }), ctxNueva).alimenta).toMatch(/no se puede alimentar/);
+    expect(faltasDeLaPregunta(nueva({ tipo: 'NUMERO', alimenta: 'PARTIDA_RELACIONES' }), ctxNueva)).toEqual({});
+  });
+
+  it('cambiar de número a párrafo suelta la meta que ya no cuadra', () => {
+    expect(conTipo(nueva({ tipo: 'NUMERO', alimenta: 'META_CUERPO' }), 'AREA_TEXTO').alimenta).toBeNull();
+  });
+
+  it('dejar de alimentar una meta avisa; cambiar otra cosa no', () => {
+    const original = pregunta({ id: 30, tipo: 'NUMERO', alimenta: 'META_CUERPO' });
+    expect(dejaDeAlimentarUnaMeta(original, { ...formularioDesde(original), alimenta: null })).toBe(true);
+    expect(dejaDeAlimentarUnaMeta(original, formularioDesde(original))).toBe(false);
+    expect(dejaDeAlimentarUnaMeta(pregunta({ id: 31, tipo: 'AREA_TEXTO', alimenta: 'OBJETIVO_CUERPO' }), { ...formularioDesde(original), alimenta: null })).toBe(false);
   });
 
   it('un destino que no cuadra con el tipo es una falta', () => {

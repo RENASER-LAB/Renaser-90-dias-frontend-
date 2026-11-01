@@ -21,6 +21,23 @@ import { partirFecha, diasDelMes } from '../../../components/fechaEnRuedas/logic
 
 export type ErroresDelPaso = Record<number, string>;
 
+/** Lo más grande que cabe en la meta o el punto de partida (la columna del servidor: 14 cifras con 2 decimales). */
+const TOPE_DE_UNA_META = 1e12;
+
+/**
+ * La meta y el punto de partida de un eje (spec 026): cero o más y que quepan; los de Relaciones son una calificación entera del
+ * 1 al 10. Las mismas reglas que pone el servidor, para decirlo antes de guardar y con una frase de la app.
+ */
+function problemaDeLaMeta(pregunta: PreguntaDelDiagnostico, n: number): string | null {
+  const destino = pregunta.alimenta;
+  if (destino !== 'META_RELACIONES' && destino !== 'PARTIDA_RELACIONES' && !/^(META|PARTIDA)_(CUERPO|NEGOCIO)$/.test(destino ?? '')) return null;
+  if (destino === 'META_RELACIONES' || destino === 'PARTIDA_RELACIONES') {
+    return Number.isInteger(n) && n >= 1 && n <= 10 ? null : 'Escribe un número entero del 1 al 10.';
+  }
+  if (n < 0) return 'Escribe un número de cero o más.';
+  return n >= TOPE_DE_UNA_META ? 'Ese número es demasiado grande.' : null;
+}
+
 /** El mensaje de lo que falta en una pregunta, o `null` si está bien. */
 export function mensajeDeLaPregunta(pregunta: PreguntaDelDiagnostico, e: RespuestaEnEdicion): string | null {
   const vacia = estaVacia(pregunta, e);
@@ -61,7 +78,9 @@ export function mensajeDeLaPregunta(pregunta: PreguntaDelDiagnostico, e: Respues
 
     case 'NUMERO': {
       if (vacia) return pregunta.requerida ? 'Escribe un número para continuar.' : null;
-      return numeroDelTexto(e.texto) === null ? 'Escribe solo números.' : null;
+      const n = numeroDelTexto(e.texto);
+      if (n === null) return 'Escribe solo números.';
+      return problemaDeLaMeta(pregunta, n);
     }
 
     case 'FECHA': {

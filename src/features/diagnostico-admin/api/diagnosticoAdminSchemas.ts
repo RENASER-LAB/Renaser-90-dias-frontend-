@@ -31,6 +31,7 @@ const TIPOS: readonly TipoDePregunta[] = [
 ];
 const DESTINOS: readonly DestinoDeLaPregunta[] = [
   'OBJETIVO_CUERPO', 'OBJETIVO_NEGOCIO', 'OBJETIVO_RELACIONES', 'PRIORIDAD_PRINCIPAL', 'PRIMERA_ACCION', 'TRATO_DE_LA_PERSONA',
+  'META_CUERPO', 'UNIDAD_CUERPO', 'PARTIDA_CUERPO', 'META_NEGOCIO', 'UNIDAD_NEGOCIO', 'PARTIDA_NEGOCIO', 'META_RELACIONES', 'PARTIDA_RELACIONES',
 ];
 
 const quienSchema = z.object({ id: z.union([z.string(), z.number()]).transform(String), nombre: z.string().nullish() }).passthrough();

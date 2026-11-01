@@ -38,6 +38,12 @@ describe('diagnosticoSchemas: lectura tolerante del diagnóstico', () => {
     expect(leerDiagnostico(null)).toBeNull();
   });
 
+  it('lee los destinos de la meta medible: sin ellos se perderían y al guardar el editor se borrarían', () => {
+    for (const destino of ['META_CUERPO', 'UNIDAD_CUERPO', 'PARTIDA_CUERPO', 'META_NEGOCIO', 'UNIDAD_NEGOCIO', 'PARTIDA_NEGOCIO', 'META_RELACIONES', 'PARTIDA_RELACIONES']) {
+      expect(leerPregunta(pregunta({ tipo: 'NUMERO', alimenta: destino }))?.alimenta).toBe(destino);
+    }
+  });
+
   it('lee la condición, la escala y el destino', () => {
     const p = leerPregunta(pregunta({
       tipo: 'CUADRICULA',
