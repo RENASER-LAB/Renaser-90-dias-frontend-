@@ -63,7 +63,7 @@ describe('la ficha dice cómo entró la persona', () => {
     act(() => {
       r = TestRenderer.create(React.createElement(AceptacionDeLaPersona, { aceptacion: null, aceptadaPor: null, aceptadaEn: null }));
     });
-    expect(r.toJSON()).toBeNull();
+    expect(r.root.findAll(n => n.type === Text)).toHaveLength(0);
   });
 
   it('la lista y la ficha usan la misma función, y la ficha monta la sección', () => {
