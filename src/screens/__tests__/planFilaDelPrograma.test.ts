@@ -19,7 +19,8 @@ const HOY = sinComentarios(fs.readFileSync(path.join(RAIZ, 'screens/HoyScreen.ts
 
 describe('Plan: la fila del programa propio', () => {
   it('va arriba de todo (antes de los objetivos por confirmar y del selector de eje) y solo si hay algo que decir', () => {
-    expect(PLAN).toContain('{programaPropio.visible ? <FilaDelProgramaPropio programa={programaPropio} /> : null}');
+    // Sin programa propio andando el estado vacío trae su propio botón «Elegir mi Día 1» y la fila no se repite, salvo que haya que reintentar (#82).
+    expect(PLAN).toContain('{programaPropio.visible && (!sinProgramaPropio || programaPropio.error !== null) ? <FilaDelProgramaPropio programa={programaPropio} /> : null}');
     const fila = PLAN.indexOf('<FilaDelProgramaPropio');
     expect(fila).toBeGreaterThan(-1);
     expect(fila).toBeLessThan(PLAN.indexOf('<TarjetaRevisaTusObjetivos'));
