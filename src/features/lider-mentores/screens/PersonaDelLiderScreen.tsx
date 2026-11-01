@@ -18,6 +18,9 @@ import { CierresDelDia } from '../../cierre/components/CierresDelDia';
 import { obtenerOchentaVeinteDeUnaPersona } from '../../ochenta-veinte/api/ochentaVeinteApi';
 import { OchentaVeinteDeLaFicha } from '../../ochenta-veinte/components/OchentaVeinteDeLaFicha';
 import type { CargarOchentaVeinte } from '../../ochenta-veinte/types/ochentaVeinte.types';
+import { lecturaParaElLider } from '../../diagnostico/api/diagnosticoLecturaApi';
+import { SeccionDelDiagnosticoDeLaPersona } from '../../diagnostico/components/SeccionDelDiagnosticoDeLaPersona';
+import type { CargarLecturaDelDiagnostico } from '../../diagnostico/hooks/useLecturaDelDiagnostico';
 import type { CargarCierres } from '../../cierre/types/cierre.types';
 import { obtenerHuecosDePersona } from '../../huecos/api/huecosApi';
 import { TiempoLibreDeLaSemana } from '../../huecos/components/TiempoLibreDeLaSemana';
@@ -140,6 +143,11 @@ export function PersonaDelLiderScreen({
     () => (lunes?: string | null) => obtenerCierresDePersona(grupoDeRuta, personaId, lunes),
     [grupoDeRuta, personaId],
   );
+  /* Spec 026: su diagnóstico inicial, por la misma puerta (la del grupo o la que no pregunta por grupo). Una vez por persona. */
+  const cargarDiagnostico = useMemo<CargarLecturaDelDiagnostico>(
+    () => () => lecturaParaElLider(grupoDeRuta, personaId),
+    [grupoDeRuta, personaId],
+  );
 
   /* Spec 031: su 80/20 y el análisis de la semana y del mes, por la misma puerta del liderazgo (con o sin grupo). */
   const cargarOchentaVeinte = useMemo<CargarOchentaVeinte>(
@@ -221,6 +229,7 @@ export function PersonaDelLiderScreen({
       <TiempoLibreDeLaSemana cargar={cargarHuecos} />
       <CierresDelDia cargar={cargarCierres} />
       <OchentaVeinteDeLaFicha cargar={cargarOchentaVeinte} />
+      <SeccionDelDiagnosticoDeLaPersona cargar={cargarDiagnostico} />
 
       <View style={estilos.acciones}>
         <BotonPrincipal

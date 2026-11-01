@@ -1,0 +1,34 @@
+# Spec 026 — «Quitar preguntas»: el modo con la barra fija arriba, una sola confirmación y cancelar sin tocar nada.
+# ESCRITO Y SIN CORRER. Precondición: el borrador del dueño (27 preguntas) sin publicar o ya publicado; nadie lo ha respondido todavía.
+# La pregunta del trato y el consentimiento no se pueden quitar (el flujo no las marca).
+# cuenta: admin
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "YO"
+- scrollUntilVisible:
+    element: "Abrir Administración"
+    direction: DOWN
+- tapOn: "Abrir Administración"
+- tapOn: "Más opciones"
+- scrollUntilVisible:
+    element: "Fichas"
+    direction: DOWN
+- tapOn: "Fichas"
+- tapOn: "Diagnóstico inicial"
+- scrollUntilVisible:
+    element: "Quitar preguntas"
+    direction: DOWN
+- tapOn: "Quitar preguntas"
+# Entra al modo: la barra fija de arriba tiene el contador y las dos salidas.
+- extendedWaitUntil:
+    visible: "Cancelar"
+    timeout: 10000
+- takeScreenshot: F11a-modo-quitar
+# Cancelar sale sin tocar nada.
+- tapOn: "Cancelar"
+- extendedWaitUntil:
+    visible: "Quitar preguntas"
+    timeout: 10000
+- assertVisible: "Importar preguntas"
+- takeScreenshot: F11b-cancelado

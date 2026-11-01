@@ -1,0 +1,150 @@
+# Contesta lo que se ve del DIAGNÓSTICO del dueño (spec 026, `diagnostico-inicial.csv` importado) con la respuesta más corta que
+# vale: reconoce cada pregunta por su texto y no depende de cómo se reparten las preguntas en pasos. Lo que ya viene
+# precargado (nombre y ciudad, de la solicitud) no se toca. Los textos que se escriben son de una letra: `inputText` tarda unos
+# 10 s por letra (ver el README).
+# Parámetro opcional: NEGOCIO (por defecto «No\.»): la respuesta a «¿Actualmente tienes un negocio…?».
+appId: com.renaser.app
+env:
+  NEGOCIO: "No\\."
+---
+- runFlow:
+    when:
+      visible: "¿Cuántos años tienes\\?"
+    commands:
+      - tapOn:
+          id: "pregunta-(diag_)?p2"
+      - inputText: "34"
+      - hideKeyboard
+- runFlow:
+    when:
+      visible: "¿A qué te dedicas actualmente\\?"
+    commands:
+      - tapOn: "Soy profesional independiente\\."
+# La cuadrícula de satisfacción: las siete filas, con el 3.
+- runFlow:
+    when:
+      visible: "¿Qué tan satisfecho\\(a\\) estás.*"
+    commands:
+      - tapOn: "Mis relaciones personales y familiares: 3"
+      - tapOn: "Mi salud y bienestar físico: 3"
+      - tapOn: "Mi capacidad para gestionar mis emociones: 3"
+      - tapOn: "Mi disciplina para cumplir lo que me propongo: 3"
+      - tapOn: "Mi situación económica personal: 3"
+      - tapOn: "Mis resultados profesionales o empresariales: 3"
+      - tapOn: "El tiempo disponible para disfrutar mi vida: 3"
+- runFlow:
+    when:
+      visible: "En tus relaciones personales, familiares o profesionales.*"
+    commands:
+      - tapOn: "Me cuesta expresar lo que siento o necesito\\."
+- runFlow:
+    when:
+      visible: "Durante los últimos siete días, ¿cuántas horas dormiste.*"
+    commands:
+      - tapOn: "Menos de 5 horas\\."
+- runFlow:
+    when:
+      visible: "Durante los últimos siete días, ¿cuántos días realizaste.*"
+    commands:
+      - tapOn: "Ningún día\\."
+- runFlow:
+    when:
+      visible: "¿Qué aspecto está afectando más tu salud.*"
+    commands:
+      - tapOn: "Falta de descanso\\."
+- runFlow:
+    when:
+      visible: "¿Cuál es tu ingreso personal mensual.*"
+    commands:
+      - tapOn:
+          id: "pregunta-(diag_)?p10"
+      - inputText: "0"
+      - hideKeyboard
+- runFlow:
+    when:
+      visible: "¿Qué situación describe mejor tu realidad económica.*"
+    commands:
+      - tapOn: "Actualmente no genero ingresos\\."
+- runFlow:
+    when:
+      visible: "¿Cuántas horas dedicas semanalmente.*"
+    commands:
+      - tapOn: "Actualmente no trabajo\\."
+- runFlow:
+    when:
+      visible: "¿Actualmente tienes un negocio.*"
+    commands:
+      - tapOn: "${NEGOCIO}"
+# Las del negocio son opcionales: con «Sí.» solo se contesta la primera.
+- runFlow:
+    when:
+      visible: "¿A qué se dedica tu negocio\\?"
+    commands:
+      - tapOn:
+          id: "pregunta-(diag_)?p13a"
+      - inputText: "x"
+      - hideKeyboard
+# «Tu mente…» (p14) es opcional: se deja. La 15 es un párrafo obligatorio.
+- runFlow:
+    when:
+      visible: "Piensa en una situación real de los últimos 30 días.*"
+    commands:
+      - tapOn:
+          id: "pregunta-(diag_)?p15"
+      - inputText: "x"
+      - hideKeyboard
+- runFlow:
+    when:
+      visible: "RELACIONES \\|.*"
+    commands:
+      - tapOn:
+          id: "pregunta-(diag_)?p16"
+      - inputText: "x"
+      - hideKeyboard
+- runFlow:
+    when:
+      visible: "SALUD Y BIENESTAR \\|.*"
+    commands:
+      - tapOn:
+          id: "pregunta-(diag_)?p17"
+      - inputText: "x"
+      - hideKeyboard
+- runFlow:
+    when:
+      visible: "RIQUEZA Y NEGOCIOS \\|.*"
+    commands:
+      - tapOn:
+          id: "pregunta-(diag_)?p18"
+      - inputText: "x"
+      - hideKeyboard
+- runFlow:
+    when:
+      visible: "De las tres áreas anteriores.*"
+    commands:
+      - tapOn: "Riqueza, profesión o negocios\\."
+- runFlow:
+    when:
+      visible: "Imagina que han transcurrido 12 meses.*"
+    commands:
+      - tapOn:
+          id: "pregunta-(diag_)?p20"
+      - inputText: "x"
+      - hideKeyboard
+- runFlow:
+    when:
+      visible: "¿Qué primera acción concreta.*"
+    commands:
+      - tapOn:
+          id: "pregunta-(diag_)?p21"
+      - inputText: "x"
+      - hideKeyboard
+- runFlow:
+    when:
+      visible: "¿Cuánto tiempo puedes dedicar semanalmente.*"
+    commands:
+      - tapOn: "Menos de 2 horas\\."
+- runFlow:
+    when:
+      visible: "Declaración de responsabilidad y consentimiento"
+    commands:
+      - tapOn: "He leído y acepto la declaración de responsabilidad y consentimiento\\."

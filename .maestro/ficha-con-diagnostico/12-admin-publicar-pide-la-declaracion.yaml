@@ -1,0 +1,27 @@
+# Spec 026 — «Publicar»: mientras el consentimiento lleve el texto de relleno «[PENDIENTE DEL DUEÑO]» el servidor no deja publicar y el panel
+# lo dice ANTES, con el botón apagado. ESCRITO Y SIN CORRER.
+# Precondición: la base recién sembrada por V147 (la declaración todavía de relleno).
+# cuenta: admin
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "YO"
+- scrollUntilVisible:
+    element: "Abrir Administración"
+    direction: DOWN
+- tapOn: "Abrir Administración"
+- tapOn: "Más opciones"
+- scrollUntilVisible:
+    element: "Fichas"
+    direction: DOWN
+- tapOn: "Fichas"
+- tapOn: "Diagnóstico inicial"
+- scrollUntilVisible:
+    element: "Publicar"
+    direction: DOWN
+- assertVisible: ".*declaración de responsabilidad y consentimiento.*"
+- takeScreenshot: F12a-publicar-bloqueado
+# El botón está apagado: tocarlo no abre ninguna confirmación.
+- tapOn: "Publicar"
+- assertNotVisible: "¿Publicar la versión.*"
+- takeScreenshot: F12b-sin-confirmacion

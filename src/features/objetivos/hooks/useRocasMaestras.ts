@@ -3,8 +3,13 @@ import { useCallback, useEffect, useState } from 'react';
 import { mensajeDeError } from '../../../services/http/apiClient';
 import * as objetivosApi from '../api/objetivosApi';
 import { esRocaMaestraFija } from '../utils/objetivoFijo';
-import { esMapaPendiente } from '../utils/mapaPendiente';
 import type { DefinicionRocaMaestra, EjeObjetivo, RocaMaestraApi } from '../types/objetivos.types';
+import type { ObjetivoParaConfirmar } from '../utils/objetivosPorConfirmar';
+
+/** Lo que devuelve `confirmar`: todo confirmado, o en qué eje falló (y cuáles ya se habían confirmado antes). */
+export type ResultadoDeConfirmar =
+  | { ok: true; confirmados: EjeObjetivo[] }
+  | { ok: false; confirmados: EjeObjetivo[]; falloEn: EjeObjetivo; mensaje: string };
 
 /**
  * El objetivo de 90 días del aprendiz, traído del backend. Se define una vez y queda fijo (D-234); después solo
@@ -50,9 +55,8 @@ export function useRocasMaestras() {
    *
    * > **Corregido 2026-09-30.** Decía «Define o corrige el objetivo de un eje»: ya no se corrige.
    *
-   * Si el servidor responde que todavía no hay Mapa activo (`MAPA_PENDIENTE`, issue #37), el resultado trae
-   * `mapaPendiente: true` además del mensaje del servidor, para que quien llama ofrezca abrir el Mapa. Contra un
-   * backend que no lo conoce nunca aparece.
+   * > **Corregido 2026-10-31 (spec 026).** Ya no hay Mapa de Renacimiento: el servidor dejó de responder
+   * > `MAPA_PENDIENTE` y no exige nada previo para escribir el objetivo (se quitó `mapaPendiente` del resultado).
    *
    * La respuesta del servidor reemplaza a la roca de ese eje en memoria, en vez de recargar la
    * lista entera: el backend devuelve la roca ya guardada, con su porcentaje recalculado, así que
@@ -72,8 +76,38 @@ export function useRocasMaestras() {
       return {
         ok: false as const,
         mensaje: mensajeDeError(e, 'No pudimos guardar tu objetivo.'),
-        mapaPendiente: esMapaPendiente(e),
       };
+    } finally {
+      setGuardando(false);
+    }
+  }, [cargar]);
+
+  /**
+   * Confirma los objetivos que nacieron del diagnóstico (spec 026): un `PUT /rocks/master/{eje}` por eje, **en serie**, solo
+   * con el texto (sin meta: el servidor lo marca confirmado). Se detiene en el primer fallo y dice en qué eje fue; los que ya
+   * se confirmaron quedan confirmados (cada respuesta reemplaza a su roca en memoria) y no se repiten.
+   */
+  const confirmar = useCallback(async (items: readonly ObjetivoParaConfirmar[]): Promise<ResultadoDeConfirmar> => {
+    setGuardando(true);
+    const confirmados: EjeObjetivo[] = [];
+    try {
+      for (const item of items) {
+        try {
+          const guardada = await objetivosApi.definirRocaMaestra(item.eje, { objetivo: item.objetivo });
+          setRocas(previas => [...previas.filter(r => r.eje !== item.eje), guardada]);
+          confirmados.push(item.eje);
+        } catch (e) {
+          // Si otro teléfono ya lo confirmó con otro texto, lo guardado manda: se vuelve a leer.
+          if (esRocaMaestraFija(e)) void cargar();
+          return {
+            ok: false,
+            confirmados,
+            falloEn: item.eje,
+            mensaje: mensajeDeError(e, 'No pudimos confirmar tu objetivo.'),
+          };
+        }
+      }
+      return { ok: true, confirmados };
     } finally {
       setGuardando(false);
     }
@@ -84,5 +118,5 @@ export function useRocasMaestras() {
     [rocas]
   );
 
-  return { rocas, deEje, cargando, error, guardando, definir, recargar: cargar };
+  return { rocas, deEje, cargando, error, guardando, definir, confirmar, recargar: cargar };
 }

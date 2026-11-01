@@ -1,0 +1,50 @@
+# Spec 026 — la persona completa el diagnóstico en su ingreso, de la portada al cierre. ESCRITO Y SIN CORRER: necesita el backend
+# con la spec 026 y el diagnóstico del dueño importado y PUBLICADO (`diagnostico-inicial.csv`), y un emulador libre.
+# cuenta: aprendiz  (la ranura apunta a una cuenta NUEVA —sin onboarding completo— aceptada «con diagnóstico», del Diplomado)
+# Precondición: su solicitud trae nombre y ciudad (se precargan); todavía no empezó el diagnóstico. NO es un flujo de `ya-adentro`:
+# la sesión que abre `correr.sh` cae directo en la ficha de ingreso, que en esta cuenta es el diagnóstico (no la ficha estándar).
+# Cubre: la portada (sin contar en la barra), pasos cortos con barra de avance, el cierre con «Tus objetivos ya están preparados» y
+# que después sigue Términos.
+appId: com.renaser.app
+---
+- extendedWaitUntil:
+    visible: "Tiempo estimado: 15 minutos"
+    timeout: 60000
+- assertVisible: "No buscamos respuestas perfectas\\. Buscamos respuestas verdaderas\\."
+# La ficha estándar NO se pide: su primer paso («Nombre completo») no aparece.
+- assertNotVisible: "Nombre completo"
+- takeScreenshot: D01a-portada
+- tapOn: "EMPEZAR"
+# Primer paso: nombre (precargado), edad y ciudad (precargada). La edad es obligatoria: sin ella no se avanza.
+- extendedWaitUntil:
+    visible: "¿Cuál es tu nombre completo\\?"
+    timeout: 20000
+- tapOn: "SIGUIENTE"
+- assertVisible: "Escribe tu respuesta para continuar\\."
+- takeScreenshot: D01b-falta-la-edad
+- runFlow: ../comun/diagnostico-responder-el-paso.yaml
+- tapOn: "SIGUIENTE"
+# El resto: una vuelta por paso hasta que el botón dice «TERMINAR».
+- repeat:
+    while:
+      visible: "SIGUIENTE"
+    times: 40
+    commands:
+      - runFlow: ../comun/diagnostico-responder-el-paso.yaml
+      - tapOn: "SIGUIENTE"
+      - waitForAnimationToEnd:
+          timeout: 3000
+- runFlow: ../comun/diagnostico-responder-el-paso.yaml
+- takeScreenshot: D01c-ultimo-paso
+- tapOn: "TERMINAR"
+- extendedWaitUntil:
+    visible: "Tus objetivos ya están preparados"
+    timeout: 60000
+- takeScreenshot: D01d-cierre
+- assertVisible: ".*Términos.*"
+- tapOn: "CONTINUAR"
+# Después del diagnóstico sigue Términos (no la ficha estándar).
+- extendedWaitUntil:
+    visible: ".*[Tt]érminos.*"
+    timeout: 30000
+- takeScreenshot: D01e-terminos

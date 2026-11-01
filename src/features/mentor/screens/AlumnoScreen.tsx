@@ -26,6 +26,9 @@ import { CierresDelDia } from '../../cierre/components/CierresDelDia';
 import { obtenerOchentaVeinteDeUnAlumno } from '../../ochenta-veinte/api/ochentaVeinteApi';
 import { OchentaVeinteDeLaFicha } from '../../ochenta-veinte/components/OchentaVeinteDeLaFicha';
 import type { CargarOchentaVeinte } from '../../ochenta-veinte/types/ochentaVeinte.types';
+import { lecturaParaElMentor } from '../../diagnostico/api/diagnosticoLecturaApi';
+import { SeccionDelDiagnosticoDeLaPersona } from '../../diagnostico/components/SeccionDelDiagnosticoDeLaPersona';
+import type { CargarLecturaDelDiagnostico } from '../../diagnostico/hooks/useLecturaDelDiagnostico';
 import type { CargarCierres } from '../../cierre/types/cierre.types';
 import { obtenerHuecosDeAlumno } from '../../huecos/api/huecosApi';
 import { TiempoLibreDeLaSemana } from '../../huecos/components/TiempoLibreDeLaSemana';
@@ -87,6 +90,11 @@ export function AlumnoScreen({
   /* Spec 017: lo que dijo al cerrar cada día, por la ruta del mentor. También estable por persona. */
   const cargarCierres = useMemo<CargarCierres | null>(
     () => (grupoId ? (lunes?: string | null) => obtenerCierresDeAlumno(grupoId, alumno.participanteId, lunes) : null),
+    [grupoId, alumno.participanteId],
+  );
+  /* Spec 026: su diagnóstico inicial, por la ruta del mentor (solo lectura). Estable por persona. */
+  const cargarDiagnostico = useMemo<CargarLecturaDelDiagnostico | null>(
+    () => (grupoId ? () => lecturaParaElMentor(grupoId, alumno.participanteId) : null),
     [grupoId, alumno.participanteId],
   );
 
@@ -377,6 +385,8 @@ export function AlumnoScreen({
         <CierresDelDia cargar={cargarCierres} />
         {/* Spec 031: su 80/20 y el análisis de SER, por semana y por mes (solo lectura). */}
         <OchentaVeinteDeLaFicha cargar={cargarOchentaVeinte} />
+        {/* Spec 026: lo que respondió en su diagnóstico inicial (solo lectura; no se dibuja si tiene la ficha estándar). */}
+        <SeccionDelDiagnosticoDeLaPersona cargar={cargarDiagnostico} />
 
       </ScrollView>
     </SafeAreaView>

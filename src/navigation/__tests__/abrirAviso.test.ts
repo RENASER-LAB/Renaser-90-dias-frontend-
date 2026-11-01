@@ -99,7 +99,7 @@ describe('tocar el recordatorio de un hábito', () => {
     soltar();
   });
 
-  it('día 7 con el Mapa de Renacimiento abierto (sin pestañas): espera, y al salir del Mapa lleva a Training', () => {
+  it('con las pestañas todavía sin montar (login u onboarding): espera, y cuando aparecen lleva a Training', () => {
     const { irAPestana, aparecenLasPestanas, soltar } = navegador([]);
     anotarRutaDeAviso(RUTA_JUGO_VERDE);
     expect(irAPestana).not.toHaveBeenCalled();

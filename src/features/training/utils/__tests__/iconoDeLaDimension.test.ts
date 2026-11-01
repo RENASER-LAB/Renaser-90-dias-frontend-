@@ -80,12 +80,6 @@ describe('ICONO_DE_LA_DIMENSION: la fuente única', () => {
     expect(practicas).not.toMatch(/\bicon:\s*'/);
     expect((practicas.match(/<Icon name=\{iconoDeLaDimension\(d\.key\)\}/g) ?? []).length).toBe(1);
   });
-
-  it('el paso «Hitos» del Mapa usa el ícono del eje, no una tabla propia', () => {
-    const hitos = sinComentarios(leer('features/mapa-renacimiento/screens/HitosScreen.tsx'));
-    expect(hitos).not.toMatch(/const ICONO\b/);
-    expect(hitos).toContain('<Icon name={iconoDelEje(EJE_POR_AREA[area])}');
-  });
 });
 
 describe('los dibujos de las dimensiones', () => {

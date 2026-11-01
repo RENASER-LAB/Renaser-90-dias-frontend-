@@ -5,12 +5,12 @@ import { useNavigation } from '@react-navigation/native';
 import { Alert } from '../../../components/Alerta';
 import { GoldButton } from '../../../components/GoldButton';
 import { useAuth } from '../../../context/AuthContext';
-import { useAccionesDelMapa } from '../../mapa-renacimiento/hooks/useAccionesDelMapa';
 import { useRocasDiarias } from '../hooks/useRocasDiarias';
 import { useRocasSemanales } from '../hooks/useRocasSemanales';
 import type { CierreRocaSemanal, EjeObjetivo, ItemPlanDiario, ItemPlanSemanal, RocaDiariaApi, RocaMaestraApi } from '../types/objetivos.types';
 import { EJES, ETIQUETA_EJE } from '../types/objetivos.types';
 import { accionesDelEje, avanceDeLasAcciones, unirAcciones } from '../utils/planPrincipal';
+import type { SugerenciaDeAccion } from '../utils/accionesPropias';
 import { semanaAPlanificar } from '../utils/periodoDelPrograma';
 import { AgendarAccionesModal } from './AgendarAccionesModal';
 import { PlanSemanalModal } from './PlanSemanalModal';
@@ -38,21 +38,24 @@ export function PlanDelEje({
   maestras,
   numeroSemana,
   diaPrograma,
+  duracionDias,
   ejeAbierto,
   objetivoSugeridoDe,
-  onIrAlMapa,
   pedidoDeOrganizar = 0,
   cierre,
   registrarLasAcciones,
   abrirOchentaVeinte = null,
   alAbrirOchentaVeinte,
+  accionSugerida = null,
+  onDefinirObjetivos,
 }: {
   maestras: RocaMaestraApi[];
   numeroSemana: number;
   diaPrograma: number;
+  /** La duración del programa de esta persona (90 o 365): de ella sale la última semana. Sin dato, la de siempre. */
+  duracionDias?: number | null;
   ejeAbierto: EjeObjetivo;
   objetivoSugeridoDe: (eje: EjeObjetivo) => string;
-  onIrAlMapa?: () => void;
   /**
    * Un contador: cada vez que sube, se abre «Organizar mi semana» como si se hubiera tocado el botón (spec 028: «Planificar mi mes» lo
    * pide al tocar la semana de ahora). Sin él, o en 0, no hace nada.
@@ -60,7 +63,7 @@ export function PlanDelEje({
   pedidoDeOrganizar?: number;
   /**
    * «Cierra tu día» (spec 033): una tarjeta del día completo que Plan dibuja justo bajo «Acciones que mueven la meta», porque
-   * cerrar es lo último que se hace con ellas. No depende del eje elegido. Plan la dibuja sola cuando no hay Mapa activo.
+   * cerrar es lo último que se hace con ellas. No depende del eje elegido.
    */
   cierre?: React.ReactNode;
   /** El lugar de «Acciones que mueven la meta», para que «Ver mañana en Plan» lleve el scroll hasta ahí. */
@@ -68,12 +71,16 @@ export function PlanDelEje({
   /** Spec 031: el aviso «tu análisis está listo» pide abrir «Tu 80/20» en la semana o el mes. Se consume una vez (`alAbrirOchentaVeinte`). */
   abrirOchentaVeinte?: 'SEMANA' | 'MES' | null;
   alAbrirOchentaVeinte?: () => void;
+  /** La primera acción del diagnóstico de la persona, para ofrecerla al agendar (eje de su prioridad principal). */
+  accionSugerida?: SugerenciaDeAccion | null;
+  /** «Escribir mis objetivos»: la semana está bloqueada hasta tener los tres de 90 días. Abre el editor del primero que falta. */
+  onDefinirObjetivos?: () => void;
 }) {
   const { user } = useAuth();
   const navigation = useNavigation();
   const semanal = useRocasSemanales(maestras);
   // El domingo se arma la semana que EMPIEZA (D-203): se lee aparte, y solo ese día.
-  const semanaQueSeArma = semanaAPlanificar(diaPrograma);
+  const semanaQueSeArma = semanaAPlanificar(diaPrograma, undefined, duracionDias);
   const armaLaQueEmpieza = semanaQueSeArma !== numeroSemana;
   const queEmpieza = useRocasSemanales(maestras, semanaQueSeArma, armaLaQueEmpieza);
   const diaria = useRocasDiarias();
@@ -89,8 +96,6 @@ export function PlanDelEje({
     setOchentaVeinte(true);
     alAbrirOchentaVeinte?.();
   }, [abrirOchentaVeinte, alAbrirOchentaVeinte]);
-  /* Solo cuando el planificador se abre: quien nunca lo toca no paga la lectura del Mapa. */
-  const accionesDelMapa = useAccionesDelMapa(agendando);
 
   const seArma = armaLaQueEmpieza ? queEmpieza : semanal;
   const paraAgendar = armaLaQueEmpieza ? queEmpieza : semanal;
@@ -134,7 +139,7 @@ export function PlanDelEje({
   /** «Organizar mi semana ›»: lo que ya existía para armarla; y con el eje armado, repartir sus acciones. */
   const organizarMiSemana = () => {
     if (semanal.estado === 'bloqueada') {
-      onIrAlMapa?.();
+      onDefinirObjetivos?.();
       return;
     }
     if (ejeSinObjetivoDeLaSemana || !puedeAgendar) setArmando(true);
@@ -175,7 +180,7 @@ export function PlanDelEje({
         }
         alArmar={() => setArmando(true)}
         alRevisar={() => setRevisando(ejeAbierto)}
-        alIrAlMapa={onIrAlMapa}
+        alDefinirObjetivos={onDefinirObjetivos}
         alArmarLaQueEmpieza={() => setArmando(true)}
       />
 
@@ -240,7 +245,7 @@ export function PlanDelEje({
         visible={agendando}
         semanal={paraAgendar}
         fecha={diaria.objetivo.fecha}
-        accionesDelMapa={accionesDelMapa}
+        sugerida={accionSugerida}
         guardando={diaria.guardando}
         onGuardar={guardarAcciones}
         onCerrar={() => setAgendando(false)}

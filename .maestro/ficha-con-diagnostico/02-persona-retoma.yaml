@@ -1,0 +1,53 @@
+# Spec 026 — retomar donde quedó: lo escrito en el paso en curso sobrevive a que Android mate la app (borrador local por usuario y
+# versión), y un paso ya guardado se retoma en ese paso (el servidor lo recuerda). ESCRITO Y SIN CORRER: igual que el 01, pero la
+# cuenta aún no debe haber pasado del primer paso. Usa `launchApp` tras `killApp`: la sesión sigue guardada, pero la build de
+# desarrollo tarda más en volver (ver el README: Maestro #3667).
+# cuenta: aprendiz  (nueva, aceptada «con diagnóstico», con nombre y ciudad precargados)
+appId: com.renaser.app
+---
+- extendedWaitUntil:
+    visible: "Tiempo estimado: 15 minutos"
+    timeout: 60000
+- tapOn: "EMPEZAR"
+- extendedWaitUntil:
+    visible: "¿Cuántos años tienes\\?"
+    timeout: 20000
+# Escribe la edad y NO toca «Siguiente»: eso solo está en el borrador del teléfono.
+- tapOn:
+    id: "pregunta-(diag_)?p2"
+- inputText: "34"
+- hideKeyboard
+# El borrador se escribe medio segundo después de la última tecla.
+- waitForAnimationToEnd:
+    timeout: 2000
+- killApp
+- launchApp:
+    appId: com.renaser.app
+    stopApp: false
+- extendedWaitUntil:
+    visible: "¿Cuántos años tienes\\?"
+    timeout: 120000
+# Sin portada: retoma en el paso, con lo escrito.
+- assertNotVisible: "Tiempo estimado: 15 minutos"
+- assertVisible: "34"
+- takeScreenshot: D02a-retomo-lo-escrito
+# Ahora sí: guarda el paso y deja que Android mate la app en el paso 2.
+- tapOn: "SIGUIENTE"
+- extendedWaitUntil:
+    visible: "¿A qué te dedicas actualmente\\?"
+    timeout: 30000
+- killApp
+- launchApp:
+    appId: com.renaser.app
+    stopApp: false
+- extendedWaitUntil:
+    visible: "¿A qué te dedicas actualmente\\?"
+    timeout: 120000
+- assertNotVisible: "Tiempo estimado: 15 minutos"
+- takeScreenshot: D02b-retomo-el-paso-guardado
+# Atrás sube un paso por vez y lo respondido sigue ahí.
+- back
+- extendedWaitUntil:
+    visible: "¿Cuántos años tienes\\?"
+    timeout: 20000
+- assertVisible: "34"

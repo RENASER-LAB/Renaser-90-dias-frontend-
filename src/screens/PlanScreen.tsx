@@ -5,10 +5,10 @@ import { Alert } from '../components/Alerta';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BORDES_DE_UNA_PESTANA } from '../navigation/bordesDeUnaPestana';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../theme/ThemeContext';
 import { space } from '../theme/tokens';
 import { useResponsive } from '../theme/responsive';
-import { useAuth } from '../context/AuthContext';
 import { useSystemBackHandler } from '../hooks/useSystemBackHandler';
 import { ScreenHeader } from '../components/ui';
 import { GoldButton } from '../components/GoldButton';
@@ -21,7 +21,6 @@ import { CierreEnPlan } from '../features/cierre/components/CierreEnPlan';
 import { ejeDeLasAcciones } from '../features/cierre/utils/ejeDeLasAcciones';
 import { useResumenHome } from '../features/home/hooks/useResumenHome';
 import type { DiaDelPlan } from '../features/habits/utils/semanaDelPlan';
-import { useMapaRenacimientoAbierto } from '../features/mapa-renacimiento/MapaRenacimientoContext';
 import { cifraEscrita } from '../features/objetivos/api/planMensualApi';
 import { EditarObjetivoDelMesModal } from '../features/objetivos/components/EditarObjetivoDelMesModal';
 import { usePlanMensual } from '../features/objetivos/hooks/usePlanMensual';
@@ -29,9 +28,9 @@ import { BotonPlanificarMes } from '../features/objetivos/components/BotonPlanif
 import { PlanDelEje } from '../features/objetivos/components/PlanDelEje';
 import { PlanDelMesModal } from '../features/objetivos/components/PlanDelMesModal';
 import { TarjetaDelObjetivo } from '../features/objetivos/components/TarjetasDelPlan';
-import { PuertaDelMapa } from '../features/objetivos/components/PuertaDelMapa';
 import { useAccionesDeHoy } from '../features/objetivos/hooks/useAccionesDeHoy';
-import { usePuertaDeObjetivos } from '../features/objetivos/hooks/usePuertaDeObjetivos';
+import { HojaConfirmarObjetivos } from '../features/objetivos/components/HojaConfirmarObjetivos';
+import { TarjetaRevisaTusObjetivos } from '../features/objetivos/components/TarjetaRevisaTusObjetivos';
 import { useRocasMaestras } from '../features/objetivos/hooks/useRocasMaestras';
 import type { EjeObjetivo, RocaMaestraApi } from '../features/objetivos/types/objetivos.types';
 import { EJES, ETIQUETA_CORTA_EJE, ETIQUETA_EJE } from '../features/objetivos/types/objetivos.types';
@@ -39,6 +38,7 @@ import { conPrincipalPrimero, usePrioridadPrincipal } from '../features/objetivo
 import { definicionConAvance, LINEA_OBJETIVO_FIJO } from '../features/objetivos/utils/objetivoFijo';
 import { iconoDelEje } from '../features/objetivos/utils/iconoDelEje';
 import { etiquetaDelMes, mesDe, semanaDe } from '../features/objetivos/utils/periodoDelPrograma';
+import { estaPorConfirmar, rocasPorConfirmar, type ObjetivoParaConfirmar } from '../features/objetivos/utils/objetivosPorConfirmar';
 import { ESPACIO_PARA_LANZADOR } from '../features/renasia/components/RenasiaLauncher';
 import { useOcultarBarraAlDesplazar } from '../navigation/barraAlDesplazar/BarraInferior';
 
@@ -189,28 +189,24 @@ export default function PlanScreen() {
    */
   const objetivos = useRocasMaestras();
 
-  // Sin las tres rocas maestras, el backend cierra la planificación semanal con 403 ROCKS_LOCKED, y
-  // quien las escribe es el Mapa de Renacimiento. Por eso ese estado no ofrece "reintentar" sino la
-  // puerta al Mapa: es lo único que destraba la cadena.
-  const { abrir: abrirMapa, abierto: mapaAbierto } = useMapaRenacimientoAbierto();
   /**
-   * **Los objetivos esperan al Mapa** (issue #37, 2026-10-27, decisión del dueño: «Bloqueemos objetivos diciendo desde
-   * el inicio que debe hacer el Mapa de Renacimiento»). El objetivo de 90 días nace del Mapa y queda fijo; escribirlo
-   * acá sin Mapa activo lo dejaba chocando con el Mapa al activarlo (`409 ROCA_MAESTRA_FIJA`, backend #20). Mientras
-   * no esté activo, Objetivos no ofrece editar nada —ni el objetivo, ni el mes, la semana o las acciones que cuelgan
-   * de él— y dice que primero va el Mapa. Con el Mapa activo, todo es como siempre. El Mapa sigue siendo opcional en
-   * el resto de la app. Se vuelve a leer al abrir Objetivos (`activeSubView`), por si se hizo en otro teléfono.
+   * El eje de la prioridad principal de la persona, y los tres con ese adelante (pedido del cliente el 2026-09-14; desde la
+   * spec 026 sale de su diagnóstico). Sin prioridad —ficha estándar, sin diagnóstico o sin red—, `conPrincipalPrimero` devuelve el
+   * orden de siempre.
    */
-  const { user } = useAuth();
-  const { puerta, reintentar: reintentarPuerta } = usePuertaDeObjetivos(
-    user?.id ?? null,
-    mapaAbierto,
+  const { ejePrincipal, primeraAccion } = usePrioridadPrincipal();
+  const ejesOrdenados = useMemo(() => conPrincipalPrimero(EJES, ejePrincipal), [ejePrincipal]);
+  /* La primera acción del diagnóstico se sugiere al agendar, en el eje de la prioridad principal (no se agenda sola). */
+  const accionSugerida = useMemo(
+    () => (ejePrincipal && primeraAccion ? { eje: ejePrincipal, texto: primeraAccion } : null),
+    [ejePrincipal, primeraAccion],
   );
   /**
-   * **«Cierra tu día»** (spec 033, 2026-10-31, pedido del dueño: «Cerrar el día se mueve a Plan»). Está siempre, con o sin Mapa
-   * (decisión 033-3 A): bajo «Acciones que mueven la meta» cuando hay Mapa y bajo «Primero tu Mapa de Renacimiento» cuando no.
+   * **«Cierra tu día»** (spec 033, 2026-10-31, pedido del dueño: «Cerrar el día se mueve a Plan»). Está siempre
+   * (decisión 033-3 A): bajo «Acciones que mueven la meta». Desde la spec 026 ya no hay Mapa de Renacimiento que la esconda.
    * El eje de cada acción pendiente de la hoja sale de las acciones de hoy (el servidor no lo manda en el cierre).
    */
+  const { user } = useAuth();
   const { rocas: rocasDeHoy } = useAccionesDeHoy();
   const ejeDeLaAccion = useMemo(() => ejeDeLasAcciones(rocasDeHoy), [rocasDeHoy]);
   const scrollRef = useRef<React.ComponentRef<typeof ScrollView>>(null);
@@ -229,8 +225,13 @@ export default function PlanScreen() {
       () => undefined,
     );
   }, [movimientoReducido]);
-  /** El eje que se está mirando. */
-  const [ejeAbierto, setEjeAbierto] = useState<EjeObjetivo>(EJE_POR_DEFECTO);
+
+  /**
+   * El eje que se está mirando: el que la persona tocó, o —mientras no haya tocado ninguno— el primero del selector, que es el de
+   * su prioridad principal (antes arrancaba siempre en Cuerpo aunque la prioridad fuera otra).
+   */
+  const [ejeElegido, setEjeElegido] = useState<EjeObjetivo | null>(null);
+  const ejeAbierto: EjeObjetivo = ejeElegido ?? ejesOrdenados[0] ?? EJE_POR_DEFECTO;
   /**
    * Si se está leyendo la explicación de los tres niveles.
    *
@@ -246,13 +247,8 @@ export default function PlanScreen() {
   const objetivoFijo = rocaAbierta != null;
   /** Fijo y sin número (Relaciones, por ejemplo): no hay nada que anotar, así que no hay botón. */
   const sinAvanceQueAnotar = objetivoFijo && rocaAbierta.meta == null;
-
-  /**
-   * El eje que la persona eligió como principal en el paso 2 del Mapa, y los tres con ese adelante
-   * (pedido del cliente el 2026-09-14). Sin prioridad guardada, `conPrincipalPrimero` devuelve el
-   * orden de siempre.
-   */
-  const { ejePrincipal, relacionesBase, relacionesMeta } = usePrioridadPrincipal();
+  /** Spec 026: un objetivo del diagnóstico sin confirmar no pide «anotar avance» sino revisarlo y confirmarlo (una vez). */
+  const abiertaPorConfirmar = estaPorConfirmar(rocaAbierta);
 
   /* El objetivo de ESTE MES para el eje abierto, calculado por el servidor (ver la cabecera de
      `api/planMensualApi.ts`). */
@@ -265,6 +261,18 @@ export default function PlanScreen() {
   const [planificandoMes, setPlanificandoMes] = useState(false);
   const [pedidoDeOrganizar, setPedidoDeOrganizar] = useState(0);
 
+  /* Los objetivos que nacieron del diagnóstico y esperan confirmación (spec 026): tarjeta arriba y hoja para revisarlos. */
+  const pendientes = useMemo(() => rocasPorConfirmar(objetivos.rocas, ejesOrdenados), [objetivos.rocas, ejesOrdenados]);
+  const [revisando, setRevisando] = useState(false);
+  const confirmarObjetivos = async (items: ObjetivoParaConfirmar[]) => {
+    const resultado = await objetivos.confirmar(items);
+    if (resultado.ok) {
+      setRevisando(false);
+      confirmar('Tus objetivos de 90 días quedaron confirmados.');
+    }
+    return resultado;
+  };
+
   const cifraDelMesAbierto =
     mesDelEjeAbierto?.cifra != null && planDelEjeAbierto
       ? cifraEscrita(mesDelEjeAbierto.cifra, planDelEjeAbierto.unidad, planDelEjeAbierto.unidadAdelante)
@@ -276,7 +284,6 @@ export default function PlanScreen() {
     planDelEjeAbierto?.semana
       ? cifraEscrita(planDelEjeAbierto.semana.cifra, planDelEjeAbierto.unidad, planDelEjeAbierto.unidadAdelante)
       : null;
-  const ejesOrdenados = useMemo(() => conPrincipalPrimero(EJES, ejePrincipal), [ejePrincipal]);
 
   /**
    * Cambiar de eje sin salir de Objetivos (2026-10-05, decisión del dueño). Antes, para pasar de
@@ -284,7 +291,7 @@ export default function PlanScreen() {
    * se va con el eje: hablaba del otro objetivo.
    */
   const cambiarEje = (eje: EjeObjetivo) => {
-    setEjeAbierto(eje);
+    setEjeElegido(eje);
     setConfirmacion(null);
   };
 
@@ -307,7 +314,7 @@ export default function PlanScreen() {
   useEffect(() => {
     const params = route.params as { abrirObjetivosFecha?: string; abrirObjetivosEje?: EjeObjetivo | null } | undefined;
     if (!params?.abrirObjetivosFecha) return;
-    if (params.abrirObjetivosEje) setEjeAbierto(params.abrirObjetivosEje);
+    if (params.abrirObjetivosEje) setEjeElegido(params.abrirObjetivosEje);
     (navigation as unknown as { setParams: (p: Record<string, unknown>) => void })
       .setParams({ abrirObjetivosFecha: undefined, abrirObjetivosEje: undefined });
   }, [route.params, navigation]);
@@ -316,12 +323,16 @@ export default function PlanScreen() {
   // GESTOS TÁCTILES DEL SISTEMA (BACKHANDLER)
   // =========================================================================
   useSystemBackHandler(() => {
+    if (revisando) {
+      setRevisando(false);
+      return true;
+    }
     if (editGoalModalVisible) {
       setEditGoalModalVisible(false);
       return true;
     }
     return false;
-  }, editGoalModalVisible);
+  }, editGoalModalVisible || revisando);
 
   // =========================================================================
   // HANDLERS
@@ -330,36 +341,32 @@ export default function PlanScreen() {
    * Abre el editor del objetivo de 90 días del eje que se está mirando. Prellena con lo guardado; si
    * el aprendiz todavía no lo definió, los campos arrancan vacíos.
    */
-  const openEditGoalModal = () => {
-    setEditGoalTitle(rocaAbierta?.objetivo ?? '');
-    setEditGoalCurrentVal(rocaAbierta?.avance != null ? String(rocaAbierta.avance) : '');
-    setEditGoalTargetVal(rocaAbierta?.meta != null ? String(rocaAbierta.meta) : '');
-    setEditGoalUnidad(rocaAbierta?.unidad ?? '');
+  const openEditGoalModal = (eje: EjeObjetivo = ejeAbierto) => {
+    const roca = rocaDeEje(eje);
+    setEditGoalTitle(roca?.objetivo ?? '');
+    setEditGoalCurrentVal(roca?.avance != null ? String(roca.avance) : '');
+    setEditGoalTargetVal(roca?.meta != null ? String(roca.meta) : '');
+    setEditGoalUnidad(roca?.unidad ?? '');
     // El punto de partida se muestra tal cual está guardado. Con la roca ya definida es de solo
     // lectura (D-234), así que no se propone nada: una roca vieja sin él lo muestra vacío.
-    setEditGoalBase(rocaAbierta?.lineaBase != null ? String(rocaAbierta.lineaBase) : '');
+    setEditGoalBase(roca?.lineaBase != null ? String(roca.lineaBase) : '');
     setEditGoalModalVisible(true);
   };
 
   /**
-   * Un guardado que el servidor rechazó. Con «todavía no hay Mapa» (`MAPA_PENDIENTE`, issue #37) se dice lo que dijo
-   * el servidor y se ofrece abrir el Mapa; con cualquier otro rechazo, su mensaje tal cual, como siempre.
+   * «Escribir mis objetivos» (la semana está bloqueada hasta tener los tres de 90 días): abre el editor del primer eje, en el
+   * orden de la pantalla, que todavía no tiene objetivo. Sin Mapa ni diagnóstico, así se llega a ellos (spec 026).
    */
-  const avisarGuardadoFallido = (resultado: { mensaje: string; mapaPendiente: boolean }) => {
-    if (!resultado.mapaPendiente) {
-      Alert.alert('No se pudo guardar', resultado.mensaje);
-      return;
-    }
-    Alert.alert('Primero tu Mapa de Renacimiento', resultado.mensaje, [
-      { text: 'Ahora no', style: 'cancel' },
-      {
-        text: 'Hacer mi Mapa',
-        onPress: () => {
-          setEditGoalModalVisible(false);
-          abrirMapa();
-        },
-      },
-    ]);
+  const definirObjetivos = () => {
+    const faltante = ejesOrdenados.find(eje => rocaDeEje(eje) == null);
+    if (!faltante) return;
+    if (faltante !== ejeAbierto) cambiarEje(faltante);
+    openEditGoalModal(faltante);
+  };
+
+  /** Un guardado que el servidor rechazó: su mensaje tal cual (el de `ROCA_MAESTRA_FIJA` incluido). */
+  const avisarGuardadoFallido = (resultado: { mensaje: string }) => {
+    Alert.alert('No se pudo guardar', resultado.mensaje);
   };
 
   /**
@@ -478,7 +485,7 @@ export default function PlanScreen() {
       diaPrograma={diaPrograma > 0 ? diaPrograma : null}
       habitosHoy={resumen?.habitosHoy ?? null}
       ejeDe={ejeDeLaAccion}
-      puedeVerManana={puerta === 'abierta'}
+      puedeVerManana
       onVerManana={verMananaEnPlan}
     />
   ) : null;
@@ -513,63 +520,68 @@ export default function PlanScreen() {
         contentContainerStyle={estiloDelContenido}
         showsVerticalScrollIndicator={false}
       >
-        {/* Sin Mapa activo no hay nada que armar (issue #37, 2026-10-27): en lugar de todo lo del eje, «Primero tu Mapa de
-            Renacimiento» con «Hacer mi Mapa» —o la comprobación, si todavía no se sabe—. */}
-        {puerta !== 'abierta' ? (
-          <View style={{ marginTop: space.gap, paddingBottom: 28 }}>
-            <PuertaDelMapa puerta={puerta} onHacerMapa={abrirMapa} onReintentar={reintentarPuerta} />
-            {cierreDelDia ? <View style={{ marginTop: 14 }}>{cierreDelDia}</View> : null}
-          </View>
-        ) : (
-          <View style={styles.pantalla}>
-            {/* El eje elegido manda sobre todo lo de abajo. Mismo orden que las prioridades del Mapa: el principal primero. */}
-            <ControlSegmentado
-              opciones={ejesOrdenados.map(eje => ({
-                valor: eje,
-                etiqueta: ETIQUETA_CORTA_EJE[eje],
-                accessibilityLabel: ETIQUETA_EJE[eje],
-                icono: iconoDelEje(eje),
-              }))}
-              valor={ejeAbierto}
-              onCambiar={cambiarEje}
-              achicarTexto
-              accessibilityLabel="Eje de tu plan"
-            />
+        <View style={styles.pantalla}>
+          {/* Spec 026: mientras haya objetivos del diagnóstico por confirmar, lo primero es revisarlos. Al confirmarlos desaparece. */}
+          {pendientes.length > 0 ? <TarjetaRevisaTusObjetivos cantidad={pendientes.length} alRevisar={() => setRevisando(true)} /> : null}
 
-            {/* c. El objetivo de 90 días. Los «…» abren la hoja de siempre: escribir el objetivo (si falta) o anotar el avance
-                (si ya nació del Mapa, que lo deja fijo, D-234). Sin avance que anotar no se dibujan. */}
-            <TarjetaDelObjetivo
-              roca={rocaAbierta}
-              cargando={objetivos.cargando}
-              error={objetivos.error}
-              cifraDelMes={cifraDelMesAbierto}
-              alAbrirOpciones={sinAvanceQueAnotar ? undefined : openEditGoalModal}
-              alCambiarElMes={() => setEditandoMes(true)}
-            />
+          {/* El eje elegido manda sobre todo lo de abajo; el de la prioridad principal de la persona va primero. */}
+          <ControlSegmentado
+            opciones={ejesOrdenados.map(eje => ({
+              valor: eje,
+              etiqueta: ETIQUETA_CORTA_EJE[eje],
+              accessibilityLabel: ETIQUETA_EJE[eje],
+              icono: iconoDelEje(eje),
+            }))}
+            valor={ejeAbierto}
+            onCambiar={cambiarEje}
+            achicarTexto
+            accessibilityLabel="Eje de tu plan"
+          />
 
-            <BotonPlanificarMes mesEnCurso={resumen ? etiquetaDelMes(mesDe(diaPrograma)) : null} onPress={() => setPlanificandoMes(true)} />
+          {/* c. El objetivo de 90 días. Los «…» abren la hoja de siempre: escribir el objetivo (si falta) o anotar el avance
+              (si ya quedó fijo, D-234). Sin avance que anotar no se dibujan. */}
+          <TarjetaDelObjetivo
+            roca={rocaAbierta}
+            cargando={objetivos.cargando}
+            error={objetivos.error}
+            cifraDelMes={cifraDelMesAbierto}
+            alAbrirOpciones={abiertaPorConfirmar ? () => setRevisando(true) : sinAvanceQueAnotar ? undefined : () => openEditGoalModal()}
+            alCambiarElMes={() => setEditandoMes(true)}
+          />
 
-            {confirmacion && (
-              <ConfirmacionEnLinea key={confirmacion.clave} texto={confirmacion.texto} onTerminar={() => setConfirmacion(null)} />
-            )}
+          <BotonPlanificarMes mesEnCurso={resumen ? etiquetaDelMes(mesDe(diaPrograma)) : null} onPress={() => setPlanificandoMes(true)} />
 
-            {/* d a g: «Esta semana», «Acciones que mueven la meta», «Tu 80/20» y «Organizar mi semana ›». */}
-            <PlanDelEje
-              maestras={objetivos.rocas}
-              numeroSemana={semanaDe(diaPrograma)}
-              diaPrograma={diaPrograma}
-              ejeAbierto={ejeAbierto}
-              objetivoSugeridoDe={planMensual.objetivoSugeridoDe}
-              onIrAlMapa={abrirMapa}
-              pedidoDeOrganizar={pedidoDeOrganizar}
-              cierre={cierreDelDia}
-              registrarLasAcciones={accionesRef}
-              abrirOchentaVeinte={ochentaVeinteAlAbrir}
-              alAbrirOchentaVeinte={() => setOchentaVeinteAlAbrir(null)}
-            />
-          </View>
-        )}
+          {confirmacion && (
+            <ConfirmacionEnLinea key={confirmacion.clave} texto={confirmacion.texto} onTerminar={() => setConfirmacion(null)} />
+          )}
+
+          {/* d a g: «Esta semana», «Acciones que mueven la meta», «Tu 80/20» y «Organizar mi semana ›». */}
+          <PlanDelEje
+            maestras={objetivos.rocas}
+            numeroSemana={semanaDe(diaPrograma, undefined, resumen?.duracionDias)}
+            diaPrograma={diaPrograma}
+            duracionDias={resumen?.duracionDias}
+            ejeAbierto={ejeAbierto}
+            objetivoSugeridoDe={planMensual.objetivoSugeridoDe}
+            accionSugerida={accionSugerida}
+            onDefinirObjetivos={definirObjetivos}
+            pedidoDeOrganizar={pedidoDeOrganizar}
+            cierre={cierreDelDia}
+            registrarLasAcciones={accionesRef}
+            abrirOchentaVeinte={ochentaVeinteAlAbrir}
+            alAbrirOchentaVeinte={() => setOchentaVeinteAlAbrir(null)}
+          />
+        </View>
       </ScrollView>
+
+      {/* HOJA: REVISAR Y CONFIRMAR LOS OBJETIVOS QUE NACIERON DEL DIAGNÓSTICO (spec 026) */}
+      <HojaConfirmarObjetivos
+        visible={revisando && pendientes.length > 0}
+        pendientes={pendientes}
+        guardando={objetivos.guardando}
+        alCerrar={() => setRevisando(false)}
+        alConfirmar={confirmarObjetivos}
+      />
 
       {/* ========================================================================= */}
       {/* HOJA: EL OBJETIVO DE 90 DÍAS (DEFINIRLO O ANOTAR EL AVANCE)               */}

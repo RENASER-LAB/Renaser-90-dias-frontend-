@@ -73,7 +73,10 @@ import {
   type SignatureCanvasHandle,
   type SignatureData,
 } from '../components/SignatureCanvas';
-import { MapaRenacimientoFlow } from '../features/mapa-renacimiento/MapaRenacimientoFlow';
+import { useEstadoDeMiDiagnostico } from '../features/diagnostico/hooks/useEstadoDeMiDiagnostico';
+import { MiDiagnosticoScreen } from '../features/diagnostico/screens/MiDiagnosticoScreen';
+import { CompletarDiagnosticoScreen } from '../features/diagnostico/screens/CompletarDiagnosticoScreen';
+import { filaDeMiDiagnostico } from '../features/yo/utils/filaDeMiDiagnostico';
 import { elegirFotoDePerfil } from '../features/auth/utils/elegirFotoDePerfil';
 import * as authApi from '../features/auth/api/authApi';
 import { ESPACIO_PARA_LANZADOR } from '../features/renasia/components/RenasiaLauncher';
@@ -87,7 +90,7 @@ import { useMisEvidencias } from '../features/evidence/hooks/useMisEvidencias';
 import { resumenDeEvidencias } from '../features/evidence/resumenDeEvidencias';
 import { ESTADO_EVIDENCIA } from '../features/evidence/api/evidenceSchemas';
 import { MiniaturaDeEvidencia } from '../features/evidence/components/MiniaturaDeEvidencia';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { useMiCaja } from '../features/caja/hooks/useMiCaja';
 import { MiCajaScreen } from '../features/caja/screens/MiCajaScreen';
 import { EliminarMiCuentaScreen } from '../features/cuenta/screens/EliminarMiCuentaScreen';
@@ -249,16 +252,15 @@ function inicialesDe(nombre: string): string {
 }
 
 /**
- * Las 2 etapas actuales: solo el título y el orden son fijos. El estado de cada una lo decide
+ * Las etapas de «Mi onboarding»: solo el título y el orden son fijos. El estado de cada una lo decide
  * `useEtapasOnboarding` con datos reales — antes estaba escrito acá con `completed: true` en tres
  * de ellas, así que un aprendiz que no había hecho nada veía tres tildes verdes.
  *
- * Hoy solo El Pacto tiene marca en el backend (`pactSignedAt`). El Mapa de Renacimiento reúne
- * el formulario completo de esta fase y se muestra como una única segunda etapa.
+ * Hoy solo El Pacto tiene marca en el backend (`pactSignedAt`). La segunda etapa, el Mapa de Renacimiento, se retiró (spec 026,
+ * 2026-10-31): lo reemplaza el diagnóstico, que tiene su propia fila en Yo («Mi diagnóstico»).
  */
 const ONBOARDING_STAGES = [
   { id: 'st1', num: 1, title: 'El Pacto', descPendiente: 'Tu acto fundacional' },
-  { id: 'st2', num: 2, title: 'Mapa de Renacimiento', descPendiente: 'Tu mapa completo de transformación' },
 ] as const;
 
 /** «Versión 2 · aceptada el 31 de octubre de 2026»: lo que dice la fila de los términos en Mi onboarding (spec 027). */
@@ -420,6 +422,19 @@ export default function YoScreen() {
      un aprendiz, desde el Día 0 (el servidor responde 403 a quien no lo es). Pedir no cambia el día. */
   const miEmergencia = useMiEmergencia();
   const [enEmergencia, setEnEmergencia] = useState(false);
+  /* Mi diagnóstico (spec 026): la fila aparece según el estado que dice el servidor (en curso o completado; también «Completa tu
+     diagnóstico» si todavía no lo empieza) y abre su lectura o el recorrido, a pantalla completa como la Caja y la emergencia.
+     Yo no se desmonta: el estado se vuelve a leer cada vez que la pestaña recupera el foco (pudo terminarse desde Hoy). */
+  const miDiagnostico = useEstadoDeMiDiagnostico();
+  const filaDelDiagnostico = filaDeMiDiagnostico(miDiagnostico.estado);
+  const [enDiagnostico, setEnDiagnostico] = useState<'ver' | 'completar' | null>(null);
+  const recargarMiDiagnostico = useRef(miDiagnostico.recargar);
+  recargarMiDiagnostico.current = miDiagnostico.recargar;
+  useFocusEffect(
+    useCallback(() => {
+      recargarMiDiagnostico.current();
+    }, []),
+  );
   /* Mi Radar (spec 012, pedido del dueño del 2026-10-29): el Código Renaser desde el día 8, que la persona enciende y
      configura. La fila va justo debajo de «Tuve una emergencia», SOLO desde el día 8 y si el servidor lo ofrece (con un
      backend anterior no hay fila). A pantalla completa, como la emergencia. El aviso `/mi-radar` llega con
@@ -663,30 +678,7 @@ export default function YoScreen() {
     if (!regreso) return false;
     setActiveView(regreso);
     return true;
-    // Con el Mapa de Renacimiento abierto manda SU handler (registrado después): tiene que poder
-    // retroceder paso por paso, no salir de la etapa entera de un toque.
-  }, activeView !== 'main' && activeView !== 'mapa_renacimiento');
-
-  /**
-   * Etapa 2 del onboarding (Mapa de Renacimiento). Se devuelve ANTES del
-   * `SafeAreaView` de esta pantalla porque la pantalla trae el suyo propio: anidarlos duplicaría
-   * los márgenes de seguridad del sistema.
-   */
-  if (activeView === 'mapa_renacimiento') {
-    return user ? (
-      <MapaRenacimientoFlow
-        userId={user.id}
-        onSalir={() => {
-          setActiveView('onboarding');
-          // El Mapa se abre y se cierra con este `useState`, sin navegación de por medio: la
-          // pestaña `Yo` nunca pierde el foco, así que el `useFocusEffect` de `useEtapasOnboarding`
-          // no se entera de que la etapa 2 acaba de terminarse. Sin esta relectura, quien activa su
-          // Mapa vuelve a "Tu proceso completo" y sigue viendo el contador de antes.
-          void recargarEtapasOnboarding();
-        }}
-      />
-    ) : null;
-  }
+  }, activeView !== 'main');
 
   if (enSoporteTi && veSoporteTi) {
     return <ConsolaSoporteTiScreen onSalir={() => setEnSoporteTi(false)} />;
@@ -721,6 +713,24 @@ export default function YoScreen() {
 
   if (enCaja && miCaja.visible && miCaja.caja) {
     return <MiCajaScreen caja={miCaja.caja} onVolver={() => setEnCaja(false)} onCambio={miCaja.recargar} />;
+  }
+
+  /* Mi diagnóstico, a pantalla completa. El atrás del sistema y la flecha los maneja la propia pantalla (sube un paso del recorrido y,
+     en el primero, llama a `onBack`). */
+  if (enDiagnostico === 'ver') {
+    return <MiDiagnosticoScreen onBack={() => setEnDiagnostico(null)} />;
+  }
+  if (enDiagnostico === 'completar') {
+    return (
+      <CompletarDiagnosticoScreen
+        onBack={() => setEnDiagnostico(null)}
+        onTerminado={() => {
+          setEnDiagnostico(null);
+          miDiagnostico.recargar();
+          void recargarResumen();
+        }}
+      />
+    );
   }
 
   if (enEmergencia && miEmergencia.visible && miEmergencia.mia) {
@@ -1026,6 +1036,17 @@ export default function YoScreen() {
                 }}
               />
             ) : null}
+            {/* MI DIAGNÓSTICO (spec 026): solo para quien tiene la ficha con diagnóstico. Reemplaza al Mapa de Renacimiento, que se retiró. */}
+            {filaDelDiagnostico ? (
+              <FilaDeAjuste
+                key="mi-diagnostico"
+                icono="fileText"
+                titulo={filaDelDiagnostico.titulo}
+                detalle={filaDelDiagnostico.detalle}
+                etiqueta={`${filaDelDiagnostico.titulo}. ${filaDelDiagnostico.detalle}`}
+                onPress={() => setEnDiagnostico(filaDelDiagnostico.pantalla)}
+              />
+            ) : null}
           </GrupoDeAjustes>
         </ScrollView>
       )}
@@ -1105,7 +1126,7 @@ export default function YoScreen() {
               <FilaDeAjuste
                 icono="listChecks"
                 titulo="Mi onboarding"
-                detalle="El Pacto y tu Mapa de Renacimiento"
+                detalle="Tu Pacto de Renacimiento"
                 onPress={() => setActiveView('onboarding')}
               />
               {esDisponible(CLAVES.evidencias) ? (
@@ -1312,21 +1333,15 @@ export default function YoScreen() {
             {/* Era 10 px y centrado: por debajo del mínimo de micro-etiqueta y desalineado
                 respecto del inicio de la barra que describe. */}
             <Text style={[t.small, styles.cifras, { color: c.textSoft }]}>
-              {etapasOnboarding.completadas} de {ONBOARDING_STAGES.length} etapas completadas
+              {etapasOnboarding.completadas} de {ONBOARDING_STAGES.length} {ONBOARDING_STAGES.length === 1 ? 'etapa completada' : 'etapas completadas'}
             </Text>
           </View>
 
-          {/* 2 Etapas */}
+          {/* Las etapas */}
           <View style={{ gap: space.gap, paddingBottom: 28 }}>
             {ONBOARDING_STAGES.map(stage => {
-              // El estado de cada etapa sale de datos reales, no del array: `pactSignedAt` para
-              // el Pacto y `stageCompleted` para el Mapa. La etapa 2 leia el estado del
-              // Cuestionario Profundo, que es otro flujo — por eso quien ya habia terminado su
-              // mapa seguia viendo "1 de 2 etapas completadas".
-              const estado =
-                stage.id === 'st1' ? etapasOnboarding.pacto
-                : stage.id === 'st2' ? etapasOnboarding.mapaRenacimiento
-                : 'pendiente';
+              // El estado de cada etapa sale de datos reales, no del array: `pactSignedAt` para el Pacto.
+              const estado = etapasOnboarding.pacto;
               const completada = estado === 'completada';
               const enProgreso = estado === 'en_progreso';
               const descripcion = completada
@@ -1340,15 +1355,7 @@ export default function YoScreen() {
                 key={stage.id}
                 accessibilityRole="button"
                 accessibilityLabel={`${stage.title}. ${descripcion}`}
-                onPress={() => {
-                  if (stage.id === 'st1') {
-                    setActiveView('pacto');
-                  } else {
-                    // Etapa 2 — el Mapa de Renacimiento contiene el formulario completo y
-                    // reanuda automáticamente desde el paso donde la persona quedó.
-                    setActiveView('mapa_renacimiento');
-                  }
-                }}
+                onPress={() => setActiveView('pacto')}
                 style={[
                   styles.stageCard,
                   {

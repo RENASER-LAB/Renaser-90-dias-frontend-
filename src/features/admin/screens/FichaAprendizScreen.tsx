@@ -21,6 +21,9 @@ import { CierresDelDia } from '../../cierre/components/CierresDelDia';
 import { obtenerOchentaVeinteDeUnaPersona } from '../../ochenta-veinte/api/ochentaVeinteApi';
 import { OchentaVeinteDeLaFicha } from '../../ochenta-veinte/components/OchentaVeinteDeLaFicha';
 import type { CargarOchentaVeinte } from '../../ochenta-veinte/types/ochentaVeinte.types';
+import { lecturaParaAdministracion } from '../../diagnostico/api/diagnosticoLecturaApi';
+import { SeccionDelDiagnosticoDeLaPersona } from '../../diagnostico/components/SeccionDelDiagnosticoDeLaPersona';
+import type { CargarLecturaDelDiagnostico } from '../../diagnostico/hooks/useLecturaDelDiagnostico';
 import type { CargarCierres } from '../../cierre/types/cierre.types';
 import { obtenerHuecosDePersona } from '../../huecos/api/huecosApi';
 import { TiempoLibreDeLaSemana } from '../../huecos/components/TiempoLibreDeLaSemana';
@@ -45,6 +48,7 @@ import { grupoParaVerSusDias } from '../utils/susDiasYEvidencias';
 import { CambiarDiaScreen } from './CambiarDiaScreen';
 import { EliminarCuentaAdminScreen } from './EliminarCuentaAdminScreen';
 import { rotuloDeFase } from '../../home/hooks/useResumenHome';
+import { FichaDeIngresoDeLaPersona } from '../../diagnostico-admin/components/FichaDeIngresoDeLaPersona';
 import { FormacionDeLaPersona } from '../../formaciones/components/FormacionDeLaPersona';
 import { ConstanciaDeTerminos } from '../../onboarding/terminos/components/ConstanciaDeTerminos';
 import { AceptacionDeLaPersona } from '../components/AceptacionDeLaPersona';
@@ -144,6 +148,8 @@ export function FichaAprendizScreen({
     () => (grupoDelRadar ? (tipo, inicio) => obtenerOchentaVeinteDeUnaPersona(grupoDelRadar, aprendiz.id, tipo, inicio) : null),
     [grupoDelRadar, aprendiz.id],
   );
+  /* Spec 026: su diagnóstico inicial, por la lectura de Administración (no pregunta por grupo). Estable por persona. */
+  const cargarDiagnostico = useMemo<CargarLecturaDelDiagnostico>(() => () => lecturaParaAdministracion(aprendiz.id), [aprendiz.id]);
   const nombre = aprendiz.fullName?.trim() || 'Aprendiz sin nombre';
   /* El día que trae el servidor al abrir la ficha gana sobre el de la fila que la abrió. */
   const datosDeCabecera = lineasDeCabecera(
@@ -296,6 +302,9 @@ export function FichaAprendizScreen({
 
         {/* Qué versión de los términos aceptó, cuándo y con qué firma (spec 027). Sin servidor que lo ofrezca, no se dibuja. */}
         <ConstanciaDeTerminos personaId={aprendiz.id} />
+        {/* Su ficha de ingreso (spec 026-9): «Estándar» o «Con diagnóstico», con «Asignar el diagnóstico» a quien ya estaba dentro y
+            «Volver a la ficha estándar». Si el servidor no la ofrece (backend anterior), no se dibuja. */}
+        <FichaDeIngresoDeLaPersona personaId={aprendiz.id} nombre={nombre} alCambiar={setAvisoFinal} />
 
         {/* Día del programa (26/09, D-82). El botón aparece solo si el servidor entregó el detalle
             administrativo —mismo permiso que el PUT— y su programa ya empezó. */}
@@ -486,6 +495,9 @@ export function FichaAprendizScreen({
         {/* Spec 017: lo que dijo al cerrar cada día, de lunes a domingo (solo lectura). */}
         <CierresDelDia cargar={cargarCierres} />
         <OchentaVeinteDeLaFicha cargar={cargarOchentaVeinte} />
+
+        {/* Spec 026: lo que respondió en su diagnóstico inicial (solo lectura; no se dibuja si tiene la ficha estándar). */}
+        <SeccionDelDiagnosticoDeLaPersona cargar={cargarDiagnostico} />
 
         {/* D-243: solo ADMIN o ALQUIMISTA, nunca sobre sí mismo; sobre un ADMIN o ALQUIMISTA, solo un ADMIN. */}
         {ofrecerEliminar ? (

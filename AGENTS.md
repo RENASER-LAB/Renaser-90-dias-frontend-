@@ -1015,6 +1015,287 @@ borra análisis sueltos; se borran con la cuenta). Lo que cambia y nada más:
 * **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire) **y el backend con la spec 031 antes** (V153 y V154). Contra un backend
   anterior no aparece nada nuevo: la hoja «Tu 80/20» y las fichas quedan como estaban.
 
+## Cambio por pedido del dueño — 2026-10-31 — ficha con diagnóstico: reemplaza al Mapa de Renacimiento (spec 026)
+
+Pedido y decisiones del dueño del 31/10 (spec 026 del backend, `Renaser-90-dias-backend/specs/026-ficha-con-diagnostico/`, D-303): una **ficha nueva
+«con diagnóstico»** —su formulario de Google, adaptado— va **en lugar de** la ficha estándar para quien Administración decida (al aceptar la solicitud,
+spec 025, o después, a quien ya estaba dentro); **el Mapa de Renacimiento ya no va** («será reemplazado con la nueva ficha»). De las respuestas nacen los
+objetivos de 90 días de Plan, que la persona revisa y confirma una vez. La ficha estándar queda como hoy. **Todo es de la app y necesita el backend de
+la 026 antes**: contra uno anterior nadie tiene el diagnóstico y la app queda como estaba, salvo que el Mapa ya no se ofrece. Son tres partes:
+
+### La persona: el ingreso, el recorrido y la lectura (spec 026)
+
+Pedido del dueño: una ficha nueva «con diagnóstico» —su formulario de Google, adaptado— que va **EN LUGAR de** la ficha estándar para
+quien Administración decida (al aceptar su solicitud, spec 025, o después, a quien ya estaba dentro); de ella nacen los objetivos de 90
+días de Plan. Esta entrada es solo la mitad de la **persona** (spec y contrato en
+`Renaser-90-dias-backend/specs/026-ficha-con-diagnostico/`). Todo vive en `src/features/diagnostico/`. Lo que cambia y nada más:
+
+* **El ingreso** (`OnboardingFlow`): lee `ficha` de `GET /onboarding/state` (`ESTANDAR` | `CON_DIAGNOSTICO`; ausente o desconocida =
+  `ESTANDAR`, así que un backend anterior no cambia nada). Con `CON_DIAGNOSTICO` y el diagnóstico sin terminar, el paso inicial es
+  `diagnostico` (`DiagnosticoDeLaPersonaScreen`) en lugar de `FichaInicialScreen`; al terminar sigue Términos y «Elige tu Día 1», igual
+  que hoy. Si ya lo terminó y no aceptó Términos (cerró la app ahí), entra a Términos; con Términos aceptados, a «Elige tu Día 1»; si no se
+  puede saber (sin red), abre el diagnóstico, que sabe reintentar. «Salir» de la portada cierra la sesión, como la ficha estándar. **El
+  «volver» de Términos** de esta persona muestra lo que respondió en solo lectura (`MiDiagnosticoScreen`), porque no hay una ficha a la que
+  volver a editar. Al entrar a la app se llama `completeOnboarding()` **sin ficha** (la ficha estándar no existe para ella: el diagnóstico ya
+  está en el servidor). **La ficha estándar no cambia en nada.** Límite aceptado: si `GET /onboarding/state` falla por red justo al abrir,
+  se queda con la ficha estándar (el comportamiento de siempre); `AuthContext` ya leyó ese mismo endpoint un instante antes.
+* **El recorrido** (`components/RecorridoDelDiagnostico`, la misma pantalla para la persona y para la vista previa de Administración):
+  **portada** (título, mensaje con sus saltos de línea y «Empezar»; la barra de avance no la cuenta) → **pasos cortos** → **cierre**.
+  Es la ficha estándar con otro contenido: el mismo esqueleto (`MarcoDePaso`: barra arriba, un solo scroll, botón fijo abajo que sube con
+  el teclado), la misma `BarraDeAvance` (un tramo por sección) y las mismas opciones grandes (`OpcionElegible`).
+  * **Pasos**: cada sección se parte en pasos de 1 a 3 preguntas según lo que pesa cada una (`utils/pasosDelRecorrido`): un párrafo, una
+    cuadrícula, el consentimiento y una lista de más de 5 opciones van solos; de 4 a 5 opciones pesan doble. **La composición de un paso nunca
+    depende de sus propias respuestas**: una pregunta que se muestra «solo si» otra del mismo paso abre un paso nuevo.
+  * **Condicionales** (`seMuestraSi`, `utils/visibilidad`): se muestra solo si la respuesta de la pregunta indicada ES ese `valor` (en casillas,
+    si lo INCLUYE); recursivo; una condición que nombra una pregunta que no está (otra formación) o un ciclo la deja oculta. Las ocultas no se
+    piden ni cuentan; **sus respuestas guardadas se conservan** y reaparecen si la condición vuelve a cumplirse. Los pasos y secciones sin
+    preguntas visibles se saltan.
+  * **Tipos**: TEXTO (`FormField`), AREA_TEXTO (con contador «123 / 500» si hay `largoMaximo`, que además corta en ese tope), NUMERO (teclado
+    decimal, acepta coma, solo dígitos), SELECCION_UNICA (`OpcionElegible`), SELECCION_MULTIPLE (casillas cuadradas; con `maximoOpciones` la
+    tercera no se marca y un texto dice «Elige como máximo 2.»), ESCALA y CUADRICULA (números de 48, repartidos en filas parejas si son más de
+    cinco; la cuadrícula muestra cada fila con su escala, los extremos una vez arriba y «N de M respondidas»; no avanza hasta responder todas
+    las filas), FECHA (`CampoDeFecha`: las ruedas de día, mes y año de la ficha estándar sin su tope de «mayor de 18»; guarda `DD/MM/AAAA`) y
+    CASILLA = consentimiento (la declaración, que viene en `ayuda`, completa y sin scroll propio sobre la casilla; **siempre se marca**, sea cual
+    sea `requerida`). Un tipo que la app no conoce no llega (el esquema lo descarta).
+  * **Precarga**: si `precarga` viene y no hay respuesta guardada, el campo arranca con ese valor para confirmarlo (se guarda al avanzar).
+  * **Lo que falta**: al tocar «Siguiente» con una obligatoria sin responder se marca **esa** pregunta (borde rojo y un mensaje de 15 px en
+    tuteo bajo ella: «Escribe tu respuesta para continuar.», «Elige una opción para continuar.», «Responde todas las filas para continuar.»…),
+    vibra con `tacto.error()` y la vista baja hasta ella (`MarcoDePaso` suma la prop opcional `desplazarA`). Nada de diálogos.
+  * **Guardar de verdad**: cada «Siguiente» llama a `onGuardarPaso(respuestasDeEsePaso, pasoAlQueLlega)` y **solo avanza si resuelve**; si falla,
+    el paso dice «No se pudo guardar. Revisa tu conexión.» con «Reintentar» de 48, sin perder lo escrito. En el último paso se revisa TODO
+    antes de mandar nada (un borrador restaurado pudo dejar un hueco) y se guarda ese mismo paso. «Terminar» llama a `onTerminar()`; un 400
+    `DIAGNOSTICO_INCOMPLETO` (`faltan`) lleva al paso de la primera pregunta que falta y la marca; un fallo de red dice «No se pudo terminar…»
+    con «Reintentar». Un doble toque manda un solo pedido.
+  * **Atrás** (flecha y gesto del sistema, `useSystemBackHandler`): sube un paso; en el primero vuelve a la portada; en la portada llama a
+    `onSalir`; en el cierre es «Continuar». Volver no manda nada ni pierde lo escrito.
+  * **Retomar**: arranca en el paso de `datos.paso` (acotado), sin portada, con todo lo respondido. Se guarda el paso **al que se llega**.
+  * **El cierre**: «Tus objetivos ya están preparados» con los objetivos que devolvió `terminar` (el de la prioridad principal primero, con su
+    eje y el texto tal como lo escribió), la primera acción si hubo y qué sigue; sin objetivos, «Los escribirás en Plan.». «Continuar» llama
+    a `onContinuar`. En el ingreso «qué sigue» dice Términos y Día 1; para quien ya estaba dentro, revisar y confirmar los objetivos en Plan.
+  * **Vista previa** (`modo: 'vistaPrevia'`): no guarda nada ni en el servidor ni en el teléfono, no llama a `onTerminar`, y el último botón
+    («Cerrar vista previa») cierra con `onSalir`.
+  * **Movimiento** (`emil-design-eng`, `animate-expo`): ninguno propio. El paso nuevo entra con el desplazamiento de 25 px + fundido de 260 ms
+    de `MarcoDePaso` (con «reducir movimiento», solo fundido), la barra rellena en 280 ms, y los toques usan `Presionable`. Las respuestas
+    cambian al instante (se hacen decenas de veces).
+* **Borrador local** (`utils/borradorLocal`): lo que se escribe en el paso en curso se guarda en `AsyncStorage`, clave
+  `renaser.diagnostico.<usuario>.<versión>`, medio segundo después de la última tecla, al pasar la app a segundo plano y al salir; se borra al
+  guardar el paso y al terminar. Al abrir, lo escrito y no mandado le gana a lo del servidor (es más reciente). Cualquier fallo de
+  almacenamiento se lee como «no hay borrador».
+* **Pantallas conectadas** (`components/DiagnosticoConectado`, envuelto por `screens/DiagnosticoDeLaPersonaScreen` para el ingreso y
+  `screens/CompletarDiagnosticoScreen` para quien ya estaba dentro, con su cabecera «‹ Diagnóstico» en los avisos): abre `GET /diagnostico/mio`;
+  **404** → «Todavía no tienes un diagnóstico disponible.» con «Reintentar»; **409** → ya lo terminó (avisa y sigue); sin red → «No pudimos
+  cargar tu diagnóstico. Revisa tu conexión.». Guardar un paso = `PUT /diagnostico/mio/respuestas` y después `PUT /onboarding/state`
+  (`flow: diagnostico`, `step`); si el servidor rechaza solo el cursor, el paso se da por guardado (lo respondido está a salvo).
+* **Ofrecerlo a quien ya estaba dentro** (FR-026-9): `hooks/useEstadoDeMiDiagnostico` (`GET /diagnostico/mio/estado`; sin lectura —404, sin red—
+  no hay oferta; se relee al cambiar de cuenta, al volver la app al frente y al terminar el diagnóstico) y
+  `components/TarjetaDelDiagnosticoPendiente` (props `{ alAbrir }`; «Completa tu diagnóstico · De él nacen tus objetivos de 90 días ›», una fila
+  compacta toda tocable, del estilo de la tarjeta del Mapa que reemplaza; **devuelve `null` salvo con el diagnóstico pendiente o en curso**).
+  Hoy la monta y abre `CompletarDiagnosticoScreen` (lo hace el agente `plan-hoy`). Para la fila «Mi diagnóstico» de Yo,
+  `utils/estadoDelDiagnostico.diagnosticoTerminado(estado)` dice si ya lo terminó (con el mismo hook).
+* **Lectura de solo lectura**: `screens/MiDiagnosticoScreen` (props `{ onBack }`; Yo → «Mi diagnóstico», cabecera «‹ Mi diagnóstico») y
+  `components/SeccionDelDiagnosticoDeLaPersona` (props `{ cargar }`) en las fichas del **mentor o la guía** (`AlumnoScreen`), del **líder**
+  (`PersonaDelLiderScreen`, con grupo y desde «Todos los aprendices») y de **Administración** (`FichaAprendizScreen`), debajo de «Cierres del
+  día». Por sección, cada pregunta tal como se le hizo con su respuesta legible (texto, valores como lista, una fila por área de la cuadrícula,
+  «Aceptó» en el consentimiento; sin respuesta, «Sin respuesta»); una pregunta retirada lleva la marca «Pregunta retirada» y conserva lo que se
+  respondió. Mismo criterio que el tiempo libre y los cierres: **403, 404, la ficha estándar o ningún diagnóstico no dibujan nada**; mientras
+  llega la primera lectura tampoco (sin parpadeo); un fallo de red dice «No se pudo cargar el diagnóstico.» con «Reintentar» de 48; si
+  todavía no lo completó, «Todavía no lo ha completado.». Rutas: `GET /admin/diagnostico/personas/{id}`,
+  `/mentor/groups/{g}/learners/{u}/diagnostico` y `/leadership/groups/{g}/people/{p}/diagnostico` (o `/leadership/people/{p}/diagnostico` sin
+  grupo). **No hay nada que editar ni ningún pedido de escritura.**
+* **Retoques a lo compartido (aditivos, sin cambio para nadie más)**: `MarcoDePaso` suma la prop opcional `desplazarA` (bajar la vista hasta
+  una altura); `FormField` suma `mensajeDeErrorAparte` (borde rojo sin el texto de 12 px, para decirlo a 15); el esquema de
+  `GET /onboarding/state` suma `ficha`; `PreguntaLeida` suma `escalaMax` opcional (con él la cuadrícula se lee «Mi salud… · 4 de 5»; sin él,
+  «Mi salud… · 4»: el contrato de §4 todavía no trae la escala en la lectura).
+* **No cambian**: la ficha estándar (preguntas, pasos, validaciones, borrador), Términos, «Elige tu Día 1», los cinco tabs, Plan, Hoy y Yo por
+  dentro (solo montan lo que esta entrada exporta), ni ningún permiso (lo decide el servidor). Sin dependencias nuevas ni código nativo.
+* **Pruebas**: Jest `respuestasEnEdicion`, `visibilidadYPasos`, `validacion`, `borradorLocal`, `lecturaLegible`, `estadoDelDiagnostico`,
+  `diagnosticoLecturaApi`, `recorridoDelDiagnostico` (portada, pasos, condicionales, lo que falta, guardar/reintentar, terminar,
+  `DIAGNOSTICO_INCOMPLETO`, atrás, retomar, borrador, vista previa, bajar hasta la pregunta), `campoDeFecha`, `diagnosticoConectado`,
+  `onboardingFlowConDiagnostico`, `estadoOnboardingFicha`, `useEstadoDeMiDiagnostico`, `tarjetaDelDiagnosticoPendiente`,
+  `seccionDelDiagnosticoDeLaPersona`, `miDiagnosticoScreen` y `lecturaEnLasFichas`. Maestro, **escritos y sin correr**:
+  `.maestro/ficha-con-diagnostico/01–04` y `comun/diagnostico-responder-el-paso`.
+* **Sin comprobar en pantalla** (solo se ve con el emulador): el aspecto de los pasos (alturas de las opciones, la cuadrícula de 7 filas, el
+  texto largo de la declaración), el desplazamiento hasta la pregunta marcada con el teclado abierto, y el borrador tras matar la app.
+* **Hace falta un APK nuevo** (solo JavaScript: ni `package.json`, ni `app.json`, ni código nativo; la app no se actualiza por aire) **y el backend
+  con la spec 026 antes** (`/diagnostico/mio…`, `ficha` en `/onboarding/state` y las tres lecturas). Contra un backend anterior nadie tiene
+  `CON_DIAGNOSTICO`: la app queda como estaba.
+
+### Administración → Más opciones → «Fichas» (spec 026)
+
+Pedido del dueño (026-1 A, 026-4 A, 026-9 B): el **diagnóstico se administra desde la app**; la ficha estándar queda como hoy y solo se nombra. Solo
+ADMIN y ALQUIMISTA (Administración ya se muestra por `canAdminister`; el servidor vuelve a exigirlo en cada pedido). Todo vive en
+`src/features/diagnostico-admin/`. Lo que cambia y nada más:
+
+* **La fila «Fichas»** en «Más opciones» (`MasOpcionesScreen`; sigue la disponibilidad de las personas, `CLAVES.adminPersonas`) abre
+  `FichasAdminScreen`, un nivel más de la pila de `AdminScreen` (`{ nombre: 'fichas' }`): lista ↔ editor ↔ asignar a varias personas. El atrás
+  (flecha y sistema) sube un nivel por vez: editor → lista → Más opciones.
+* **El editor** (`DiagnosticoEditorScreen`): la portada (su título y su mensaje se editan, no se borra) y las secciones con sus preguntas, en el orden en
+  que las ve la persona. Por pregunta (`EditorDePreguntaSheet`, una hoja): texto, ayuda, tipo (Texto corto, Párrafo, Número, Opción única, Casillas,
+  Escala, Cuadrícula, Fecha, Consentimiento), obligatoria, opciones o filas (`EditorDeOpciones`), máximo de opciones, rango de la escala
+  (`EditorDeEscala`), **«Se muestra solo si»** (`SelectorDeCondicion`: solo una pregunta ANTERIOR de opciones y una de sus opciones; las demás no se
+  ofrecen), **«Alimenta»** (`SelectorDeDestino`: objetivo de Cuerpo, Negocio o Relaciones, prioridad principal, primera acción; el trato no se asigna
+  a mano y uno ya usado se marca) y **«Se muestra en»** (formaciones; vacío = todas). Duplicar, subir y bajar (botones de 48, sin arrastre; una pregunta
+  que llega al borde de su sección pasa a la de al lado). Cada cambio se manda al servidor y se **relee el borrador** antes de avisarlo: lo que se ve es
+  lo que el servidor tiene. El aviso de lo guardado es `AvisoDeAbajo`. Un solo scroll.
+* **Preguntas protegidas**: la del **trato** (la usa SER) y el **consentimiento** no se quitan ni cambian de tipo; el editor lo dice en lugar de ofrecer el
+  botón. A una pregunta con respuestas no se le cambia el tipo (el servidor lo rechaza con su motivo, que se dice tal cual).
+* **Quitar** (`BarraDeQuitar`, modo «Quitar preguntas», barra fija ARRIBA —abajo flota el botón de SER—): se marcan varias y hay **una sola confirmación**.
+  El servidor las **elimina** si nunca se publicaron ni se respondieron, y las **retira** (dejan de mostrarse y conservan sus respuestas) si no; lo dice
+  en el aviso («2 eliminadas · 1 retirada»). Si otra pregunta depende de una (409 `TIENE_DEPENDIENTES`) se muestran cuáles y se repite con confirmación
+  quitándolas juntas. **Retiradas** (`PreguntasRetiradas`, plegada): se pueden restaurar (409 si su «alimenta» ya lo tiene otra).
+* **Vista previa** (`VistaPreviaDelDiagnosticoScreen`, `GET /admin/diagnostico/vista-previa`): el MISMO `RecorridoDelDiagnostico` de la persona en
+  `modo: 'vistaPrevia'` (no guarda nada), elegible por formación y duración (Escuela 90 días, Diplomado 3 meses o 1 año, Certificación 90 días).
+* **Publicar** (`PanelDePublicar`): dice qué versión está vigente y si hay cambios; si el servidor no deja publicar, **lo dice antes con cada motivo y
+  apaga el botón** (sin preguntas, sin consentimiento, **falta el texto de la declaración de responsabilidad y consentimiento**, una condición rota).
+  Publicar manda `versionBase`; un 409 `OTRA_PERSONA_PUBLICO` pide releer. «Versiones» (`HojaDeVersiones`): quién publicó y cuándo. **La declaración
+  de responsabilidad y consentimiento la escribe Administración** en la ayuda de la pregunta del consentimiento (026-6); mientras diga
+  `[PENDIENTE DEL DUEÑO]` el diagnóstico no se publica.
+* **Importar** (`HojaDeImportar`, 026-4 A): se **pega** la tabla (lo copiado de Excel o Google Sheets sale con tabuladores; también vale CSV con coma o
+  punto y coma) y el servidor dice qué entendió y los errores **por fila** (la cabecera es la 1); con un error no se puede confirmar (todo o nada).
+  «Añadir» o «Reemplazar» (reemplazar muestra cuántas preguntas se retirarían y cuántas ya tienen respuestas). **«Descargar plantilla»** y
+  **«Descargar la ficha»** (`useDescargaDeFicha`: `plantilla.csv` y `exportar.csv`) abren la hoja de compartir del sistema. **No hay selector de
+  archivos** (pediría un módulo nativo nuevo): se pega el texto. Lo importado queda en borrador.
+* **Asignar el diagnóstico a quien ya estaba dentro** (026-9 B): en la **ficha de una persona** (`FichaAprendizScreen`, `FichaDeIngresoDeLaPersona`,
+  debajo de la formación) se lee su ficha de ingreso («Estándar» o «Con diagnóstico»), con «Asignar el diagnóstico» y «Volver a la ficha estándar»;
+  quien decide si se puede es el servidor (409 con el motivo si ya respondió). Y en **Fichas → «Asignar a varias personas»**
+  (`AsignarDiagnosticoVariasScreen`, `utils/seleccionDePersonas`): se busca como en «Personas» (al servidor, con el filtro de formación), se marcan,
+  lo marcado se conserva al cambiar la búsqueda y **una sola confirmación** las cambia a todas; el servidor deja afuera a las que no se pueden y dice por
+  qué («12 asignadas · 2 omitidas»). La barra de la selección va arriba y fija.
+* **Rutas** (`/api/v1/admin/diagnostico`): `GET ` (borrador), `GET /vista-previa`, `POST/PUT/DELETE /secciones[/id]`, `PUT /secciones/orden`,
+  `POST/PUT /preguntas[/id]`, `PUT /preguntas/{id}/mover`, `POST /preguntas/{id}/duplicar|restaurar`, `POST /preguntas/quitar`, `POST /publicar`,
+  `GET /versiones`, `POST /importacion/vista-previa`, `POST /importacion`, `GET /plantilla.csv|exportar.csv`, `GET /personas/{id}` (la lectura) y
+  `POST /personas/ficha`. Las respuestas se leen con esquemas tolerantes (`diagnosticoAdminSchemas`): una pregunta o sección rota se pierde ella.
+* **No cambian**: la ficha estándar, el resto de Administración, los demás tabs. Sin dependencias nuevas ni código nativo.
+* **Pruebas**: Jest `diagnosticoAdminApi`, `diagnosticoAdminSchemas`, `borradorDePregunta`, `condicionesYOrden`, `editorDelDiagnostico`,
+  `quitarPreguntasEnElEditor`, `publicarYVistaPrevia`, `importarPreguntas`, `useDiagnosticoAdmin`, `fichasAdminScreen`, `fichasEnAdministracion`,
+  `textosDeLaFicha`, `seleccionDePersonas`, `asignarDiagnosticoVarias` y `fichaDeIngresoDeLaPersona`. Maestro, escritos y sin correr:
+  `.maestro/ficha-con-diagnostico/10–13`.
+* **Sin comprobar en pantalla** (solo se ve con el emulador): el aspecto del editor con muchas preguntas, la hoja de importar con una tabla larga y la
+  barra fija de «Quitar» con el teclado abierto.
+* **Hace falta un APK nuevo** y **el backend con la spec 026 antes**; contra uno anterior «Fichas» responde 404 y lo dice.
+
+### El Mapa se retira; Plan, Hoy y Yo dependen del diagnóstico (spec 026)
+
+Decisión del dueño (spec 026 del backend, `specs/026-ficha-con-diagnostico/`): el **Mapa de Renacimiento ya no va**; lo reemplaza la
+ficha con diagnóstico. De las respuestas del diagnóstico nacen los objetivos de 90 días de Plan, el eje de la prioridad principal va
+primero y la primera acción se sugiere al agendar. Sin diagnóstico, la persona escribe sus objetivos directo en Plan, **sin ningún
+requisito del Mapa**. Esta entrada es la parte de Plan / Hoy / Yo; el recorrido de la persona, las lecturas de otras personas y
+Administración → «Fichas» son de otras entradas de la 026. Lo que cambia y nada más:
+
+#### El Mapa se retira de la app
+* **Se borró `src/features/mapa-renacimiento/` entero** (flujo de diez pasos, pantallas, `MapaRenacimientoContext`, hooks, esquemas y
+  tests) y todo lo que entraba a él: la tarjeta «Mapa de renacimiento» de Hoy, la fila/estado «Haz tu Mapa de Renacimiento» de la
+  tarjeta de acciones, «Primero tu Mapa de Renacimiento» y «Ir al Mapa de Renacimiento» de Plan, la etapa «Mapa de Renacimiento» de
+  Yo → Ajustes → Mi onboarding, el overlay que reemplazaba a las pestañas (`RootNavigator`, `MapaRenacimientoProvider` de `App.tsx`),
+  y los dos lugares que esperaban a que se cerrara (el botón flotante de SER, `RenasiaLauncher`, y el radar, `RadarContext`).
+  `useEtapasOnboarding` ya no lee `GET /api/v1/mapa-renacimiento`; `catalogoPreguntas` ya no pide el flujo `mapa_dia7`.
+* **Los datos que el servidor guarde del Mapa no se tocan**: solo la app deja de ofrecerlo. El servidor (contrato §3) responde
+  `stageCompleted: true` a todos y `409 MAPA_RETIRADO` a lo que intentara escribir.
+* **Se borraron** también `e2e/mapa-poder/mapa-por-rol.spec.ts` y `playwright.mapa.config.ts` (el recorrido del Mapa del Poder).
+  **Se conservó la suite del Día 1**, que vivía en esa carpeta y no dependía del Mapa: ahora es `e2e/dia-uno/` (`dia-uno.spec.ts`,
+  `preparar.py`, `README.md`) con `playwright.dia-uno.config.ts` autónomo; la variable `E2E_ACTORES` reemplaza a `E2E_MAPA_ACTORES`
+  (el nombre viejo se sigue aceptando).
+* **Se conservó** lo que otras funciones siguen usando: `home/utils/diasQueQuedan` (lo prueba `formaciones/__tests__/fasesYDuraciones`;
+  hoy sin uso en el código de producción), `objetivos/utils/iconoDelEje`, `objetivos/utils/cifraDelObjetivo` y los esquemas de Plan.
+  `EXPO_PUBLIC_MAPA_DIA7` de `eas.json` quedó sin efecto (nada la lee); se puede quitar cuando convenga.
+* Prueba que lo vigila de punta a punta: `navigation/__tests__/mapaRetirado.test.ts` (ningún import, identificador ni texto del Mapa).
+
+#### Plan sin la puerta
+* **Plan siempre muestra el selector de eje y todo lo del eje** (objetivo de 90 días, semana, acciones…). Se borraron `PuertaDelMapa`,
+  `usePuertaDeObjetivos`, `puertaDeObjetivos` y `mapaPendiente`. Sin Mapa ni diagnóstico, «Define tu objetivo de 90 días» se escribe
+  ahí mismo (los «…» de la tarjeta del objetivo abren la hoja de siempre).
+* **`PUT /api/v1/rocks/master/{eje}`** sigue como siempre (`409 ROCA_MAESTRA_FIJA` incluido); `MAPA_PENDIENTE` ya no existe y se quitó
+  `mapaPendiente` de `useRocasMaestras.definir`. La línea de la hoja del objetivo fijo dice «Tu objetivo de 90 días quedó fijo.
+  Aquí solo anotas cuánto llevas.» (sin «en tu Mapa»). La opción `desdeElMapa` de `definirRocaMaestra` se quitó.
+* **Con la semana bloqueada** (faltan objetivos de 90 días; el servidor responde 403 `ROCKS_LOCKED`) la tarjeta «Esta semana» dice
+  «Primero define tus tres objetivos de 90 días…» y ofrece **«Escribir mis objetivos»**, que abre el editor del primer eje (en el orden
+  de la pantalla) que todavía no tiene objetivo. «Organizar mi semana ›» hace lo mismo en ese estado.
+
+#### Objetivos de 90 días «por confirmar»
+* `GET /rocks/master` suma `origin` (`PLAN | MAPA | DIAGNOSTICO`) y `confirmed` por fila. Se leen **tolerantes** (`objetivosSchemas`):
+  ausentes ⇒ `PLAN` y confirmado, así un servidor anterior no muestra nada «por confirmar». Un objetivo `DIAGNOSTICO` con
+  `confirmed: false` está «por confirmar» (`objetivos/utils/objetivosPorConfirmar`).
+* **Plan**: arriba, la tarjeta **«Revisa tus objetivos de 90 días»** («3 objetivos por confirmar», «Salieron de tu diagnóstico. Léelos,
+  cámbialos si quieres y confírmalos: después quedan fijos.», botón **«Revisar y confirmar»**) mientras haya alguno. El objetivo por
+  confirmar lleva en su tarjeta una píldora **«Por confirmar»** (ícono `hourglass`, borde y texto: no solo color) y sus «…» abren la
+  revisión en lugar de «Anotar avance».
+* **La hoja** (`HojaConfirmarObjetivos`, `HojaDesdeAbajo grande`): el aviso a la vista «Puedes reescribirlos una vez. Después quedan
+  fijos.», un campo editable por objetivo por confirmar (el de la prioridad principal primero) con contador «n / 500» —**nunca se
+  recorta en silencio**: el campo no lleva `maxLength`; pasar de 500 se dice y no deja confirmar— y «Confirmar mis objetivos» fijo
+  abajo. Confirmar manda **un `PUT /rocks/master/{eje}` por eje, en serie**, solo con `{ objetivo }` (sin meta; el servidor lo marca
+  confirmado). Si uno falla se detiene, dice **cuál** («No pudimos confirmar tu objetivo de Cuerpo.» y el motivo) y cuáles ya quedaron
+  confirmados; con un `ROCA_MAESTRA_FIJA` (otro teléfono ya lo confirmó) se vuelve a leer lo guardado. Al terminar: línea «Tus
+  objetivos de 90 días quedaron confirmados.», `tacto.logro()`, y la tarjeta y las etiquetas desaparecen.
+* **Ya confirmado, o de otro origen, el objetivo es fijo como siempre** (D-234: solo el avance, si tiene meta).
+
+#### Prioridad y primera acción desde el diagnóstico
+* `usePrioridadPrincipal` y las acciones del Mapa dejaron de leer el Mapa. Ahora `usePrioridadPrincipal` lee
+  `GET /api/v1/diagnostico/mio/resumen` (`obtenerResumenDeMiDiagnostico`) cada vez que Plan recupera el foco: **el eje de la
+  prioridad va primero en el selector** (y es el que se abre mientras la persona no toque otro; antes arrancaba siempre en Cuerpo) y
+  la **primera acción** se ofrece al agendar.
+* **«Agendar mis acciones»** (`AgendarAccionesModal`): en el eje de la prioridad aparece la primera acción como **«Sugerida por tu
+  diagnóstico»**; **no se agenda sola** (nada viene marcado: se elige tocándola). Ya no se ofrecen las acciones del Mapa ni se marcan
+  solas las que «tocaban hoy». Lo que la persona escribe a mano sigue igual.
+* **Sin diagnóstico, con un servidor anterior (404) o sin red**: el orden de siempre y sin sugerencia, sin error visible. Un fallo al
+  releer conserva lo último que se leyó. Lo que el Mapa daba y ya no hay (hitos, acciones motoras) no se muestra; la cifra del mes
+  sigue la regla de siempre («sin cifra no se muestra nada», `usePlanMensual`).
+
+#### Hoy
+* Se quitó la tarjeta «Mapa de renacimiento» y `useLecturaDelEstadoDelMapa`. **La tarjeta de acciones** (`vistaDeLaAccionDeHoy`) ya no
+  tiene el estado `mapa`; sin acciones hoy dice, según los objetivos de 90 días (`useObjetivosDeNoventaDias`: una lectura de
+  `GET /rocks/master` por foco): **«Confirma tus objetivos de 90 días» / «Confirmar»** (hay objetivos del diagnóstico por confirmar),
+  **«Define tu objetivo de 90 días en Plan» / «Escribir mi objetivo»** (no tiene sus tres objetivos) —ambas son la misma fila compacta
+  de siempre, toda tocable, y llevan a Plan—, o «Hoy no tienes acciones agendadas» / «Agendar en Plan». **Una acción que seguir manda
+  sobre todo** (como mandaba sobre el Mapa). Mientras no se sabe, nada (sin parpadeo); si la lectura de los objetivos falla, no afirma
+  nada de ellos.
+* **Con el diagnóstico pendiente o en curso**, Hoy muestra `TarjetaDelDiagnosticoPendiente` (de la persona; no se dibuja si no hay
+  nada pendiente) en el lugar donde estaba la tarjeta del Mapa, debajo del programa propio. Al tocarla abre `CompletarDiagnosticoScreen`
+  **como un estado de Hoy** (reemplaza la pantalla, sin pestaña nueva); al terminar o salir, Hoy vuelve y relee el resumen, las
+  acciones y los objetivos.
+* No cambia nada más de Hoy.
+
+#### Yo
+* **Mi onboarding** queda con una etapa, **El Pacto** (la fila dice «Tu Pacto de Renacimiento»; «0 de 1 etapa completada»). Se quitó el
+  estado `mapa_renacimiento` de `VistaDeYo`.
+* **Fila nueva «Mi diagnóstico»** en la lista de Yo (junto a «Tuve una emergencia» y «Mi Radar»; ícono `fileText`), solo con la ficha con
+  diagnóstico: **completado** → «Mi diagnóstico / Lee lo que respondiste» abre `MiDiagnosticoScreen`; **en curso** → «Mi diagnóstico /
+  Sigue donde lo dejaste» y **pendiente** → «Completa tu diagnóstico / Todavía no lo empiezas» abren `CompletarDiagnosticoScreen`; con la
+  ficha estándar, sin lectura o con un servidor anterior no hay fila (`yo/utils/filaDeMiDiagnostico`). A pantalla completa como la Caja y
+  la emergencia; el estado se relee cada vez que Yo recupera el foco y al terminar el recorrido.
+
+#### Compatibilidad
+* **Sin backend nuevo para que nada se rompa**: contra un servidor anterior (sin las rutas del diagnóstico, 404) Plan, Hoy y Yo
+  funcionan sin el Mapa y sin errores visibles; la persona escribe sus objetivos en Plan, Hoy dice «Define tu objetivo de 90 días en
+  Plan» y Yo no muestra «Mi diagnóstico». Los objetivos «por confirmar» y la primera acción necesitan el backend de la 026.
+* **No cambian**: los demás tabs, la barra de pestañas, las reglas del servidor de las semanas y las acciones, ningún diseño fuera de lo
+  de arriba. Sin dependencias nuevas ni código nativo.
+* **Pruebas**: Jest `planSinMapa`, `planPorConfirmar`, `objetivosPorConfirmar` (utils, componentes y esquema), `useRocasMaestrasConfirmar`,
+  `usePrioridadPrincipal`, `agendarAccionesSugerida`, `accionesPropias`, `useObjetivosDeNoventaDias`, `vistaDeLaAccionDeHoy`,
+  `tarjetaAccionDeHoy`, `hoySinMapaConDiagnostico`, `yoSinMapaConDiagnostico`, `filaDeMiDiagnostico`, `useEtapasOnboarding`,
+  `definirRocaMaestra` y `mapaRetirado`. Maestro, escritos y sin correr: `.maestro/ficha-con-diagnostico/20-plan-objetivos-por-confirmar`,
+  `21-hoy-sin-mapa` y `22-sin-diagnostico-escribe-objetivos-en-plan` (y se ajustaron `diseno-31/01–03`).
+* **Hace falta un APK nuevo** (solo JavaScript: ni `package.json`, ni `app.json`, ni código nativo; la app no se actualiza por aire).
+  **Hace falta el backend de la 026** para los objetivos por confirmar y la primera acción.
+
+### Las semanas y los meses del plan siguen la duración de la persona (spec 026, tras la 022)
+
+* `objetivos/utils/periodoDelPrograma` cuenta las semanas y los bloques de cuatro semanas con la **duración propia** (`semanasDelProgramaDe`, `mesesDelProgramaDe`): con 90 días son
+  13 semanas y 3 bloques (como siempre); con 365, **53** semanas y 13 bloques (el último se lleva la 53). `semanaDe`, `semanaAPlanificar`, `mesDe`, `semanasDelMes`,
+  `mesDeLaSemana` y `etiquetaDelMes` reciben `duracionDias` (opcional: sin dato, la de 90). Plan la pasa desde `GET /home` (`resumen.duracionDias`), igual que Yo.
+  Es la misma cuenta de `SemanaPrograma` del backend (V156 sube los topes de la base a la semana 53 y el mes 12); prueba `periodoDelProgramaSegunLaDuracion`.
+* **No cambia** el texto «objetivo de 90 días» (es el nombre del objetivo en toda la app); decidir si en el Diplomado de 1 año se llama de otra forma es del dueño.
+
+### Entradas anteriores que esta deja obsoletas
+
+Donde una entrada de este documento nombra el Mapa de Renacimiento (el flujo de diez pasos, su tarjeta en Hoy, `PuertaDelMapa` /
+`usePuertaDeObjetivos`, «Primero tu Mapa de Renacimiento», `MAPA_PENDIENTE`, `mapa-renacimiento/*`, `useAccionesDelMapa`, la etapa «Mapa de
+Renacimiento» de Mi onboarding, el E2E del Mapa del Poder, `EXPO_PUBLIC_MAPA_DIA7`), léase **retirado** y vale esta entrada. En concreto:
+«tab `Plan`: los objetivos esperan al Mapa de Renacimiento (issue #37)» y «Corrección encontrada en el E2E del Mapa del Poder por rol — 2026-10-10»
+quedan solo como historia; en «diseño de Hoy, Plan y Training» (2026-10-31) el estado `mapa` de la tarjeta de acciones, «sin Mapa no se repite la tarjeta
+Diseña tu mapa» y la `PuertaDelMapa` de Plan ya no existen; «Recuperación del Día 1 de cuentas anteriores» sigue valiendo pero su suite pasó de
+`e2e/mapa-poder/` a `e2e/dia-uno/` (`E2E_ACTORES`). Las demás menciones (la fase y los días que quedan, el radar que esperaba al Mapa, los íconos por eje)
+son sueltas y se leen igual con el Mapa fuera.
+
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
 Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel especializado en React Native, Expo y TypeScript. Al crear, refactorizar o modificar cualquier pantalla o componente, debes cumplir OBLIGATORIAMENTE con los siguientes estándares:

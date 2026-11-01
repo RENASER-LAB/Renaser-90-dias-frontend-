@@ -135,7 +135,8 @@ describe('dónde está cada pieza de las formaciones', () => {
 
   it('el día y las fases salen de la duración de cada persona, no de un 90 escrito', () => {
     expect(fuente('src/screens/YoScreen.tsx')).toContain('faseEnCurso(resumen?.fase, resumen?.diaPrograma, resumen?.duracionDias)');
-    expect(fuente('src/screens/HoyScreen.tsx')).toContain('duracionDias: resumen?.duracionDias');
+    /* Hoy ya no cuenta «los días que quedan»: lo hacía la tarjeta del Mapa de Renacimiento, que se retiró (spec 026). Plan sí lee la duración. */
+    expect(fuente('src/screens/PlanScreen.tsx')).toContain('resumen?.duracionDias');
   });
 
   it('ninguna pantalla de las formaciones escribe un nombre de fuente (solo los roles de fuentes.ts)', () => {

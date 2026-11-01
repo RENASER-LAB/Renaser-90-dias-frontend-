@@ -31,15 +31,10 @@ describe('conPrincipalPrimero', () => {
 });
 
 /**
- * El Mapa del Día 7 usa esta misma función, pero con sus **áreas** (`salud`, `negocio_dinero`,
- * `relaciones`), no con los ejes de Plan. Por eso se hizo genérica el 2026-09-23.
- *
- * El bug que cierra: los pasos 3, 4 y 5 del Mapa estaban fijos —siempre salud, luego negocio,
- * luego relaciones—, así que elegir "Negocio y dinero" como prioridad en el paso 2 y que el paso 3
- * pidiera *"un cambio concreto en tu cuerpo o salud"* era la respuesta normal del flujo. Se llenan
- * las tres igual; lo que cambia es cuál va primero.
+ * La función es genérica (se hizo así el 2026-09-23 para el Mapa, que ya no existe): ordena cualquier lista con el elemento
+ * elegido primero, sea de ejes de Plan o de otras claves.
  */
-describe('conPrincipalPrimero con las areas del Mapa', () => {
+describe('conPrincipalPrimero con otras claves', () => {
   const AREAS = ['salud', 'negocio_dinero', 'relaciones'] as const;
 
   it('pone primero el area elegida como prioridad', () => {

@@ -1,0 +1,45 @@
+# Spec 026 (FR-026-9) — quien ya estaba dentro de la app y recibió el diagnóstico lo completa desde Hoy. ESCRITO Y SIN CORRER:
+# necesita el backend con la spec 026, el diagnóstico publicado, y que la tarjeta de Hoy esté montada (agente plan-hoy:
+# `TarjetaDelDiagnosticoPendiente` → `CompletarDiagnosticoScreen`).
+# cuenta: aprendiz  (una cuenta que YA terminó su onboarding y a la que Administración le asignó el diagnóstico después —
+#   `POST /admin/diagnostico/personas/ficha`—; su solicitud trae nombre y ciudad)
+# Cubre: la tarjeta «Completa tu diagnóstico» en Hoy, el recorrido completo, el cierre que manda a Plan (no a Términos) y que la
+# tarjeta desaparece al terminar.
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "HOY"
+- extendedWaitUntil:
+    visible: "Completa tu diagnóstico"
+    timeout: 30000
+- assertVisible: "De él nacen tus objetivos de 90 días\\."
+- takeScreenshot: D04a-hoy-con-la-tarjeta
+- tapOn: "Completa tu diagnóstico"
+- extendedWaitUntil:
+    visible: "Tiempo estimado: 15 minutos"
+    timeout: 30000
+- tapOn: "EMPEZAR"
+- repeat:
+    while:
+      visible: "SIGUIENTE"
+    times: 40
+    commands:
+      - runFlow: ../comun/diagnostico-responder-el-paso.yaml
+      - tapOn: "SIGUIENTE"
+      - waitForAnimationToEnd:
+          timeout: 3000
+- runFlow: ../comun/diagnostico-responder-el-paso.yaml
+- tapOn: "TERMINAR"
+- extendedWaitUntil:
+    visible: "Tus objetivos ya están preparados"
+    timeout: 60000
+# Ya está dentro de la app: no sigue Términos ni el Día 1, sino revisar los objetivos en Plan.
+- assertVisible: "En Plan puedes revisar tus objetivos y confirmarlos\\."
+- assertNotVisible: ".*Términos.*"
+- takeScreenshot: D04b-cierre-ya-dentro
+- tapOn: "CONTINUAR"
+# De vuelta en la app: la tarjeta de Hoy se fue.
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "HOY"
+- assertNotVisible: "Completa tu diagnóstico"
+- takeScreenshot: D04c-hoy-sin-la-tarjeta

@@ -1,0 +1,75 @@
+# Hoy sin el Mapa de Renacimiento y con el diagnóstico (spec 026). ESCRITO Y SIN CORRER: pide el backend con la spec 026, un
+# emulador libre y una cuenta sembrada en la base LOCAL (nunca producción). Se corre de a uno cambiando ESTADO:
+#  - sin-objetivos: aprendiz sin sus tres objetivos de 90 días y sin acciones hoy → «Define tu objetivo de 90 días en Plan» /
+#    «Escribir mi objetivo», que lleva a Plan.
+#  - por-confirmar: aprendiz con objetivos del diagnóstico sin confirmar y sin acciones hoy → «Confirma tus objetivos de 90 días» /
+#    «Confirmar», que lleva a Plan y a su tarjeta «Revisa tus objetivos de 90 días».
+#  - diagnostico-pendiente: persona con la ficha con diagnóstico PENDIENTE (la recibió después de entrar) → Hoy ofrece completarlo
+#    (la tarjeta es del agente de la persona) y Yo dice «Completa tu diagnóstico».
+# cuenta: aprendiz
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "HOY"
+- extendedWaitUntil:
+    visible: "Tu acompañante"
+    timeout: 30000
+# Lo que ya no existe en Hoy: la tarjeta del Mapa y todo lo que lo nombra.
+- assertNotVisible: "Mapa de renacimiento"
+- assertNotVisible: "Diseña tu mapa"
+- assertNotVisible: "Continúa tu mapa"
+- assertNotVisible: "Haz tu Mapa de Renacimiento"
+- assertNotVisible: "Hacer mi Mapa"
+- assertNotVisible: ".*de este Mapa nacen tus objetivos.*"
+- runFlow:
+    when:
+      true: ${ESTADO == 'sin-objetivos'}
+    commands:
+      - assertVisible: "Define tu objetivo de 90 días en Plan"
+      - assertVisible: "Escribir mi objetivo"
+      - takeScreenshot: H21a-hoy-sin-objetivos
+      - tapOn: "Escribir mi objetivo"
+      - extendedWaitUntil:
+          visible: "Tu dirección en 90 días"
+          timeout: 20000
+      # Sin Mapa ni diagnóstico, Plan deja escribir el objetivo (ver 22).
+      - assertVisible: "Tu objetivo de 90 días"
+- runFlow:
+    when:
+      true: ${ESTADO == 'por-confirmar'}
+    commands:
+      - assertVisible: "Confirma tus objetivos de 90 días"
+      - takeScreenshot: H21b-hoy-por-confirmar
+      - tapOn: "Confirmar"
+      - extendedWaitUntil:
+          visible: "Revisa tus objetivos de 90 días"
+          timeout: 20000
+- runFlow:
+    when:
+      true: ${ESTADO == 'diagnostico-pendiente'}
+    commands:
+      # La tarjeta del diagnóstico pendiente (componente de la persona): se busca por su palabra.
+      - scrollUntilVisible:
+          element: "(?i).*diagnóstico.*"
+          direction: DOWN
+          timeout: 30000
+      - takeScreenshot: H21c-hoy-diagnostico-pendiente
+      - tapOn: "(?i).*diagnóstico.*"
+      # El recorrido se abre como un estado de Hoy; el atrás del sistema lo cierra y vuelve a Hoy.
+      - pressKey: back
+      - extendedWaitUntil:
+          visible: "Tu acompañante"
+          timeout: 20000
+      # En Yo, la fila lo ofrece también; y en «Mi onboarding» ya no hay etapa del Mapa.
+      - tapOn: "YO"
+      - extendedWaitUntil:
+          visible: "Completa tu diagnóstico"
+          timeout: 30000
+      - takeScreenshot: H21d-yo-completa-tu-diagnostico
+      - tapOn: "Ajustes"
+      - tapOn: "Mi onboarding"
+      - extendedWaitUntil:
+          visible: "El Pacto"
+          timeout: 20000
+      - assertNotVisible: "Mapa de Renacimiento"
+      - assertVisible: "0 de 1 etapa completada|1 de 1 etapa completada"

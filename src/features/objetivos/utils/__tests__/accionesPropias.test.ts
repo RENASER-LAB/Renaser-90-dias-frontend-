@@ -1,9 +1,9 @@
 import { describe, expect, it } from '@jest/globals';
 
-import { conAccionPropia, opcionesDelEje, type AccionElegida } from '../accionesPropias';
+import { conAccionPropia, opcionesDelEje, sugeridasDelEje, type AccionElegida } from '../accionesPropias';
 
 const MAXIMO = 3;
-const caminar = { texto: 'Caminar 40 minutos', dias: [1, 3, 5], frecuenciaSemanal: 3 };
+const caminar = { texto: 'Caminar 40 minutos', sugerida: true };
 
 function elegida(eje: AccionElegida['eje'], titulo: string): AccionElegida {
   return { eje, titulo, hora: '', pasos: [] };
@@ -47,22 +47,23 @@ describe('conAccionPropia', () => {
 });
 
 describe('opcionesDelEje', () => {
-  it('muestra las del Mapa y las propias juntas', () => {
+  it('muestra la sugerida y las propias juntas, la sugerida primero', () => {
     const elegidas = [elegida('CUERPO', 'Ir al gimnasio')];
     const opciones = opcionesDelEje('CUERPO', [caminar], elegidas);
 
     expect(opciones.map(o => o.texto)).toEqual(['Caminar 40 minutos', 'Ir al gimnasio']);
+    expect(opciones[0].sugerida).toBe(true);
   });
 
-  it('la propia se dibuja sin dias: no sale del ritmo del Mapa', () => {
+  it('la propia se dibuja sin marca de sugerida: no sale del diagnóstico', () => {
     const opciones = opcionesDelEje('CUERPO', [], [elegida('CUERPO', 'Ir al gimnasio')]);
-    expect(opciones[0]).toEqual({ texto: 'Ir al gimnasio', dias: [], frecuenciaSemanal: 0 });
+    expect(opciones[0]).toEqual({ texto: 'Ir al gimnasio' });
   });
 
-  it('no duplica una propia que coincide con una del Mapa: es la misma', () => {
+  it('no duplica una propia que coincide con la sugerida: es la misma, y sigue marcada como sugerida', () => {
     const opciones = opcionesDelEje('CUERPO', [caminar], [elegida('CUERPO', 'Caminar 40 minutos')]);
     expect(opciones).toHaveLength(1);
-    expect(opciones[0].dias).toEqual([1, 3, 5]);
+    expect(opciones[0].sugerida).toBe(true);
   });
 
   it('no se lleva las propias de otro eje', () => {
@@ -71,7 +72,27 @@ describe('opcionesDelEje', () => {
       .toEqual(['Caminar 40 minutos']);
   });
 
-  it('un eje sin nada del Mapa ofrece solo lo propio, y no rompe', () => {
+  it('un eje sin nada sugerido ofrece solo lo propio, y no rompe', () => {
     expect(opcionesDelEje('RELACIONES', [], [])).toEqual([]);
+  });
+});
+
+describe('sugeridasDelEje: la primera acción del diagnóstico', () => {
+  const sugerencia = { eje: 'TRABAJO' as const, texto: 'El lunes revisaré mis ventas' };
+
+  it('se ofrece solo en el eje de la prioridad principal, marcada como sugerida', () => {
+    expect(sugeridasDelEje('TRABAJO', sugerencia)).toEqual([{ texto: 'El lunes revisaré mis ventas', sugerida: true }]);
+    expect(sugeridasDelEje('CUERPO', sugerencia)).toEqual([]);
+    expect(sugeridasDelEje('RELACIONES', sugerencia)).toEqual([]);
+  });
+
+  it('sin diagnóstico, sin prioridad o con el texto vacío no hay sugerencia, sin error', () => {
+    expect(sugeridasDelEje('TRABAJO', null)).toEqual([]);
+    expect(sugeridasDelEje('TRABAJO', undefined)).toEqual([]);
+    expect(sugeridasDelEje('TRABAJO', { eje: 'TRABAJO', texto: '   ' })).toEqual([]);
+  });
+
+  it('el texto se limpia de espacios de sobra', () => {
+    expect(sugeridasDelEje('TRABAJO', { eje: 'TRABAJO', texto: '  Llamar a Ana ' })[0].texto).toBe('Llamar a Ana');
   });
 });

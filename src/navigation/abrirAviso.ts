@@ -12,7 +12,7 @@ import type { DestinoDeAviso } from '../features/mentor/api/avisosApi';
  * 1. Si es un hábito, una acción, la Caja Renaser (D-219) o un chat (D-221) y hay una capa obligatoria abierta (el Código Renaser, el arranque
  *    guiado o el Pacto, `capasObligatorias.ts`), **no se va**: la ruta queda esperando y se vuelve a
  *    intentar al cerrarse. La capa no se toca. El evento no espera (decisión del dueño del 28/09).
- * 2. Si la pestaña todavía no existe (login, onboarding, Mapa del Día 7), tampoco: se reintenta cuando
+ * 2. Si la pestaña todavía no existe (login, onboarding), tampoco: se reintenta cuando
  *    cambia la navegación.
  * 3. Si no, se consume la ruta y se navega. Consumirla recién ahí es lo que hace que la espera no la
  *    pierda.
@@ -152,7 +152,7 @@ export interface FuentesDeApertura {
   alAbrirAviso: (oyente: () => void) => () => void;
   /** Se abrió o se cerró una capa obligatoria. */
   alCambiarLasCapas: (oyente: () => void) => () => void;
-  /** Cambió la navegación: aparecieron las pestañas al salir del login, del onboarding o del Mapa. */
+  /** Cambió la navegación: aparecieron las pestañas al salir del login o del onboarding. */
   alCambiarLaNavegacion: (oyente: () => void) => () => void;
 }
 

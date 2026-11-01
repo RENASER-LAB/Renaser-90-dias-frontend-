@@ -45,21 +45,16 @@ import type { TipoPreguntaOnboarding } from '../types/onboarding.types';
  * `ficha_inicial` (ver el comentario largo de `data/bloquesCuestionarioProfundo.ts`).
  */
 /**
- * `mapa_dia7` se agregó el 2026-09-14. **Sin esta línea el Mapa de Renacimiento no puede guardar
- * nada en el servidor**: sus 30+ preguntas las sembró la V41 justamente para eso, y sin embargo
- * el Mapa solo mandaba las tres Rocas Maestras y la marca de etapa. Todo lo demás —la prioridad
- * principal, las líneas base, los hitos, los motivos— se quedaba en el AsyncStorage del teléfono
- * y se perdía al reinstalar o al entrar desde otro equipo.
- *
- * Se comprobó contra la base el 2026-09-14: cero filas en `respuestas_onboarding` para cualquier
- * clave `map_*`, en una cuenta que sí tenía sus tres rocas y la etapa marcada como completa.
+ * > **Corregido 2026-10-31 (spec 026).** Aquí había un quinto flujo, `mapa_dia7` (las 30+ preguntas del Mapa de Renacimiento). El
+ * > Mapa se retiró de la app y el servidor responde `409 MAPA_RETIRADO` a sus respuestas: la app ya no lo pide ni lo guarda. Quitarlo
+ * > de la lista también evita que, si el servidor algún día deja de ofrecer ese cuestionario, falle la carga de todo el catálogo
+ * > (la ficha inicial dependería de él).
  */
 const FLUJOS_QUE_RESPONDE_LA_APP = [
   'terminos',
   'pacto',
   'ficha_inicial',
   'cuestionario_profundo',
-  'mapa_dia7',
 ] as const;
 
 interface PreguntaResuelta {

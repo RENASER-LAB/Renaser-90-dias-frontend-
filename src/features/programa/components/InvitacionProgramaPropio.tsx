@@ -42,7 +42,7 @@ export function InvitacionProgramaPropio({
       <Text style={[t.cardTitle, { color: c.textStrong, marginTop: 8 }]}>Hacer mi programa de 90 días</Text>
       {/* Era `fontSize: 13`, por debajo del mínimo de párrafo de AGENTS.md §4 (14–15.5). */}
       <Text style={[t.body, { color: c.textSoft, marginTop: 8 }]}>
-        Puedes recorrerlo tú también: tus hábitos, tus objetivos y tu Mapa, con tu propio día. No cambia
+        Puedes recorrerlo tú también: tus hábitos y tus objetivos, con tu propio día. No cambia
         nada de lo que ves como acompañante.
       </Text>
       <View style={{ flexDirection: 'row', gap: 10, marginTop: 18, flexWrap: 'wrap', alignItems: 'center' }}>
