@@ -73,6 +73,11 @@ interface MarcoDePasoProps {
   direccion?: DireccionDePaso;
   /** El botón principal. Queda fijo abajo y sube con el teclado. */
   pie: React.ReactNode;
+  /**
+   * Lleva la vista hasta una altura del contenido (el diagnóstico de la spec 026 baja hasta la pregunta que falta). Cada `vez`
+   * nueva es un pedido nuevo: pedir dos veces la misma altura vuelve a desplazar. Sin esto, el marco no se desplaza solo.
+   */
+  desplazarA?: { y: number; vez: number } | null;
   children: React.ReactNode;
 }
 
@@ -84,6 +89,7 @@ export function MarcoDePaso({
   claveContenido = 0,
   direccion = 'adelante',
   pie,
+  desplazarA = null,
   children,
 }: MarcoDePasoProps) {
   const { c, t } = useTheme();
@@ -111,6 +117,15 @@ export function MarcoDePaso({
   const lista = useRef<React.ComponentRef<typeof ScrollView>>(null);
   const desplazamiento = useRef(0);
   const altoDeLaLista = useRef(0);
+
+  /* Un pedido de desplazamiento desde afuera (la pregunta que falta). Con «reducir movimiento», sin deslizar. */
+  const vezDelDesplazamiento = desplazarA?.vez;
+  useEffect(() => {
+    if (!desplazarA) return;
+    lista.current?.scrollTo({ y: Math.max(0, desplazarA.y), animated: !movimientoReducido });
+    // Solo cuando llega un pedido nuevo (`vez`), no por cualquier otro cambio de las props.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vezDelDesplazamiento]);
 
   const alAcomodarLaLista = (evento: LayoutChangeEvent) => {
     const alto = evento.nativeEvent.layout.height;
