@@ -248,3 +248,66 @@ describe('errores de lectura', () => {
     expect(todo()).toContain('No pudimos cargar tu plan de la semana.');
   });
 });
+
+describe('el pedido de «Planificar mi mes» (spec 028): organizar la semana de ahora', () => {
+  const props = (pedidoDeOrganizar: number) => ({
+    maestras: [], numeroSemana: 3, diaPrograma: mockDiaDePrograma, ejeAbierto: 'CUERPO' as const, objetivoSugeridoDe: () => '', onIrAlMapa: jest.fn(), pedidoDeOrganizar,
+  });
+  const montarConPedido = (pedido: number) => {
+    mockLlamadas = 0;
+    act(() => {
+      raiz = TestRenderer.create(React.createElement(PlanDelEje, props(pedido)));
+    });
+  };
+  const subirElPedidoA = (pedido: number) => {
+    mockLlamadas = 0;
+    act(() => raiz!.update(React.createElement(PlanDelEje, props(pedido))));
+  };
+
+  it('sin pedido (o con el contador en 0) no abre nada, como siempre', () => {
+    montarConPedido(0);
+    expect(mockModalesAbiertos).toEqual([]);
+  });
+
+  it('cada subida del contador abre lo mismo que «Organizar mi semana ›»: con el eje armado, «Agendar»', () => {
+    montarConPedido(0);
+    subirElPedidoA(1);
+    expect(mockModalesAbiertos).toEqual(['agendar']);
+  });
+
+  it('sin objetivo semanal en el eje, abre el asistente de la semana', () => {
+    mockSemanal = semanal('sin_planificar');
+    montarConPedido(0);
+    subirElPedidoA(1);
+    expect(mockModalesAbiertos).toContain('asistente');
+  });
+
+  it('sin los tres objetivos de 90 días ofrece el Mapa, no armar', () => {
+    mockSemanal = semanal('bloqueada');
+    const onIrAlMapa = jest.fn();
+    mockLlamadas = 0;
+    act(() => {
+      raiz = TestRenderer.create(React.createElement(PlanDelEje, { ...props(0), onIrAlMapa }));
+    });
+    mockLlamadas = 0;
+    act(() => raiz!.update(React.createElement(PlanDelEje, { ...props(1), onIrAlMapa })));
+    expect(onIrAlMapa).toHaveBeenCalledTimes(1);
+    expect(mockModalesAbiertos).toEqual([]);
+  });
+
+  it('un contador que ya venía alto al montar no abre nada; volver a dibujar con el mismo valor tampoco', () => {
+    montarConPedido(4);
+    expect(mockModalesAbiertos).toEqual([]);
+    subirElPedidoA(4);
+    expect(mockModalesAbiertos).toEqual([]);
+  });
+
+  it('se atiende una vez por subida: la siguiente subida vuelve a abrir', () => {
+    montarConPedido(0);
+    subirElPedidoA(1);
+    subirElPedidoA(1);
+    const antes = mockModalesAbiertos.length;
+    subirElPedidoA(2);
+    expect(mockModalesAbiertos.length).toBeGreaterThan(antes);
+  });
+});
