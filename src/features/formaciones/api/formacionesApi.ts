@@ -1,5 +1,6 @@
 import { apiFetch } from '../../../services/http/apiClient';
 import type {
+  ComunidadDeLaFormacion,
   DatosDeTraslado,
   DatosParaGuardarFormacion,
   DetalleDeFormacion,
@@ -7,9 +8,11 @@ import type {
   FormacionDeUnaPersona,
   ResumenDeFormacion,
   TarjetaDeFormacion,
+  TipoDeComunidad,
 } from '../types/formaciones.types';
 import {
   aTarjetas,
+  leerComunidadDeLaFormacion,
   leerDetalle,
   leerFormacionDeLaSesion,
   leerFormacionDeUnaPersona,
@@ -73,4 +76,27 @@ export async function asignarFormaciones(personaId: string, formaciones: string[
 /** `POST /api/v1/admin/trainees/{id}/formacion`: pasa a un aprendiz a otra formación. Reinicia su programa en la nueva. */
 export async function trasladarAprendiz(personaId: string, datos: DatosDeTraslado): Promise<void> {
   await apiFetch<unknown>(`/api/v1/admin/trainees/${encodeURIComponent(personaId)}/formacion`, { method: 'POST', body: datos });
+}
+
+/**
+ * `GET /api/v1/admin/formaciones/{codigo}/comunidad` (spec 024): los cuatro tipos de comunidad de la formación, si están prendidos y
+ * cuántas conversaciones esconde cada uno si se apaga. Un backend anterior responde 404 (la sección no se dibuja).
+ */
+export async function leerComunidadDeLaFormacionApi(codigo: string): Promise<ComunidadDeLaFormacion | null> {
+  return leerComunidadDeLaFormacion(
+    await apiFetch<unknown>(`/api/v1/admin/formaciones/${encodeURIComponent(codigo)}/comunidad`, { timeoutMs: 15_000 }),
+    codigo,
+  );
+}
+
+/**
+ * `PUT /api/v1/admin/formaciones/{codigo}/comunidad/{tipo}` `{ prendido }`: prende o apaga un tipo de comunidad. Apagar ESCONDE sin
+ * borrar (los mensajes quedan y vuelven al prender); rige al instante. Es idempotente. Solo Administración y Alquimista.
+ */
+export async function cambiarTipoDeComunidad(codigo: string, tipo: TipoDeComunidad, prendido: boolean): Promise<void> {
+  await apiFetch<unknown>(`/api/v1/admin/formaciones/${encodeURIComponent(codigo)}/comunidad/${encodeURIComponent(tipo)}`, {
+    method: 'PUT',
+    body: { prendido },
+    timeoutMs: 15_000,
+  });
 }

@@ -21,3 +21,13 @@ export function nombreCortoDeFormacion(codigo: string): string {
 export function nombreLargoDeFormacion(codigo: string): string {
   return conocida(codigo) ? NOMBRES[codigo].largo : codigo;
 }
+
+/**
+ * El nombre configurado de una formación, sin el «Renaser» del final, para donde no cabe entero (el selector de la Comunidad y el
+ * rótulo de una fila): «Diplomado Renaser» → «Diplomado». Si Administración le puso otro nombre (sin ese final), se queda tal cual.
+ */
+export function nombreSinRenaser(nombre: string): string {
+  const limpio = nombre.trim();
+  const corto = limpio.replace(/\s+Renaser$/i, '').trim();
+  return corto.length > 0 ? corto : limpio;
+}

@@ -23,6 +23,7 @@ import { RearmadorDeAlarmas } from './src/features/alarmas/components/RearmadorD
 import { SincronizadorDeAcciones } from './src/features/objetivos/components/SincronizadorDeAcciones';
 import { AnfitrionDeCelebraciones } from './src/features/fenix/components/AnfitrionDeCelebraciones';
 import { FormacionProvider } from './src/features/formaciones/context/FormacionContext';
+import { SincronizadorDeLaFormacionDeLaComunidad } from './src/features/formaciones/components/SincronizadorDeLaFormacionDeLaComunidad';
 import { FuncionalidadesProvider } from './src/features/plataforma/estado/FuncionalidadesProvider';
 import { FranjaVerComo, SinBordeDeArriba } from './src/features/soporte-ti/verComo/FranjaVerComo';
 
@@ -61,6 +62,9 @@ function Shell() {
       <RenombrarHabitoOverlay />
       {/* Canales de Android y alarmas de eventos al día al entrar. No pinta nada. */}
       <AbridorDeEventos />
+      {/* La formación con la que Administración, Alquimista y Soporte TI leen y crean en la Comunidad (spec 024). Para las demás
+          cuentas no hace nada. No pinta nada. */}
+      <SincronizadorDeLaFormacionDeLaComunidad />
       {/* Tocar un aviso abre lo suyo: un evento (Comunidad → Eventos, E-5), el recordatorio de un
           hábito (Training en su dimensión) o el de una acción (Plan → Objetivos), D-218. Espera a que
           se cierren el Código Renaser, el arranque guiado o el Pacto. No pinta nada. */}
