@@ -76,6 +76,8 @@ export interface WireConversacion {
   photoPath?: string | null;
   /** Solo en un SOPORTE (D-244 del backend, 2026-10-02): el aprendiz de ese chat. */
   supportTraineeId?: string | null;
+  /** Spec 024: el código de la formación de la conversación. Ausente con un backend anterior. */
+  formation?: string | null;
 }
 
 /**

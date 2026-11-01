@@ -49,6 +49,8 @@ export interface Evento {
   /** Para reenviarlo tal cual al editar: el formulario siempre manda el evento completo. */
   audiencia: string | null;
   rolesDestino: string[];
+  /** Spec 024: el código de la formación del evento. Ausente con un servidor anterior. */
+  formacion?: string | null;
 }
 
 /** Una fecha concreta de un evento (un evento recurrente tiene varias). */

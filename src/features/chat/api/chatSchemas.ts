@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { formacionTolerante } from '../../formaciones/api/formacionTolerante';
+
 /**
  * Validación en runtime de lo que responde el backend para Chat (Atención Personalizada).
  *
@@ -41,6 +43,8 @@ export const wireConversacionSchema = z
     /* D-244: en un soporte, el aprendiz de ese chat. Quien atiende lo usa para ver su pedido de
        emergencia. `nullish` por lo mismo que `photoPath`. */
     supportTraineeId: z.string().nullish(),
+    /* Spec 024: la formación de la conversación. Opcional y tolerante: un backend anterior no la manda y un valor raro no deja sin bandeja. */
+    formation: formacionTolerante,
   })
   .passthrough();
 

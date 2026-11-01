@@ -1,4 +1,5 @@
 import { apiFetch } from '../../../services/http/apiClient';
+import { agregarLaFormacion } from '../../formaciones/estado/formacionDeLaComunidad';
 import type { ChatUrlSubida, WireConversacion, WireConversacionResumen, WireMensaje, WireMensajesPage, WireMiembrosPage, WireParticipantesPage, WireSoportesPage } from '../types/chat.types';
 import {
   urlSubidaChatSchema,
@@ -27,8 +28,9 @@ import {
  * y `mediaPath`. Los bytes nunca pasan por el backend.
  */
 
-export async function obtenerConversaciones(): Promise<WireConversacionResumen[]> {
-  const r = await apiFetch<unknown>('/api/v1/chat/conversations');
+export async function obtenerConversaciones(formation?: string | null): Promise<WireConversacionResumen[]> {
+  // Spec 024: `formation` solo lo pasa quien ve todas las formaciones y eligió una; los demás reciben la suya.
+  const r = await apiFetch<unknown>(agregarLaFormacion('/api/v1/chat/conversations', formation));
   return validarRespuesta<WireConversacionResumen[]>(wireConversacionesListSchema, r,
     'GET /api/v1/chat/conversations');
 }
@@ -38,20 +40,26 @@ export async function obtenerConversaciones(): Promise<WireConversacionResumen[]
  * más viejo, `texto` busca por nombre o correo del aprendiz en el servidor. Un endpoint aparte para no
  * tocar `GET /conversations`, que la app instalada usa tal cual.
  */
-export async function obtenerSoportes(pedido: { texto?: string; cursor?: string | null; tamano?: number } = {}): Promise<WireSoportesPage> {
+export async function obtenerSoportes(
+  pedido: { texto?: string; cursor?: string | null; tamano?: number; formation?: string | null } = {},
+): Promise<WireSoportesPage> {
   const params = new URLSearchParams();
   if (pedido.texto?.trim()) params.set('q', pedido.texto.trim());
   if (pedido.cursor) params.set('cursor', pedido.cursor);
   params.set('size', String(pedido.tamano ?? 25));
-  const r = await apiFetch<unknown>(`/api/v1/chat/support-conversations?${params.toString()}`);
+  const r = await apiFetch<unknown>(agregarLaFormacion(`/api/v1/chat/support-conversations?${params.toString()}`, pedido.formation));
   return validarRespuesta<WireSoportesPage>(wireSoportesPageSchema, r, 'GET /api/v1/chat/support-conversations');
 }
 
-/** `POST /conversations/direct` — abre (o recupera) el 1 a 1 con `otherUserId`. */
-export async function abrirConversacionDirecta(otherUserId: string): Promise<WireConversacion> {
+/**
+ * `POST /conversations/direct` — abre (o recupera) el 1 a 1 con `otherUserId`. El servidor lo abre en la formación que las dos
+ * personas comparten; `formation` (spec 024) solo desempata cuando comparten varias (dos administradores) y solo lo pasa la
+ * Comunidad de quien ve todas, con una elegida.
+ */
+export async function abrirConversacionDirecta(otherUserId: string, formation?: string | null): Promise<WireConversacion> {
   const r = await apiFetch<unknown>('/api/v1/chat/conversations/direct', {
     method: 'POST',
-    body: { otherUserId },
+    body: formation ? { otherUserId, formation } : { otherUserId },
   });
   return validarRespuesta<WireConversacion>(wireConversacionSchema, r, 'POST /api/v1/chat/conversations/direct');
 }
@@ -228,9 +236,9 @@ export async function obtenerDirectorioMiembros(query?: string, cursor?: string)
 }
 
 /** `GET /conversations/global/members` — roster del grupo GLOBAL (#28). */
-export async function obtenerMiembrosGlobal(cursor?: string): Promise<WireMiembrosPage> {
+export async function obtenerMiembrosGlobal(cursor?: string, formation?: string | null): Promise<WireMiembrosPage> {
   const query = cursor ? `?cursor=${encodeURIComponent(cursor)}` : '';
-  const r = await apiFetch<unknown>(`/api/v1/chat/conversations/global/members${query}`);
+  const r = await apiFetch<unknown>(agregarLaFormacion(`/api/v1/chat/conversations/global/members${query}`, formation));
   return validarRespuesta<WireMiembrosPage>(wireMiembrosPageSchema, r,
     'GET /api/v1/chat/conversations/global/members');
 }

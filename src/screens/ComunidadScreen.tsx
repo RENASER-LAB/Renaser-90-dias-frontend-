@@ -145,6 +145,15 @@ import { conversacionAPantallaCompleta } from '../features/chat/utils/pantallaCo
 import { OPCIONES_CON_PESTANAS, OPCIONES_SIN_PESTANAS } from '../navigation/pestanasOcultas';
 import { mapearMensaje, resumenDelUltimoMensaje } from '../features/chat/api/chatMappers';
 import { abrirConversacionDirecta } from '../features/chat/api/chatApi';
+import { formacionDeLaLectura, MENSAJE_ELEGIR_PARA_PUBLICAR } from '../features/formaciones/estado/formacionDeLaComunidad';
+import { useFormacionDeLaComunidad } from '../features/formaciones/hooks/useFormacionDeLaComunidad';
+import { RotuloDeFormacion } from '../features/formaciones/components/RotuloDeFormacion';
+import { SelectorDeFormacionDeLaComunidad } from '../features/formaciones/components/SelectorDeFormacionDeLaComunidad';
+import { AvisoDeFormacionPorElegir } from '../features/formaciones/components/AvisoDeFormacionPorElegir';
+import { agruparPorFormacion } from '../features/ranking/utils/agruparPorFormacion';
+import { RankingPorFormacion } from '../features/ranking/components/RankingPorFormacion';
+import { useTestimonios } from '../features/community/hooks/useTestimonios';
+import { TarjetaDeTestimonio } from '../features/community/components/TarjetaDeTestimonio';
 import type { CitaDelMensaje, WireMensaje } from '../features/chat/types/chat.types';
 import { marcarChatMontado } from '../features/renasia/state/chatEnPantalla';
 import { useRanking } from '../features/ranking/hooks/useRanking';
@@ -236,6 +245,8 @@ export interface CourseItem {
   locked?: boolean;
   diaDesbloqueo?: number | null;
   diasFaltantes?: number;
+  /** Spec 024: el código de la formación del curso (el rótulo de la tarjeta, solo si se leen «Todas»). Ausente con un servidor anterior. */
+  formacion?: string | null;
 }
 
 // =========================================================================
@@ -292,6 +303,8 @@ export interface PostItem {
    * campo desaparece; si falla, la tarjeta se quita.
    */
   pendiente?: boolean;
+  /** Spec 024: el código de la formación de la publicación (el rótulo, solo si se leen «Todas»). Ausente con un servidor anterior. */
+  formacion?: string | null;
 }
 
 export interface ReactionUser {
@@ -431,6 +444,8 @@ export interface ChatConversation {
   /* D-244 (2026-10-02): en un chat de soporte, el aprendiz de ese chat (`supportTraineeId`). Quien
      atiende lo usa para ver si pidió ayuda por una emergencia. `null` en lo demás. */
   aprendizDelSoporte?: string | null;
+  /* Spec 024: el código de la formación de la conversación. Ausente con un backend anterior. */
+  formacion?: string | null;
 }
 
 export interface GroupMember {
@@ -608,7 +623,43 @@ const SIN_MENSAJES: ChatMessage[] = [];
 /** Desde cuántos integrantes la info del chat ofrece el buscador por nombre (D-222). */
 const UMBRAL_DEL_BUSCADOR = 12;
 
+/**
+ * La pestaña Comunidad (spec 024: por formación).
+ *
+ * Este envoltorio existe por UNA razón: quien ve las tres formaciones (Administración, Alquimista y Soporte TI) elige cuál mirar con
+ * el selector de arriba, y al cambiar la elección **las seis secciones se leen de nuevo y se cierra cualquier hoja o detalle
+ * abierto** (un curso, una conversación, un evento). La forma más segura de que no quede nada de la formación anterior ni por un
+ * instante es armar la pantalla de nuevo: igual que cuando el personal cambia de formación activa (`llaveDeLasVistas`, spec 022), la
+ * llave de `ComunidadPorFormacion` cambia con la elección. La sección que se estaba mirando se conserva (Ranking sigue siendo Ranking).
+ *
+ * Para las demás cuentas la llave nunca cambia: no se arma nada de nuevo y esto es transparente. Mientras se lee la elección recordada
+ * en el teléfono (un instante, solo para quien ve todas) no se pide nada: evita leer «Todas» y volver a leer la formación elegida.
+ */
 export default function ComunidadScreen() {
+  const { c } = useTheme();
+  const { listo, veTodas, eleccion } = useFormacionDeLaComunidad();
+  const seccionRecordada = useRef<SeccionComunidad>('muro');
+  const recordarSeccion = useCallback((seccion: SeccionComunidad) => {
+    seccionRecordada.current = seccion;
+  }, []);
+  if (!listo) return <View style={{ flex: 1, backgroundColor: c.bg }} />;
+  return (
+    <ComunidadPorFormacion
+      key={veTodas ? `formacion:${eleccion ?? 'todas'}` : 'una-formacion'}
+      seccionInicial={seccionRecordada.current}
+      alCambiarDeSeccion={recordarSeccion}
+    />
+  );
+}
+
+function ComunidadPorFormacion({
+  seccionInicial,
+  alCambiarDeSeccion,
+}: {
+  /** La sección con la que arranca (al armarse de nuevo por cambiar de formación, la que se estaba mirando). */
+  seccionInicial: SeccionComunidad;
+  alCambiarDeSeccion: (seccion: SeccionComunidad) => void;
+}) {
   const { c, t, mode } = useTheme();
   // D-99: el chat dentro de un curso le dice a SER (antes Sparkie, D-255) en que dia del programa va la persona.
   const { diaPrograma } = useProgramaDia();
@@ -857,13 +908,16 @@ export default function ComunidadScreen() {
   // Única fuente de verdad de "en qué sección estoy" (ver `SeccionComunidad`). Nunca se escribe a
   // mano: se pasa siempre por `irASeccion`, que además limpia el sub-estado de la sección que se
   // deja.
-  const [seccionElegida, setSeccionActiva] = useState<SeccionComunidad>('muro');
+  const [seccionElegida, setSeccionActiva] = useState<SeccionComunidad>(seccionInicial);
   /* Spec 002, fase 2 (decisión P1 del dueño): una sección que a esta cuenta todavía no le toca (un despliegue en el que
      no entró, algo que su rol personalizado no tiene) NO se dibuja en la fila. Si era la abierta, se muestra la primera
      que quede, sin parpadeo: `seccionActiva` sale de la elegida y de lo que está a la vista. Si no queda ninguna con
      interruptor, la pestaña entera dice que todavía no está disponible (ver el `return` de abajo). */
   const seccionActiva = seccionQueSeMuestra(seccionElegida, seccionesVisibles);
   const comunidadSinSecciones = seccionesVisibles.length === 0;
+  useEffect(() => {
+    alCambiarDeSeccion(seccionActiva);
+  }, [seccionActiva, alCambiarDeSeccion]);
   useEffect(() => {
     // La elegida se escondió: queda elegida la que se muestra, para no volver a saltar si reaparece.
     if (seccionActiva !== seccionElegida) setSeccionActiva(seccionActiva);
@@ -1541,6 +1595,26 @@ export default function ComunidadScreen() {
    */
   const tieneGrupo = miCelula?.assigned === true && tieneMentor;
 
+  /* Spec 024: la formación de la Comunidad (el selector, los rótulos y qué se puede crear). Para quien no ve todas las formaciones
+     no hace nada visible. */
+  const formacionDeLaComunidad = useFormacionDeLaComunidad();
+  /* Spec 024: Administración con «Todas» elegida no puede publicar (la publicación nace en una formación y el servidor responde 400
+     sin ella). En vez de abrir el compositor, una línea dice qué falta; nada se envía. Las demás cuentas abren el compositor como
+     siempre. */
+  const [pidioPublicarSinFormacion, setPidioPublicarSinFormacion] = useState(false);
+  /* Spec 024: «Cambiamos a Diplomado Renaser.» al abrir el chat de un aviso de otra formación. */
+  const [avisoDeFormacion, setAvisoDeFormacion] = useState<{ clave: number; texto: string } | null>(null);
+  const hayQueElegirParaPublicar = formacionDeLaComunidad.hayQueElegirParaCrear;
+  const abrirElComposer = useCallback(() => {
+    if (hayQueElegirParaPublicar) {
+      setPidioPublicarSinFormacion(true);
+      return;
+    }
+    setCreatePostModalVisible(true);
+  }, [hayQueElegirParaPublicar]);
+  /* Spec 024: los testimonios de la formación. Se leen la primera vez que se abre la sección; sin lista (servidor anterior, sin
+     permiso, sin red o vacía) la sección dice «Próximamente» como siempre. */
+  const testimonios = useTestimonios(seccionActiva === 'testimonios');
   // Sub-módulo: Ranking Real del Backend
   const { rankingData, loading: rankingCargando, error: rankingError, recargar: recargarRanking } = useRanking(recursosPedidos.ranking);
   /* Spec 002: lo que se pidió mientras una sección estaba apagada quedó en error; al volver, se pide de nuevo. Eventos
@@ -1597,6 +1671,14 @@ export default function ComunidadScreen() {
       isCurrentUser: esMiEntrada(item, { id: user?.id }),
     }));
   }, [apiRankingEntries, tipoRanking, user?.id, nombreUsuario]);
+
+  /* Spec 024: quien ve todas las formaciones y lee «Todas» recibe cada fila con su formación y su posición DENTRO de ella: la
+     tabla se pinta por formación (un encabezado, un podio y una lista cada una). Para las demás cuentas, y con una sola formación
+     elegida, esto es `null` y el ranking es el de siempre. */
+  const gruposDelRanking = useMemo(
+    () => (formacionDeLaComunidad.mostrarRotulos ? agruparPorFormacion(apiRankingEntries) : null),
+    [formacionDeLaComunidad.mostrarRotulos, apiRankingEntries]
+  );
 
   // Podio Top 3 100% Real de la API (null si no hay datos)
   const podioTop1 = useMemo(() => {
@@ -1880,11 +1962,16 @@ export default function ComunidadScreen() {
    * con esa persona. Misma forma que las otras dos — parámetro de pestaña, consumido una vez.
    */
   useEffect(() => {
-    const params = route.params as { abrirChatConversacionId?: string } | undefined;
+    const params = route.params as { abrirChatConversacionId?: string; abrirChatAviso?: string } | undefined;
     const id = params?.abrirChatConversacionId;
     if (!id) return;
 
     irASeccion('tribu');
+    /* Spec 024 (FR-032): si el aviso era de un chat de OTRA formación, antes de llegar acá se cambió la formación (la activa del
+       personal con varias, o la elección de quien ve todas); se dice en una línea. */
+    if (typeof params?.abrirChatAviso === 'string' && params.abrirChatAviso.trim()) {
+      setAvisoDeFormacion({ clave: Date.now(), texto: params.abrirChatAviso.trim() });
+    }
     /* El pedido suele venir del «Escribirle» de una ficha: se cierra todo lo que tapa Comunidad
        («Mi grupo», su ficha, la ficha desde la info) y la info, o el chat pedido quedaría detrás.
        E-341: antes no se cerraban «Mi grupo» ni su ficha, y el botón parecía no hacer nada. */
@@ -1894,7 +1981,7 @@ export default function ComunidadScreen() {
     // Recién creada, puede no estar en el listado: se pide de nuevo para que aparezca. `forzar`:
     // una lectura que ya estuviera en vuelo salió antes de crearla y no la traería.
     void recargarConversaciones({ forzar: true });
-    (navigation as any).setParams({ abrirChatConversacionId: undefined });
+    (navigation as any).setParams({ abrirChatConversacionId: undefined, abrirChatAviso: undefined });
   }, [route.params, navigation, recargarConversaciones]);
 
   /**
@@ -1914,11 +2001,11 @@ export default function ComunidadScreen() {
     // — tocaba el hábito de Clase Diaria y después el de post en comunidad, y le quedaban las dos
     // secciones una encima de la otra (E-116).
     irASeccion('muro');
-    setCreatePostModalVisible(true);
+    abrirElComposer();
     // Se consume una sola vez, igual que `abrirCursoId`: sin esto, volver a esta pestaña
     // reabriría el composer aunque la persona lo hubiera cerrado a propósito.
     (navigation as any).setParams({ abrirComposerMuro: undefined });
-  }, [route.params, navigation]);
+  }, [route.params, navigation, abrirElComposer]);
 
   /**
    * Entrada desde un aviso de evento (`/eventos/{id}`, E-5): la deja `AbridorDeEventos`, que vive
@@ -2191,7 +2278,7 @@ export default function ComunidadScreen() {
   const abrirDMConIntegrante = async (usuarioId: string) => {
     setGroupInfoVisible(false);
     try {
-      const conv = await abrirConversacionDirecta(usuarioId);
+      const conv = await abrirConversacionDirecta(usuarioId, formacionDeLaLectura());
       irASeccion('tribu');
       setChatPedidoDeOtraPestana(conv.id);
       // `forzar`: puede estar recién creada, y una lectura en vuelo no la traería.
@@ -2924,6 +3011,10 @@ export default function ComunidadScreen() {
             );
           })}
         </ScrollView>
+        {/* Spec 024: «Todas · Escuela · Diplomado · Certificación». Solo lo dibuja quien ve las tres formaciones (Administración,
+            Alquimista, Soporte TI); para las demás cuentas no hay nada ni un hueco. Debajo de la fila de círculos, así al subir
+            un poco (que deja a la vista solo esa fila) también queda a mano. Cambiar de formación arma la pestaña de nuevo. */}
+        <SelectorDeFormacionDeLaComunidad estilo={{ paddingHorizontal: horizontalPadding, marginTop: 12 }} />
       </View>
       )}
       </Reanimated.View>
@@ -2969,7 +3060,7 @@ export default function ComunidadScreen() {
               {publicarEnElMuro.disponible && !publicarEnElMuro.prendida ? <AvisoDeMantenimiento aviso={publicarEnElMuro.aviso} /> : null}
               {publicarEnElMuro.disponible && publicarEnElMuro.prendida ? (
               <Presionable
-                onPress={() => setCreatePostModalVisible(true)}
+                onPress={abrirElComposer}
                 accessibilityRole="button"
                 accessibilityLabel="Crear una publicación"
                 style={[styles.createPostBar, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
@@ -2991,6 +3082,9 @@ export default function ComunidadScreen() {
                   <Icon name="plus" size={TAMANO_ICONO.normal} color={c.onGold} />
                 </View>
               </Presionable>
+              ) : null}
+              {pidioPublicarSinFormacion && hayQueElegirParaPublicar ? (
+                <AvisoDeFormacionPorElegir texto={MENSAJE_ELEGIR_PARA_PUBLICAR} />
               ) : null}
 
               {/* «Publicado», y después «tu hábito quedó completo»: en línea, debajo de donde se
@@ -3073,6 +3167,8 @@ export default function ComunidadScreen() {
       {seccionActiva === 'muro' ? (
         <AvisoDeAbajo aviso={confirmacionModeracion} onTerminar={() => setConfirmacionModeracion(null)} />
       ) : null}
+      {/* Spec 024: la línea de «Cambiamos a …» (sobre la barra de escribir si el chat ya está abierto). */}
+      <AvisoDeAbajo aviso={avisoDeFormacion} abajo={96} onTerminar={() => setAvisoDeFormacion(null)} />
 
       {/* ========================================================================= */}
       {/* SECCIÓN EVENTOS (2026-09-26, E-5 a E-8)                                   */}
@@ -3153,9 +3249,16 @@ export default function ComunidadScreen() {
                 las guias de audio de TrainingScreen: si las cadenas quedan en el archivo, alguien
                 las vuelve a colgar de una pantalla.
 
-                El backend YA tiene testimonios (`TestimonioResponse`), pero el movil todavia no
-                los pide. Cuando se conecten, esto pasa a ser la lista real con su estado vacio.
+                El backend YA tiene testimonios (`TestimonioResponse`). Desde la spec 024 (2026-10-31) el
+                movil los pide (`useTestimonios`, los de la formacion de la persona): con al menos uno
+                se ve la lista real; sin lista —servidor anterior, sin permiso, sin red o vacia— queda
+                la tarjeta «Proximamente» de abajo, igual que antes.
               */}
+              {testimonios.testimonios.length > 0 ? (
+                testimonios.testimonios.map(testimonio => <TarjetaDeTestimonio key={testimonio.id} testimonio={testimonio} />)
+              ) : testimonios.cargando ? (
+                <Text style={[t.body, { color: c.textSoft }]}>Cargando testimonios...</Text>
+              ) : (
               <View style={[styles.mediaLunaCard, { borderColor: c.border, backgroundColor: c.cardBg }]}>
                 <View style={styles.mediaLunaContent}>
                   {/* Estado vacío con su ícono, el mismo de la sección (2026-10-05). */}
@@ -3176,6 +3279,7 @@ export default function ComunidadScreen() {
                   </Text>
                 </View>
               </View>
+              )}
             </View>
           )}
 
@@ -3228,10 +3332,27 @@ export default function ComunidadScreen() {
                 <Text style={[t.small, { color: c.textSoft, flex: 1 }]}>
                   {TABLAS_DE_RANKING.find(tabla => tabla.clave === tipoRanking)?.explica}
                 </Text>
-                <BotonDescargarPodio entradas={apiRankingEntries} tabla={tipoRanking} fechaDelCorte={rankingData?.fecha} />
+                {/* Spec 024: la imagen lleva el nombre de la formación que se mira; con «Todas» pide elegir una antes de descargar. */}
+                <BotonDescargarPodio
+                  entradas={apiRankingEntries}
+                  tabla={tipoRanking}
+                  fechaDelCorte={rankingData?.fecha}
+                  nombreDeLaFormacion={formacionDeLaComunidad.nombreDeLaQueSeMira}
+                  faltaElegirFormacion={formacionDeLaComunidad.hayQueElegirParaCrear}
+                />
               </View>
 
-              {rankingCargando && !podioTop1 ? (
+              {gruposDelRanking && !rankingCargando ? (
+                /* Spec 024: «Todas» (solo Administración, Alquimista y Soporte TI): un encabezado, un podio y una tabla por formación. */
+                <RankingPorFormacion
+                  grupos={gruposDelRanking}
+                  tabla={tipoRanking}
+                  quien={{ id: user?.id }}
+                  nombreDeQuienMira={nombreUsuario}
+                  activo={seccionActiva === 'ranking'}
+                  nombreDeLaFormacion={formacionDeLaComunidad.nombreDe}
+                />
+              ) : rankingCargando && !podioTop1 ? (
                 <View style={[styles.myRankCard, { borderColor: c.border, backgroundColor: c.cardBg }]}>
                   <View style={{ marginBottom: 8 }}>
                     <Icon name="trophy" size={28} color={c.goldInk} />
@@ -3303,8 +3424,8 @@ export default function ComunidadScreen() {
                 </View>
               </View>
 
-              {/* Tabla de Clasificación General */}
-              {rankingList.length > 0 && (
+              {/* Tabla de Clasificación General (con «Todas» y filas con formación, la tabla va dentro de cada formación, arriba). */}
+              {rankingList.length > 0 && !gruposDelRanking && (
                 <View key={tipoRanking} style={[styles.leaderboardList, { borderColor: c.border, backgroundColor: c.cardBg }]}>
                   {/* Las filas entran escalonadas detrás del podio (ver `EntradaEscalonada`): la
                       tabla se lee de arriba hacia abajo, que es el orden en el que importa. */}
@@ -3433,6 +3554,8 @@ export default function ComunidadScreen() {
                 </View>
 
                 <View style={{ padding: space.cardPad, gap: 10 }}>
+                  {/* Spec 024: la formación del curso, solo cuando Administración lee «Todas». */}
+                  <RotuloDeFormacion formation={course.formacion} />
                   {!!course.summary && (
                     <View>
                       <Text

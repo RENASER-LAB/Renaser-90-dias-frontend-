@@ -51,6 +51,13 @@ import { LETRA, Parrafo } from './piezas';
 import { SelectorDeVista } from './SelectorDeVista';
 import { TarjetasDeEventos } from './TarjetasDeEventos';
 import { useOcultarBarraAlDesplazar } from '../../../navigation/barraAlDesplazar/BarraInferior';
+import { AvisoDeFormacionPorElegir } from '../../formaciones/components/AvisoDeFormacionPorElegir';
+import {
+  FormacionPorElegirError,
+  MENSAJE_ELEGIR_PARA_CREAR,
+  formacionDelCuerpo,
+} from '../../formaciones/estado/formacionDeLaComunidad';
+import { useFormacionDeLaComunidad } from '../../formaciones/hooks/useFormacionDeLaComunidad';
 
 type Vista =
   | { nombre: 'lista' }
@@ -126,6 +133,10 @@ export function SeccionEventos({
     true,
   );
   const [vista, setVista] = useState<Vista>({ nombre: 'lista' });
+  /* Spec 024: Administración con «Todas» elegida no puede crear un evento (nace en una formación). En vez de abrir el formulario,
+     una línea dice qué falta; nada se envía. Las demás cuentas nunca la ven. */
+  const { hayQueElegirParaCrear } = useFormacionDeLaComunidad();
+  const [pidioCrearSinFormacion, setPidioCrearSinFormacion] = useState(false);
   /* E-516 (2026-10-05). Cada vista de la sección es OTRA lista, y se le dice a la barra con `vista`:
      al cambiar, la barra y el encabezado de Comunidad vuelven a la vista. En Android el
      `ScrollView` se monta de nuevo al poner o quitar el `RefreshControl` (lo envuelve un
@@ -307,9 +318,10 @@ export function SeccionEventos({
     setErrorFormulario(null);
     setEnviando(true);
     try {
+      /* Al CREAR, la formación viaja en el cuerpo (solo Administración; las demás cuentas no mandan nada). Al editar no cambia. */
       const guardado = original
         ? await eventosApi.editarEvento(original.id, armado.cuerpo)
-        : await eventosApi.crearEvento(armado.cuerpo);
+        : await eventosApi.crearEvento(armado.cuerpo, formacionDelCuerpo(MENSAJE_ELEGIR_PARA_CREAR).formation);
       if (portada) {
         // El evento ya quedó guardado: si la portada falla, se dice y se sigue (se puede reintentar
         // editándolo).
@@ -328,7 +340,9 @@ export function SeccionEventos({
       setVista({ nombre: 'detalle', eventoId: guardado.id, inicioOcurrencia: null });
     } catch (e) {
       setErrorFormulario(
-        e instanceof ApiError && e.status === 403
+        e instanceof FormacionPorElegirError
+          ? e.message
+          : e instanceof ApiError && e.status === 403
           ? 'Tu cuenta no puede crear ni editar eventos.'
           : mensajeDeError(e, 'No se pudo guardar el evento. Intenta de nuevo.'),
       );
@@ -458,12 +472,19 @@ export function SeccionEventos({
             icono="plus"
             estilo={estilos.accion}
             onPress={() => {
+              if (hayQueElegirParaCrear) {
+                setPidioCrearSinFormacion(true);
+                return;
+              }
               setErrorFormulario(null);
               setVista({ nombre: 'formulario', original: null });
             }}
           />
         ) : null}
       </View>
+      {gestiona && hayQueElegirParaCrear && pidioCrearSinFormacion ? (
+        <AvisoDeFormacionPorElegir texto={MENSAJE_ELEGIR_PARA_CREAR} />
+      ) : null}
 
       <SelectorDeVista vista={forma} onCambiar={cambiarForma} />
       <SoloLosQueVoy activo={soloVoy} onCambiar={setSoloVoy} />

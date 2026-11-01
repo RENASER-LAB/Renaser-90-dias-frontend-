@@ -88,6 +88,8 @@ export function mapearPublicacion(post: WallPost): PostItem {
     // Se cargan aparte, al abrir la sección de comentarios (GET /wall/{id}/comments) — el feed
     // solo trae `commentCount`, no la lista.
     comments: [],
+    // Spec 024: solo si el servidor la mandó (la publicación de un servidor anterior queda idéntica).
+    ...(post.formation ? { formacion: post.formation } : {}),
   };
 }
 
