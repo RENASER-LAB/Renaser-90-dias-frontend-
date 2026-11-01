@@ -23,7 +23,16 @@ export type DestinoDeLaPregunta =
   | 'OBJETIVO_RELACIONES'
   | 'PRIORIDAD_PRINCIPAL'
   | 'PRIMERA_ACCION'
-  | 'TRATO_DE_LA_PERSONA';
+  | 'TRATO_DE_LA_PERSONA'
+  // La meta medible de cada eje (a dónde llegar, en qué unidad, desde dónde parte): alimenta la cifra del mes en Plan.
+  | 'META_CUERPO'
+  | 'UNIDAD_CUERPO'
+  | 'PARTIDA_CUERPO'
+  | 'META_NEGOCIO'
+  | 'UNIDAD_NEGOCIO'
+  | 'PARTIDA_NEGOCIO'
+  | 'META_RELACIONES'
+  | 'PARTIDA_RELACIONES';
 
 export interface OpcionDeLaPregunta {
   valor: string;

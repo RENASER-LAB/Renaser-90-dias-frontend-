@@ -58,6 +58,12 @@ describe('leerPreguntaAdmin', () => {
     expect(p).toMatchObject({ estado: 'ACTIVA', protegida: false, respuestas: 0, formaciones: null, seccionId: 9, alimenta: null, seMuestraSi: null });
   });
 
+  it('los destinos de la meta medible se leen', () => {
+    expect(leerPreguntaAdmin({ ...PREGUNTA, alimenta: 'META_NEGOCIO' })?.alimenta).toBe('META_NEGOCIO');
+    expect(leerPreguntaAdmin({ ...PREGUNTA, alimenta: 'UNIDAD_CUERPO' })?.alimenta).toBe('UNIDAD_CUERPO');
+    expect(leerPreguntaAdmin({ ...PREGUNTA, alimenta: 'PARTIDA_RELACIONES' })?.alimenta).toBe('PARTIDA_RELACIONES');
+  });
+
   it('un destino desconocido se lee como ninguno', () => {
     expect(leerPreguntaAdmin({ ...PREGUNTA, alimenta: 'OTRA_COSA' })?.alimenta).toBeNull();
     expect(leerPreguntaAdmin({ ...PREGUNTA, alimenta: 'PRIMERA_ACCION' })?.alimenta).toBe('PRIMERA_ACCION');

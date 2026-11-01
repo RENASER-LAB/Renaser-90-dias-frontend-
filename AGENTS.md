@@ -1285,6 +1285,32 @@ Administración → «Fichas» son de otras entradas de la 026. Lo que cambia y 
   Es la misma cuenta de `SemanaPrograma` del backend (V156 sube los topes de la base a la semana 53 y el mes 12); prueba `periodoDelProgramaSegunLaDuracion`.
 * **No cambia** el texto «objetivo de 90 días» (es el nombre del objetivo en toda la app); decidir si en el Diplomado de 1 año se llama de otra forma es del dueño.
 
+### La meta medible y la constancia de las lecturas (spec 026, decisiones del dueño del 2026-11-01)
+
+Dos decisiones del dueño sobre la ficha con diagnóstico (backend V157, D-303). Solo JavaScript en la app; **hace falta el backend con V157 antes** y un APK nuevo.
+
+* **La meta medible se pregunta en el diagnóstico.** Por cada eje, debajo de su objetivo en palabras, el borrador del backend trae preguntas **opcionales**: a qué
+  número quiere llegar, en qué unidad (kg, soles, clientes…) y desde qué número parte; Relaciones solo los dos números, enteros del 1 al 10 (siempre es esa escala).
+  Alimentan ocho destinos nuevos (`DestinoDeLaPregunta`: `META_CUERPO`, `UNIDAD_CUERPO`, `PARTIDA_CUERPO`, `META_NEGOCIO`, `UNIDAD_NEGOCIO`, `PARTIDA_NEGOCIO`,
+  `META_RELACIONES`, `PARTIDA_RELACIONES`). Con las tres partes el objetivo llega a Plan **con su meta**: Plan lo dibuja como cualquier objetivo con meta
+  («Inicio · Actual · Meta», el %, «Este mes») y saca la cifra del mes y los hitos; sin alguna parte, queda en palabras y el plan dice «sin cifra», como hasta hoy.
+  Confirmar el objetivo (`PUT /rocks/master/{eje}` solo con el texto) no borra la meta.
+* **Los dos esquemas leen los destinos nuevos** (`diagnostico/api/diagnosticoSchemas`, `diagnostico-admin/api/diagnosticoAdminSchemas`): sin ellos una pregunta de la
+  meta se leería «sin destino» y, al guardar el editor, dejaría de alimentarla. **El editor** (`diagnostico-admin/utils/tiposDePregunta`) los ofrece según el tipo:
+  la meta y el punto de partida piden una pregunta de **Número**; la unidad, de **Texto corto**. Al dejar de alimentar una meta el editor avisa («Su objetivo de ese
+  eje quedará solo en palabras: Plan no podrá sacar la cifra de cada mes.», `dejaDeAlimentarUnaMeta`). La importación por CSV los acepta por su nombre («Meta de
+  Cuerpo», «Unidad de Negocio», «Punto de partida de Relaciones»…).
+* **La persona ve antes de guardar lo que el servidor exige** (`diagnostico/utils/validacion`): Relaciones, «Escribe un número entero del 1 al 10.»; Cuerpo y
+  Negocio, «Escribe un número de cero o más.» y «Ese número es demasiado grande.» (de 10¹² en adelante). Aceptan decimales y la coma. Siguen siendo opcionales.
+* **Supuesto a confirmar con el dueño:** Negocio se toma como un **nivel** (dónde estar al cierre de cada mes); no se pregunta si la meta es mensual o acumulada
+  al final, como hacía el Mapa. Y la unidad que parece una escala («puntos», «/10») se trata como escala (cifras enteras).
+* **Quién abrió el diagnóstico de una persona queda anotado** (backend): el mentor o la guía de su grupo, el líder, Administración y Alquimista. **No hay nada
+  nuevo en la app**: las pantallas que lo leen (`diagnostico/components/SeccionDelDiagnosticoDeLaPersona` en las fichas) piden lo mismo de siempre. La propia
+  persona («Mi diagnóstico») no deja registro. Esa constancia no entra al resumen de las 20:00 que recibe el mentor.
+* **Pruebas:** Jest `validacion` (la meta de un eje), `diagnosticoSchemas`, `diagnosticoAdminSchemas` y `borradorDePregunta` (los destinos nuevos). Maestro, escrito
+  y sin correr: `.maestro/ficha-con-diagnostico/05-persona-responde-la-meta-y-plan-saca-la-cifra.yaml` (pide el borrador sembrado por la V157 publicado; el ayudante
+  `comun/diagnostico-responder-el-paso.yaml` contesta la meta con `META: si`). Los flujos 01 a 04 siguen igual: las preguntas nuevas son opcionales.
+
 ### Entradas anteriores que esta deja obsoletas
 
 Donde una entrada de este documento nombra el Mapa de Renacimiento (el flujo de diez pasos, su tarjeta en Hoy, `PuertaDelMapa` /

@@ -65,6 +65,14 @@ export const DESTINOS_EN_ORDEN: ReadonlyArray<{ valor: DestinoDeLaPregunta; etiq
   { valor: 'PRIORIDAD_PRINCIPAL', etiqueta: 'Prioridad principal', detalle: 'El eje que elige va primero en Plan.' },
   { valor: 'PRIMERA_ACCION', etiqueta: 'Primera acción', detalle: 'Se le sugiere al agendar su primera acción.' },
   { valor: 'TRATO_DE_LA_PERSONA', etiqueta: 'Trato de la persona', detalle: 'Cómo le habla SER: en masculino, femenino o neutro.' },
+  { valor: 'META_CUERPO', etiqueta: 'Meta de Cuerpo', detalle: 'El número al que quiere llegar: con él Plan saca la cifra de cada mes.' },
+  { valor: 'UNIDAD_CUERPO', etiqueta: 'Unidad de Cuerpo', detalle: 'En qué mide su meta de Cuerpo (kg, días por semana…).' },
+  { valor: 'PARTIDA_CUERPO', etiqueta: 'Punto de partida de Cuerpo', detalle: 'El número desde el que parte hoy.' },
+  { valor: 'META_NEGOCIO', etiqueta: 'Meta de Negocio', detalle: 'El número al que quiere llegar: con él Plan saca la cifra de cada mes.' },
+  { valor: 'UNIDAD_NEGOCIO', etiqueta: 'Unidad de Negocio', detalle: 'En qué mide su meta de Negocio (S/ al mes, clientes…).' },
+  { valor: 'PARTIDA_NEGOCIO', etiqueta: 'Punto de partida de Negocio', detalle: 'El número desde el que parte hoy.' },
+  { valor: 'META_RELACIONES', etiqueta: 'Meta de Relaciones', detalle: 'Un entero del 1 al 10 al que quiere llegar.' },
+  { valor: 'PARTIDA_RELACIONES', etiqueta: 'Punto de partida de Relaciones', detalle: 'Un entero del 1 al 10: cómo califica hoy esta área.' },
 ];
 
 export function etiquetaDelDestino(destino: DestinoDeLaPregunta): string {
@@ -73,6 +81,11 @@ export function etiquetaDelDestino(destino: DestinoDeLaPregunta): string {
 
 export function esObjetivo(destino: DestinoDeLaPregunta | null): boolean {
   return destino === 'OBJETIVO_CUERPO' || destino === 'OBJETIVO_NEGOCIO' || destino === 'OBJETIVO_RELACIONES';
+}
+
+/** Los destinos de la meta medible (meta, unidad y punto de partida de cada eje). */
+export function esParteDeUnaMeta(destino: DestinoDeLaPregunta | null): boolean {
+  return destino !== null && /^(META|UNIDAD|PARTIDA)_(CUERPO|NEGOCIO|RELACIONES)$/.test(destino);
 }
 
 /** Con qué tipos de pregunta puede alimentar cada destino (contrato §5; la primera acción es texto libre). */
@@ -86,6 +99,16 @@ export function tiposDelDestino(destino: DestinoDeLaPregunta): readonly TipoDePr
     case 'PRIORIDAD_PRINCIPAL':
     case 'TRATO_DE_LA_PERSONA':
       return ['SELECCION_UNICA'];
+    case 'UNIDAD_CUERPO':
+    case 'UNIDAD_NEGOCIO':
+      return ['TEXTO'];
+    case 'META_CUERPO':
+    case 'PARTIDA_CUERPO':
+    case 'META_NEGOCIO':
+    case 'PARTIDA_NEGOCIO':
+    case 'META_RELACIONES':
+    case 'PARTIDA_RELACIONES':
+      return ['NUMERO'];
   }
 }
 

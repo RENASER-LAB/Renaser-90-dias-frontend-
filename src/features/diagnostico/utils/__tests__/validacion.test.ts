@@ -97,3 +97,36 @@ describe('qué falta en un paso y en todo el recorrido', () => {
     expect(pasos[faltante?.indice ?? 0].preguntas.map(p => p.id)).toContain(P.relaciones);
   });
 });
+
+describe('la meta medible de un eje', () => {
+  const numero = (alimenta: NonNullable<ReturnType<typeof pregunta>['alimenta']>) =>
+    pregunta({ id: 900, tipo: 'NUMERO', requerida: false, alimenta });
+
+  it('Relaciones es un entero del 1 al 10, la meta y el punto de partida', () => {
+    for (const destino of ['META_RELACIONES', 'PARTIDA_RELACIONES'] as const) {
+      expect(mensajeDeLaPregunta(numero(destino), con({ texto: '8' }))).toBeNull();
+      expect(mensajeDeLaPregunta(numero(destino), con({ texto: '10' }))).toBeNull();
+      expect(mensajeDeLaPregunta(numero(destino), con({ texto: '11' }))).toBe('Escribe un número entero del 1 al 10.');
+      expect(mensajeDeLaPregunta(numero(destino), con({ texto: '0' }))).toBe('Escribe un número entero del 1 al 10.');
+      expect(mensajeDeLaPregunta(numero(destino), con({ texto: '6,5' }))).toBe('Escribe un número entero del 1 al 10.');
+    }
+  });
+
+  it('Cuerpo y Negocio aceptan decimales y cero, no negativos ni lo que no cabe', () => {
+    for (const destino of ['META_CUERPO', 'PARTIDA_CUERPO', 'META_NEGOCIO', 'PARTIDA_NEGOCIO'] as const) {
+      expect(mensajeDeLaPregunta(numero(destino), con({ texto: '85,5' }))).toBeNull();
+      expect(mensajeDeLaPregunta(numero(destino), con({ texto: '0' }))).toBeNull();
+      expect(mensajeDeLaPregunta(numero(destino), con({ texto: '-3' }))).toBe('Escribe un número de cero o más.');
+      expect(mensajeDeLaPregunta(numero(destino), con({ texto: '1000000000000' }))).toBe('Ese número es demasiado grande.');
+    }
+  });
+
+  it('son opcionales: vacías pasan, y un texto que no es número se dice', () => {
+    expect(mensajeDeLaPregunta(numero('META_CUERPO'), RESPUESTA_VACIA)).toBeNull();
+    expect(mensajeDeLaPregunta(numero('META_CUERPO'), con({ texto: 'mucho' }))).toBe('Escribe solo números.');
+  });
+
+  it('otro número del diagnóstico (la edad) no recibe estas reglas', () => {
+    expect(mensajeDeLaPregunta(preguntas[P.edad], con({ texto: '34' }))).toBeNull();
+  });
+});

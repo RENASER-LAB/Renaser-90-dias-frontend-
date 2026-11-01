@@ -3,9 +3,12 @@
 # precargado (nombre y ciudad, de la solicitud) no se toca. Los textos que se escriben son de una letra: `inputText` tarda unos
 # 10 s por letra (ver el README).
 # Parámetro opcional: NEGOCIO (por defecto «No\.»): la respuesta a «¿Actualmente tienes un negocio…?».
+# Parámetro opcional: META (por defecto «no»): con «si» contesta también las preguntas de la meta medible del BORRADOR SEMBRADO por la V157
+# (Relaciones 5 → 8 sobre 10, Cuerpo 9 → 5 «k», Negocio 1 → 2 «S»: un solo carácter cada una). No existen en `diagnostico-inicial.csv`, que es el formulario del dueño tal cual.
 appId: com.renaser.app
 env:
   NEGOCIO: "No\\."
+  META: "no"
 ---
 - runFlow:
     when:
@@ -148,3 +151,76 @@ env:
       visible: "Declaración de responsabilidad y consentimiento"
     commands:
       - tapOn: "He leído y acepto la declaración de responsabilidad y consentimiento\\."
+# La meta medible (spec 026, V157): opcionales, así que solo se contestan con META=si. Cada respuesta es de un carácter por lo lento de `inputText`.
+- runFlow:
+    when:
+      true: ${META == 'si'}
+      visible: "RELACIONES · Del 1 al 10, ¿cómo calificas hoy.*"
+    commands:
+      - tapOn:
+          id: "pregunta-diag_p16c"
+      - inputText: "5"
+      - hideKeyboard
+- runFlow:
+    when:
+      true: ${META == 'si'}
+      visible: "RELACIONES · ¿A qué número del 1 al 10 quieres llevarla.*"
+    commands:
+      - tapOn:
+          id: "pregunta-diag_p16d"
+      - inputText: "8"
+      - hideKeyboard
+- runFlow:
+    when:
+      true: ${META == 'si'}
+      visible: "SALUD Y BIENESTAR · ¿En qué unidad mides.*"
+    commands:
+      - tapOn:
+          id: "pregunta-diag_p17c"
+      - inputText: "k"
+      - hideKeyboard
+- runFlow:
+    when:
+      true: ${META == 'si'}
+      visible: "SALUD Y BIENESTAR · ¿Desde qué número partes hoy.*"
+    commands:
+      - tapOn:
+          id: "pregunta-diag_p17d"
+      - inputText: "9"
+      - hideKeyboard
+- runFlow:
+    when:
+      true: ${META == 'si'}
+      visible: "SALUD Y BIENESTAR · ¿A qué número quieres llegar.*"
+    commands:
+      - tapOn:
+          id: "pregunta-diag_p17e"
+      - inputText: "5"
+      - hideKeyboard
+- runFlow:
+    when:
+      true: ${META == 'si'}
+      visible: "RIQUEZA Y NEGOCIOS · ¿En qué unidad mides.*"
+    commands:
+      - tapOn:
+          id: "pregunta-diag_p18c"
+      - inputText: "S"
+      - hideKeyboard
+- runFlow:
+    when:
+      true: ${META == 'si'}
+      visible: "RIQUEZA Y NEGOCIOS · ¿Desde qué número partes hoy.*"
+    commands:
+      - tapOn:
+          id: "pregunta-diag_p18d"
+      - inputText: "1"
+      - hideKeyboard
+- runFlow:
+    when:
+      true: ${META == 'si'}
+      visible: "RIQUEZA Y NEGOCIOS · ¿A qué número quieres llegar.*"
+    commands:
+      - tapOn:
+          id: "pregunta-diag_p18e"
+      - inputText: "2"
+      - hideKeyboard

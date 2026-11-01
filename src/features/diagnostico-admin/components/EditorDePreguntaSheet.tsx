@@ -13,10 +13,12 @@ import { confirmar } from '../../admin/utils/dialogo';
 import type { PreguntaAdmin, PreguntaRequest, SeccionAdmin } from '../types/diagnosticoAdmin.types';
 import {
   alternarFormacion,
+  AVISO_AL_QUITAR_UNA_META,
   AVISO_AL_QUITAR_UN_OBJETIVO,
   conDestino,
   conTipo,
   cuerpoDesde,
+  dejaDeAlimentarUnaMeta,
   dejaDeAlimentarUnObjetivo,
   faltasDeLaPregunta,
   formularioDesde,
@@ -117,6 +119,10 @@ export function EditorDePreguntaSheet({
     }
     if (dejaDeAlimentarUnObjetivo(pregunta, form)) {
       const sigue = await confirmar('Esta pregunta deja de alimentar un objetivo', AVISO_AL_QUITAR_UN_OBJETIVO, { ok: 'Guardar de todos modos' });
+      if (!sigue) return;
+    }
+    if (dejaDeAlimentarUnaMeta(pregunta, form)) {
+      const sigue = await confirmar('Esta pregunta deja de alimentar una meta', AVISO_AL_QUITAR_UNA_META, { ok: 'Guardar de todos modos' });
       if (!sigue) return;
     }
     setGuardando(true);
