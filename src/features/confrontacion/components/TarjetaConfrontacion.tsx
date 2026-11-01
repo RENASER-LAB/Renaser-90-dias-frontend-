@@ -13,12 +13,22 @@ import { fraseDelDia } from '../utils/fraseDelDia';
  * esto no es un dato más del día, es lo primero que la persona lee. Lo que la hace destacar es
  * que **no se parece a nada de lo que la rodea**, no que tenga más adornos.
  *
- * Si no hay día de programa todavía no dibuja nada (`fraseDelDia` devuelve `null`): a alguien que
- * no arrancó no se le muestra la frase del día 1.
+ * Sale SIEMPRE, también a quien no tiene día de programa (personal sin programa, Día 0, sin Día 1 elegido): entonces la frase se elige por
+ * la fecha del calendario (`fechaDeHoy`). Solo no dibuja nada mientras todavía no se sabe ni el día ni la fecha (`fraseDelDia` da `null`).
+ *
+ * > **Corregido 2026-11-01 (pedido del dueño: «recuerda la frase… que salga pese que no inició su programa»).** Antes no dibujaba nada sin
+ * > día de programa, y a esas cuentas les quedaba un hueco vacío arriba de Hoy.
  */
-export function TarjetaConfrontacion({ diaPrograma }: { diaPrograma: number | null | undefined }) {
+export function TarjetaConfrontacion({
+  diaPrograma,
+  fechaDeHoy,
+}: {
+  diaPrograma: number | null | undefined;
+  /** `YYYY-MM-DD`, la fecha de hoy en el teléfono. Solo se usa si no hay día de programa. `null` = todavía no se sabe. */
+  fechaDeHoy?: string | null;
+}) {
   const { c, t } = useTheme();
-  const frase = fraseDelDia(diaPrograma);
+  const frase = fraseDelDia(diaPrograma, fechaDeHoy);
 
   if (!frase) return null;
 

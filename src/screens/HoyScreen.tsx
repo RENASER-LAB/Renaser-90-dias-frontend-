@@ -65,6 +65,7 @@ import { RegistroConFotoModal } from '../features/habits/components/RegistroConF
 import { cifrasDeHabitos } from '../features/home/utils/cifrasDeHabitos';
 import { diametroDelOrbe } from '../features/home/utils/diametroDelOrbe';
 import { cuandoEsElEvento } from '../features/home/utils/cuandoEsElEvento';
+import { fechaLocalISO } from '../features/objetivos/utils/ventanasDePlanificacion';
 import { useOcultarBarraAlDesplazar } from '../navigation/barraAlDesplazar/BarraInferior';
 
 export default function HoyScreen() {
@@ -215,6 +216,10 @@ export default function HoyScreen() {
    * > inventado es peor que no mostrarlo. Reportado por el dueño el día que se registró.
    */
   const diaConocido = resumen?.diaPrograma ?? null;
+  /* La fecha de hoy para la frase del día de quien NO tiene día de programa (personal sin programa, Día 0, sin Día 1 elegido): `/home` no la
+     manda, así que es el día civil del teléfono (supuesto anotado en `fraseDelDia`). Se da solo cuando ya se sabe si hay día de programa
+     (`/home` respondió o falló): antes, quien sí lo tiene vería primero la frase del calendario y se le cambiaría por la de su día. */
+  const fechaDeHoy = resumen || errorResumen ? fechaLocalISO(new Date()) : null;
   /* La tarjeta de acciones de arriba (2026-10-31): qué muestra lo decide `vistaDeLaAccionDeHoy`, con las acciones de hoy que
      esta pantalla ya lee y los objetivos de 90 días (spec 026: sin acciones, dice si faltan o si hay que confirmarlos); la meta de la
      acción que sigue, `useMetaDeLaAccion`. */
@@ -308,7 +313,7 @@ export default function HoyScreen() {
             en Yo), NO la frase del día. La frase sube y ocupa su lugar, con su raya dorada corta. */}
         {/* El nombre de la formación (spec 022, FR-014): una línea chica, solo para quien tiene más de una o no es de la Escuela. */}
         <NombreDeLaFormacion />
-        <TarjetaConfrontacion diaPrograma={diaConocido} />
+        <TarjetaConfrontacion diaPrograma={diaConocido} fechaDeHoy={fechaDeHoy} />
 
         {/* ========================================================================= */}
         {/* 2. LA ACCIÓN QUE SIGUE HOY (2026-10-31)                                   */}

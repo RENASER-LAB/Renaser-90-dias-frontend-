@@ -76,7 +76,7 @@ describe('Hoy: solo el programa propio', () => {
   });
 
   it('la frase del día (con su raya dorada) ya no depende de ningún papel', () => {
-    expect(HOY).toContain('<TarjetaConfrontacion diaPrograma={diaConocido} />');
+    expect(HOY).toContain('<TarjetaConfrontacion diaPrograma={diaConocido} fechaDeHoy={fechaDeHoy} />');
     expect(HOY).not.toMatch(/\{mostrarPrograma \?/);
   });
 });

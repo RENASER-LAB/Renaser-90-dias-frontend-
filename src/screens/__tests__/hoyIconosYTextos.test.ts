@@ -74,7 +74,7 @@ describe('Hoy: textos en tipo oración', () => {
     // Desde el 2026-10-31 Hoy ya no lleva la cabecera de fase, día y puntos (están en Yo): arriba va la frase del día.
     expect(HOY).not.toMatch(/Día \{diaConocido/);
     expect(HOY).not.toMatch(/\} pts/);
-    expect(HOY).toContain('<TarjetaConfrontacion diaPrograma={diaConocido} />');
+    expect(HOY).toContain('<TarjetaConfrontacion diaPrograma={diaConocido} fechaDeHoy={fechaDeHoy} />');
     expect(HOY).toMatch(/>\s*Tu acompañante\s*</);
   });
 
