@@ -1,65 +1,58 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 
-import type { ResumenDelMapa } from '../../mapa-renacimiento/api/respuestasDelMapa';
-import { leerResumenDelMapa } from '../../mapa-renacimiento/api/respuestasDelMapa';
-import { EJE_POR_AREA } from '../../mapa-renacimiento/tipos';
+import { obtenerResumenDeMiDiagnostico } from '../../diagnostico/api/diagnosticoApi';
 import type { EjeObjetivo } from '../types/objetivos.types';
 
 /**
- * Cuál de los tres ejes es el principal: el que la persona eligió en el paso 2 del Mapa
- * ("¿Qué área manda en tus próximos 90 días?").
+ * Cuál de los tres ejes es el principal, y cuál es la primera acción que la persona se propuso: ambas salen de su
+ * **diagnóstico** (spec 026; antes salían del paso 2 del Mapa de Renacimiento, que se retiró).
  *
- * **Qué pidió el cliente.** Los tres objetivos se llenan igual, pero el principal va PRIMERO en la
- * lista. No es un orden estético: es la decisión que la persona tomó antes de escribir nada, y
- * verla arriba cada vez que abre el Plan es el punto de haberla tomado.
+ * **Qué pidió el cliente.** Los tres objetivos se llenan igual, pero el principal va PRIMERO en la lista. No es un orden
+ * estético: es la decisión que la persona tomó antes de escribir nada, y verla arriba cada vez que abre el Plan es el punto de
+ * haberla tomado. La primera acción se ofrece como sugerida al agendar (en el eje de esa prioridad).
  *
- * **Por qué puede venir `null`, y por qué eso no es un error.** Tres casos legítimos: todavía no
- * llegó al paso 2; hizo el Mapa antes del 2026-09-14, cuando la prioridad no salía del teléfono;
- * o la lectura falló por red. En los tres, quien llama muestra el orden por defecto — nunca un
- * mensaje de error, porque no tener prioridad no rompe nada.
+ * **Por qué puede venir `null`, y por qué eso no es un error.** Cuatro casos legítimos: la persona tiene la ficha estándar (sin
+ * diagnóstico); todavía no lo terminó; el servidor es anterior a la spec 026 (404); o la lectura falló por red. En todos,
+ * quien llama muestra el orden de siempre y ninguna sugerencia — nunca un mensaje de error, porque no tener prioridad no
+ * rompe nada. Un fallo tampoco borra lo que ya se había leído.
  *
- * Es una sola lectura al montar y no se refresca sola: la prioridad cambia dentro del Mapa, que es
- * una pantalla completa, y al volver de ahí el Plan se recarga entero.
+ * Se vuelve a leer cada vez que Plan recupera el foco: la prioridad puede nacer al terminar el diagnóstico desde Hoy o Yo
+ * (Plan es una pestaña que no se desmonta).
  */
-export interface PrioridadYEscala {
+export interface PrioridadYPrimeraAccion {
   ejePrincipal: EjeObjetivo | null;
-  /** La escala 1-10 de Relaciones. Viaja acá porque sale de la MISMA lectura que la prioridad. */
-  relacionesBase: number | null;
-  relacionesMeta: number | null;
-  /*
-   * > **Corregido el 2026-09-22 (el mismo día).** Acá se habían agregado `saludTipo`,
-   * > `saludUnidad`, `negocioTipo` y `negocioPeriodo` para que la app calculara la cifra del mes.
-   * > Ese cálculo se movió al servidor —había dos fórmulas dando números distintos para el mismo
-   * > mes, ver `api/planMensualApi.ts`— y con él se fueron los cuatro campos: el backend lee esas
-   * > respuestas del Mapa por su cuenta (`onboarding.api.MedicionDelMapaFinder`), así que
-   * > reexponerlas acá era cargar datos que ya no mira nadie.
-   */
+  /** «El lunes revisaré…»: lo que escribió en el diagnóstico. `null` si no hay. */
+  primeraAccion: string | null;
   cargando: boolean;
 }
 
-export function usePrioridadPrincipal(): PrioridadYEscala {
-  const [estado, setEstado] = useState<Omit<PrioridadYEscala, 'cargando'>>({
-    ejePrincipal: null,
-    relacionesBase: null,
-    relacionesMeta: null,
-  });
+export function usePrioridadPrincipal(): PrioridadYPrimeraAccion {
+  const [estado, setEstado] = useState<Omit<PrioridadYPrimeraAccion, 'cargando'>>({ ejePrincipal: null, primeraAccion: null });
   const [cargando, setCargando] = useState(true);
 
-  useEffect(() => {
-    let vigente = true;
-    void leerResumenDelMapa().then(resumen => {
-      if (!vigente) return;
-      setEstado({
-        ejePrincipal: resumen.prioridad ? EJE_POR_AREA[resumen.prioridad] : null,
-        relacionesBase: resumen.relacionesBase,
-        relacionesMeta: resumen.relacionesMeta,
-      });
-      setCargando(false);
-    });
-    return () => {
-      vigente = false;
-    };
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      let vigente = true;
+      obtenerResumenDeMiDiagnostico()
+        .then(resumen => {
+          if (!vigente) return;
+          setEstado({
+            ejePrincipal: resumen.completado ? resumen.prioridad : null,
+            primeraAccion: resumen.completado ? resumen.primeraAccion : null,
+          });
+        })
+        .catch(() => {
+          // Sin diagnóstico, sin la ruta (servidor anterior) o sin red: se queda lo último que se leyó, y el orden de siempre.
+        })
+        .finally(() => {
+          if (vigente) setCargando(false);
+        });
+      return () => {
+        vigente = false;
+      };
+    }, []),
+  );
 
   return { ...estado, cargando };
 }

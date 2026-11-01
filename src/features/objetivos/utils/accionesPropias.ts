@@ -1,4 +1,3 @@
-import type { AccionDelMapa } from '../../mapa-renacimiento/hooks/useAccionesDelMapa';
 import type { EjeObjetivo } from '../types/objetivos.types';
 
 /**
@@ -22,24 +21,47 @@ export interface AccionElegida {
 }
 
 /**
- * Lo que se ofrece en un eje: lo que la persona escribió en el Mapa **más** lo que agregó a mano.
+ * Una acción que se ofrece al agendar. `sugerida`: nace del diagnóstico de la persona (su «primera acción»); no se agenda
+ * sola, se elige tocándola como cualquier otra.
+ */
+export interface AccionOfrecida {
+  texto: string;
+  sugerida?: boolean;
+}
+
+/**
+ * La primera acción del diagnóstico (spec 026), ofrecida **solo en el eje de la prioridad principal** de la persona. Sin
+ * diagnóstico, sin prioridad o sin texto no hay sugerencia, y el resto de los ejes no ofrecen nada.
+ */
+export interface SugerenciaDeAccion {
+  eje: EjeObjetivo;
+  texto: string;
+}
+
+export function sugeridasDelEje(eje: EjeObjetivo, sugerencia: SugerenciaDeAccion | null | undefined): AccionOfrecida[] {
+  const texto = sugerencia?.texto.trim();
+  return sugerencia && sugerencia.eje === eje && texto ? [{ texto, sugerida: true }] : [];
+}
+
+/**
+ * Lo que se ofrece en un eje: lo sugerido por el diagnóstico **más** lo que la persona agregó a mano.
  *
- * Las propias entran a la lista visible para que se dibujen igual que las del Mapa —con su hora y
+ * Las propias entran a la lista visible para que se dibujen igual que las sugeridas —con su hora y
  * sus pasos—. Sin esto, una acción escrita a mano quedaba elegida pero invisible: el contador subía
  * y en pantalla no aparecía nada.
  *
- * Una propia que coincide palabra por palabra con una del Mapa **no se duplica**: es la misma.
+ * Una propia que coincide palabra por palabra con una sugerida **no se duplica**: es la misma.
  */
 export function opcionesDelEje(
   eje: EjeObjetivo,
-  delMapa: AccionDelMapa[],
+  sugeridas: AccionOfrecida[],
   elegidas: AccionElegida[]
-): AccionDelMapa[] {
-  const textos = new Set(delMapa.map(a => a.texto));
+): AccionOfrecida[] {
+  const textos = new Set(sugeridas.map(a => a.texto));
   const propias = elegidas
     .filter(e => e.eje === eje && !textos.has(e.titulo))
-    .map<AccionDelMapa>(e => ({ texto: e.titulo, dias: [], frecuenciaSemanal: 0 }));
-  return [...delMapa, ...propias];
+    .map<AccionOfrecida>(e => ({ texto: e.titulo }));
+  return [...sugeridas, ...propias];
 }
 
 /**

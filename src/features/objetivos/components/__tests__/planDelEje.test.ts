@@ -4,9 +4,9 @@ import TestRenderer, { act, type ReactTestInstance, type ReactTestRenderer } fro
 
 /**
  * La pantalla principal de Plan (2026-10-31, «en Plan replica este formato»): «Esta semana», «Acciones que mueven la meta»,
- * «Tu 80/20» y «Organizar mi semana ›», en sus estados: sin semana, sin acciones, con todo, el domingo y el Mapa. Los hooks de
+ * «Tu 80/20» y «Organizar mi semana ›», en sus estados: sin semana, sin acciones, con todo, el domingo y sin los tres objetivos de 90 días. Los hooks de
  * lectura se reemplazan; lo que se prueba es qué se dibuja y qué abre cada toque. El objetivo de 90 días y el selector de eje
- * son de `PlanScreen` (probados con `planRediseno` y `planEsperaAlMapa`).
+ * son de `PlanScreen` (probados con `planRediseno` y `planSinMapa`).
  */
 
 jest.mock('../../../../theme/ThemeContext', () => {
@@ -18,7 +18,6 @@ jest.mock('../../../../theme/ThemeContext', () => {
 jest.mock('../../../../context/AuthContext', () => ({ useAuth: () => ({ user: { id: 'u1' } }) }));
 const mockNavigate = jest.fn();
 jest.mock('@react-navigation/native', () => ({ useNavigation: () => ({ navigate: mockNavigate }), useFocusEffect: () => undefined }));
-jest.mock('../../../mapa-renacimiento/hooks/useAccionesDelMapa', () => ({ useAccionesDelMapa: () => ({}) }));
 // «Recordatorios de tus acciones ›» (fila + hoja) tiene su propia prueba; acá solo importa dónde y cuándo se dibuja.
 const mockRecordatorios: { userId: string; rocas?: unknown }[] = [];
 jest.mock('../RecordatoriosDeLasAcciones', () => ({
@@ -86,12 +85,13 @@ const diaria = (extra: Record<string, unknown> = {}) => ({
   cargando: false, error: null, guardando: false, planificar: jest.fn(), recargar: jest.fn(), ...extra,
 });
 
+const alDefinirObjetivos = jest.fn();
 let raiz: ReactTestRenderer | null = null;
 function montar() {
   mockLlamadas = 0;
   act(() => {
     raiz = TestRenderer.create(
-      React.createElement(PlanDelEje, { maestras: [], numeroSemana: 3, diaPrograma: mockDiaDePrograma, ejeAbierto: 'CUERPO', objetivoSugeridoDe: () => '', onIrAlMapa: jest.fn() }),
+      React.createElement(PlanDelEje, { maestras: [], numeroSemana: 3, diaPrograma: mockDiaDePrograma, ejeAbierto: 'CUERPO', objetivoSugeridoDe: () => '', onDefinirObjetivos: alDefinirObjetivos }),
     );
   });
 }
@@ -110,6 +110,7 @@ beforeEach(() => {
   mockModalesAbiertos.length = 0;
   mockRecordatorios.length = 0;
   mockNavigate.mockReset();
+  alDefinirObjetivos.mockReset();
   mockSemanal = semanal('planificada', 'Caminar 5 días');
   mockQueEmpieza = semanal('cargando');
   mockDiaria = diaria();
@@ -211,11 +212,22 @@ describe('sin semana armada', () => {
     expect(mockRecordatorios).toHaveLength(0);
   });
 
-  it('sin los tres objetivos de 90 días (bloqueada): ofrece el Mapa, no armar', () => {
+  it('sin los tres objetivos de 90 días (bloqueada): ofrece escribirlos, no armar ni nombrar el Mapa', () => {
     mockSemanal = semanal('bloqueada');
     montar();
     expect(todo()).toContain('Primero define tus tres objetivos de 90 días');
-    expect(botonCon('Ir al Mapa de Renacimiento')).toBeDefined();
+    expect(todo()).not.toContain('Mapa');
+    expect(botonCon('Ir al Mapa')).toBeUndefined();
+    pulsar(botonCon('Escribir mis objetivos'));
+    expect(alDefinirObjetivos).toHaveBeenCalledTimes(1);
+  });
+
+  it('«Organizar mi semana» con la semana bloqueada también lleva a escribir los objetivos', () => {
+    mockSemanal = semanal('bloqueada');
+    montar();
+    pulsar(botonCon('Organizar mi semana'));
+    expect(alDefinirObjetivos).toHaveBeenCalledTimes(1);
+    expect(mockModalesAbiertos).toEqual([]);
   });
 });
 

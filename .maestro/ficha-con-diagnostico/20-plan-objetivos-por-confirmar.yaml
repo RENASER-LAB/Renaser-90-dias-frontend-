@@ -1,0 +1,79 @@
+# Plan con los objetivos de 90 días que nacieron del diagnóstico, «por confirmar» (spec 026). ESCRITO Y SIN CORRER: pide el backend
+# con la spec 026, un emulador libre y una cuenta sembrada en la base LOCAL (nunca producción).
+# cuenta: aprendiz  (la ranura apunta a un aprendiz con el diagnóstico COMPLETADO y sus tres objetivos `origin = DIAGNOSTICO`,
+#   `confirmed = false`; prioridad principal TRABAJO y primera acción «El lunes revisaré mis ventas»)
+# Qué prueba: la tarjeta «Revisa tus objetivos de 90 días», la etiqueta «Por confirmar» en el objetivo, la hoja con el aviso de «una
+# vez» y los contadores, y que al confirmar desaparece todo. Escribir en un campo con `inputText` tarda ~10 s por letra: el flujo
+# confirma los textos tal cual los dejó el diagnóstico (probar a reescribir uno es manual).
+# La parte 2 (agendar y ver la primera acción sugerida) solo corre con SEMANA_ARMADA=si: pide la semana del eje de la prioridad armada.
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "PLAN"
+- extendedWaitUntil:
+    visible: "Tu dirección en 90 días"
+    timeout: 30000
+# Nada del Mapa: ni la puerta ni su botón.
+- assertNotVisible: ".*Mapa.*"
+# La tarjeta de arriba y la etiqueta del objetivo.
+- assertVisible: "Revisa tus objetivos de 90 días"
+- assertVisible: "3 objetivos por confirmar"
+- assertVisible: "Por confirmar"
+# El eje de la prioridad principal va primero en el selector y es el que se abre.
+- assertVisible: "Negocio"
+- takeScreenshot: P20a-plan-objetivos-por-confirmar
+# Los «…» del objetivo por confirmar abren la revisión, no «Anotar avance».
+- tapOn: "Revisar y confirmar el objetivo"
+- extendedWaitUntil:
+    visible: "Puedes reescribirlos una vez. Después quedan fijos."
+    timeout: 20000
+- assertVisible: ".* / 500"
+- assertVisible: "Confirmar mis objetivos"
+- takeScreenshot: P20b-hoja-de-revision
+# Cerrar la hoja no pierde nada: la tarjeta sigue ahí.
+- pressKey: back
+- extendedWaitUntil:
+    visible: "Revisa tus objetivos de 90 días"
+    timeout: 20000
+# Confirmar de verdad.
+- tapOn: "Revisar y confirmar"
+- extendedWaitUntil:
+    visible: "Confirmar mis objetivos"
+    timeout: 20000
+- tapOn: "Confirmar mis objetivos"
+- extendedWaitUntil:
+    visible: "Tus objetivos de 90 días quedaron confirmados."
+    timeout: 40000
+- takeScreenshot: P20c-objetivos-confirmados
+- assertNotVisible: "Revisa tus objetivos de 90 días"
+- assertNotVisible: "Por confirmar"
+# Ya confirmados quedan fijos: los «…» ofrecen anotar avance (si tiene número) y no la revisión.
+- assertNotVisible: "Revisar y confirmar el objetivo"
+# Hoy deja de pedir que los confirme.
+- tapOn: "HOY"
+- extendedWaitUntil:
+    visible: "Tu acompañante"
+    timeout: 30000
+- assertNotVisible: "Confirma tus objetivos de 90 días"
+# Parte 2 (opcional): la primera acción del diagnóstico se SUGIERE al agendar, en el eje de la prioridad (no se agenda sola).
+- runFlow:
+    when:
+      true: ${SEMANA_ARMADA == 'si'}
+    commands:
+      - tapOn: "PLAN"
+      - extendedWaitUntil:
+          visible: "Organizar mi semana"
+          timeout: 30000
+      - scrollUntilVisible:
+          element: "Organizar mi semana"
+          direction: DOWN
+          timeout: 30000
+      - tapOn: "Organizar mi semana"
+      - extendedWaitUntil:
+          visible: "Agendar mis acciones"
+          timeout: 20000
+      - assertVisible: "El lunes revisaré mis ventas"
+      - assertVisible: "Sugerida por tu diagnóstico"
+      # No viene marcada: el botón no cuenta ninguna.
+      - assertNotVisible: "Agendar \\(.*\\)"
+      - takeScreenshot: P20d-primera-accion-sugerida

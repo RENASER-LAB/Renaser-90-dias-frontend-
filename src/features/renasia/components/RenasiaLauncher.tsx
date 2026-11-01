@@ -10,7 +10,6 @@ import { NOMBRE_ACOMPANANTE } from '../data/agentes';
 import { FenixDeSerQueSalta } from '../../fenix/components/FenixDeSerQueSalta';
 import { useMantenerSemaforoVigente } from '../../semaforo/estado/useSemaforoVigente';
 import { RenasiaPanel } from '../screens/RenasiaPanel';
-import { useMapaRenacimientoAbierto } from '../../mapa-renacimiento/MapaRenacimientoContext';
 import { useHayChatEnPantalla } from '../state/chatEnPantalla';
 import { useBarraInferior } from '../../../navigation/barraAlDesplazar/BarraInferior';
 import { ALTO_TAB_BAR, DIAMETRO, MARGEN_DERECHO, SEPARACION } from './lugarDelLanzador';
@@ -49,7 +48,6 @@ export function RenasiaLauncher() {
   /* Spec 002: con el chat de SER apagado el botón sigue (la funcionalidad no desaparece) y el panel abre con el aviso
      de mantenimiento; el lector de pantalla lo dice antes de tocar. */
   const chatDeSer = useFuncionalidad(CLAVES.iaChat);
-  const { abierto: mapaAbierto } = useMapaRenacimientoAbierto();
   /* «Ocultar la barra al desplazar» (2026-10-02): cuando la barra de pestañas baja, el botón baja
      lo mismo y queda a la misma distancia del borde de abajo, en vez de quedar colgado sobre un
      hueco. Sigue a la vista: el acompañante se puede abrir aunque se esté leyendo una lista. */
@@ -77,13 +75,7 @@ export function RenasiaLauncher() {
   // de IA flotando sobre una conversacion entre personas no tiene por que estar ahi.
   // Se esconde el boton pero NO el panel: si la persona ya tenia abierto al acompanante, no se le
   // cierra en la cara.
-  //
-  // Y tambien con el Mapa de Renacimiento abierto (2026-09-22, reportado por el dueno mirando la
-  // pantalla: "que hace ahi, quitalo cuando este haciendo el formulario del mapa del poder"). Es
-  // exactamente el mismo caso que la ficha inicial de mas arriba, y se escapo por un detalle: el
-  // Mapa es del DIA 7, o sea que el onboarding ya esta completo y `isOnboardingCompleted` no lo
-  // filtra. No es solo estorbo visual — el flotante se monta justo encima del interruptor de
-  // compromiso del ultimo paso, asi que tocar "me comprometo" abria el chat.
+  // (Hasta la spec 026 tambien se escondia con el Mapa de Renacimiento abierto; el Mapa se retiro.)
 
   return (
     <>
@@ -92,7 +84,7 @@ export function RenasiaLauncher() {
         nada que pueda comerse los toques de la pantalla que esté debajo.
       */}
       {/* Spec 002, fase 2: si SER todavía no le toca a esta cuenta, el botón no se dibuja (no es mantenimiento). */}
-      {!hayChatEnPantalla && !mapaAbierto && chatDeSer.disponible && (
+      {!hayChatEnPantalla && chatDeSer.disponible && (
         <Animated.View style={[styles.posicion, { bottom: insets.bottom + ALTO_TAB_BAR + SEPARACION }, acompanaALaBarra]}>
           {/* El fénix es la cara de SER (2026-10-06, pedido del dueño): acá es FOTO FIJA en el ánimo del semáforo
               propio (`FenixDeSerQuieto`), sin Rive. Todo lo vivo del fénix está en el centro de Hoy.

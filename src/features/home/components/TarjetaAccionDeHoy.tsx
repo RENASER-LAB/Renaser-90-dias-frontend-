@@ -23,35 +23,39 @@ export function TarjetaAccionDeHoy({
   vista,
   meta,
   alEmpezar,
-  alHacerElMapa,
+  alIrAPlan,
   alAgendar,
 }: {
   vista: VistaDeLaAccionDeHoy;
   /** El objetivo al que pertenece la acción (`useMetaDeLaAccion`); sin él la línea no se dibuja. */
   meta: string | null;
   alEmpezar: (accionId: string) => void;
-  alHacerElMapa: () => void;
+  /** «Escribir mi objetivo» / «Confirmar»: lleva a Plan, donde se escriben y se confirman los objetivos de 90 días. */
+  alIrAPlan: () => void;
   alAgendar: () => void;
 }) {
   const { c, t } = useTheme();
 
-  /* Sin Mapa (corregido 2026-10-31, el dueño: «que ocupe el mismo tamaño que Coherencia y Racha, no tan grande»): una fila
-     compacta, toda tocable, en lugar de la tarjeta con botón dorado. */
-  if (vista.tipo === 'mapa') {
+  /* Sin objetivos de 90 días, o con los del diagnóstico por confirmar (spec 026; antes aquí iba «Haz tu Mapa de Renacimiento»):
+     una fila compacta, toda tocable, del alto que tenía Coherencia / Racha (corregido 2026-10-31, el dueño: «no tan grande»),
+     en lugar de la tarjeta con botón dorado. Lleva a Plan. */
+  if (vista.tipo === 'sin-objetivos' || vista.tipo === 'por-confirmar') {
+    const titulo = vista.tipo === 'sin-objetivos' ? 'Define tu objetivo de 90 días en Plan' : 'Confirma tus objetivos de 90 días';
+    const accion = vista.tipo === 'sin-objetivos' ? 'Escribir mi objetivo' : 'Confirmar';
     return (
       <Presionable
-        onPress={alHacerElMapa}
+        onPress={alIrAPlan}
         accessibilityRole="button"
-        accessibilityLabel="Haz tu Mapa de Renacimiento. De ahí nace tu objetivo de 90 días."
+        accessibilityLabel={`${titulo}. ${accion}.`}
         style={[estilos.tarjeta, estilos.compacta, { borderColor: c.border, backgroundColor: c.cardBg }]}
       >
-        <Icon name="map" size={TAMANO_ICONO.normal} color={c.goldInk} />
+        <Icon name="flag" size={TAMANO_ICONO.normal} color={c.goldInk} />
         <View style={estilos.textos}>
-          <Text style={[t.cardTitle, estilos.tituloCompacto, { color: c.textStrong }]} numberOfLines={1}>
-            Haz tu Mapa de Renacimiento
+          <Text style={[t.cardTitle, estilos.tituloCompacto, { color: c.textStrong }]} numberOfLines={2}>
+            {titulo}
           </Text>
-          <Text style={[t.small, estilos.lineaCompacta, { color: c.textSoft }]} numberOfLines={2}>
-            De ahí nace tu objetivo de 90 días.
+          <Text style={[t.small, estilos.lineaCompacta, { color: c.goldInk, fontFamily: fuentes.negrita }]} numberOfLines={1}>
+            {accion}
           </Text>
         </View>
         <Icon name="chevron" size={TAMANO_ICONO.chico} color={c.textSoft} />

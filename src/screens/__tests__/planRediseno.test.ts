@@ -106,13 +106,6 @@ describe('Plan: íconos', () => {
     expect(TARJETAS).not.toContain('name="zap"');
   });
 
-  it('el Mapa usa el mismo ícono por eje que Plan (Relaciones ya no es `users`)', () => {
-    for (const pantalla of ['PrioridadScreen', 'SistemaEjecucionScreen']) {
-      const fuente = sinComentarios(leer(`features/mapa-renacimiento/screens/${pantalla}.tsx`));
-      expect(fuente).toMatch(/<Icon name=\{iconoDelEje\(EJE_POR_AREA\[area\]\)\}/);
-      expect(fuente).not.toMatch(/relaciones: 'users'/);
-    }
-  });
 });
 
 describe('Plan: el eje y su objetivo', () => {

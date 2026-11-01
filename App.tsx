@@ -13,7 +13,6 @@ import { navegacionRef } from './src/navigation/navegacionRef';
 import { RenasiaLauncher } from './src/features/renasia/components/RenasiaLauncher';
 import { SparkieOverlay } from './src/features/sparkie/components/SparkieOverlay';
 import { AnfitrionAlerta } from './src/components/Alerta';
-import { MapaRenacimientoProvider } from './src/features/mapa-renacimiento/MapaRenacimientoContext';
 import { RadarProvider } from './src/features/radar/RadarContext';
 import { CodigoRenaserOverlay } from './src/features/radar/components/CodigoRenaserOverlay';
 import { RenombrarHabitoOverlay } from './src/features/habits/components/RenombrarHabitoOverlay';
@@ -107,15 +106,11 @@ export default function App() {
           <FuncionalidadesProvider>
           {/* La formación de la sesión (spec 022): Escuela, Diplomado o Certificación. Nace del login y se relee al volver al frente. */}
           <FormacionProvider>
-          {/* El Mapa de Renacimiento (Día 7) se abre a pantalla completa por encima de las
-              pestañas; este proveedor guarda si está abierto. Ver RootNavigator. */}
-          <MapaRenacimientoProvider>
-            {/* Una sola lectura del Codigo Renaser para toda la app: la tarjeta de Hoy y el
-                formulario a pantalla completa comparten estado. Ver RadarContext. */}
-            <RadarProvider>
-              <Shell />
-            </RadarProvider>
-          </MapaRenacimientoProvider>
+          {/* Una sola lectura del Codigo Renaser para toda la app: la tarjeta de Hoy y el
+              formulario a pantalla completa comparten estado. Ver RadarContext. */}
+          <RadarProvider>
+            <Shell />
+          </RadarProvider>
           </FormacionProvider>
           </FuncionalidadesProvider>
         </AuthProvider>

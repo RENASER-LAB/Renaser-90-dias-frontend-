@@ -39,16 +39,17 @@ export async function obtenerRocasMaestras(): Promise<RocaMaestraApi[]> {
  *
  * `meta`, `avance` y `unidad` van los tres o ninguno. Media meta da 400: un avance sin meta no
  * dibuja barra y un número sin unidad no se puede ni escribir en pantalla.
+ *
+ * Spec 026: sin diagnóstico ni Mapa, la persona escribe su objetivo directo (se crea, ya confirmado). Un objetivo del
+ * diagnóstico «por confirmar» se puede reescribir UNA vez: ese pedido lo deja confirmado.
  */
 export async function definirRocaMaestra(
   eje: EjeObjetivo,
   definicion: DefinicionRocaMaestra,
-  opciones: { desdeElMapa?: boolean } = {},
 ): Promise<RocaMaestraApi> {
-  // Backend D-284 (issue #20): la activación del Mapa manda `origen: 'MAPA'` y el servidor deja que su objetivo reemplace
-  // al que se definió antes en Plan. Plan no manda nada (un `origen` distinto de `MAPA` es 400).
-  const body = opciones.desdeElMapa ? { ...definicion, origen: 'MAPA' as const } : definicion;
-  const r = await apiFetch<unknown>(`/api/v1/rocks/master/${eje}`, { method: 'PUT', body });
+  // Spec 026: ya no hay Mapa que mande `origen: 'MAPA'` (el servidor ignora `desdeElMapa`). Un objetivo que nació del
+  // diagnóstico y está «por confirmar» se confirma con este mismo pedido, solo con el texto (ver `useRocasMaestras.confirmar`).
+  const r = await apiFetch<unknown>(`/api/v1/rocks/master/${eje}`, { method: 'PUT', body: definicion });
   return validarRespuesta(objetivosSchemas.rocaMaestra, r, `PUT /api/v1/rocks/master/${eje}`);
 }
 

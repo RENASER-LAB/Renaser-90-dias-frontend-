@@ -11,6 +11,7 @@ import type { RocaDiariaApi, RocaMaestraApi } from '../types/objetivos.types';
 import { ETIQUETA_EJE } from '../types/objetivos.types';
 import { estadoDeLaAccion, horaCortaDeLaAccion, textoDelEstado } from '../utils/accionesDeHoy';
 import { primeraClausula } from '../utils/cifraDelObjetivo';
+import { estaPorConfirmar } from '../utils/objetivosPorConfirmar';
 import { iconoDelEje } from '../utils/iconoDelEje';
 import { colorDePareto, etiquetaDeLaAccion, lineaDelObjetivo, NOMBRE_DEL_COLOR } from '../utils/planPrincipal';
 
@@ -34,6 +35,7 @@ export function TarjetaDelObjetivo({
   alAbrirOpciones,
   alCambiarElMes,
 }: {
+  /** Un objetivo del diagnóstico sin confirmar se ve «Por confirmar»; sus «…» abren la revisión y no «Anotar avance». */
   roca: RocaMaestraApi | null;
   cargando: boolean;
   error: string | null;
@@ -45,6 +47,7 @@ export function TarjetaDelObjetivo({
 }) {
   const { c, t } = useTheme();
   const linea = roca ? lineaDelObjetivo(roca) : null;
+  const porConfirmar = estaPorConfirmar(roca);
   return (
     <View style={[estilos.tarjeta, { borderColor: c.border, backgroundColor: c.cardBg }]}>
       <View style={estilos.fila}>
@@ -54,7 +57,7 @@ export function TarjetaDelObjetivo({
           <Presionable
             onPress={alAbrirOpciones}
             accessibilityRole="button"
-            accessibilityLabel="Más opciones del objetivo"
+            accessibilityLabel={porConfirmar ? 'Revisar y confirmar el objetivo' : 'Más opciones del objetivo'}
             style={estilos.puntos}
           >
             <Icon name="dots" size={TAMANO_ICONO.normal} color={c.textSoft} />
@@ -73,6 +76,18 @@ export function TarjetaDelObjetivo({
         </Text>
       ) : (
         <>
+          {/* «Por confirmar» (spec 026): un objetivo que nació del diagnóstico y la persona todavía no confirmó. Con texto, ícono y
+              borde, no solo color. */}
+          {porConfirmar ? (
+            <View
+              style={[estilos.chipPorConfirmar, { borderColor: c.gold, backgroundColor: c.goldWash }]}
+              accessible
+              accessibilityLabel="Por confirmar"
+            >
+              <Icon name="hourglass" size={TAMANO_ICONO.chico} color={c.goldInk} />
+              <Text style={[t.small, estilos.textoDelChip, { color: c.goldInk }]}>Por confirmar</Text>
+            </View>
+          ) : null}
           {/* Solo la primera cláusula (2026-09-22, pedido del dueño: «quiero poco texto»). */}
           <Text style={[t.cardTitle, estilos.objetivo, { color: c.textStrong }]}>{primeraClausula(roca.objetivo)}</Text>
           {roca.porcentaje != null ? (
@@ -130,7 +145,7 @@ export function TarjetaEstaSemana({
   queEmpieza,
   alArmar,
   alRevisar,
-  alIrAlMapa,
+  alDefinirObjetivos,
   alArmarLaQueEmpieza,
 }: {
   estado: EstadoDeLaSemana;
@@ -146,7 +161,8 @@ export function TarjetaEstaSemana({
   queEmpieza?: { numeroSemana: number; titulo: string | null; cargando: boolean };
   alArmar: () => void;
   alRevisar: () => void;
-  alIrAlMapa?: () => void;
+  /** Con la semana bloqueada: abre el editor del primer objetivo de 90 días que falta. */
+  alDefinirObjetivos?: () => void;
   alArmarLaQueEmpieza: () => void;
 }) {
   const { c, t } = useTheme();
@@ -169,8 +185,8 @@ export function TarjetaEstaSemana({
       {estado === 'bloqueada' ? (
         <View style={estilos.bloque}>
           <Text style={[t.body, { color: c.textSoft }]}>Primero define tus tres objetivos de 90 días: la semana se arma a partir de ellos.</Text>
-          {alIrAlMapa ? (
-            <GoldButton label="Ir al Mapa de Renacimiento" onPress={alIrAlMapa} variant="outline" icon="chevron" textStyle={TEXTO_DEL_BOTON} />
+          {alDefinirObjetivos ? (
+            <GoldButton label="Escribir mis objetivos" onPress={alDefinirObjetivos} variant="outline" icon="chevron" textStyle={TEXTO_DEL_BOTON} />
           ) : null}
         </View>
       ) : null}
@@ -437,6 +453,9 @@ const estilos = StyleSheet.create({
   // La línea «Inicio · Actual · Meta» puede ocupar dos renglones: 12 de aire hasta la barra para que no quede pegada.
   barraDelObjetivo: { marginTop: 12 },
   relleno: { height: '100%', borderRadius: 4 },
+  /** «Por confirmar»: una píldora con borde, a la izquierda, antes del texto del objetivo. */
+  chipPorConfirmar: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', borderWidth: 1, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4, marginTop: 10 },
+  textoDelChip: { fontFamily: fuentes.negrita, fontSize: 14, lineHeight: 20, letterSpacing: 0 },
   puntos: { width: 48, height: 48, marginRight: -12, marginVertical: -10, alignItems: 'center', justifyContent: 'center' },
   esteMes: { minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 4 },
   bloque: { gap: 12, marginTop: 8 },

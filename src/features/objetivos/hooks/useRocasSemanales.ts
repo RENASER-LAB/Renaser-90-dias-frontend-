@@ -71,7 +71,7 @@ export function useRocasSemanales(maestras: RocaMaestraApi[], semana?: number, a
     } catch (e) {
       // Un 403 acá no es "algo falló": es el estado normal de quien todavía no definió sus tres
       // objetivos de 90 días. Mostrarlo como error rojo mandaría a la persona a soporte en vez de
-      // al Mapa, que es lo que le falta hacer.
+      // a escribir sus objetivos, que es lo que le falta hacer.
       if (e instanceof ApiError && e.esProhibido) {
         setBloqueada(true);
         setRocas([]);

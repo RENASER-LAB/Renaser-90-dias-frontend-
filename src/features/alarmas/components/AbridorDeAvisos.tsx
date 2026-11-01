@@ -20,7 +20,7 @@ import {
  *
  * El hábito y la acción esperan, sin tocar nada, mientras el Código Renaser, el arranque guiado o el Pacto
  * estén a la vista; el evento no (dueño, 28/09). Todos esperan a que existan las pestañas (login,
- * onboarding, Mapa del Día 7). Ver `navigation/abrirAviso.ts`.
+ * onboarding). Ver `navigation/abrirAviso.ts`.
  * No pinta nada.
  *
  * > **Antes (hasta 2026-09-28)** esto era la mitad de `AbridorDeEventos` y solo abría eventos, sin

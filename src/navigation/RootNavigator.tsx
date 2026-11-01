@@ -8,8 +8,6 @@ import ComunidadScreen from '../screens/ComunidadScreen';
 import YoScreen from '../screens/YoScreen';
 import LoginScreen from '../screens/LoginScreen';
 import { OnboardingFlow } from '../features/onboarding/screens/OnboardingFlow';
-import { MapaRenacimientoFlow } from '../features/mapa-renacimiento/MapaRenacimientoFlow';
-import { useMapaRenacimientoAbierto } from '../features/mapa-renacimiento/MapaRenacimientoContext';
 import { useAuth } from '../context/AuthContext';
 import { useFormacionDeLaSesion } from '../features/formaciones/context/FormacionContext';
 import { useEleccionRecordada } from '../features/formaciones/hooks/useEleccionRecordada';
@@ -45,7 +43,6 @@ function MainTabs() {
 
 export function RootNavigator() {
   const { isAuthenticated, isOnboardingCompleted, sesionCargando, onboardingResuelto, user } = useAuth();
-  const mapa = useMapaRenacimientoAbierto();
   /* Las formaciones (spec 022): el personal con varias elige una al entrar (una sola vez por teléfono), el que no tiene ninguna ve
      un aviso, y al cambiar de formación las pestañas se arman de nuevo (ver la `key` de abajo). Para todos los demás no cambia nada. */
   const { formacion } = useFormacionDeLaSesion();
@@ -74,11 +71,6 @@ export function RootNavigator() {
     return <OnboardingFlow />;
   }
 
-  // El Mapa de Renacimiento del Día 7 reemplaza a las pestañas mientras está abierto (manual del
-  // Día 7, §3 V01 / AC-01: sin navegación general durante el flujo), igual que el onboarding.
-  if (mapa.abierto && user) {
-    return <MapaRenacimientoFlow userId={user.id} onSalir={mapa.cerrar} />;
-  }
   // Personal sin ninguna formación asignada: solo el aviso (nunca una app vacía sin explicación).
   if (noTieneFormacion(formacion)) {
     return <SinFormacionScreen />;
