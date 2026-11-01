@@ -1,6 +1,6 @@
 /**
  * Spec 023 aplicada al ranking: «Kilómetros» y «Gimnasio» solo si el catálogo de la formación tiene KILÓMETROS DIARIOS (`DAILY_KM`) o GIMNASIO
- * (`WORKOUT`); sin catálogo leído salen las cuatro.
+ * (`GYM`); sin catálogo leído salen las cuatro.
  */
 import { describe, expect, it } from '@jest/globals';
 
@@ -15,11 +15,11 @@ describe('tablasQueSeOfrecen', () => {
   });
 
   it('un catálogo con los dos hábitos (la Escuela) ofrece las cuatro', () => {
-    expect(titulos(['WAKE_UP', 'DAILY_KM', 'WORKOUT', null])).toEqual(['General', 'Coherencia', 'Kilómetros', 'Gimnasio']);
+    expect(titulos(['WAKE_UP', 'DAILY_KM', 'GYM', null])).toEqual(['General', 'Coherencia', 'Kilómetros', 'Gimnasio']);
   });
 
   it('un catálogo sin KILÓMETROS DIARIOS esconde Kilómetros', () => {
-    expect(titulos(['WAKE_UP', 'WORKOUT'])).toEqual(['General', 'Coherencia', 'Gimnasio']);
+    expect(titulos(['WAKE_UP', 'GYM'])).toEqual(['General', 'Coherencia', 'Gimnasio']);
   });
 
   it('un catálogo sin GIMNASIO esconde Gimnasio', () => {

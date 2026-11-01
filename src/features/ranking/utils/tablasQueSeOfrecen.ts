@@ -12,7 +12,7 @@ import { TABLAS_DE_RANKING, type ClaveDeTabla } from './tablasDeRanking';
  */
 export const CLAVE_DE_SISTEMA_DE_LA_TABLA: Readonly<Partial<Record<ClaveDeTabla, string>>> = {
   kilometros: 'DAILY_KM',
-  gimnasio: 'WORKOUT',
+  gimnasio: 'GYM',
 };
 
 export function tablasQueSeOfrecen(clavesDelCatalogo: ReadonlyArray<string | null | undefined> | null): typeof TABLAS_DE_RANKING {

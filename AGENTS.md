@@ -1367,7 +1367,7 @@ cambia de forma** (sus seis secciones, sus diseños y textos) y para el aprendiz
 
 Dos decisiones del dueño que aparecieron al integrar las specs 022 a 034 (solo la app; el backend, sin endpoints nuevos). Lo que cambia y nada más:
 * **Ranking → «Kilómetros» y «Gimnasio» solo salen si el catálogo de hábitos de la formación que se mira tiene ese hábito** (`KILÓMETROS DIARIOS`,
-  clave `DAILY_KM`, y `GIMNASIO`, clave `WORKOUT`; spec 023 sobre el ranking de la 024). «General» y «Coherencia» salen siempre. Las demás cuentas leen
+  clave `DAILY_KM`, y `GIMNASIO`, clave `GYM`; spec 023 sobre el ranking de la 024). «General» y «Coherencia» salen siempre. Las demás cuentas leen
   su propio catálogo (`GET /habits`); Administración, Alquimista y Soporte TI con una formación elegida, el de esa formación (`GET /admin/habits?formation=`,
   solo los activos); con «Todas» salen las cuatro. **Solo se esconde una pestaña cuando el catálogo se leyó bien y de verdad no la tiene**: sin lectura, con
   fallo o vacío (una cuenta que no hace su programa en esa formación) salen las cuatro, como antes. Si la pestaña elegida deja de ofrecerse, vuelve a «General».
