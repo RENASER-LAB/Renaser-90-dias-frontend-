@@ -1,5 +1,5 @@
 import { fuentes } from '../../../theme/fuentes';
-import React from 'react';
+import React, { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { useCapacidades } from '../../admin/hooks/useCapacidades';
@@ -37,23 +37,39 @@ export function BotonDescargarPodio({
   entradas,
   tabla,
   fechaDelCorte,
+  nombreDeLaFormacion = null,
+  faltaElegirFormacion = false,
 }: {
   /** Las filas de la tabla que se mira (`entradasDeLaTabla`), tal como las muestra la pantalla. */
   entradas: readonly EntradaRankingDto[];
   tabla: ClaveDeTabla;
   /** `RankingAgregadoDto.fecha`: la fecha del corte, que sale escrita en la imagen. */
   fechaDelCorte?: string | null;
+  /** Spec 024: el nombre de la formación que se está mirando; la imagen lo escribe en su cabecera y en el nombre del archivo. */
+  nombreDeLaFormacion?: string | null;
+  /**
+   * Spec 024: Administración leyendo «Todas». Las filas son de varias formaciones y un podio es de una: antes de descargar se pide
+   * elegir una (una línea, sin diálogo) y no se prepara ninguna imagen.
+   */
+  faltaElegirFormacion?: boolean;
 }) {
-  const { c } = useTheme();
+  const { c, t } = useTheme();
   const { capacidades } = useCapacidades();
   const { enCurso, preparando, tarjetaRef, alTarjetaLista, compartir } = useCompartirPodio();
+  const [pidioSinFormacion, setPidioSinFormacion] = useState(false);
 
   if (!capacidades.exportarRanking || entradas.length === 0) return null;
 
   return (
     <View>
       <Presionable
-        onPress={() => void compartir(podioParaCompartir(entradas, tabla, fechaDelCorte))}
+        onPress={() => {
+          if (faltaElegirFormacion) {
+            setPidioSinFormacion(true);
+            return;
+          }
+          void compartir(podioParaCompartir(entradas, tabla, fechaDelCorte, undefined, nombreDeLaFormacion));
+        }}
         disabled={preparando}
         accessibilityRole="button"
         accessibilityLabel="Descargar la imagen del podio"
@@ -67,6 +83,11 @@ export function BotonDescargarPodio({
         <Icon name="forward" size={TAMANO_ICONO.normal} color={c.goldInk} />
         <Text style={[estilos.texto, { color: c.goldInk }]}>{preparando ? 'Preparando…' : 'Descargar'}</Text>
       </Presionable>
+      {faltaElegirFormacion && pidioSinFormacion ? (
+        <Text accessibilityRole="alert" style={[t.small, estilos.aviso, { color: c.goldInk }]}>
+          Elige una formación arriba para descargar el podio.
+        </Text>
+      ) : null}
 
       {enCurso ? (
         /* Fuera de pantalla, sin tocar y sin que el lector de pantalla pase por ahí: es solo el molde de la
@@ -100,6 +121,7 @@ const estilos = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   texto: { fontFamily: fuentes.negrita, fontSize: 15, lineHeight: 20 },
+  aviso: { marginTop: 8, maxWidth: 220, fontFamily: fuentes.media },
   fueraDePantalla: {
     position: 'absolute',
     top: 0,

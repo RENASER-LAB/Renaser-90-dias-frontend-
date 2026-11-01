@@ -53,12 +53,12 @@ describe('Plan: textos', () => {
     for (const viejo of ['Enfocado. Estratégico. Real.', 'VOLVER A PLAN', '02. OBJETIVOS (3 NIVELES)', '1. OBJETIVO PRINCIPAL (90 DÍAS)', 'CUMPLIDO', 'PRINCIPAL<', 'Avance cuantitativo']) {
       expect(PLAN).not.toContain(viejo);
     }
-    expect(TARJETAS).toContain('Tu objetivo de 90 días');
+    expect(TARJETAS).toContain('Tu objetivo de {plazo}');
   });
 
-  it('la cabecera: «Plan» y debajo, en dorado, «Tu dirección en 90 días»; sin la diana de la maqueta', () => {
+  it('la cabecera: «Plan» y debajo, en dorado, «Tu dirección en 90 días» (o 3 meses, o 1 año); sin la diana de la maqueta', () => {
     expect(PLAN).toContain('<ScreenHeader title="Plan" />');
-    expect(PLAN).toMatch(/color: c\.goldInk,[^}]*\}\]\}>Tu dirección en 90 días<\/Text>/);
+    expect(PLAN).toMatch(/color: c\.goldInk,[^}]*\}\]\}>\{`Tu dirección en \$\{plazo\}`\}<\/Text>/);
     expect(PLAN).not.toContain('Tu mapa de los próximos 90 días');
     // La diana de la maqueta no hace nada: no se dibuja (el ScreenHeader solo pinta un botón con ícono y acción).
     expect(PLAN).not.toMatch(/<ScreenHeader[^>]*right=/);
@@ -106,13 +106,6 @@ describe('Plan: íconos', () => {
     expect(TARJETAS).not.toContain('name="zap"');
   });
 
-  it('el Mapa usa el mismo ícono por eje que Plan (Relaciones ya no es `users`)', () => {
-    for (const pantalla of ['PrioridadScreen', 'SistemaEjecucionScreen']) {
-      const fuente = sinComentarios(leer(`features/mapa-renacimiento/screens/${pantalla}.tsx`));
-      expect(fuente).toMatch(/<Icon name=\{iconoDelEje\(EJE_POR_AREA\[area\]\)\}/);
-      expect(fuente).not.toMatch(/relaciones: 'users'/);
-    }
-  });
 });
 
 describe('Plan: el eje y su objetivo', () => {

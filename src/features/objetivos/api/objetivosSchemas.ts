@@ -24,6 +24,10 @@ const rocaMaestraSchema = z
     porcentaje: z.number().nullable(),
     creadoEn: z.string(),
     actualizadoEn: z.string(),
+    // Spec 026: de dónde nació y si ya se confirmó. Tolerante: un servidor anterior no los manda (→ `PLAN`, confirmado), y un
+    // valor que esta versión no conozca tampoco rompe la lista.
+    origin: z.enum(['PLAN', 'MAPA', 'DIAGNOSTICO']).catch('PLAN'),
+    confirmed: z.boolean().catch(true),
   })
   .passthrough();
 

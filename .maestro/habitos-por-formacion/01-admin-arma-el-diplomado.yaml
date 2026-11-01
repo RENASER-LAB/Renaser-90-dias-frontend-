@@ -1,0 +1,74 @@
+# Administración arma el Diplomado (spec 023, historias 2 y 3). ESCRITO Y SIN CORRER.
+# cuenta: admin  (Administración o Alquimista)
+# Precondición: el Diplomado no tiene todavía una categoría «Estudio E2E» (la base local arranca vacía en el Diplomado).
+# Hábitos del programa → Diplomado → Categorías → «Nueva categoría» → el primer hábito dentro de ella.
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "YO"
+- scrollUntilVisible:
+    element: "Administración"
+    direction: DOWN
+    timeout: 40000
+- tapOn: "Administración"
+- scrollUntilVisible:
+    element: "Más opciones"
+    direction: DOWN
+    timeout: 40000
+- tapOn: "Más opciones"
+- scrollUntilVisible:
+    element: "Hábitos del programa"
+    direction: DOWN
+    timeout: 40000
+- tapOn: "Hábitos del programa"
+# El selector de formación: se elige la del Diplomado y la lista es la suya.
+- extendedWaitUntil:
+    visible: "Diplomado"
+    timeout: 30000
+- tapOn: "Diplomado"
+- extendedWaitUntil:
+    visible: "Esta formación todavía no tiene hábitos.*"
+    timeout: 30000
+- takeScreenshot: H01a-el-diplomado-arranca-vacio
+# Categorías de esa formación.
+- tapOn: "Categorías de Diplomado"
+- extendedWaitUntil:
+    visible: "Nueva categoría"
+    timeout: 30000
+- tapOn: "Nueva categoría"
+- tapOn: "Nombre"
+- inputText: "Estudio E2E"
+- hideKeyboard
+- tapOn: "Libro abierto"
+- tapOn: "Crear categoría"
+- extendedWaitUntil:
+    visible: ".*Estudio E2E.*"
+    timeout: 30000
+- takeScreenshot: H01b-categoria-creada
+# Atrás: de Categorías a Hábitos del programa; «Nuevo» crea el hábito dentro de la formación.
+- back
+- extendedWaitUntil:
+    visible: "Nuevo"
+    timeout: 20000
+- tapOn: "Nuevo"
+- extendedWaitUntil:
+    visible: "Nuevo hábito"
+    timeout: 20000
+- tapOn: "Nombre"
+- inputText: "Leer treinta minutos E2E"
+- hideKeyboard
+# Solo ofrece las categorías del Diplomado.
+- assertVisible: "Estudio E2E"
+- assertNotVisible: "Emociones"
+- tapOn: "Estudio E2E"
+- scrollUntilVisible:
+    element: "Crear hábito"
+    direction: DOWN
+    timeout: 30000
+- tapOn: "Crear hábito"
+- extendedWaitUntil:
+    visible: ".*Leer treinta minutos E2E.*"
+    timeout: 30000
+- takeScreenshot: H01c-habito-creado-en-el-diplomado
+# Una categoría con hábitos activos no se desactiva: el servidor dice por qué.
+- back

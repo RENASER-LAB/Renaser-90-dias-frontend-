@@ -1,0 +1,45 @@
+# Yo → «Mi ingreso» con cronograma (spec 032, maqueta del dueño): los pasos, «Tus fechas de pago», las cuotas y confirmar UNA vez. ESCRITO Y SIN CORRER.
+# cuenta: aprendiz
+# Precondición (base local): la cuenta tiene un cronograma de 3 cuotas de US$ 1 000 (la primera ya pagada) sin confirmar. Ver el README.
+appId: com.renaser.app
+---
+- runFlow: comun-abrir-mi-ingreso.yaml
+- assertVisible: "Tus fechas de pago"
+- assertVisible: "Revisa el cronograma acordado."
+- assertVisible: "Acuerdo"
+- assertVisible: "Pagos"
+- assertVisible: "✓ Pagado|Pagado"
+- assertVisible: "Pendiente"
+- assertVisible: "US\\$.1.000"
+- takeScreenshot: P05a-mi-ingreso
+# Sin tono de reproche.
+- assertNotVisible: ".*[Aa]trasad.*"
+- assertNotVisible: ".*[Vv]encid.*"
+# La confirmación: casilla, nombre y botón. Sin la casilla, no manda nada y dice qué falta.
+- scrollUntilVisible:
+    element: "Confirmar cronograma"
+    direction: DOWN
+    timeout: 30000
+- tapOn: "Confirmar cronograma"
+- assertVisible: "Marca que revisaste tus fechas y montos."
+- tapOn: "Revisé mis fechas y montos."
+- tapOn: "Confirmar cronograma"
+- assertVisible: "Escribe tu nombre."
+- tapOn: "Tu nombre"
+- inputText: "Aprendiz Pagos"
+- hideKeyboard
+- tapOn: "Confirmar cronograma"
+- extendedWaitUntil:
+    visible: "Cronograma confirmado"
+    timeout: 20000
+- assertVisible: "Confirmaste tu cronograma el.*"
+- assertNotVisible: "Confirmar cronograma"
+- takeScreenshot: P05b-confirmado
+# Al volver a abrir, sigue confirmado y no se vuelve a pedir.
+- back
+- assertVisible: "Coherencia"
+- tapOn: "Mi ingreso"
+- assertVisible: "Confirmaste tu cronograma el.*"
+- assertNotVisible: "Confirmar cronograma"
+- back
+- assertVisible: "Coherencia"

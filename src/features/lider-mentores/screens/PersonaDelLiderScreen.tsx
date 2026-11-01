@@ -15,6 +15,12 @@ import { PALABRA_NO_SE_MIDE, palabraParaQuienAcompana, rolEnPalabras } from '../
 import { formatearPorcentaje } from '../../semaforo/utils/lecturaDelSemaforo';
 import { obtenerCierresDePersona } from '../../cierre/api/cierreApi';
 import { CierresDelDia } from '../../cierre/components/CierresDelDia';
+import { obtenerOchentaVeinteDeUnaPersona } from '../../ochenta-veinte/api/ochentaVeinteApi';
+import { OchentaVeinteDeLaFicha } from '../../ochenta-veinte/components/OchentaVeinteDeLaFicha';
+import type { CargarOchentaVeinte } from '../../ochenta-veinte/types/ochentaVeinte.types';
+import { lecturaParaElLider } from '../../diagnostico/api/diagnosticoLecturaApi';
+import { SeccionDelDiagnosticoDeLaPersona } from '../../diagnostico/components/SeccionDelDiagnosticoDeLaPersona';
+import type { CargarLecturaDelDiagnostico } from '../../diagnostico/hooks/useLecturaDelDiagnostico';
 import type { CargarCierres } from '../../cierre/types/cierre.types';
 import { obtenerHuecosDePersona } from '../../huecos/api/huecosApi';
 import { TiempoLibreDeLaSemana } from '../../huecos/components/TiempoLibreDeLaSemana';
@@ -85,6 +91,7 @@ export function PersonaDelLiderScreen({
   avisoSiNoSeAbre,
   alAbrirFicha,
   desdeTodos = false,
+  diaInicial,
 }: {
   /** El grupo de la persona; `null` = no tiene (solo se llega así desde «Todos los aprendices»). */
   grupoId: string | null;
@@ -109,6 +116,12 @@ export function PersonaDelLiderScreen({
    * Ausente = desde un grupo o desde Administración, por las rutas del grupo de siempre.
    */
   desdeTodos?: boolean;
+  /**
+   * El día que se abre primero (`YYYY-MM-DD`), cuando la ficha se abre desde «Hábitos de todos» (spec 029): ahí se mira un día
+   * concreto y la ficha tiene que abrir ESE día, no el más reciente con hábitos. Solo vale si el día está en la ventana leída;
+   * si no está (hoy no cabe en los 7 días hasta ayer), abre el de siempre. Ausente = el de siempre. Aditiva: nada más cambia.
+   */
+  diaInicial?: string;
 }) {
   /* La puerta de las cuatro lecturas: la del grupo, o `null` = la que no pregunta por grupo. */
   const grupoDeRuta = desdeTodos ? null : grupoId;
@@ -130,6 +143,17 @@ export function PersonaDelLiderScreen({
     () => (lunes?: string | null) => obtenerCierresDePersona(grupoDeRuta, personaId, lunes),
     [grupoDeRuta, personaId],
   );
+  /* Spec 026: su diagnóstico inicial, por la misma puerta (la del grupo o la que no pregunta por grupo). Una vez por persona. */
+  const cargarDiagnostico = useMemo<CargarLecturaDelDiagnostico>(
+    () => () => lecturaParaElLider(grupoDeRuta, personaId),
+    [grupoDeRuta, personaId],
+  );
+
+  /* Spec 031: su 80/20 y el análisis de la semana y del mes, por la misma puerta del liderazgo (con o sin grupo). */
+  const cargarOchentaVeinte = useMemo<CargarOchentaVeinte>(
+    () => (tipo, inicio) => obtenerOchentaVeinteDeUnaPersona(grupoDeRuta, personaId, tipo, inicio),
+    [grupoDeRuta, personaId],
+  );
 
   /* El día abierto se guarda junto con la semana a la que pertenece: al cambiar de semana vuelve solo al día
      más reciente con hábitos, sin un efecto que corra un render tarde. */
@@ -137,7 +161,12 @@ export function PersonaDelLiderScreen({
   const [aviso, setAviso] = useState<string | null>(null);
   const [abriendoChat, setAbriendoChat] = useState(false);
   const [eleccion, setEleccion] = useState<{ desde: string; fecha: string | null } | null>(null);
-  const diaAbierto = datos ? (eleccion?.desde === datos.desde ? eleccion.fecha : diaInicialDelDetalle(datos.dias)) : null;
+  const diaDePartida = datos
+    ? diaInicial && datos.dias.some(d => d.fecha === diaInicial)
+      ? diaInicial
+      : diaInicialDelDetalle(datos.dias)
+    : null;
+  const diaAbierto = datos ? (eleccion?.desde === datos.desde ? eleccion.fecha : diaDePartida) : null;
   const alternarDia = (fecha: string) => {
     if (datos) setEleccion({ desde: datos.desde, fecha: diaAbierto === fecha ? null : fecha });
   };
@@ -199,6 +228,8 @@ export function PersonaDelLiderScreen({
       <CodigoRenaserDelAlumno cargar={cargarRadar} />
       <TiempoLibreDeLaSemana cargar={cargarHuecos} />
       <CierresDelDia cargar={cargarCierres} />
+      <OchentaVeinteDeLaFicha cargar={cargarOchentaVeinte} />
+      <SeccionDelDiagnosticoDeLaPersona cargar={cargarDiagnostico} />
 
       <View style={estilos.acciones}>
         <BotonPrincipal

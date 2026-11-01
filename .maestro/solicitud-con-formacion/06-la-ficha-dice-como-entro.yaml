@@ -1,0 +1,23 @@
+# La ficha de la persona dice cómo entró, igual que la lista de «Aceptadas» (spec 025, historia 4, escenario 1). ESCRITO Y SIN CORRER.
+# cuenta: admin
+# Precondición: «Sol-Diplomado Uno» ya aceptada en el Diplomado de 1 año, con diagnóstico (flujo 02), con un rol base (o uno personalizado).
+appId: com.renaser.app
+---
+- runFlow: comun-abrir-solicitudes.yaml
+- tapOn: "Aceptadas"
+- extendedWaitUntil:
+    visible: "Sol-Diplomado Uno"
+    timeout: 30000
+# Lo que dice la lista...
+- assertVisible: "Aceptada por .*"
+- assertVisible: "Diplomado 1 año.*con diagnóstico"
+- takeScreenshot: S06a-la-lista
+# ...lo dice la ficha (Administración → Personas → la persona).
+- back
+- tapOn: "Personas"
+- tapOn: "Sol-Diplomado Uno"
+- scrollUntilVisible:
+    element: "Cómo entró"
+- assertVisible: "Aceptada por .*"
+- assertVisible: "Diplomado 1 año.*con diagnóstico"
+- takeScreenshot: S06b-la-ficha

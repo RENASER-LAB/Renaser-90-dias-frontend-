@@ -6,6 +6,8 @@ jest.mock('../AnimalDeFaseDetalleScreen', () => ({}));
 jest.mock('../AnimalesDeFaseAdminScreen', () => ({}));
 jest.mock('../../hooks/useAnimalesDeFaseAdmin', () => ({}));
 jest.mock('../BienvenidaAdminScreen', () => ({}));
+jest.mock('../CodigoRenaserEnFichasAdminScreen', () => ({}));
+jest.mock('../CategoriasDeHabitoAdminScreen', () => ({}));
 jest.mock('../HabitosProgramaAdminScreen', () => ({}));
 jest.mock('../HabitoProgramaFormScreen', () => ({}));
 jest.mock('../../hooks/useHabitosProgramaAdmin', () => ({}));
@@ -25,6 +27,12 @@ jest.mock('../../../caja/screens/CajaContenidoScreen', () => ({}));
 jest.mock('../../../caja/screens/CajaDetalleScreen', () => ({}));
 jest.mock('../../../caja/screens/CajaListaScreen', () => ({}));
 jest.mock('../../../lider-mentores/screens/PersonaDelLiderScreen', () => ({}));
+jest.mock('../../../diagnostico-admin/screens/FichasAdminScreen', () => ({}));
+jest.mock('../../../formaciones/screens/FormacionDetalleAdminScreen', () => ({}));
+jest.mock('../../../formaciones/screens/FormacionesAdminScreen', () => ({}));
+jest.mock('../../../onboarding/terminos/screens/TerminosAdminScreen', () => ({}));
+jest.mock('../../../onboarding/terminos/screens/TerminosDeUnaFormacionScreen', () => ({}));
+jest.mock('../../../onboarding/terminos/screens/EditorDeTerminosScreen', () => ({}));
 
 import { pilaInicial, pilaTrasEliminarCuenta } from '../AdminScreen';
 

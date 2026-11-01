@@ -12,13 +12,13 @@ import { textoVentanaSemanal } from '../utils/ventanasDePlanificacion';
 import { HojaDesdeAbajo } from '../../../components/hojaDesdeAbajo/HojaDesdeAbajo';
 import { Presionable } from '../../../components/Presionable';
 import { tacto } from '../../../utils/tacto';
+import { usePlazoDelObjetivo } from '../context/PlazoDelObjetivo';
 
 /**
  * Armar el plan de la semana: **un eje por pantalla**.
  *
  * **Por qué de a uno.** Son tres rocas con seis campos cada una: dieciocho campos juntos son un
- * muro, y el usuario de este programa tiene entre 50 y 60 años. Se avanza de a un eje, igual que el
- * Mapa de Renacimiento con sus vistas. El último paso resume y recién ahí se guarda: el backend
+ * muro, y el usuario de este programa tiene entre 50 y 60 años. Se avanza de a un eje, con sus vistas. El último paso resume y recién ahí se guarda: el backend
  * crea todas de una sola llamada (`POST /rocks/weekly`), así que guardar eje por eje no sería ni
  * siquiera posible.
  *
@@ -67,7 +67,7 @@ interface PlanSemanalModalProps {
   /** Para mostrar, en cada paso, a qué objetivo de 90 días sirve el de esta semana. */
   maestras: RocaMaestraApi[];
   /**
-   * El eje que eligió como principal en el Mapa. Va primero y es **el único obligatorio**: los
+   * El eje que se arma primero (el que se está mirando en Plan). Va primero y es **el único obligatorio**: los
    * otros dos se suman cuando quiera, no cuando el formulario lo exija.
    */
   ejePrincipal: EjeObjetivo | null;
@@ -103,6 +103,7 @@ export function PlanSemanalModal({
   onCerrar,
 }: PlanSemanalModalProps) {
   const { c, t } = useTheme();
+  const plazo = usePlazoDelObjetivo();
   const [paso, setPaso] = useState(0);
   const [borradores, setBorradores] = useState<Record<EjeObjetivo, BorradorDeEje>>(() => ({
     CUERPO: { ...BORRADOR_VACIO },
@@ -111,7 +112,7 @@ export function PlanSemanalModal({
   }));
 
   /*
-   * Se vuelve al paso 1 cada vez que se abre, y se siembran las acciones del Mapa.
+   * Se vuelve al paso 1 cada vez que se abre.
    *
    * Reabrir a mitad de camino, con lo escrito de la vez anterior, es más confuso que empezar de
    * nuevo: no hay forma de saber qué quedó a medias. Lo que sí sobrevive es lo que la persona
@@ -128,7 +129,7 @@ export function PlanSemanalModal({
   }, [visible, objetivoSugeridoDe]);
 
   /*
-   * El principal del Mapa va primero: es el que manda y el único que hay que llenar para guardar.
+   * El principal va primero: es el que manda y el único que hay que llenar para guardar.
    * Los que ya tienen objetivo esta semana quedan fuera de los pasos — ver `ejesYaConObjetivo`.
    */
   const ejesOrdenados = useMemo(() => {
@@ -366,7 +367,7 @@ export function PlanSemanalModal({
           <>
             {objetivoDelEje ? (
               <View style={[estilos.recordatorio, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}>
-                <Text style={[t.small, { color: c.textSoft, fontSize: 13 }]}>Tu objetivo de 90 días</Text>
+                <Text style={[t.small, { color: c.textSoft, fontSize: 13 }]}>{`Tu objetivo de ${plazo}`}</Text>
                 <Text style={[t.body, { color: c.textStrong, fontSize: 15, marginTop: 4, lineHeight: 21 }]}>
                   {objetivoDelEje}
                 </Text>

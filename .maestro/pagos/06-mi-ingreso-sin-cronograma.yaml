@@ -1,0 +1,16 @@
+# Yo → «Mi ingreso» sin cronograma: «Tu pago fue cancelado» (spec 032, texto del dueño). ESCRITO Y SIN CORRER.
+# cuenta: aprendiz
+# Precondición (base local): la cuenta tiene anotado «sin cronograma» (`PUT /admin/pagos/personas/{id}` con `{"mode":"NONE"}`).
+appId: com.renaser.app
+---
+- runFlow: comun-abrir-mi-ingreso.yaml
+- assertVisible: "Tu pago fue cancelado"
+- assertVisible: "No tienes cuotas por pagar."
+- assertNotVisible: "Tus fechas de pago"
+- assertNotVisible: "Confirmar cronograma"
+- assertNotVisible: "Revisé mis fechas y montos."
+- takeScreenshot: P06-tu-pago-fue-cancelado
+- back
+- assertVisible: "Coherencia"
+# La fila de Yo dice lo mismo.
+- assertVisible: "Tu pago fue cancelado"

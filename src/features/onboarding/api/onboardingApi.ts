@@ -122,8 +122,10 @@ export async function avanzarEstado(input: AvanzarEstadoInput): Promise<EstadoOn
 }
 
 /** POST /api/v1/onboarding/milestones — marca un hito de aceptación/firma (TERMINOS, PACTO, PACTO_FIRMADO, ROCAS_SYNC). */
-export async function aceptarHito(milestone: HitoOnboarding): Promise<EstadoOnboardingApi> {
-  const r = await apiFetch<unknown>('/api/v1/onboarding/milestones', { method: 'POST', body: { milestone } });
+export async function aceptarHito(milestone: HitoOnboarding, termsVersionId?: string | null): Promise<EstadoOnboardingApi> {
+  /* Spec 027: con el hito de Términos va además la versión que la persona leyó, para dejar constancia de ella. Un servidor anterior ignora el campo. */
+  const body = termsVersionId ? { milestone, termsVersionId } : { milestone };
+  const r = await apiFetch<unknown>('/api/v1/onboarding/milestones', { method: 'POST', body });
   return validarRespuesta<EstadoOnboardingApi>(estadoOnboardingSchema, r, 'POST /api/v1/onboarding/milestones');
 }
 

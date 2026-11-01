@@ -1,3 +1,4 @@
+import type { PagoParaElPedido } from '../../pagos/utils/borradorDelCronograma';
 import { apiFetch } from '../../../services/http/apiClient';
 import { validarRespuesta } from '../../mentor/api/mentorSchemas';
 import { semanaAlumnoSchema, type SemanaAlumnoApi } from '../../mentor/api/mentorSchemas';
@@ -10,6 +11,7 @@ import {
   grupoResumenSchema,
   guiasRecepcionSchema,
   mentorCandidatoSchema,
+  opcionesDeAceptacionSchema,
   paginaAprendicesSchema,
   paginaSolicitudesSchema,
   paginaStaffSchema,
@@ -21,6 +23,7 @@ import {
   type GrupoResumenApi,
   type GuiasRecepcionApi,
   type MentorCandidatoApi,
+  type OpcionesDeAceptacionApi,
   type PaginaAprendicesApi,
   type PaginaSolicitudesApi,
   type PaginaStaffApi,
@@ -269,6 +272,10 @@ export async function listarAprendices(opciones: {
   soloSinGrupo?: boolean;
   /** Solo las cuentas de ese rol (backend E-605). Sin él vienen todas, staff incluido (D-138). */
   rol?: RolAsignable;
+  /** Spec 022: solo las personas de esa formación (código). Sin él vienen las de todas. */
+  formacion?: string | null;
+  /** Solo las cuentas activas: sin las solicitudes que esperan aprobación (el padrón las trae, inactivas y sin programa). */
+  soloActivas?: boolean;
 }): Promise<PaginaAprendicesApi> {
   const params = new URLSearchParams({
     page: String(opciones.pagina ?? 0),
@@ -277,6 +284,8 @@ export async function listarAprendices(opciones: {
   if (opciones.busqueda && opciones.busqueda.trim()) params.set('q', opciones.busqueda.trim());
   if (opciones.soloSinGrupo) params.set('withoutGroup', 'true');
   if (opciones.rol) params.set('role', opciones.rol);
+  if (opciones.formacion) params.set('formation', opciones.formacion);
+  if (opciones.soloActivas) params.set('activeOnly', 'true');
 
   return validarRespuesta<PaginaAprendicesApi>(
     paginaAprendicesSchema,
@@ -435,8 +444,11 @@ export async function obtenerSemanaAdministrativa(
 export async function listarSolicitudes(
   estado: 'PENDING' | 'APPROVED' | 'REJECTED',
   pagina = 0,
+  /** Spec 025: con ella, las pendientes y las aceptadas en esa formación. Un backend anterior la ignora. */
+  formacion: string | null = null,
 ): Promise<PaginaSolicitudesApi> {
   const params = new URLSearchParams({ status: estado, page: String(pagina), size: '20' });
+  if (formacion) params.set('formation', formacion);
   return validarRespuesta<PaginaSolicitudesApi>(
     paginaSolicitudesSchema,
     await apiFetch<unknown>(`/api/v1/account-requests?${params.toString()}`),
@@ -454,12 +466,57 @@ export async function listarSolicitudes(
  * Aprobar una solicitud. Sin rol, el pedido de siempre (sin cuerpo: entra como aprendiz). Con un rol personalizado
  * (spec 002, fase 2, contrato §4.5), además `rolPersonalizadoId`: el rol base sale de él.
  */
-export async function aprobarSolicitud(id: string, rol?: RolAsignable | string, rolPersonalizadoId?: string | null): Promise<void> {
-  const cuerpo = rol ? { role: rol, ...(rolPersonalizadoId ? { rolPersonalizadoId } : {}) } : null;
+export async function aprobarSolicitud(
+  id: string,
+  rol?: RolAsignable | string,
+  rolPersonalizadoId?: string | null,
+  /** Spec 025: a qué formaciones entra, con qué duración y si su ficha es con diagnóstico. Solo se manda si el servidor lo ofrece. */
+  eleccion?: EleccionAlAceptar | null,
+): Promise<void> {
+  const cuerpo = rol
+    ? {
+        role: rol,
+        ...(rolPersonalizadoId ? { rolPersonalizadoId } : {}),
+        ...(eleccion ? cuerpoDeLaEleccion(eleccion) : {}),
+      }
+    : null;
   await apiFetch<unknown>(`/api/v1/account-requests/${encodeURIComponent(id)}/approve`, {
     method: 'POST',
     ...(cuerpo ? { body: cuerpo } : {}),
   });
+}
+
+/** Lo que Administración elige al aceptar, además del rol (spec 025). Las formaciones van vacías para Administración y Alquimista. */
+export type EleccionAlAceptar = {
+  formaciones: string[];
+  duracionDias: number | null;
+  conDiagnostico: boolean;
+  /** Spec 032: cómo paga (`NONE` o `SCHEDULE` con sus cuotas). `null` o ausente = no se decidió y no se manda nada (la persona queda «sin anotar»). */
+  pago?: PagoParaElPedido | null;
+};
+
+function cuerpoDeLaEleccion(eleccion: EleccionAlAceptar) {
+  return {
+    formations: eleccion.formaciones,
+    ...(eleccion.duracionDias !== null ? { durationDays: eleccion.duracionDias } : {}),
+    withDiagnosis: eleccion.conDiagnostico,
+    ...(eleccion.pago ? { payment: eleccion.pago } : {}),
+  };
+}
+
+/**
+ * `GET /api/v1/account-requests/acceptance-options` (spec 025). `null` si el servidor no lo ofrece (un backend anterior responde 404): la hoja de
+ * aceptar queda entonces solo con el rol, como siempre, y NO manda formaciones — el servidor viejo las ignoraría en silencio y la persona entraría a
+ * la Escuela sin que quien la acepta lo sepa.
+ */
+export async function leerOpcionesDeAceptacion(): Promise<OpcionesDeAceptacionApi | null> {
+  try {
+    const respuesta = await apiFetch<unknown>('/api/v1/account-requests/acceptance-options', { timeoutMs: 15_000 });
+    const lectura = opcionesDeAceptacionSchema.safeParse(respuesta);
+    return lectura.success ? lectura.data : null;
+  } catch {
+    return null;
+  }
 }
 
 /** Una opción de rol para elegir (Equipo y roles, Solicitudes): un rol base o un personalizado que hereda de uno. */

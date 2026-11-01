@@ -1,0 +1,62 @@
+# Administración → Formaciones (spec 022, historia 4). ESCRITO Y SIN CORRER.
+# cuenta: admin  (Administración o Alquimista)
+# Dos toques desde la raíz hasta el detalle de una formación; sus cifras llevan a las listas ya filtradas.
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "YO"
+- scrollUntilVisible:
+    element: "Administración"
+    direction: DOWN
+    timeout: 40000
+- tapOn: "Administración"
+- scrollUntilVisible:
+    element: "Formaciones"
+    direction: DOWN
+    timeout: 40000
+- tapOn: "Formaciones"
+# Las tres, con duración y cifras.
+- extendedWaitUntil:
+    visible: "Escuela Renaser.*"
+    timeout: 30000
+- assertVisible: "Diplomado Renaser.*"
+- assertVisible: "Certificación Renaser.*"
+- assertVisible: ".*3 meses · 1 año.*"
+- takeScreenshot: F05a-las-tres-formaciones
+- tapOn: "Diplomado Renaser.*"
+# «Por atender» está más abajo y fuera de la pantalla en un teléfono (segunda jornada del E2E, 01/11/2026): se espera lo de arriba.
+- extendedWaitUntil:
+    visible: "Resumen"
+    timeout: 30000
+- assertVisible: "Resumen"
+- assertVisible: "Personas"
+- assertVisible: "Grupos"
+- takeScreenshot: F05b-detalle-del-diplomado
+# «Ver personas» abre Personas ya filtrada por el Diplomado.
+- scrollUntilVisible:
+    element: "Ver personas"
+    direction: DOWN
+    timeout: 30000
+- tapOn: "Ver personas"
+- extendedWaitUntil:
+    visible: "Buscar por nombre o correo"
+    timeout: 30000
+- assertVisible:
+    text: "Diplomado"
+    selected: true
+- takeScreenshot: F05c-personas-del-diplomado
+- back
+- extendedWaitUntil:
+    visible: "Resumen"
+    timeout: 20000
+# Editar: la hoja abre con lo que hay y se cierra sin guardar.
+- scrollUntilVisible:
+    element: "Editar"
+    direction: UP
+    timeout: 30000
+- tapOn: "Editar"
+- extendedWaitUntil:
+    visible: "Duraciones que ofrece"
+    timeout: 20000
+- takeScreenshot: F05d-editar-la-formacion
+- tapOn: "Cerrar sin guardar"

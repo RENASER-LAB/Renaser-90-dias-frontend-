@@ -15,6 +15,11 @@ export interface CheckInRadarApi {
   /** 1..10. */
   energyLevel: number;
   whatAmIAvoiding: string;
+  /**
+   * Spec 030 (decisión 030-2): `true` si al menos una de las respuestas se dictó con el reconocimiento de voz del teléfono y
+   * sigue en el texto. La app solo lo manda cuando es `true`; ausente vale `false`. El audio nunca viaja.
+   */
+  dictado?: boolean;
 }
 
 /** Respuesta de `POST /api/v1/radar` y cada ítem de `/history`. */

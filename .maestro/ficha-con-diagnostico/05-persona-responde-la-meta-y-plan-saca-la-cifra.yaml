@@ -1,0 +1,61 @@
+# Spec 026 (decisión del dueño del 2026-11-01, V157) — la meta medible se pregunta en el diagnóstico y Plan saca la cifra del mes. ESCRITO Y SIN CORRER:
+# necesita el backend con la V157, el BORRADOR SEMBRADO publicado tal cual (con las ocho preguntas de la meta; NO el `diagnostico-inicial.csv`, que no las trae),
+# un emulador libre y una cuenta sembrada en la base LOCAL (nunca producción).
+# cuenta: aprendiz  (la ranura apunta a una cuenta que YA terminó su onboarding y a la que Administración le asignó el diagnóstico después, sin avance)
+# Cubre: el recorrido contestando la meta de cada eje (`META: si` del ayudante), el cierre que manda a Plan, y que en Plan el objetivo de Cuerpo llega CON su
+# meta («Inicio · Actual · Meta») y con la cifra del mes ("Este mes"), mientras que el de un eje sin meta contestada queda en palabras.
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "HOY"
+- extendedWaitUntil:
+    visible: "Completa tu diagnóstico"
+    timeout: 30000
+- tapOn: "Completa tu diagnóstico"
+- extendedWaitUntil:
+    visible: "Tiempo estimado: 15 minutos"
+    timeout: 30000
+- tapOn: "EMPEZAR"
+- repeat:
+    while:
+      visible: "SIGUIENTE"
+    times: 45
+    commands:
+      - runFlow:
+          file: ../comun/diagnostico-responder-el-paso.yaml
+          env:
+            META: "si"
+      - tapOn: "SIGUIENTE"
+      - waitForAnimationToEnd:
+          timeout: 3000
+- runFlow:
+    file: ../comun/diagnostico-responder-el-paso.yaml
+    env:
+      META: "si"
+- tapOn: "TERMINAR"
+- extendedWaitUntil:
+    visible: "Tus objetivos ya están preparados"
+    timeout: 60000
+- tapOn: "CONTINUAR"
+# Plan: los objetivos llegan por confirmar y, los que tienen meta, con su línea de inicio, avance y meta.
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "PLAN"
+- extendedWaitUntil:
+    visible: "Revisa tus objetivos de 90 días"
+    timeout: 30000
+- assertVisible: "3 objetivos por confirmar"
+- assertVisible: ".*Inicio.*Actual.*Meta.*"
+- takeScreenshot: D05a-plan-con-la-meta
+# Confirmar solo con el texto no borra la meta.
+- tapOn: "Revisar y confirmar"
+- extendedWaitUntil:
+    visible: "Confirmar mis objetivos"
+    timeout: 20000
+- tapOn: "Confirmar mis objetivos"
+- extendedWaitUntil:
+    visible: "Tus objetivos de 90 días quedaron confirmados\\."
+    timeout: 40000
+- assertVisible: ".*Inicio.*Actual.*Meta.*"
+# La cifra del mes sale de la meta.
+- assertVisible: ".*Este mes.*"
+- takeScreenshot: D05b-plan-con-la-cifra-del-mes

@@ -1,0 +1,14 @@
+# «Hábitos de todos» (spec 029): solo para el líder de mentores (y la administración). Un mentor no tiene «Mis mentores» en Yo, y
+# por tanto tampoco la fila nueva; el servidor responde 403 a su lectura.
+# ESCRITO Y SIN CORRER. cuenta: mentor (la ranura E2E_MENTOR_*).
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "YO"
+- scrollUntilVisible:
+    element: "Tuve una emergencia"
+    direction: DOWN
+    timeout: 40000
+- assertNotVisible: "Mis mentores"
+- assertNotVisible: "Hábitos de todos"
+- takeScreenshot: H03-el-mentor-no-ve-la-fila

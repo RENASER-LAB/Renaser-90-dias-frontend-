@@ -5,6 +5,7 @@ import { mensajeDeError } from '../../../services/http/apiClient';
 // Solo se LEE (no se toca `features/eventos/`): la misma relectura compartida que ya usa la lista
 // de Eventos, con sus pruebas. Mismo criterio que `objetivos` con `eventos/utils/zonaHoraria`.
 import { crearLecturaVigente, type LecturaVigente } from '../../eventos/utils/lecturaVigente';
+import { formacionDeLaLectura } from '../../formaciones/estado/formacionDeLaComunidad';
 import * as chatApi from '../api/chatApi';
 import { alLlegarMensajeDeOtroChat } from '../avisos/mensajesEnVivo';
 import {
@@ -77,7 +78,7 @@ export function useChatConversaciones(actorId: string | null | undefined, activo
         const quien = actor.current;
         await Promise.allSettled([...marcasEnVuelo.current]);
         const [resumenes, directorioPagina] = await Promise.all([
-          chatApi.obtenerConversaciones(),
+          chatApi.obtenerConversaciones(formacionDeLaLectura()),
           chatApi.obtenerDirectorioMiembros(undefined, undefined).catch(() => ({ members: [], nextCursor: null })),
         ]);
         const directorio: Record<string, WireMiembro> = Object.fromEntries(

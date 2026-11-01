@@ -67,8 +67,9 @@ describe('Hoy: solo el programa propio', () => {
     expect(HOY).not.toMatch(/consumirRutaPendiente|alAbrirAviso|abrirCajaAprendizId|abrirFichaAprendiz/);
   });
 
-  it('sigue ofreciendo «Elegir mi Día 1» a quien no hace su programa (personal sin Día 1)', () => {
-    expect(HOY).toContain('EntradaAlProgramaPropio');
+  it('sigue ofreciendo «Elegir mi Día 1» a quien no hace su programa (personal sin Día 1), ahora como una fila compacta', () => {
+    expect(HOY).toContain('<FilaDelProgramaPropio');
+    expect(HOY).not.toContain('EntradaAlProgramaPropio');
   });
 
   it('el fénix sigue recibiendo el color del semáforo de /home', () => {
@@ -76,7 +77,7 @@ describe('Hoy: solo el programa propio', () => {
   });
 
   it('la frase del día (con su raya dorada) ya no depende de ningún papel', () => {
-    expect(HOY).toContain('<TarjetaConfrontacion diaPrograma={diaConocido} />');
+    expect(HOY).toContain('<TarjetaConfrontacion diaPrograma={diaConocido} fechaDeHoy={fechaDeHoy} />');
     expect(HOY).not.toMatch(/\{mostrarPrograma \?/);
   });
 });
@@ -124,6 +125,12 @@ describe('el hook de los paneles', () => {
     expect(HOOK).toContain('const aprendicesDisponibles = useAprendicesDisponibles(esLider && esDisponible(CLAVES.lider));');
   });
 
+  it('«Hábitos de todos» (spec 029) se pregunta solo al líder, con la misma puerta que «Todos los aprendices»', () => {
+    expect(HOOK).toContain('const habitosDisponibles = useHabitosDeTodosDisponibles(esLider && esDisponible(CLAVES.lider));');
+    // Si la cuenta deja de ser líder, su pantalla no queda abierta.
+    expect(HOOK).toContain("'todos', 'habitosDeTodos', 'cumplimiento'");
+  });
+
   it('las filas salen de la regla pura con las entradas de Soporte TI de siempre', () => {
     expect(HOOK).toMatch(
       /filasDeRolEnYo\(\{\s*esMentor,\s*rol: user\?\.role,\s*fallo: celula\.fallo,\s*hayVista: celula\.vista !== null,\s*miGrupoDisponible: esDisponible\(CLAVES\.mentorMiGrupo\),\s*liderDisponible: esDisponible\(CLAVES\.lider\),\s*ticketsDisponible: esDisponible\(CLAVES\.tickets\),\s*semaforoDisponible: esDisponible\(CLAVES\.semaforo\),/,
@@ -166,6 +173,12 @@ describe('la pantalla del panel', () => {
 
   it('«Todos los aprendices» solo se ofrece con un 200 del servidor (`=== true`: ni pendiente ni caído)', () => {
     expect(PANTALLA).toContain('verTodos={paneles.aprendicesDisponibles === true}');
+  });
+
+  it('«Hábitos de todos» (spec 029) solo se ofrece con un 200 del servidor y vuelve a «Mis mentores»', () => {
+    expect(PANTALLA).toContain('verHabitos={paneles.habitosDisponibles === true}');
+    expect(PANTALLA).toContain("onAbrirHabitos={() => ir({ tipo: 'habitosDeTodos' })}");
+    expect(PANTALLA).toContain('<HabitosDeTodosScreen grupos={semaforoGrupos.datos?.grupos ?? []} onSalir={volver} />');
   });
 
   it('«Mi grupo» y «Mis mentores» mantienen las entradas de Soporte TI de siempre', () => {

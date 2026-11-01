@@ -6,6 +6,8 @@ import { Aparicion } from '../../../components/Aparicion';
 import { Card } from '../../../components/ui';
 import { TituloDeSeccion } from '../../../components/Legible';
 import { useTheme } from '../../../theme/ThemeContext';
+import { useFuncionalidad } from '../../plataforma/estado/useFuncionalidad';
+import { CLAVES } from '../../plataforma/utils/clavesDeLaApp';
 import { ENERGIA_MAXIMA, PREGUNTAS_RADAR } from '../../radar/config/configRadar';
 import { useHistorialDeRadar, type CargarHistorialDeRadar } from '../../radar/hooks/useHistorialDeRadar';
 import type { RegistroRadarApi } from '../../radar/types/radar.types';
@@ -20,6 +22,10 @@ import { diaLargo } from '../utils/fechasLegibles';
  * día. Por eso la sección no lo decora: sin iconos, sin colores de estado, sin insignias y sin
  * ninguna cifra que resuma o puntúe a la persona. Se muestra agrupado por día y ordenado por
  * hora, y nada más — leerlo es el objetivo, no medirlo. Solo se lee: acá nadie registra, enciende ni apaga.
+ *
+ * Spec 030: un registro dictado (`dictado`) lo dice en una línea, para que quien lee sepa que pudo haber errores de transcripción.
+ * Si el interruptor de Código Renaser para mentor/líder/Administración (spec 034) lo oculta, esta sección ni se dibuja: el dato
+ * viaja en las mismas filas, no por otro camino.
  *
  * Las cuatro preguntas salen de `PREGUNTAS_RADAR`, las mismas constantes con las que se le
  * preguntaron. Copiarlas acá con otras palabras haría que quien lee vea un enunciado distinto
@@ -37,14 +43,25 @@ import { diaLargo } from '../utils/fechasLegibles';
  * Quien aún no registró, o apagó Mi Radar, no tiene registros nuevos. Una lista vacía es eso, no un fallo: una línea y
  * se termina.
  *
+ * ## Si Administración lo apagó, acá no hay nada (spec 034)
+ *
+ * «Código Renaser en las fichas» (`radar.fichas`) nace apagado para el mentor, la guía y el líder. Apagado, la sección no se
+ * dibuja ni se pide, y el servidor responde 404 a cualquier lectura de esos roles. Administración y Alquimista no pasan por ahí.
+ *
  * ## Si el endpoint no está, acá no hay nada
  *
  * Un 404 (sin desplegar, o esa persona no se muestra) o un 403 (ya no acompaña a esta persona) no dibujan la sección.
  */
 export function CodigoRenaserDelAlumno({ cargar }: { cargar: CargarHistorialDeRadar | null }) {
   const { c, t } = useTheme();
-  const { dias, miRadar, hayMas, cargando, cargandoMas, fallo, cargarMas } = useHistorialDeRadar(cargar);
+  /* Spec 034 (D-299): Administración decide si el mentor, la guía y el líder ven el Código Renaser (apagado de fábrica). Sin
+     permiso la sección no se dibuja y ni siquiera se pide: sin hueco, sin error y sin aviso de mantenimiento. El servidor lo
+     hace cumplir igual (404): esto es lo que ahorra el pedido. Administración y Alquimista siempre lo tienen prendido. */
+  const radarEnFichas = useFuncionalidad(CLAVES.radarFichas);
+  const permitido = radarEnFichas.prendida && radarEnFichas.disponible;
+  const { dias, miRadar, hayMas, cargando, cargandoMas, fallo, cargarMas } = useHistorialDeRadar(permitido ? cargar : null);
 
+  if (!permitido) return null;
   if (fallo === 'no_disponible' || fallo === 'sin_permiso') return null;
   /* Sin a quién preguntarle no se dibuja un "Sin registros" que en realidad significa "no pregunté". */
   if (!cargar) return null;
@@ -125,6 +142,14 @@ function RegistroDeHora({ registro, hora }: { registro: RegistroRadarApi; hora: 
           Energía {registro.energyLevel} / {ENERGIA_MAXIMA}
         </Text>
       </View>
+
+      {/* Spec 030 (decisión 030-2): si la persona lo habló con el reconocimiento de voz de su teléfono, quien lee lo sabe: el
+          texto pudo traer errores de transcripción. Es una línea de texto, como el resto de la sección: sin ícono ni color de estado. */}
+      {registro.dictado ? (
+        <Text style={[t.micro, { color: c.textSoft, fontSize: 14 /* metadato */, lineHeight: 20 }]}>
+          Dictado por voz. Puede haber errores de transcripción.
+        </Text>
+      ) : null}
 
       {PREGUNTAS_RADAR.map(pregunta => {
         const texto = registro[pregunta.campo]?.trim();

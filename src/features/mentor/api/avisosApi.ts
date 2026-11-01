@@ -123,6 +123,14 @@ export interface DestinoDeMiRadar {
 }
 
 /**
+ * Mi ingreso: `/mi-ingreso` (spec 032, 2026-11-01), la ruta del recordatorio de pago de cada cuota pendiente. Abre Yo → «Mi ingreso». Lo programa
+ * el teléfono (`alarmasDePagos`), no el servidor. Sin identificadores: es siempre el suyo.
+ */
+export interface DestinoDeMiIngreso {
+  tipo: 'miIngreso';
+}
+
+/**
  * La caja de un aprendiz, para Administración: `/admin/caja/{aprendizId}` (D-219), la ruta de los
  * avisos al Admin («X está lista para su Caja», la caja enviada hace 5 días sin confirmar). Abre
  * Administración → Caja Renaser en esa caja. Quien no administra no abre nada: el servidor autoriza.
@@ -140,6 +148,24 @@ export interface DestinoDeCajaAdmin {
 export interface DestinoDelChat {
   tipo: 'chat';
   conversacionId: string;
+  /**
+   * Spec 024: la formación del chat (`/chat/{id}?formacion=DIPLOMADO`). El servidor solo la pone cuando NO es la Escuela, así que
+   * su ausencia significa «la Escuela». Solo la usa el personal con varias formaciones (para cambiar a la del chat antes de abrirlo);
+   * para las demás cuentas se ignora. Ausente (no `null`) cuando la ruta no la trae.
+   */
+  formacion?: string;
+  /** Spec 024: la línea que Comunidad dice al abrir el chat si hubo que cambiar de formación («Cambiamos a Diplomado Renaser.»). */
+  aviso?: string;
+}
+
+/**
+ * «Tu análisis está listo» (spec 031): `/plan/80-20?periodo=SEMANA|MES&inicio=…`. Abre Plan con la hoja «Tu 80/20» en esa vista. El
+ * `inicio` no se usa para abrir: la hoja arranca en el periodo en curso y el análisis nuevo está a una flecha. Que la ruta llegue no
+ * autoriza nada: el servidor lee solo a quien pregunta.
+ */
+export interface DestinoDelOchentaVeinte {
+  tipo: 'ochentaVeinte';
+  periodo: 'SEMANA' | 'MES';
 }
 
 /**
@@ -157,8 +183,10 @@ export type DestinoDeAviso =
   | DestinoDelObjetivo
   | DestinoDeMiCaja
   | DestinoDeMiRadar
+  | DestinoDeMiIngreso
   | DestinoDeCajaAdmin
-  | DestinoDelChat;
+  | DestinoDelChat
+  | DestinoDelOchentaVeinte;
 
 export async function obtenerAvisosDeAcompanamiento(): Promise<AvisoApi[]> {
   const bandeja = validarRespuesta<z.infer<typeof bandejaSchema>>(
@@ -187,9 +215,15 @@ const RUTA_DEL_OBJETIVO = /^\/objetivos\/(\d{4}-\d{2}-\d{2})\/?(?:\?(.*))?$/;
 const RUTA_DE_MI_CAJA = /^\/caja\/?$/;
 /** Spec 012: Mi Radar. Con la barra final tolerada. */
 const RUTA_DE_MI_RADAR = /^\/mi-radar\/?$/;
+/** Spec 032: Mi ingreso (el aviso de pago). Con la barra final tolerada. */
+const RUTA_DE_MI_INGRESO = /^\/mi-ingreso\/?$/;
 const RUTA_DE_LA_CAJA_ADMIN = /^\/admin\/caja\/([^/?]+)\/?$/;
-/** D-221: el chat de un aviso de mensaje. Con la barra final tolerada. */
-const RUTA_DEL_CHAT = /^\/chat\/([^/?]+)\/?$/;
+/** D-221: el chat de un aviso de mensaje. Con la barra final tolerada; desde la spec 024 puede traer `?formacion=…`. */
+const RUTA_DEL_CHAT = /^\/chat\/([^/?]+)\/?(?:\?(.*))?$/;
+/** Spec 031: el aviso de «tu análisis está listo»: Plan → Tu 80/20, en la semana o el mes. */
+const RUTA_DEL_OCHENTA_VEINTE = /^\/plan\/80-20\/?(?:\?(.*))?$/;
+/** Un código de formación tal como lo manda el servidor (`DIPLOMADO`, `CERTIFICACION`); cualquier otra cosa se ignora. */
+const CODIGO_DE_FORMACION = /^[A-Z][A-Z0-9_]{1,31}$/;
 
 /**
  * Saca el destino de la ruta de un aviso: la ficha de un alumno
@@ -216,6 +250,11 @@ export function destinoDeRuta(ruta: unknown): DestinoDeAviso | null {
   if (RUTA_DEL_SEMAFORO_POR_GRUPOS.test(ruta)) return { tipo: 'semaforoGrupos' };
   if (RUTA_DE_MI_CAJA.test(ruta)) return { tipo: 'caja' };
   if (RUTA_DE_MI_RADAR.test(ruta)) return { tipo: 'miRadar' };
+  if (RUTA_DE_MI_INGRESO.test(ruta)) return { tipo: 'miIngreso' };
+  const delOchentaVeinte = RUTA_DEL_OCHENTA_VEINTE.exec(ruta);
+  if (delOchentaVeinte) {
+    return { tipo: 'ochentaVeinte', periodo: parametro(delOchentaVeinte[1], 'periodo') === 'MES' ? 'MES' : 'SEMANA' };
+  }
   const deLaCaja = RUTA_DE_LA_CAJA_ADMIN.exec(ruta);
   if (deLaCaja) {
     const aprendizId = decodificar(deLaCaja[1]);
@@ -224,7 +263,11 @@ export function destinoDeRuta(ruta: unknown): DestinoDeAviso | null {
   const delChat = RUTA_DEL_CHAT.exec(ruta);
   if (delChat) {
     const conversacionId = decodificar(delChat[1]);
-    return conversacionId ? { tipo: 'chat', conversacionId } : null;
+    if (!conversacionId) return null;
+    const formacion = parametro(delChat[2], 'formacion')?.trim().toUpperCase();
+    return formacion && CODIGO_DE_FORMACION.test(formacion)
+      ? { tipo: 'chat', conversacionId, formacion }
+      : { tipo: 'chat', conversacionId };
   }
   const delEvento = RUTA_DEL_EVENTO.exec(ruta);
   if (delEvento) {

@@ -8,6 +8,8 @@ export const CLAVES = {
   iaChat: 'ia.chat',
   iaVoz: 'ia.voz',
   iaPropuestas: 'ia.propuestas',
+  /* El análisis 80/20 con IA de «Tu 80/20» (spec 031): se apaga aparte de SER y las cifras se siguen viendo. */
+  iaAnalisis: 'ia.analisis',
   chat: 'chat',
   chatAudio: 'chat.audio',
   chatFotos: 'chat.fotos',
@@ -16,7 +18,7 @@ export const CLAVES = {
   muroComentarios: 'muro.comentarios',
   muroReacciones: 'muro.reacciones',
   habitos: 'habitos',
-  /* Rocas y objetivos (las acciones del día). También tapa «Cierra tu día» de Training (spec 017). */
+  /* Rocas y objetivos (las acciones del día). También tapa «Cierra tu día», que desde la spec 033 vive en Plan. */
   plan: 'plan',
   eventos: 'eventos',
   eventosGestion: 'eventos.gestion',
@@ -25,10 +27,14 @@ export const CLAVES = {
   semaforo: 'semaforo',
   evidencias: 'evidencias',
   caja: 'caja',
+  /* «Mi ingreso» de la persona y los pagos de su ficha en Administración (spec 032). Soporte TI la apaga; la fila de Yo se esconde y la pantalla avisa mantenimiento. */
+  pagos: 'pagos',
   emergencia: 'emergencia',
   cuentaEliminar: 'cuenta.eliminar',
   notificaciones: 'notificaciones',
   perfil: 'perfil',
+  /* El Código Renaser en las fichas del mentor, la guía y el líder (spec 034): nace apagado para ellos y se esconde. */
+  radarFichas: 'radar.fichas',
   mentorMiGrupo: 'mentor.mi_grupo',
   lider: 'lider',
   tickets: 'tickets',

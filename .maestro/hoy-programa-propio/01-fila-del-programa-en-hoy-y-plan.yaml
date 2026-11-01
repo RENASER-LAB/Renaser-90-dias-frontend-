@@ -1,0 +1,80 @@
+# La frase del día siempre y la fila compacta del programa propio, en Hoy y en Plan (2026-11-01, issue #72). ESCRITO Y SIN CORRER.
+# Se corre de a uno cambiando ESTADO; cada estado pide su cuenta/precondición:
+#  - sin-programa: personal SIN fila en el programa (un administrador que nunca eligió su Día 1) y sin «Ahora no» guardado.
+#    Hoy: frase → «Haz tu programa de 90 días · Elige tu Día 1 ›» → «Tu acompañante». Sin hueco vacío antes del fénix.
+#    # cuenta: admin
+#  - sin-dia-1: la cuenta tiene la fila del programa pero nunca eligió su Día 1 (`activated = false`).
+#    Hoy y Plan: «Todavía no elegiste tu Día 1 · Elige cuándo empiezas ›».   # cuenta: admin (con la fila sin activar)
+#  - esperando: ya eligió su Día 1 y la fecha no llega todavía (día 0). Hoy y Plan: «Tu programa empieza el <día> <n> de <mes>»,
+#    sin chevron. Es el BUG del issue #72: antes no decía nada.   # cuenta: aprendiz con el Día 1 elegido para dentro de 2 o más días
+# (Las comprobaciones llevan «.*» porque la fila entera es un botón con su etiqueta completa: «Haz tu programa de 90 días. Elige tu Día 1.».)
+# En los tres, la frase del día se ve (por el calendario, sin día de programa) y la tarjeta grande de antes ya no existe.
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "HOY"
+# La frase del día sale siempre (9 frases, una por fecha del calendario cuando no hay día de programa).
+- extendedWaitUntil:
+    visible: ".*(Esta semana no te transforma|No te juzgues|Si fallaste en algo|Postear cada día|La abundancia no llega|No eres débil|Todo lo que no se observa|Esta etapa no vino|Las personas promedio).*"
+    timeout: 30000
+- assertNotVisible: "Puedes recorrerlo tú también.*"
+- runFlow:
+    when:
+      true: ${ESTADO == 'sin-programa'}
+    commands:
+      - assertVisible: ".*Haz tu programa de 90 días.*"
+      - assertVisible: "Elige tu Día 1"
+      # Sube: justo debajo de la frase y antes del fénix, sin hueco vacío (la fila está arriba de «Tu acompañante»).
+      - assertVisible:
+          text: "Tu acompañante"
+          below: ".*Haz tu programa de 90 días.*"
+      - takeScreenshot: H01a-sin-programa-en-hoy
+      # Toda la fila abre el selector del Día 1 (el mismo de siempre) y volver no elige nada.
+      - tapOn: ".*Haz tu programa de 90 días.*"
+      - extendedWaitUntil:
+          visible: "CONFIRMAR MI DÍA 1"
+          timeout: 20000
+      - tapOn:
+          text: "Volver sin elegir"
+      - assertVisible: ".*Haz tu programa de 90 días.*"
+      # La ✕ «Ahora no» esconde la fila en Hoy sin borrar nada.
+      - tapOn: "Ahora no. No se borra nada."
+      - assertNotVisible: ".*Haz tu programa de 90 días.*"
+      - takeScreenshot: H01b-ahora-no
+- runFlow:
+    when:
+      true: ${ESTADO == 'sin-dia-1'}
+    commands:
+      - assertVisible: ".*Todavía no elegiste tu Día 1.*"
+      - assertVisible: "Elige cuándo empiezas"
+      - assertNotVisible: "Ahora no. No se borra nada."
+      - assertVisible:
+          text: "Tu acompañante"
+          below: ".*Todavía no elegiste tu Día 1.*"
+      - takeScreenshot: H01c-sin-dia-1-en-hoy
+      - tapOn: "PLAN"
+      - extendedWaitUntil:
+          visible: ".*Todavía no elegiste tu Día 1.*"
+          timeout: 30000
+      - takeScreenshot: H01d-sin-dia-1-en-plan
+- runFlow:
+    when:
+      true: ${ESTADO == 'esperando'}
+    commands:
+      - assertVisible: ".*Tu programa empieza el .* de .*"
+      # No lleva a nada: ni chevron ni botón ni la ✕.
+      - assertNotVisible: "Ahora no. No se borra nada."
+      - assertNotVisible: "Elegir mi Día 1"
+      - assertVisible:
+          text: "Tu acompañante"
+          below: ".*Tu programa empieza el .* de .*"
+      - takeScreenshot: H01e-esperando-en-hoy
+      - tapOn: "PLAN"
+      - extendedWaitUntil:
+          visible: "Tu dirección en 90 días"
+          timeout: 30000
+      - assertVisible: ".*Tu programa empieza el .* de .*"
+      - assertVisible:
+          text: "Cuerpo"
+          below: ".*Tu programa empieza el .* de .*"
+      - takeScreenshot: H01f-esperando-en-plan

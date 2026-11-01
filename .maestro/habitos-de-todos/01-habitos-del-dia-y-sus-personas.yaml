@@ -1,0 +1,70 @@
+# «Hábitos de todos» (2026-10-31, spec 029, pedido del dueño: «el líder ve todos los hábitos, quién los cumplió y quién no»).
+# ESCRITO Y SIN CORRER: necesita el backend con `GET /leadership/habits` y un emulador libre.
+# El líder → Yo → «Mis mentores» → «Hábitos de todos» (un día, hoy) → un hábito → sus personas (primero las que no cumplieron)
+# → la ficha de una persona, abierta en ese mismo día → atrás (personas, con la búsqueda) → atrás (hábitos del día) → atrás
+# («Mis mentores»).
+# cuenta: admin (la ranura E2E_ADMIN_* apunta al LÍDER DE MENTORES).
+# HABITO = parte del nombre de un hábito de hoy. PERSONA = parte del nombre de una persona que lo tenía.
+# Precondición: el líder ya entró y el servidor ofrece la lectura.
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "YO"
+- scrollUntilVisible:
+    element: "Mis mentores"
+    direction: DOWN
+    timeout: 40000
+- tapOn: "Mis mentores"
+- extendedWaitUntil:
+    visible: "Resultado por grupo"
+    timeout: 30000
+- scrollUntilVisible:
+    element: "Hábitos de todos"
+    direction: DOWN
+    timeout: 60000
+- takeScreenshot: H01a-mis-mentores-habitos-de-todos
+- tapOn: "Hábitos de todos"
+# Hoy, con el resumen del día y los hábitos (los que menos se cumplen, primero).
+- extendedWaitUntil:
+    visible: "Hoy"
+    timeout: 30000
+- assertVisible: "Día anterior"
+- assertVisible: ".*alumnos con hábitos.*"
+- takeScreenshot: H01b-habitos-de-hoy
+# Un hábito → sus personas, por secciones (primero las que no cumplieron).
+- scrollUntilVisible:
+    element: ".*${HABITO}.*"
+    direction: DOWN
+    timeout: 60000
+- tapOn: ".*${HABITO}.*"
+- extendedWaitUntil:
+    visible: "Buscar por nombre"
+    timeout: 30000
+- takeScreenshot: H01c-personas-del-habito
+- tapOn: "Buscar por nombre"
+- inputText: "${PERSONA}"
+- hideKeyboard
+- extendedWaitUntil:
+    visible: ".*${PERSONA}.*"
+    timeout: 30000
+# Su ficha de siempre, abierta en el MISMO día (hoy).
+- tapOn: ".*${PERSONA}.*"
+- extendedWaitUntil:
+    visible: ".*Escribirle.*"
+    timeout: 60000
+- takeScreenshot: H01d-ficha-de-la-persona
+# Atrás: ficha → personas del hábito (con la búsqueda) → hábitos del día → «Mis mentores».
+- back
+- extendedWaitUntil:
+    visible: "Buscar por nombre"
+    timeout: 20000
+- assertVisible: ".*${PERSONA}.*"
+- back
+- extendedWaitUntil:
+    visible: "Día anterior"
+    timeout: 20000
+- back
+- extendedWaitUntil:
+    visible: "Resultado por grupo"
+    timeout: 20000
+- takeScreenshot: H01e-de-vuelta-en-mis-mentores

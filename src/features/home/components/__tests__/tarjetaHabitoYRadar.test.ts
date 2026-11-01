@@ -86,7 +86,7 @@ const desdeElOcho = (extra: Partial<EntradaDeLaMitad> = {}, config: MiRadarApi =
 const onAbrirTraining = jest.fn();
 const onAbrirMiRadar = jest.fn();
 let raiz: ReactTestRenderer | null = null;
-function montar(diaPrograma = 3) {
+function montar(diaPrograma = 3, sinHabitos = false) {
   act(() => {
     raiz = TestRenderer.create(
       React.createElement(TarjetaHabitoYRadar, {
@@ -95,6 +95,7 @@ function montar(diaPrograma = 3) {
         diaPrograma,
         inscrito: true,
         onAbrirMiRadar,
+        sinHabitos,
       }),
     );
   });
@@ -337,5 +338,32 @@ describe('la mitad del Radar, desde el día 8', () => {
     mockRadar.actual = crearRadar();
     montar(3);
     expect(mockModal).toHaveLength(0);
+  });
+});
+
+describe('una formación sin hábitos (spec 023, FR-014)', () => {
+  it('sin hábitos no se dibuja «Hábitos de hoy»: queda la mitad del Radar a todo el ancho, sin divisor', () => {
+    mockRadar.actual = crearRadar();
+    montar(3, true);
+    const t = textos();
+    expect(t).not.toContain('Hábitos de hoy');
+    expect(t).not.toContain('8/18');
+    expect(t).toContain('Código Renaser');
+    expect(botones()).toHaveLength(1);
+    expect(mitadDe('Abrir Training')).toBeUndefined();
+  });
+
+  it('sin hábitos y sin Radar la tarjeta no se dibuja: ni un recuadro vacío', () => {
+    mockRadar.actual = crearRadar({ inscrito: false });
+    montar(3, true);
+    expect(textos()).toBe('');
+    expect(botones()).toHaveLength(0);
+  });
+
+  it('por defecto la tarjeta es la de siempre', () => {
+    mockRadar.actual = crearRadar();
+    montar();
+    expect(textos()).toContain('Hábitos de hoy');
+    expect(botones()).toHaveLength(2);
   });
 });

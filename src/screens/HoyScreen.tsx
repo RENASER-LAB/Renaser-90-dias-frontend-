@@ -10,6 +10,7 @@ import {
   Pressable,
 } from 'react-native';
 import { TarjetaConfrontacion } from '../features/confrontacion/components/TarjetaConfrontacion';
+import { NombreDeLaFormacion } from '../features/formaciones/components/NombreDeLaFormacion';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BORDES_DE_UNA_PESTANA } from '../navigation/bordesDeUnaPestana';
 import { useNavigation } from '@react-navigation/native';
@@ -21,23 +22,28 @@ import { Icon, TAMANO_ICONO } from '../components/Icon';
 import { Presionable } from '../components/Presionable';
 import { tacto } from '../utils/tacto';
 import { Aparicion } from '../components/Aparicion';
-import { useEsMentor } from '../features/mentor/hooks/useEsMentor';
-import { EntradaAlProgramaPropio } from '../features/programa/components/EntradaAlProgramaPropio';
+import { FilaDelProgramaPropio } from '../features/programa/components/FilaDelProgramaPropio';
+import { useFilaDelProgramaPropio } from '../features/programa/hooks/useFilaDelProgramaPropio';
 import { usePublicarSemaforoDeHoy } from '../features/semaforo/estado/useSemaforoVigente';
 import { useCelebracionDelDia } from '../features/fenix/hooks/useCelebracionDelDia';
-import { useCapacidades } from '../features/admin/hooks/useCapacidades';
 import { useResumenHome } from '../features/home/hooks/useResumenHome';
+import { AvisoDeProgramaEnOtraFormacion } from '../features/habits/components/AvisoDeProgramaEnOtraFormacion';
+import { useCategoriasDeHabito } from '../features/habits/categorias/hooks/useCategoriasDeHabito';
+import { useProgramaEnOtraFormacion } from '../features/formaciones/hooks/useProgramaEnOtraFormacion';
+import { sinHabitosEnLaFormacion } from '../features/home/utils/sinHabitosEnLaFormacion';
 import { useHabitoDelMomento } from '../features/habits/hooks/useHabitoDelMomento';
 import { TarjetaHabitoYRadar } from '../features/home/components/TarjetaHabitoYRadar';
+import { dibujarLaTarjetaDeHabitos } from '../features/home/utils/dibujarLaTarjetaDeHabitos';
 import { useUltimaPublicacionMuro } from '../features/community/hooks/useUltimaPublicacionMuro';
 import { tiempoRelativo } from '../features/community/utils/tiempoRelativo';
 import { useAuth } from '../context/AuthContext';
-import { useMapaRenacimientoAbierto } from '../features/mapa-renacimiento/MapaRenacimientoContext';
-import { useLecturaDelEstadoDelMapa } from '../features/mapa-renacimiento/hooks/useEstadoMapa';
-import { mapaHabilitado } from '../features/mapa-renacimiento/utils/mapaHabilitado';
+import { TarjetaDelDiagnosticoPendiente } from '../features/diagnostico/components/TarjetaDelDiagnosticoPendiente';
+import { CompletarDiagnosticoScreen } from '../features/diagnostico/screens/CompletarDiagnosticoScreen';
+import { useObjetivosDeNoventaDias } from '../features/objetivos/hooks/useObjetivosDeNoventaDias';
 import { useAccionesDeHoy } from '../features/objetivos/hooks/useAccionesDeHoy';
 import { useMetaDeLaAccion } from '../features/objetivos/hooks/useMetaDeLaAccion';
 import { TarjetaAccionDeHoy } from '../features/home/components/TarjetaAccionDeHoy';
+import { PlazoDelObjetivoProvider } from '../features/objetivos/context/PlazoDelObjetivo';
 import { vistaDeLaAccionDeHoy } from '../features/home/utils/vistaDeLaAccionDeHoy';
 import { minutosDeAhora } from '../features/training/utils/listaDelDia';
 import { ESPACIO_PARA_LANZADOR } from '../features/renasia/components/RenasiaLauncher';
@@ -57,9 +63,9 @@ import type { PedidoDeFotoUI } from '../features/renasia/types/renasia.types';
 import { useRegistroConFoto } from '../features/habits/hooks/useRegistroConFoto';
 import { RegistroConFotoModal } from '../features/habits/components/RegistroConFotoModal';
 import { cifrasDeHabitos } from '../features/home/utils/cifrasDeHabitos';
-import { diasQueQuedanSiSeSabe, lapsoQueQueda } from '../features/home/utils/diasQueQuedan';
 import { diametroDelOrbe } from '../features/home/utils/diametroDelOrbe';
 import { cuandoEsElEvento } from '../features/home/utils/cuandoEsElEvento';
+import { fechaLocalISO } from '../features/objetivos/utils/ventanasDePlanificacion';
 import { useOcultarBarraAlDesplazar } from '../navigation/barraAlDesplazar/BarraInferior';
 
 export default function HoyScreen() {
@@ -72,19 +78,23 @@ export default function HoyScreen() {
   /* El hábito de ESTA hora para la primera tarjeta. Vive acá y no dentro de la tarjeta porque
      `useFocusEffect` tiene que correr con la pantalla montada, y porque el pull-to-refresh de
      Hoy también lo recarga. */
-  const { habito: habitoAhora, recargar: recargarHabitoAhora } = useHabitoDelMomento();
+  const { habito: habitoAhora, recargar: recargarHabitoAhora, registrosLeidos, registrosDeHoy } = useHabitoDelMomento();
+  /* Spec 023: «Hábitos de hoy» es de la formación de la persona. Sin hábitos en su formación no se dibuja, y quien tiene su programa
+     propio en OTRA formación que la activa ve una línea que lo dice en lugar de la tarjeta. */
+  const categorias = useCategoriasDeHabito();
+  const programaEnOtraFormacion = useProgramaEnOtraFormacion();
   const { user } = useAuth();
-  /* Rol Mentor: solo para saber si la invitación al programa propio le corresponde. Sus paneles («Mi grupo» y «Mis mentores») ya
-     no están en Hoy: viven en Yo, como Administración (2026-10-31, pedido del dueño: Hoy es solo el programa propio). */
-  const esMentor = useEsMentor();
-  /* Quien puede administrar lo dice el SERVIDOR, no el rol leido en el telefono. Un rol nuevo
-     manana no dejaria la entrada colgada, y una capacidad falseada abre pantallas vacias: cada
-     endpoint vuelve a autorizar (SDD 003, ARF-15). */
-  const { capacidades, error: errorCapacidades, recargar: recargarCapacidades } = useCapacidades();
-  /* Ya no `esMentor`: la invitacion al programa propio es para todo el staff, ADMIN y ALQUIMISTA
-     incluidos. Atarla a "es mentor" los dejaba fuera de un programa que el backend si les
-     permitia iniciar — el bloqueo estaba aca, no en el permiso (ARF-16). */
-  const programaPropioActivo = esMentor || capacidades.administrar || capacidades.puedeIniciarPrograma;
+  /* El programa propio (D-260) como una fila compacta (2026-11-01, pedido del dueño), justo debajo de la frase del día: «Haz tu programa de
+     90 días» a quien no tiene fila, «Todavía no elegiste tu Día 1» a quien la tiene sin Día 1. Quién puede tener un programa propio lo
+     dice el servidor, no el rol del teléfono (ARF-16); los paneles de rol («Mi grupo», «Mis mentores») no están en Hoy sino en Yo. El hook
+     vive aquí y no dentro de la fila para saber, antes de dibujar, si hay algo: un bloque vacío deja igual sus dos separaciones de 28. */
+  const programaPropio = useFilaDelProgramaPropio({
+    inscrito: resumen?.inscrito,
+    diaPrograma: resumen?.diaPrograma,
+    duracionDias: resumen?.duracionDias,
+    formacion: resumen?.formacion,
+  });
+  const { recargarCapacidades } = programaPropio;
   // El orbe del centro (2026-09-23): conversación por voz con el acompañante, y su chat para
   // confirmar propuestas o leer la respuesta completa.
   const voz = useVozDelOrbe();
@@ -133,8 +143,11 @@ export default function HoyScreen() {
     user?.id,
     resumen ? { rachaActual: resumen.rachaActual, habitosHoy: resumen.habitosHoy, fase: resumen.fase } : null,
   );
-  const { abrir: abrirMapa, abierto: mapaAbierto } = useMapaRenacimientoAbierto();
-  const { estado: estadoMapa, confirmado: estadoMapaConfirmado } = useLecturaDelEstadoDelMapa(user?.id ?? null, mapaAbierto);
+  /* El diagnóstico pendiente de quien ya estaba dentro (spec 026): su tarjeta abre el recorrido a pantalla completa, como un estado
+     de Hoy (sin pestaña nueva). Al terminar, Hoy vuelve a leer lo que el diagnóstico pudo cambiar: los objetivos de Plan. */
+  const [diagnosticoAbierto, setDiagnosticoAbierto] = useState(false);
+  /* Los objetivos de 90 días (cuántos y cuántos por confirmar): deciden qué dice la tarjeta de acciones cuando hoy no hay ninguna. */
+  const { objetivos: objetivosDeNoventaDias, recargar: recargarObjetivos } = useObjetivosDeNoventaDias();
   const {
     publicacion: ultimaPublicacion,
     cargando: cargandoUltimaPublicacion,
@@ -162,6 +175,7 @@ export default function HoyScreen() {
     await Promise.all([
       recargarResumen(),
       recargarAcciones(),
+      recargarObjetivos(),
       recargarUltimaPublicacion(),
       recargarHabitoAhora(),
       recargarCapacidades(),
@@ -170,6 +184,7 @@ export default function HoyScreen() {
   }, [
     recargarResumen,
     recargarAcciones,
+    recargarObjetivos,
     recargarUltimaPublicacion,
     recargarHabitoAhora,
     recargarCapacidades,
@@ -201,64 +216,30 @@ export default function HoyScreen() {
    * > inventado es peor que no mostrarlo. Reportado por el dueño el día que se registró.
    */
   const diaConocido = resumen?.diaPrograma ?? null;
-  // Mapa de Renacimiento. **Disponible desde el Día 0 y opcional** (decisión del dueño,
-  // 2026-09-08). Antes aparecía recién el Día 7; se adelanta por dos razones:
-  //
-  //   1. En Día 0 se PLANIFICA, no se ejecuta — el mismo criterio ya aplicado a los hábitos
-  //      (D-103, E-137). Definir el objetivo de los 90 días es planificar, y quien quiere
-  //      hacerlo el primer día no tiene por qué esperar una semana.
-  //   2. Al activarlo se escriben las tres Rocas Maestras, que son la llave de TODA la cadena de
-  //      Rocas: sin ellas el backend responde `403 ROCKS_LOCKED` y la pestaña Plan queda
-  //      bloqueada. Adelantar el Mapa adelanta el desbloqueo del plan.
-  //
-  // Sigue siendo opcional: nadie queda trabado por no llenarlo.
-  //
-  // > **Corregido 2026-10-27 (issue #37, decisión del dueño).** «Sigue siendo opcional» vale para la app, no para los
-  // > objetivos de Plan: el objetivo de 90 días nace del Mapa y queda fijo, y escribirlo en Plan sin Mapa lo dejaba
-  // > chocando con el Mapa al activarlo (`409 ROCA_MAESTRA_FIJA`, backend #20). Plan → Objetivos espera al Mapa
-  // > (`usePuertaDeObjetivos`): sin Mapa activo muestra «Primero tu Mapa de Renacimiento» con «Hacer mi Mapa». Hoy, el
-  // > resto de la app y el Día 0 no cambian: nada obliga a hacer el Mapa. Esta tarjeta solo lo dice desde el inicio.
-  //
-  // Interruptor de salida a producción: en desarrollo siempre; en un build de producción SOLO si
-  // EXPO_PUBLIC_MAPA_DIA7=on (variable de Vercel/EAS, inlined al compilar). Se conserva — encender
-  // el flujo sigue siendo un acto deliberado y no un efecto del merge.
-  // (La regla vive ahora en `mapaHabilitado()`: Plan la necesita igual, 2026-10-27.)
-  const MAPA_DIA7_HABILITADO = mapaHabilitado();
-  // Decía "83 días", que era 90 − 7 y valía mientras el Mapa vivía en el Día 7. Desde que arranca
-  // en el Día 0 ese número miente: quien lo abre el primer día tiene 90 por delante, no 83.
-  // La cuenta vive en `diasQueQuedan` desde el 2026-10-05: la apertura del Mapa usa la misma.
-  //
-  // > **Corregido 2026-10-05 (ajustes de Hoy y Yo).** Se calculaba con `diaNumero` (era
-  // > `diaConocido ?? 0`): con `/home` caído la tarjeta decía «los próximos 90 días», un número
-  // > inventado. Ahora usa el mismo criterio que la apertura del Mapa: sin día conocido (o sin
-  // > inscripción), «lo que queda del programa», y «el día que queda» en vez de «los próximos 1 días».
-  // > `cargando: false` a propósito: Hoy se vuelve a pedir en cada foco con el resumen anterior a la
-  // > vista, y el texto no tiene que parpadear a «lo que queda del programa» en cada recarga.
-  const lapsoDelMapa = lapsoQueQueda(
-    diasQueQuedanSiSeSabe({ diaPrograma: resumen?.diaPrograma, inscrito: resumen?.inscrito, cargando: false }),
-  );
-  const mostrarMapa = MAPA_DIA7_HABILITADO && !!user;
+  /* Sin día de programa (el personal sin programa, quien no eligió su Día 1 o está en el día 0) no hay hábitos de hoy que contar: la tarjeta
+     decía «0/0» y «Lidera tu energía diaria.», un dato inventado (E2E de las formaciones, 01/11/2026, issue #86). «Mientras no se sabe, no se
+     dibuja»: tampoco mientras `/home` carga, para que no aparezca y desaparezca; si `/home` falló y nunca llegó, queda como antes. El hueco no
+     queda porque el contenedor separa con `gap`, no con márgenes de cada hijo. */
+  const dibujarHabitos = dibujarLaTarjetaDeHabitos({ resumen, error: errorResumen });
+  /* La fecha de hoy para la frase del día de quien NO tiene día de programa (personal sin programa, Día 0, sin Día 1 elegido): `/home` no la
+     manda, así que es el día civil del teléfono (supuesto anotado en `fraseDelDia`). Se da solo cuando ya se sabe si hay día de programa
+     (`/home` respondió o falló): antes, quien sí lo tiene vería primero la frase del calendario y se le cambiaría por la de su día. */
+  const fechaDeHoy = resumen || errorResumen ? fechaLocalISO(new Date()) : null;
   /* La tarjeta de acciones de arriba (2026-10-31): qué muestra lo decide `vistaDeLaAccionDeHoy`, con las acciones de hoy que
-     esta pantalla ya lee y el Mapa que ya lee la tarjeta del Mapa; la meta de la acción que sigue, `useMetaDeLaAccion`. */
+     esta pantalla ya lee y los objetivos de 90 días (spec 026: sin acciones, dice si faltan o si hay que confirmarlos); la meta de la
+     acción que sigue, `useMetaDeLaAccion`. */
   const vistaDeLaAccion = useMemo(
     () =>
       vistaDeLaAccionDeHoy({
         rocas: accionesDeHoy,
-        mapa: { habilitado: MAPA_DIA7_HABILITADO && !!user, estado: estadoMapa, confirmado: estadoMapaConfirmado },
+        objetivos: objetivosDeNoventaDias,
         ahoraMin: minutosDeAhora(Date.now()),
       }),
-    [accionesDeHoy, MAPA_DIA7_HABILITADO, user, estadoMapa, estadoMapaConfirmado],
+    [accionesDeHoy, objetivosDeNoventaDias],
   );
   const metaDeLaAccion = useMetaDeLaAccion(vistaDeLaAccion?.tipo === 'accion' ? vistaDeLaAccion.accion : null);
-  /* La tarjeta del Mapa de más abajo no se repite (pedido del dueño, 2026-10-31): sin Mapa, la invitación ya está arriba, en la
-     fila compacta «Haz tu Mapa de Renacimiento». Con el Mapa empezado o activo sigue saliendo, porque es la entrada para verlo. */
-  const mostrarTarjetaDelMapa = mostrarMapa && vistaDeLaAccion?.tipo !== 'mapa';
-  const tituloMapa = estadoMapa === 'activo'
-    ? 'Tu mapa está activo'
-    : estadoMapa === 'en_progreso' || estadoMapa === 'listo_para_revision' ? 'Continúa tu mapa' : 'Diseña tu mapa';
-  const detalleMapa = estadoMapa === 'activo'
-    ? `Tus objetivos, acciones y protocolo de retorno para ${lapsoDelMapa}.`
-    : `Tu plan para ${lapsoDelMapa} empieza aquí: de este Mapa nacen tus objetivos. 15–20 min.`;
+  /* La tarjeta de acciones solo se dibuja cuando ya se sabe qué decir y, si es una acción, su meta (sin parpadeo). */
+  const hayTarjetaDeAccion = Boolean(vistaDeLaAccion && metaDeLaAccion.lista);
   /* Los dos textos de la primera tarjeta. El estado lo decide `habitoDelMomento`; acá solo se
      redacta. `sin-datos` cae al texto genérico de siempre —Día 0, cuenta recién aprobada, o el
      endpoint falló— porque inventar un hábito sería peor que no decir nada. */
@@ -289,6 +270,22 @@ export default function HoyScreen() {
         terminarConversacion();
       }
     : undefined;
+
+  /* El diagnóstico a pantalla completa (spec 026), como un estado de Hoy. Va después de TODOS los hooks. El atrás del sistema y la
+     flecha los maneja la propia pantalla (sube un paso del recorrido y, en el primero, llama a `onBack`); al terminar, Hoy relee. */
+  if (diagnosticoAbierto) {
+    return (
+      <CompletarDiagnosticoScreen
+        onBack={() => setDiagnosticoAbierto(false)}
+        onTerminado={() => {
+          setDiagnosticoAbierto(false);
+          void recargarResumen();
+          void recargarAcciones();
+          void recargarObjetivos();
+        }}
+      />
+    );
+  }
 
   return (
     <SafeAreaView edges={BORDES_DE_UNA_PESTANA} style={{ flex: 1, backgroundColor: c.bg }}>
@@ -321,25 +318,36 @@ export default function HoyScreen() {
         <Aparicion>
         {/* Corregido 2026-10-31 (el dueño): lo que se quita de Hoy es la cabecera (fase, «Día n de 90» y puntos, que ya están
             en Yo), NO la frase del día. La frase sube y ocupa su lugar, con su raya dorada corta. */}
-        <TarjetaConfrontacion diaPrograma={diaConocido} />
+        {/* El nombre de la formación (spec 022, FR-014): una línea chica, solo para quien tiene más de una o no es de la Escuela. */}
+        <NombreDeLaFormacion />
+        <TarjetaConfrontacion diaPrograma={diaConocido} fechaDeHoy={fechaDeHoy} />
 
         {/* ========================================================================= */}
         {/* 2. LA ACCIÓN QUE SIGUE HOY (2026-10-31)                                   */}
         {/* ========================================================================= */}
         </Aparicion>
 
-        <Aparicion retardo={70}>
+        {/* Corregido 2026-11-01 (pedido del dueño): este bloque solo existe si tiene algo que dibujar. Vacío dejaba sus dos separaciones de 28
+            y a la cuenta sin programa le quedaba un hueco grande entre la frase y el fénix. */}
+        {programaPropio.visible || hayTarjetaDeAccion || errorResumen ? (
+        <Aparicion retardo={70} style={{ gap: space.gap }}>
+        {/* El programa propio, justo debajo de la frase (2026-11-01): una fila compacta, del alto que tenía Coherencia / Racha. Va antes que la
+            acción de hoy: sin programa (o sin Día 1) no hay acciones que mostrar todavía. */}
+        <FilaDelProgramaPropio programa={programaPropio} />
+
         {/* Pedido del dueño, 2026-10-31: se quitaron la frase del día y Coherencia / Racha (ya están en Yo) y, en su lugar y antes
             de «Tu acompañante», va la tarjeta de «Acciones y objetivos» con el diseño nuevo: la que sigue hoy, su meta y un
             botón que lleva a Training. Mientras no se sabe qué mostrar no se dibuja nada (sin parpadeo). */}
-        {vistaDeLaAccion && metaDeLaAccion.lista ? (
-          <TarjetaAccionDeHoy
-            vista={vistaDeLaAccion}
-            meta={metaDeLaAccion.meta}
-            alEmpezar={accionId => (navigation as any).navigate('Training', { abrirAccionId: accionId })}
-            alHacerElMapa={abrirMapa}
-            alAgendar={() => (navigation as any).navigate('Plan')}
-          />
+        {hayTarjetaDeAccion && vistaDeLaAccion ? (
+          <PlazoDelObjetivoProvider duracionDias={resumen?.duracionDias} formacion={resumen?.formacion}>
+            <TarjetaAccionDeHoy
+              vista={vistaDeLaAccion}
+              meta={metaDeLaAccion.meta}
+              alEmpezar={accionId => (navigation as any).navigate('Training', { abrirAccionId: accionId })}
+              alIrAPlan={() => (navigation as any).navigate('Plan')}
+              alAgendar={() => (navigation as any).navigate('Plan')}
+            />
+          </PlazoDelObjetivoProvider>
         ) : null}
 
         {errorResumen && (
@@ -349,11 +357,12 @@ export default function HoyScreen() {
             </Text>
           </View>
         )}
+        </Aparicion>
+        ) : null}
 
         {/* ========================================================================= */}
         {/* 3. HERO: CÍRCULOS CONCÉNTRICOS & TU ÚNICO FOCO (ROCA PRIORITARIA DE HOY)  */}
         {/* ========================================================================= */}
-        </Aparicion>
 
         <Aparicion retardo={140}>
         <View style={styles.hero}>
@@ -422,60 +431,27 @@ export default function HoyScreen() {
 
         <Aparicion retardo={210} style={{ paddingBottom: 24 }}>
         <View style={{ gap: space.gap }}>
-          {/* El programa propio (D-260): «Hacer mi programa de 90 días» a quien no tiene fila y, a quien
-              la tiene sin Día 1, «Elegir mi Día 1». La tarjeta vive en `EntradaAlProgramaPropio`,
-              la misma de Yo y Training. «Ahora no» sigue siendo solo de Hoy. */}
-          <EntradaAlProgramaPropio
-            lugar="hoy"
-            activo={programaPropioActivo}
-            usuarioId={user?.id ?? null}
-            inscrito={resumen?.inscrito}
-            diaPrograma={resumen?.diaPrograma}
-            errorCapacidades={errorCapacidades}
-            reintentarCapacidades={() => void recargarCapacidades()}
-          />
-
-          {/* Tarjeta Mapa de Renacimiento */}
-          {mostrarTarjetaDelMapa ? (
-            <Presionable onPress={abrirMapa} accessibilityRole="button" accessibilityLabel={`${tituloMapa}. ${detalleMapa}`}>
-              {/* Sin el `borderColor: c.gold`: subrayar una tarjeta con un contorno dorado es
-                  destacar por adorno. Esta tarjeta ya destaca por lo que dice y por el círculo
-                  dorado que lleva dentro; el contorno sólo la desalineaba del resto. */}
-              <Card>
-                {/* Ya no dice "DÍA 7": está disponible desde el Día 0. El badge de VISTA PREVIA
-                    se fue con él — existía para marcar que en desarrollo se veía antes de tiempo,
-                    y ahora no hay "antes de tiempo". */}
-                <MicroLabel>Mapa de renacimiento</MicroLabel>
-                {/* Rediseño de Hoy (2026-10-05): el mapa (`map`) en vez del asterisco `spark`, que era
-                    también el de la propuesta de SER; y el chevron gris de 16 de todas las tarjetas
-                    en vez del disco dorado de 40 (era la única tarjeta con uno: la tarjeta entera es
-                    el botón).
-
-                    El chevron va a la altura del TÍTULO y no centrado como en las demás: con la
-                    pantalla sin desplazar, esta tarjeta queda al pie, y en un Android de 412 × 915 el
-                    botón flotante de SER (`RenasiaLauncher`, fijo abajo a la derecha) caía justo sobre
-                    el centro de su borde derecho (prueba nativa del 2026-10-05). Arriba, junto al
-                    título, queda libre. */}
-                <View style={styles.insight}>
-                  <Icon name="map" size={TAMANO_ICONO.normal} color={c.goldInk} />
-                  <View style={{ gap: 5, flex: 1 }}>
-                    <Text style={[t.cardTitle, { color: c.text }]}>{tituloMapa}</Text>
-                    <Text style={[t.small, { color: c.textSoft }]}>{detalleMapa}</Text>
-                  </View>
-                  <View style={styles.chevronDelTitulo}>
-                    <Icon name="chevron" size={TAMANO_ICONO.chico} color={c.chevron} />
-                  </View>
-                </View>
-              </Card>
-            </Presionable>
-          ) : null}
+          {/* El diagnóstico de quien ya estaba dentro y lo recibió después (spec 026), en el lugar donde estaba la tarjeta del Mapa de Renacimiento (retirado).
+              La tarjeta no se dibuja si no hay nada pendiente; al tocarla se abre el recorrido a pantalla completa. */}
+          <TarjetaDelDiagnosticoPendiente alAbrir={() => setDiagnosticoAbierto(true)} />
 
           {/* Hábitos de hoy y el Radar, en una tarjeta de dos mitades iguales y centradas (spec 016, 2026-10-29).
               Izquierda: EL HÁBITO DE ESTA HORA, no una frase fija (`useHabitoDelMomento`); toca lleva a Training, que es donde
               se opera. Derecha: el Radar. Los días 1 a 7 reemplaza a la tarjeta aparte del Código Renaser, que iba primera;
               desde el día 8 dice si Mi Radar está apagado, qué sigue o que hoy no hay. Qué dice y qué hace cada caso vive en
               `features/radar/utils/mitadDelRadar.ts`. Sin Día 1 (o sin Mi Radar en el backend) es solo la mitad de hábitos. */}
+          {programaEnOtraFormacion ? (
+            <AvisoDeProgramaEnOtraFormacion nombre={programaEnOtraFormacion.nombre} />
+          ) : !dibujarHabitos ? null : (
           <TarjetaHabitoYRadar
+            sinHabitos={sinHabitosEnLaFormacion({
+              formacion: categorias.formacion,
+              delServidor: categorias.delServidor,
+              diaPrograma: resumen?.diaPrograma,
+              registrosLeidos,
+              registrosDeHoy,
+              habitosHoyTotal: resumen?.habitosHoy?.total,
+            })}
             habitos={{
               cifra: cifrasDeHabitos(resumen?.habitosHoy),
               titulo: tituloHabitoAhora,
@@ -486,6 +462,7 @@ export default function HoyScreen() {
             inscrito={resumen?.inscrito}
             onAbrirMiRadar={() => (navigation as any).navigate('Yo', { abrirMiRadar: true })}
           />
+          )}
 
           {/* Última evidencia real del Muro: se omiten publicaciones de texto sin evidencia.
               Rediseño de Hoy (2026-10-05): la tarjeta entera responde al dedo (`Presionable`), el
@@ -502,7 +479,7 @@ export default function HoyScreen() {
               accessibilityRole="button"
               accessibilityLabel={`Abrir la última evidencia de ${ultimaPublicacion.authorName || 'la comunidad'}`}
             >
-              {/* Sin contorno dorado, por lo mismo que la tarjeta del Mapa: dos tarjetas con borde
+              {/* Sin contorno dorado, por lo mismo que otras tarjetas de Hoy: dos tarjetas con borde
                   de color y cinco sin él no es jerarquía, es ruido. */}
               <Card>
                 <View style={styles.between}>
@@ -639,7 +616,7 @@ const styles = StyleSheet.create({
     borderRadius: space.radiusSm,
     paddingVertical: 10,
     paddingHorizontal: 12,
-    marginTop: space.gap,
+    /* Sin `marginTop`: el bloque que lo contiene ya separa a sus hijos con `space.gap` (2026-11-01). */
   },
   /**
    * La sección del fénix mide lo que ocupa su contenido (rótulo, fénix, rótulo de la fase y, con la voz abierta,
@@ -716,11 +693,6 @@ const styles = StyleSheet.create({
     gap: 12,
     alignItems: 'flex-start',
     marginTop: 14,
-  },
-  /** El chevron a la altura del título de la tarjeta (solo el Mapa: ver el comentario de la tarjeta). */
-  chevronDelTitulo: {
-    height: 22,
-    justifyContent: 'center',
   },
   between: {
     flexDirection: 'row',

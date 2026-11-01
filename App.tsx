@@ -13,15 +13,18 @@ import { navegacionRef } from './src/navigation/navegacionRef';
 import { RenasiaLauncher } from './src/features/renasia/components/RenasiaLauncher';
 import { SparkieOverlay } from './src/features/sparkie/components/SparkieOverlay';
 import { AnfitrionAlerta } from './src/components/Alerta';
-import { MapaRenacimientoProvider } from './src/features/mapa-renacimiento/MapaRenacimientoContext';
 import { RadarProvider } from './src/features/radar/RadarContext';
 import { CodigoRenaserOverlay } from './src/features/radar/components/CodigoRenaserOverlay';
 import { RenombrarHabitoOverlay } from './src/features/habits/components/RenombrarHabitoOverlay';
 import { AbridorDeEventos } from './src/features/eventos/components/AbridorDeEventos';
 import { AbridorDeAvisos } from './src/features/alarmas/components/AbridorDeAvisos';
 import { RearmadorDeAlarmas } from './src/features/alarmas/components/RearmadorDeAlarmas';
+import { CargadorDeCategoriasDeHabito } from './src/features/habits/categorias/components/CargadorDeCategoriasDeHabito';
 import { SincronizadorDeAcciones } from './src/features/objetivos/components/SincronizadorDeAcciones';
+import { SincronizadorDePagos } from './src/features/pagos/components/SincronizadorDePagos';
 import { AnfitrionDeCelebraciones } from './src/features/fenix/components/AnfitrionDeCelebraciones';
+import { FormacionProvider } from './src/features/formaciones/context/FormacionContext';
+import { SincronizadorDeLaFormacionDeLaComunidad } from './src/features/formaciones/components/SincronizadorDeLaFormacionDeLaComunidad';
 import { FuncionalidadesProvider } from './src/features/plataforma/estado/FuncionalidadesProvider';
 import { FranjaVerComo, SinBordeDeArriba } from './src/features/soporte-ti/verComo/FranjaVerComo';
 
@@ -60,6 +63,9 @@ function Shell() {
       <RenombrarHabitoOverlay />
       {/* Canales de Android y alarmas de eventos al día al entrar. No pinta nada. */}
       <AbridorDeEventos />
+      {/* La formación con la que Administración, Alquimista y Soporte TI leen y crean en la Comunidad (spec 024). Para las demás
+          cuentas no hace nada. No pinta nada. */}
+      <SincronizadorDeLaFormacionDeLaComunidad />
       {/* Tocar un aviso abre lo suyo: un evento (Comunidad → Eventos, E-5), el recordatorio de un
           hábito (Training en su dimensión) o el de una acción (Plan → Objetivos), D-218. Espera a que
           se cierren el Código Renaser, el arranque guiado o el Pacto. No pinta nada. */}
@@ -69,10 +75,15 @@ function Shell() {
           teléfono borró al cerrar la app vuelven, en silencio (2026-10-31: sin hoja ni aviso). No pinta nada.
           Ver `features/alarmas/rearmarAlarmas.ts`. */}
       <RearmadorDeAlarmas />
+      {/* Las categorías de hábito (las dimensiones de Training) de la formación de la sesión, spec 023: una lectura, compartida. No pinta nada. */}
+      <CargadorDeCategoriasDeHabito />
       {/* Pone al dia las alarmas de las acciones con hora (hoy y manana) al abrir y al volver a
           primer plano, solo si la persona pidio ese aviso. No pinta nada. Ver
           `features/objetivos/notificaciones/recordatoriosDeAcciones.ts`. */}
       <SincronizadorDeAcciones />
+      {/* Pone al día las alarmas de pago (recordatorios de las cuotas pendientes del cronograma, spec 032) al abrir y al volver a primer plano.
+          No pinta nada. Ver `features/pagos/notificaciones/alarmasDePagos.ts`. */}
+      <SincronizadorDePagos />
       {/* La pantalla completa de los momentos grandes (día completo, rachas de 7 y 30, fase nueva), una por día,
           donde ocurra el hito. Aca arriba por el mismo motivo que los otros: ninguna pantalla la dibuja. Se quita
           borrando esta linea. Ver `features/fenix/components/AnfitrionDeCelebraciones.tsx`. */}
@@ -104,15 +115,14 @@ export default function App() {
           {/* Los interruptores de Soporte TI (spec 002): qué está apagado para esta sesión. Relee al entrar, al
               volver al frente, cada 60 s y cuando el servidor responde 503 FUNCIONALIDAD_APAGADA. */}
           <FuncionalidadesProvider>
-          {/* El Mapa de Renacimiento (Día 7) se abre a pantalla completa por encima de las
-              pestañas; este proveedor guarda si está abierto. Ver RootNavigator. */}
-          <MapaRenacimientoProvider>
-            {/* Una sola lectura del Codigo Renaser para toda la app: la tarjeta de Hoy y el
-                formulario a pantalla completa comparten estado. Ver RadarContext. */}
-            <RadarProvider>
-              <Shell />
-            </RadarProvider>
-          </MapaRenacimientoProvider>
+          {/* La formación de la sesión (spec 022): Escuela, Diplomado o Certificación. Nace del login y se relee al volver al frente. */}
+          <FormacionProvider>
+          {/* Una sola lectura del Codigo Renaser para toda la app: la tarjeta de Hoy y el
+              formulario a pantalla completa comparten estado. Ver RadarContext. */}
+          <RadarProvider>
+            <Shell />
+          </RadarProvider>
+          </FormacionProvider>
           </FuncionalidadesProvider>
         </AuthProvider>
       </ThemeProvider>

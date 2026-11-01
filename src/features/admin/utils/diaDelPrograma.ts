@@ -1,3 +1,4 @@
+import { etiquetaDeDuracion } from '../../formaciones/utils/etiquetaDeDuracion';
 import { ApiError } from '../../../services/http/apiClient';
 import { ultimoAjusteDiaSchema } from '../api/adminSchemas';
 
@@ -5,9 +6,9 @@ import { ultimoAjusteDiaSchema } from '../api/adminSchemas';
  * Cambiar el día del programa de un aprendiz desde Administración (pedido del dueño, 26/09).
  *
  * El contrato es el del backend (D-82, `SetProgramDayRequest`): `programDay` entero y `motivo` de
- * hasta 280 caracteres. Rango **1 a 89** por decisión del dueño (26/09): el 90 gradúa a la persona
- * y no se deshace, y el 0 la deja un día sin programa; ninguno se pone desde esta herramienta.
- * Antes el rango era 0..90. El motivo es opcional en el servidor —el panel viejo no lo
+ * hasta 280 caracteres. Rango **1 a la duración de su programa menos uno** por decisión del dueño (26/09): el
+ * último día gradúa a la persona y no se deshace, y el 0 la deja un día sin programa; ninguno se pone desde esta
+ * herramienta. Son 1 a 89 en la Escuela y 1 a 364 en el Diplomado de un año (spec 022). Antes el rango era 0..90. El motivo es opcional en el servidor —el panel viejo no lo
  * mandaba—, pero acá se pide SIEMPRE: la bitácora `ajustes_dia_programa` existe para responder
  * «¿por qué le movimos el día?», y un ajuste sin motivo no la responde.
  *
@@ -15,18 +16,24 @@ import { ultimoAjusteDiaSchema } from '../api/adminSchemas';
  */
 
 export const DIA_MINIMO = 1;
+/** El último día que se puede fijar en la Escuela (90 días). Cada persona tiene el suyo: {@link ultimoDiaAjustable}. */
 export const DIA_MAXIMO = 89;
 export const MOTIVO_MAXIMO = 280;
 
-/** Deja un día dentro de 1..89. */
-export function acotarDia(dia: number): number {
+/** El último día que se puede fijar a mano en un programa de {@code duracionDias}: el penúltimo (el último gradúa). */
+export function ultimoDiaAjustable(duracionDias: number | null | undefined): number {
+  return typeof duracionDias === 'number' && Number.isFinite(duracionDias) && duracionDias > 1 ? Math.floor(duracionDias) - 1 : DIA_MAXIMO;
+}
+
+/** Deja un día dentro de 1..{maximo} (89 en la Escuela). */
+export function acotarDia(dia: number, maximo: number = DIA_MAXIMO): number {
   if (!Number.isFinite(dia)) return DIA_MINIMO;
-  return Math.min(DIA_MAXIMO, Math.max(DIA_MINIMO, Math.trunc(dia)));
+  return Math.min(maximo, Math.max(DIA_MINIMO, Math.trunc(dia)));
 }
 
 /** Los botones − / + y los atajos «+1 día» / «−1 día»: mueven y nunca salen del rango. */
-export function moverDia(dia: number, delta: number): number {
-  return acotarDia(dia + delta);
+export function moverDia(dia: number, delta: number, maximo: number = DIA_MAXIMO): number {
+  return acotarDia(dia + delta, maximo);
 }
 
 /**
@@ -49,10 +56,13 @@ export function validarCambioDeDia(entrada: {
   diaActual: number;
   diaNuevo: number | null;
   motivo: string;
+  /** El último día que se puede fijar en SU programa (spec 022); sin él, el de la Escuela. */
+  diaMaximo?: number;
 }): ResultadoDelCambio {
   const { diaActual, diaNuevo } = entrada;
-  if (diaNuevo === null || !Number.isInteger(diaNuevo) || diaNuevo < DIA_MINIMO || diaNuevo > DIA_MAXIMO) {
-    return { ok: false, error: `Escribe un día entre ${DIA_MINIMO} y ${DIA_MAXIMO}.` };
+  const maximo = entrada.diaMaximo ?? DIA_MAXIMO;
+  if (diaNuevo === null || !Number.isInteger(diaNuevo) || diaNuevo < DIA_MINIMO || diaNuevo > maximo) {
+    return { ok: false, error: `Escribe un día entre ${DIA_MINIMO} y ${maximo}.` };
   }
   if (diaNuevo === diaActual) {
     return { ok: false, error: `Ya está en el día ${diaActual}. Elige otro día.` };
@@ -87,11 +97,11 @@ export function detalleDelCambioDeDia(desde: number, hasta: number): string {
 }
 
 /** El texto de cada error del PUT, para una persona y no para un programador. */
-export function mensajeDelErrorDeCambio(error: unknown): string {
+export function mensajeDelErrorDeCambio(error: unknown, diaMaximo: number = DIA_MAXIMO): string {
   if (error instanceof ApiError) {
     if (error.esDeRed) return 'Sin conexión. No se cambió el día; vuelve a intentar en un momento.';
     if (error.status === 400) {
-      return `No se pudo cambiar: el día tiene que estar entre ${DIA_MINIMO} y ${DIA_MAXIMO} y el motivo, tener hasta ${MOTIVO_MAXIMO} caracteres.`;
+      return `No se pudo cambiar: el día tiene que estar entre ${DIA_MINIMO} y ${diaMaximo} y el motivo, tener hasta ${MOTIVO_MAXIMO} caracteres.`;
     }
     if (error.status === 403) return 'Tu cuenta no puede cambiar el día.';
     if (error.status === 409) {
@@ -109,6 +119,9 @@ export type UltimoAjusteDia = {
   motivo: string | null;
   ajustadoPor: string | null;
   ajustadoEn: string | null;
+  /** Spec 025: solo si el ajuste fue un cambio de DURACIÓN del programa (el día no se movió). */
+  duracionAnterior?: number | null;
+  duracionNueva?: number | null;
 };
 
 /**
@@ -126,6 +139,8 @@ export function leerUltimoAjuste(dato: unknown): UltimoAjusteDia | null {
     motivo: a.motivo?.trim() || null,
     ajustadoPor: a.adjustedBy ?? null,
     ajustadoEn: a.adjustedAt ?? null,
+    duracionAnterior: a.previousDuration ?? null,
+    duracionNueva: a.newDuration ?? null,
   };
 }
 
@@ -142,7 +157,10 @@ const MESES = [
  * quien mira.
  */
 export function textoDelUltimoAjuste(ajuste: UltimoAjusteDia, quien: string | null): string {
-  let texto = `Último ajuste: del día ${ajuste.diaAnterior} al ${ajuste.diaNuevo} por ${quien || 'alguien del equipo'}`;
+  const cambioLaDuracion = ajuste.duracionNueva != null && ajuste.duracionAnterior != null;
+  let texto = cambioLaDuracion
+    ? `Último ajuste: su programa pasó de ${etiquetaDeDuracion(ajuste.duracionAnterior as number)} a ${etiquetaDeDuracion(ajuste.duracionNueva as number)} por ${quien || 'alguien del equipo'}`
+    : `Último ajuste: del día ${ajuste.diaAnterior} al ${ajuste.diaNuevo} por ${quien || 'alguien del equipo'}`;
   const fecha = ajuste.ajustadoEn ? new Date(ajuste.ajustadoEn) : null;
   if (fecha && !Number.isNaN(fecha.getTime())) {
     texto += `, el ${fecha.getDate()} de ${MESES[fecha.getMonth()]}`;

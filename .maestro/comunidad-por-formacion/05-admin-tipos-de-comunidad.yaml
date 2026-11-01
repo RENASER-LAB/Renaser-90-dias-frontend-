@@ -1,0 +1,47 @@
+# Administración → Formaciones → Comunidad: prender y apagar los tipos (spec 024). ESCRITO Y SIN CORRER.
+# cuenta: admin  (Administración o Alquimista)
+# Precondición: el Diplomado tiene chats directos creados. Apagar «Directos» los esconde para toda la formación sin borrar mensajes.
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "YO"
+- scrollUntilVisible:
+    element: "Administración"
+    direction: DOWN
+    timeout: 40000
+- tapOn: "Administración"
+- scrollUntilVisible:
+    element: "Formaciones"
+    direction: DOWN
+    timeout: 40000
+- tapOn: "Formaciones"
+- tapOn: "Diplomado Renaser.*"
+- scrollUntilVisible:
+    element: "Comunidad"
+    direction: DOWN
+    timeout: 40000
+- assertVisible: "Comunidad general"
+- assertVisible: "Grupo con mentor"
+- assertVisible: "Soporte"
+- assertVisible: "Directos"
+- takeScreenshot: C05a-tipos-de-comunidad
+# Apagar pide confirmación y dice cuántas conversaciones esconde.
+- tapOn: "Directos"
+- extendedWaitUntil:
+    visible: "¿Apagar «Directos»?"
+    timeout: 20000
+- assertVisible: ".*Los mensajes no se borran.*"
+- takeScreenshot: C05b-confirmar-apagar
+- tapOn: "Cancelar"
+# Prender o confirmar guarda y lo dice en una línea.
+- tapOn: "Directos"
+- tapOn: "Apagar"
+- extendedWaitUntil:
+    visible: "«Directos» apagado."
+    timeout: 20000
+- takeScreenshot: C05c-directos-apagado
+# Se vuelve a prender (el estado queda como estaba para el siguiente flujo).
+- tapOn: "Directos"
+- extendedWaitUntil:
+    visible: "«Directos» prendido."
+    timeout: 20000

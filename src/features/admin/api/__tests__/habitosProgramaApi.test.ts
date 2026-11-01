@@ -7,6 +7,7 @@ jest.mock('../../../../services/http/apiClient', () => ({
 
 import {
   cambiarActivoDelHabito,
+  copiarHabitoDelPrograma,
   crearHabitoDelPrograma,
   editarHabitoDelPrograma,
   eliminarHabitoDelPrograma,
@@ -105,5 +106,46 @@ describe('habitosProgramaApi', () => {
     mockApiFetch.mockResolvedValue(undefined);
     await eliminarHabitoDelPrograma('h1');
     expect(mockApiFetch).toHaveBeenLastCalledWith('/api/v1/admin/habits/h1', { method: 'DELETE' });
+  });
+});
+
+describe('habitosProgramaApi por formación (spec 023)', () => {
+  beforeEach(() => {
+    mockApiFetch.mockReset();
+  });
+
+  it('lee el catálogo de UNA formación, o de las tres con ALL, y combina con el filtro de rol', async () => {
+    mockApiFetch.mockResolvedValue([{ ...HABITO, formation: 'DIPLOMADO', categoryKey: 'DIPLOMADO_ESTUDIO' }]);
+
+    const [habito] = await leerHabitosDelPrograma(null, 'DIPLOMADO');
+    expect(mockApiFetch).toHaveBeenLastCalledWith('/api/v1/admin/habits?formation=DIPLOMADO', undefined);
+    expect(habito.formation).toBe('DIPLOMADO');
+    expect(habito.categoryKey).toBe('DIPLOMADO_ESTUDIO');
+    await leerHabitosDelPrograma(null, 'ALL');
+    expect(mockApiFetch).toHaveBeenLastCalledWith('/api/v1/admin/habits?formation=ALL', undefined);
+    await leerHabitosDelPrograma('MENTOR', 'CERTIFICACION');
+    expect(mockApiFetch).toHaveBeenLastCalledWith('/api/v1/admin/habits?role=MENTOR&formation=CERTIFICACION', undefined);
+  });
+
+  it('crear manda la formación; copiar manda la formación destino y la categoría de ESA formación', async () => {
+    mockApiFetch.mockResolvedValue(HABITO);
+
+    await crearHabitoDelPrograma({ ...CUERPO, title: 'Lectura', habitType: 'CHECKBOX', formation: 'DIPLOMADO' });
+    expect(mockApiFetch).toHaveBeenLastCalledWith('/api/v1/admin/habits', {
+      method: 'POST',
+      body: expect.objectContaining({ formation: 'DIPLOMADO', title: 'Lectura' }),
+    });
+    await copiarHabitoDelPrograma('h1', { formacion: 'CERTIFICACION', categoria: 'CERTIFICACION_ETICA' });
+    expect(mockApiFetch).toHaveBeenLastCalledWith('/api/v1/admin/habits/h1/copy', {
+      method: 'POST',
+      body: { formation: 'CERTIFICACION', category: 'CERTIFICACION_ETICA' },
+    });
+  });
+
+  it('un backend anterior a la spec 023 no manda formación ni clave de categoría: el hábito se lee igual', async () => {
+    mockApiFetch.mockResolvedValue([HABITO]);
+    const [habito] = await leerHabitosDelPrograma();
+    expect(habito.formation).toBeUndefined();
+    expect(habito.categoryKey).toBeUndefined();
   });
 });

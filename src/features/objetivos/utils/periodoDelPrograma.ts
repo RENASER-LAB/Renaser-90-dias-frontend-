@@ -30,13 +30,48 @@
  * bloque igual que sus días sobrantes se suman a la 13.
  */
 
-/** Semanas del programa: de lunes a domingo, la 13 hasta el día 90 (D-203). */
+/** Semanas de un programa de 90 días: de lunes a domingo, la 13 hasta el día 90 (D-203). */
 export const SEMANAS_DEL_PROGRAMA = 13;
 
 export const SEMANAS_POR_MES = 4;
 
-/** Meses del programa: tres bloques de cuatro semanas, y el último se lleva la 13. */
+/** Meses de un programa de 90 días: tres bloques de cuatro semanas, y el último se lleva la 13. */
 export const MESES_DEL_PROGRAMA = 3;
+
+/**
+ * Las semanas del programa de ESTA persona (spec 026, tras la 022): la duración propia manda. Con 90 días son 13; con 365, 53 (`duración / 7 + 1`; la
+ * última llega hasta el último día, como en `SemanaPrograma` del backend). Sin duración —un backend anterior— se asume la de siempre.
+ */
+export function semanasDelProgramaDe(duracionDias: number | null | undefined): number {
+  if (!duracionDias || !Number.isFinite(duracionDias) || duracionDias < 1) {
+    return SEMANAS_DEL_PROGRAMA;
+  }
+  return Math.floor(Math.min(duracionDias, 365) / DIAS_POR_SEMANA) + 1;
+}
+
+/** Los días de un mes del programa en el servidor (`MesPrograma.DIAS_POR_MES`): el objetivo del mes cierra a los 30, 60, 90… días. */
+const DIAS_POR_MES_DEL_SERVIDOR = 30;
+
+/**
+ * Los meses del programa de esta persona, **los mismos que cuenta el servidor** (`MesPrograma.mesesDe`: `duración / 30`, al menos uno): 3 en
+ * uno de 90 días y 12 en el de 365. El número de mes viaja al servidor (`PUT /rocks/monthly/{eje}/{mes}`) y tiene que ser el suyo. Antes eran
+ * bloques de cuatro semanas, que en 365 días daban 13 y no coincidían (E2E de las formaciones, 01/11/2026, J2-6). Sin duración —un backend
+ * anterior— se asume la de siempre.
+ */
+export function mesesDelProgramaDe(duracionDias: number | null | undefined): number {
+  const dias = !duracionDias || !Number.isFinite(duracionDias) || duracionDias < 1 ? 90 : Math.min(duracionDias, 365);
+  return Math.max(Math.floor(dias / DIAS_POR_MES_DEL_SERVIDOR), 1);
+}
+
+/**
+ * La última semana del mes `mes`: las semanas del programa se reparten parejo entre sus meses. Con 13 semanas y 3 meses son 4, 8 y 13 (el mes 3
+ * se lleva la 13, como siempre); con 53 y 12, 4, 8, 13, 17… 53. El último mes llega siempre a la última semana.
+ */
+function ultimaSemanaDelMes(mes: number, duracionDias: number | null | undefined): number {
+  const meses = mesesDelProgramaDe(duracionDias);
+  const semanas = semanasDelProgramaDe(duracionDias);
+  return mes >= meses ? semanas : Math.floor((mes * semanas) / meses);
+}
 
 const DIAS_POR_SEMANA = 7;
 
@@ -53,7 +88,7 @@ function acotar(valor: number, minimo: number, maximo: number): number {
  * mirando su primera semana, y "semana 0" no significaría nada. Pasado el lunes de la 13 se queda en
  * 13: nunca hay 14.
  */
-export function semanaDe(diaPrograma: number, hoy: Date = new Date()): number {
+export function semanaDe(diaPrograma: number, hoy: Date = new Date(), duracionDias?: number | null): number {
   if (!Number.isFinite(diaPrograma) || diaPrograma < 1) {
     return 1;
   }
@@ -63,7 +98,7 @@ export function semanaDe(diaPrograma: number, hoy: Date = new Date()): number {
   const indiceDelDiaUno = (((indiceDeHoy - (dia - 1)) % DIAS_POR_SEMANA) + DIAS_POR_SEMANA) % DIAS_POR_SEMANA;
   // Días desde el lunes de la semana 1 hasta hoy, y cuántos lunes pasaron en ese tramo.
   const lunesTranscurridos = Math.floor((indiceDelDiaUno + dia - 1) / DIAS_POR_SEMANA);
-  return acotar(lunesTranscurridos + 1, 1, SEMANAS_DEL_PROGRAMA);
+  return acotar(lunesTranscurridos + 1, 1, semanasDelProgramaDe(duracionDias));
 }
 
 /**
@@ -75,12 +110,12 @@ export function semanaDe(diaPrograma: number, hoy: Date = new Date()): number {
  * en esta semana. La pantalla la usa para mostrar el domingo, con su número, la semana que se va a
  * guardar, en vez de la que termina.
  */
-export function semanaAPlanificar(diaPrograma: number, hoy: Date = new Date()): number {
+export function semanaAPlanificar(diaPrograma: number, hoy: Date = new Date(), duracionDias?: number | null): number {
   if (!Number.isFinite(diaPrograma) || diaPrograma < 1) {
     return 1;
   }
-  const semana = semanaDe(diaPrograma, hoy);
-  return hoy.getDay() === DOMINGO ? Math.min(semana + 1, SEMANAS_DEL_PROGRAMA) : semana;
+  const semana = semanaDe(diaPrograma, hoy, duracionDias);
+  return hoy.getDay() === DOMINGO ? Math.min(semana + 1, semanasDelProgramaDe(duracionDias)) : semana;
 }
 
 /**
@@ -92,26 +127,30 @@ export function semanaAPlanificar(diaPrograma: number, hoy: Date = new Date()): 
  * `objetivoMensual.ts`. Son dos cortes distintos del mismo programa; cada uno está bien en su
  * terreno, y cruzarlos corre de mes el objetivo.
  */
-export function mesDe(diaPrograma: number, hoy: Date = new Date()): number {
-  return mesDeLaSemana(semanaDe(diaPrograma, hoy));
+export function mesDe(diaPrograma: number, hoy: Date = new Date(), duracionDias?: number | null): number {
+  return mesDeLaSemana(semanaDe(diaPrograma, hoy, duracionDias), duracionDias);
 }
 
-/** Las semanas que componen un mes, en orden: 1 a 4, 5 a 8 y 9 a 13. */
-export function semanasDelMes(mes: number): number[] {
-  const acotado = acotar(Math.trunc(mes), 1, MESES_DEL_PROGRAMA);
-  const primera = (acotado - 1) * SEMANAS_POR_MES + 1;
-  const ultima = acotado === MESES_DEL_PROGRAMA ? SEMANAS_DEL_PROGRAMA : primera + SEMANAS_POR_MES - 1;
+/** Las semanas que componen un mes, en orden: 1 a 4, 5 a 8 y 9 a 13 (en 90 días); en 365, 12 meses de 4 o 5 semanas y el último llega a la 53. */
+export function semanasDelMes(mes: number, duracionDias?: number | null): number[] {
+  const acotado = acotar(Math.trunc(mes), 1, mesesDelProgramaDe(duracionDias));
+  const primera = acotado === 1 ? 1 : ultimaSemanaDelMes(acotado - 1, duracionDias) + 1;
+  const ultima = ultimaSemanaDelMes(acotado, duracionDias);
   return Array.from({ length: ultima - primera + 1 }, (_, i) => primera + i);
 }
 
-/** A qué mes pertenece una semana. La 13 es del mes 3. */
-export function mesDeLaSemana(semana: number): number {
-  const acotada = acotar(Math.trunc(semana), 1, SEMANAS_DEL_PROGRAMA);
-  return Math.min(Math.ceil(acotada / SEMANAS_POR_MES), MESES_DEL_PROGRAMA);
+/** A qué mes pertenece una semana. La 13 es del mes 3 (en 90 días); la última siempre es del último mes. */
+export function mesDeLaSemana(semana: number, duracionDias?: number | null): number {
+  const acotada = acotar(Math.trunc(semana), 1, semanasDelProgramaDe(duracionDias));
+  const meses = mesesDelProgramaDe(duracionDias);
+  for (let mes = 1; mes < meses; mes += 1) {
+    if (acotada <= ultimaSemanaDelMes(mes, duracionDias)) return mes;
+  }
+  return meses;
 }
 
 /** Cómo se nombra el bloque en pantalla: "Mes 2 · Semanas 5 a 8". */
-export function etiquetaDelMes(mes: number): string {
-  const semanas = semanasDelMes(mes);
-  return `Mes ${acotar(Math.trunc(mes), 1, MESES_DEL_PROGRAMA)} · Semanas ${semanas[0]} a ${semanas[semanas.length - 1]}`;
+export function etiquetaDelMes(mes: number, duracionDias?: number | null): string {
+  const semanas = semanasDelMes(mes, duracionDias);
+  return `Mes ${acotar(Math.trunc(mes), 1, mesesDelProgramaDe(duracionDias))} · Semanas ${semanas[0]} a ${semanas[semanas.length - 1]}`;
 }

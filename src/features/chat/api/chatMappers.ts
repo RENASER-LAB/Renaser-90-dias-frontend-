@@ -464,6 +464,8 @@ export function mapearResumenConversacion(
     fotoPath: resumen.conversation.photoPath?.trim() || null,
     // D-244: de quién es el soporte, para el aviso de emergencia que ve quien atiende.
     aprendizDelSoporte: resumen.conversation.supportTraineeId?.trim() || null,
+    // Spec 024: la formación de la conversación, solo si el servidor la mandó (el rótulo de la fila, cuando se leen «Todas»).
+    ...(resumen.conversation.formation ? { formacion: resumen.conversation.formation } : {}),
     // El rol del otro en palabras, el mismo dato del subtítulo, para la info del contacto. `null`
     // si no se conoce: la info muestra entonces el genérico, nunca un rol supuesto.
     rolDelOtro: otro?.role ? traducirRol(otro.role) : null,

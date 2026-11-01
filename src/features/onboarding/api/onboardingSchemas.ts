@@ -26,6 +26,11 @@ export const estadoOnboardingSchema = z
     // el aprendiz ya completó el flujo o todavía tiene que verlo.
     completed: z.boolean(),
     completedAt: z.string().nullable(),
+    // Spec 026: qué ficha le toca a la persona. Ausente (un backend anterior) o cualquier otro valor = la ficha estándar de siempre.
+    ficha: z
+      .string()
+      .nullish()
+      .transform((valor): 'ESTANDAR' | 'CON_DIAGNOSTICO' => (valor === 'CON_DIAGNOSTICO' ? 'CON_DIAGNOSTICO' : 'ESTANDAR')),
   })
   .passthrough();
 

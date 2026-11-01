@@ -345,7 +345,7 @@ describe('dónde se usan', () => {
     expect(comunidad).toMatch(/<HojaDeReacciones\b/);
     expect(comunidad).toMatch(/<SharePostSheet\s+post=\{shareSheetPost\}/);
     expect(comunidad).not.toMatch(/REACCIONES DEL POST|NUEVA PUBLICACIÓN|FOTOS ADJUNTAS/);
-    expect(comunidad).toMatch(/<ControlSegmentado\s+opciones=\{TABLAS_DE_RANKING\.map/);
+    expect(comunidad).toMatch(/<ControlSegmentado\s+opciones=\{tablasDelRanking\.map/);
     expect(comunidad).not.toMatch(/onPress=\{\(\) => setTipoRanking\(tabla\.clave\)\}/);
   });
 });

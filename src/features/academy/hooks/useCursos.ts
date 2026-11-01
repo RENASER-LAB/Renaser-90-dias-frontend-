@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { CourseItem } from '../../../screens/ComunidadScreen';
 import { mensajeDeError } from '../../../services/http/apiClient';
+import { formacionDeLaLectura } from '../../formaciones/estado/formacionDeLaComunidad';
 import * as cursosApi from '../api/cursosApi';
 import { mapearCursoBloqueado, mapearCursoConSecciones } from '../api/academyMappers';
 
@@ -30,11 +31,13 @@ export function useCursos(activo = true) {
     try {
       // Las dos listas se piden en paralelo: son independientes entre sí (una trae lo accesible,
       // la otra lo que falta desbloquear) y ninguna depende del resultado de la otra.
+      /* Spec 024: la formación elegida (solo quien ve todas); para las demás cuentas es `null` y el pedido es el de siempre. */
+      const formacion = formacionDeLaLectura();
       const [misCursos, bloqueados] = await Promise.all([
-        cursosApi.obtenerMisCursos(),
+        cursosApi.obtenerMisCursos(formacion),
         // Si este endpoint puntual falla, no tira abajo el catálogo entero: se muestra solo lo
         // accesible (comportamiento de antes de este cambio), no un error de pantalla completa.
-        cursosApi.obtenerCursosBloqueados().catch(() => []),
+        cursosApi.obtenerCursosBloqueados(formacion).catch(() => []),
       ]);
       // Las secciones de cada curso ACCESIBLE se piden en paralelo, no en cadena: son llamadas GET
       // livianas (metadata de lecciones — título, tipo de video, duración; NUNCA los bytes del

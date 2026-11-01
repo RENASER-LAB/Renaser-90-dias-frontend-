@@ -1,0 +1,21 @@
+# Aislamiento visto por un aprendiz de la Escuela (spec 022). ESCRITO Y SIN CORRER.
+# cuenta: aprendiz  (la ranura apunta a un aprendiz de la ESCUELA, de 90 días)
+# Precondición: existe también un aprendiz del Diplomado; esta cuenta no debe verlo ni ver nada que lo nombre.
+# Para quien es de la Escuela con una sola formación, las formaciones no se notan: ni el nombre en Hoy ni «Cambiar de formación».
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "HOY"
+- assertNotVisible: "Diplomado Renaser"
+- assertNotVisible: "Certificación Renaser"
+- assertNotVisible: "Escuela Renaser"
+- takeScreenshot: F01a-hoy-de-la-escuela-sin-nombre
+- tapOn: "YO"
+- scrollUntilVisible:
+    element: "Tu evolución"
+    direction: DOWN
+    timeout: 40000
+# La tarjeta de fase de siempre: 90 días, la Fase II empieza el día 8.
+- assertNotVisible: "Cambiar de formación"
+- assertNotVisible: ".*Días 29–137.*"
+- takeScreenshot: F01b-yo-de-la-escuela

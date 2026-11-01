@@ -1,0 +1,90 @@
+# «Planificar mi mes» en Plan (spec 028, 2026-10-31; decisión del dueño 028-2: «planificar el mes» es el plan de OBJETIVOS de Plan, el
+# mes del programa). ESCRITO Y SIN CORRER. Una hoja opcional con los tres meses del programa, el objetivo del mes del eje abierto y las
+# semanas del mes; el objetivo de CUALQUIERA de los tres meses se corrige con el formulario de siempre, y tocar la semana de ahora abre
+# «Organizar mi semana». No se arman semanas que no llegaron (la ventana del domingo no cambia).
+# Precondición: Mapa activo, objetivos de 90 días definidos en el eje Cuerpo (con unidad, p. ej. kg), el programa en marcha (día 8 o más)
+# y la semana de hoy armada. El último tramo (guardar) deja el objetivo del mes 3 «con tu cifra»: es una base local de prueba.
+# cuenta: aprendiz
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "PLAN"
+- extendedWaitUntil:
+    visible: "Tu dirección en 90 días"
+    timeout: 30000
+- tapOn: "Cuerpo"
+# La fila discreta, debajo del objetivo de 90 días, con el mes en curso.
+- scrollUntilVisible:
+    element: "Planificar mi mes"
+    direction: DOWN
+    timeout: 30000
+- assertVisible: "Mes . · Semanas .*"
+- takeScreenshot: PM01-fila-planificar-mi-mes
+- tapOn: "Planificar mi mes"
+- extendedWaitUntil:
+    visible: "Objetivo del mes"
+    timeout: 15000
+- assertVisible: "Mes 1"
+- assertVisible: "Mes 2"
+- assertVisible: "Mes 3"
+- assertVisible: "El mes en curso"
+- assertVisible: "Semanas"
+- assertVisible: "El objetivo de cada semana se arma el domingo\\."
+- takeScreenshot: PM02-hoja-del-mes-en-curso
+# Cambiar de mes: el rótulo y las semanas son las del mes elegido; las que no llegaron lo dicen.
+- tapOn: "Mes 3"
+- assertVisible: "Mes 3 · Semanas 9 a 13"
+- assertVisible: "Todavía no llega"
+- assertNotVisible: "El mes en curso"
+- takeScreenshot: PM03-mes-3
+- tapOn: "Mes 1"
+- assertVisible: "Mes 1 · Semanas 1 a 4"
+- assertVisible: "Semana 1"
+- takeScreenshot: PM04-mes-1
+# Salir del formulario sin guardar no cambia nada.
+- tapOn: "Mes 3"
+- tapOn: "(Cambiar|Escribir la cifra) el objetivo de este mes"
+- extendedWaitUntil:
+    visible: "¿Dónde quieres estar al Día 90\\?"
+    timeout: 10000
+- takeScreenshot: PM05-formulario-del-mes-3
+- back
+- assertVisible: "Mes 3 · Semanas 9 a 13"
+- assertNotVisible: "Tu objetivo del mes 3 quedó guardado\\."
+# Guardar el objetivo de un mes que todavía no llegó: se confirma en línea y queda como «Tu cifra».
+- tapOn: "(Cambiar|Escribir la cifra) el objetivo de este mes"
+- extendedWaitUntil:
+    visible: "¿Dónde quieres estar al Día 90\\?"
+    timeout: 10000
+- tapOn:
+    text: "Cifra del mes"
+- eraseText: 10
+- inputText: "80"
+- hideKeyboard
+- tapOn: "Guardar"
+- extendedWaitUntil:
+    visible: "Tu objetivo del mes 3 quedó guardado\\."
+    timeout: 15000
+- assertVisible: "Al Día 90 · Tu cifra"
+- takeScreenshot: PM06-mes-3-guardado
+# Tocar la semana de ahora cierra la hoja y abre «Organizar mi semana» (el asistente o «Agendar»), recién cuando la hoja se fue.
+- back
+- extendedWaitUntil:
+    visible: "Tu dirección en 90 días"
+    timeout: 15000
+- tapOn: "Planificar mi mes"
+- extendedWaitUntil:
+    visible: "El mes en curso"
+    timeout: 15000
+- tapOn: ".*Esta semana.*Toca para organizar tu semana\\.|.*Se arma hoy.*Toca para organizar tu semana\\."
+- extendedWaitUntil:
+    visible: "Agendar mis acciones|Plan de la semana.*"
+    timeout: 15000
+- takeScreenshot: PM07-organizar-mi-semana
+- back
+- extendedWaitUntil:
+    visible: "Tu dirección en 90 días"
+    timeout: 15000
+# Con la hoja cerrada, Plan es el de siempre.
+- assertVisible: "Planificar mi mes"
+- assertVisible: "Tu objetivo de 90 días"

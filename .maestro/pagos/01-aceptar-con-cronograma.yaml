@@ -1,0 +1,68 @@
+# Aceptar a un aprendiz CON cronograma de pagos (spec 032, decisión del dueño del 2026-11-01). ESCRITO Y SIN CORRER.
+# cuenta: admin  (Administración o Alquimista)
+# Precondición (base local, nunca producción): una solicitud PENDIENTE de «Sol-Pagos Uno»; la Escuela tiene una recepción abierta y términos publicados.
+# Se corre con: .maestro/correr.sh .maestro/pagos/01-aceptar-con-cronograma.yaml
+appId: com.renaser.app
+---
+- runFlow: ../solicitud-con-formacion/comun-abrir-solicitudes.yaml
+- extendedWaitUntil:
+    visible: "Sol-Pagos Uno"
+    timeout: 30000
+- tapOn: "Aceptar a Sol-Pagos Uno"
+- extendedWaitUntil:
+    visible: "Aceptar solicitud"
+    timeout: 15000
+# El aprendiz parte sin elegir cómo paga: «Aceptar» espera y la hoja lo dice.
+- assertVisible: "Pago"
+- assertVisible: "Elige cómo paga: sin cronograma o con cronograma."
+- takeScreenshot: P01a-el-pago-sin-elegir
+- tapOn: "Pago"
+- assertVisible: "Sin cronograma \\(pagó completo\\)"
+- assertVisible: "Con cronograma"
+- tapOn: "Con cronograma"
+# Sin moneda no hay cronograma: la hoja la pide (no hay valor por defecto).
+- assertVisible: "Moneda del cronograma"
+- assertVisible: "Elige la moneda del cronograma."
+# La hoja se desplaza (#87): el cuerpo corre por encima del pie fijo, así que cada campo se busca con scroll antes de tocarlo.
+- scrollUntilVisible:
+    element: "Dólares.*"
+    direction: DOWN
+    timeout: 20000
+- tapOn: "Dólares.*"
+# El atajo «N cuotas mensuales de X desde tal fecha». Los campos se llaman por lo que dice su recuadro: «Cuotas» y «Monto de cada una».
+- scrollUntilVisible:
+    element: "Armar cuotas mensuales"
+    direction: DOWN
+    timeout: 20000
+- tapOn: "Cuotas"
+- inputText: "3"
+- tapOn: "Monto de cada una"
+- inputText: "1000"
+- hideKeyboard
+- scrollUntilVisible:
+    element: "Fecha de la primera cuota.*"
+    direction: DOWN
+    timeout: 20000
+- tapOn: "Fecha de la primera cuota.*"
+- extendedWaitUntil:
+    visible: "Elige la fecha"
+    timeout: 10000
+- tapOn: "LISTO"
+- scrollUntilVisible:
+    element: "Armar las cuotas"
+    direction: DOWN
+    timeout: 20000
+- tapOn: "Armar las cuotas"
+# Quedan tres filas editables y el total.
+- assertVisible: "3 cuotas"
+- assertVisible: "Total: US\\$.3.000"
+- assertVisible: "Con cronograma · 3 cuotas · US\\$.3.000"
+- assertVisible: "Sol-Pagos Uno entrará a la Escuela Renaser como Aprendiz, sin diagnóstico y con cronograma de 3 cuotas."
+- takeScreenshot: P01b-el-cronograma-armado
+# Hay un solo «Aceptar»: el del pie fijo de la hoja.
+- tapOn: "Aceptar"
+- extendedWaitUntil:
+    visible: "Sol-Pagos Uno entró a la Escuela Renaser como Aprendiz.*"
+    timeout: 20000
+- assertNotVisible: "Aceptar a Sol-Pagos Uno"
+- takeScreenshot: P01c-aceptada

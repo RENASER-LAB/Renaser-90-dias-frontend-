@@ -42,11 +42,11 @@ export function CabeceraAdmin({
         </View>
       </Pressable>
       <View style={{ flex: 1, flexShrink: 1 }}>
-        <Text style={[t.cardTitle, { color: c.textStrong }]} numberOfLines={1}>
+        <Text style={[t.cardTitle, { color: c.textStrong }]} numberOfLines={2}>
           {titulo}
         </Text>
         {subtitulo ? (
-          <Text style={[t.body, { color: c.textSoft, fontSize: 16 }]} numberOfLines={1}>
+          <Text style={[t.body, { color: c.textSoft, fontSize: 16 }]} numberOfLines={2}>
             {subtitulo}
           </Text>
         ) : null}

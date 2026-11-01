@@ -1,16 +1,16 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 
 import { Alert } from '../../../components/Alerta';
 import { GoldButton } from '../../../components/GoldButton';
 import { useAuth } from '../../../context/AuthContext';
-import { useAccionesDelMapa } from '../../mapa-renacimiento/hooks/useAccionesDelMapa';
 import { useRocasDiarias } from '../hooks/useRocasDiarias';
 import { useRocasSemanales } from '../hooks/useRocasSemanales';
 import type { CierreRocaSemanal, EjeObjetivo, ItemPlanDiario, ItemPlanSemanal, RocaDiariaApi, RocaMaestraApi } from '../types/objetivos.types';
 import { EJES, ETIQUETA_EJE } from '../types/objetivos.types';
 import { accionesDelEje, avanceDeLasAcciones, unirAcciones } from '../utils/planPrincipal';
+import type { SugerenciaDeAccion } from '../utils/accionesPropias';
 import { semanaAPlanificar } from '../utils/periodoDelPrograma';
 import { AgendarAccionesModal } from './AgendarAccionesModal';
 import { PlanSemanalModal } from './PlanSemanalModal';
@@ -38,22 +38,49 @@ export function PlanDelEje({
   maestras,
   numeroSemana,
   diaPrograma,
+  duracionDias,
   ejeAbierto,
   objetivoSugeridoDe,
-  onIrAlMapa,
+  pedidoDeOrganizar = 0,
+  cierre,
+  registrarLasAcciones,
+  abrirOchentaVeinte = null,
+  alAbrirOchentaVeinte,
+  accionSugerida = null,
+  onDefinirObjetivos,
 }: {
   maestras: RocaMaestraApi[];
   numeroSemana: number;
   diaPrograma: number;
+  /** La duración del programa de esta persona (90 o 365): de ella sale la última semana. Sin dato, la de siempre. */
+  duracionDias?: number | null;
   ejeAbierto: EjeObjetivo;
   objetivoSugeridoDe: (eje: EjeObjetivo) => string;
-  onIrAlMapa?: () => void;
+  /**
+   * Un contador: cada vez que sube, se abre «Organizar mi semana» como si se hubiera tocado el botón (spec 028: «Planificar mi mes» lo
+   * pide al tocar la semana de ahora). Sin él, o en 0, no hace nada.
+   */
+  pedidoDeOrganizar?: number;
+  /**
+   * «Cierra tu día» (spec 033): una tarjeta del día completo que Plan dibuja justo bajo «Acciones que mueven la meta», porque
+   * cerrar es lo último que se hace con ellas. No depende del eje elegido.
+   */
+  cierre?: React.ReactNode;
+  /** El lugar de «Acciones que mueven la meta», para que «Ver mañana en Plan» lleve el scroll hasta ahí. */
+  registrarLasAcciones?: React.Ref<View>;
+  /** Spec 031: el aviso «tu análisis está listo» pide abrir «Tu 80/20» en la semana o el mes. Se consume una vez (`alAbrirOchentaVeinte`). */
+  abrirOchentaVeinte?: 'SEMANA' | 'MES' | null;
+  alAbrirOchentaVeinte?: () => void;
+  /** La primera acción del diagnóstico de la persona, para ofrecerla al agendar (eje de su prioridad principal). */
+  accionSugerida?: SugerenciaDeAccion | null;
+  /** «Escribir mis objetivos»: la semana está bloqueada hasta tener los tres de 90 días. Abre el editor del primero que falta. */
+  onDefinirObjetivos?: () => void;
 }) {
   const { user } = useAuth();
   const navigation = useNavigation();
   const semanal = useRocasSemanales(maestras);
   // El domingo se arma la semana que EMPIEZA (D-203): se lee aparte, y solo ese día.
-  const semanaQueSeArma = semanaAPlanificar(diaPrograma);
+  const semanaQueSeArma = semanaAPlanificar(diaPrograma, undefined, duracionDias);
   const armaLaQueEmpieza = semanaQueSeArma !== numeroSemana;
   const queEmpieza = useRocasSemanales(maestras, semanaQueSeArma, armaLaQueEmpieza);
   const diaria = useRocasDiarias();
@@ -62,8 +89,13 @@ export function PlanDelEje({
   const [revisando, setRevisando] = useState<EjeObjetivo | null>(null);
   const [agendando, setAgendando] = useState(false);
   const [ochentaVeinte, setOchentaVeinte] = useState(false);
-  /* Solo cuando el planificador se abre: quien nunca lo toca no paga la lectura del Mapa. */
-  const accionesDelMapa = useAccionesDelMapa(agendando);
+  const [vistaInicialDeLaHoja, setVistaInicialDeLaHoja] = useState<'SEMANA' | 'MES' | undefined>(undefined);
+  useEffect(() => {
+    if (!abrirOchentaVeinte) return;
+    setVistaInicialDeLaHoja(abrirOchentaVeinte);
+    setOchentaVeinte(true);
+    alAbrirOchentaVeinte?.();
+  }, [abrirOchentaVeinte, alAbrirOchentaVeinte]);
 
   const seArma = armaLaQueEmpieza ? queEmpieza : semanal;
   const paraAgendar = armaLaQueEmpieza ? queEmpieza : semanal;
@@ -107,12 +139,22 @@ export function PlanDelEje({
   /** «Organizar mi semana ›»: lo que ya existía para armarla; y con el eje armado, repartir sus acciones. */
   const organizarMiSemana = () => {
     if (semanal.estado === 'bloqueada') {
-      onIrAlMapa?.();
+      onDefinirObjetivos?.();
       return;
     }
     if (ejeSinObjetivoDeLaSemana || !puedeAgendar) setArmando(true);
     else setAgendando(true);
   };
+
+  /* El pedido de afuera se atiende una vez por cada subida del contador, con el estado de ese momento. */
+  const organizarRef = useRef(organizarMiSemana);
+  organizarRef.current = organizarMiSemana;
+  const pedidoAtendido = useRef(pedidoDeOrganizar);
+  useEffect(() => {
+    if (pedidoDeOrganizar === pedidoAtendido.current) return;
+    pedidoAtendido.current = pedidoDeOrganizar;
+    organizarRef.current();
+  }, [pedidoDeOrganizar]);
 
   const tocarUna = (accion: RocaDiariaApi, esDeHoy: boolean) => {
     if (esDeHoy) {
@@ -138,30 +180,46 @@ export function PlanDelEje({
         }
         alArmar={() => setArmando(true)}
         alRevisar={() => setRevisando(ejeAbierto)}
-        alIrAlMapa={onIrAlMapa}
+        alDefinirObjetivos={onDefinirObjetivos}
         alArmarLaQueEmpieza={() => setArmando(true)}
       />
 
-      <AccionesQueMuevenLaMeta
-        acciones={delEje}
-        hoyIso={hoyIso}
-        nombreDelEje={ETIQUETA_EJE[ejeAbierto]}
-        hayPlanSemanal={hayPlanSemanal}
-        puedeAgendar={puedeAgendar}
-        error={diaria.error}
-        alTocarUna={tocarUna}
-        alAgendar={() => setAgendando(true)}
-      >
-        {/* Recordatorios de las acciones (2026-09-26): con TODAS las de hoy y mañana, no solo las del eje abierto —las
-            alarmas son de todas—. Desde el 2026-10-31 es una fila que abre una hoja con el mismo control que Yo → Alarmas. */}
-        {hayPlanSemanal && user?.id ? <RecordatoriosDeLasAcciones userId={user.id} rocas={rocasParaAlarmas} /> : null}
-      </AccionesQueMuevenLaMeta>
+      <View ref={registrarLasAcciones} collapsable={false}>
+        <AccionesQueMuevenLaMeta
+          acciones={delEje}
+          hoyIso={hoyIso}
+          nombreDelEje={ETIQUETA_EJE[ejeAbierto]}
+          hayPlanSemanal={hayPlanSemanal}
+          puedeAgendar={puedeAgendar}
+          error={diaria.error}
+          alTocarUna={tocarUna}
+          alAgendar={() => setAgendando(true)}
+        >
+          {/* Recordatorios de las acciones (2026-09-26): con TODAS las de hoy y mañana, no solo las del eje abierto —las
+              alarmas son de todas—. Desde el 2026-10-31 es una fila que abre una hoja con el mismo control que Yo → Alarmas. */}
+          {hayPlanSemanal && user?.id ? <RecordatoriosDeLasAcciones userId={user.id} rocas={rocasParaAlarmas} /> : null}
+        </AccionesQueMuevenLaMeta>
+      </View>
 
-      <TarjetaOchentaVeinte alAbrir={() => setOchentaVeinte(true)} />
+      {cierre}
+
+      <TarjetaOchentaVeinte
+        alAbrir={() => {
+          setVistaInicialDeLaHoja(undefined);
+          setOchentaVeinte(true);
+        }}
+      />
 
       <GoldButton label="Organizar mi semana" onPress={organizarMiSemana} icon="chevron" textStyle={estilos.textoDelBoton} />
 
-      <HojaOchentaVeinte visible={ochentaVeinte} alCerrar={() => setOchentaVeinte(false)} eje={ejeAbierto} deHoy={deHoyDelEje} />
+      <HojaOchentaVeinte
+        visible={ochentaVeinte}
+        alCerrar={() => setOchentaVeinte(false)}
+        eje={ejeAbierto}
+        deHoy={deHoyDelEje}
+        vistaInicial={vistaInicialDeLaHoja}
+        alAgendar={() => setAgendando(true)}
+      />
 
       {/* Arma la semana que se arma HOY (`seArma`): el domingo, la que empieza, con su número. */}
       <PlanSemanalModal
@@ -187,7 +245,7 @@ export function PlanDelEje({
         visible={agendando}
         semanal={paraAgendar}
         fecha={diaria.objetivo.fecha}
-        accionesDelMapa={accionesDelMapa}
+        sugerida={accionSugerida}
         guardando={diaria.guardando}
         onGuardar={guardarAcciones}
         onCerrar={() => setAgendando(false)}

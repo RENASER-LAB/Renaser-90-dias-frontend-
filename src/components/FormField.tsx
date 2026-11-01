@@ -12,6 +12,11 @@ interface FormFieldProps extends TextInputProps {
   icon?: IconName;
   containerStyle?: ViewStyle;
   /**
+   * Con `error`, el borde se pone rojo pero el texto del error NO se dibuja: lo dibuja quien llama, donde le convenga y con su
+   * tamaño (el diagnóstico de la spec 026 lo dice a 15 px, bajo la pregunta). Apagado por defecto: nada cambia para los demás.
+   */
+  mensajeDeErrorAparte?: boolean;
+  /**
    * El campo de verdad, para enfocarlo desde afuera (pasar al siguiente campo con la tecla «Siguiente»
    * del teclado, 2026-10-05). En React 19 `ref` llega como una prop más y viaja al `TextInput` con
    * el resto de `inputProps`: no hace falta `forwardRef`.
@@ -25,6 +30,7 @@ export function FormField({
   error,
   icon,
   containerStyle,
+  mensajeDeErrorAparte = false,
   multiline,
   numberOfLines = 1,
   style,
@@ -104,7 +110,7 @@ export function FormField({
         />
       </View>
 
-      {error ? (
+      {error && !mensajeDeErrorAparte ? (
         <Text style={[t.small, { color: c.danger, marginTop: 2, fontSize: 12 }]}>{error}</Text>
       ) : null}
     </View>

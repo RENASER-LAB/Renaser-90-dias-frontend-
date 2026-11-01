@@ -1,7 +1,8 @@
 import { useCallback, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 
-import { ApiError, mensajeDeError } from '../../../services/http/apiClient';
+import { ApiError } from '../../../services/http/apiClient';
+import { mensajeDeObjetivos } from '../utils/mensajeDeObjetivos';
 import * as objetivosApi from '../api/objetivosApi';
 import type { EjeObjetivo, ItemPlanDiario, RocaDiariaApi } from '../types/objetivos.types';
 import { fechaAPlanificar, mensajeSinPlanSemanal } from '../utils/ventanasDePlanificacion';
@@ -53,7 +54,7 @@ export function useRocasDiarias() {
       setHoyDelServidor(deLaSemana?.desde ?? deHoy[0]?.fecha ?? null);
       yaLeyo.current = true;
     } catch (e) {
-      setError(mensajeDeError(e, 'No pudimos cargar tus acciones del día.'));
+      setError(mensajeDeObjetivos(e, 'No pudimos cargar tus acciones del día.'));
     } finally {
       setCargando(false);
     }
@@ -132,7 +133,7 @@ export function useRocasDiarias() {
           mensaje: 'Ese día ya no se puede planificar. Elige uno que quede de la semana.',
         };
       }
-      return { ok: false as const, motivo: 'error' as const, mensaje: mensajeDeError(e, 'No pudimos agendar tus acciones.') };
+      return { ok: false as const, motivo: 'error' as const, mensaje: mensajeDeObjetivos(e, 'No pudimos agendar tus acciones.') };
     } finally {
       setGuardando(false);
     }

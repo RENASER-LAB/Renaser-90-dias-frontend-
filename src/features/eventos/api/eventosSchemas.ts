@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { formacionTolerante } from '../../formaciones/api/formacionTolerante';
 import type { Asistencia, Evento, Ocurrencia, ReglaDeAviso, TipoUbicacion } from '../types/eventos.types';
 
 /**
@@ -36,6 +37,8 @@ const eventoSchema = z
     createdById: z.string().nullish(),
     audienceType: z.string().nullish(),
     targetRoles: z.array(z.string()).nullish(),
+    // Spec 024: la formación del evento. Opcional y tolerante (un servidor anterior no la manda).
+    formation: formacionTolerante,
   })
   .passthrough();
 
@@ -117,6 +120,8 @@ export function aEvento(crudo: EventoCrudo): Evento {
     creadoPor: crudo.createdById ?? null,
     audiencia: crudo.audienceType ?? null,
     rolesDestino: crudo.targetRoles ?? [],
+    // Solo si el servidor la mandó: así el evento de un servidor anterior queda idéntico al de siempre.
+    ...(crudo.formation ? { formacion: crudo.formation } : {}),
   };
 }
 

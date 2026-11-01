@@ -34,6 +34,8 @@ export interface CursoApi {
   rolesPermitidos: string[];
   creadoEn: string;
   actualizadoEn: string;
+  /** Spec 024: el código de la formación del curso. Ausente con un servidor anterior. */
+  formation?: string | null;
 }
 
 /** `ProgresoCursoResponse` (camelCase). */
@@ -65,6 +67,8 @@ export interface CursoBloqueadoApi {
   orden: number;
   diaDesbloqueo: number;
   programDayActual: number;
+  /** Spec 024: el código de la formación del curso. Ausente con un servidor anterior. */
+  formation?: string | null;
 }
 
 /**

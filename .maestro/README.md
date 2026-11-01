@@ -26,6 +26,13 @@ local (nunca contra producción).
   escribe con `inputText`, que tarda ~10 s por letra (ver abajo). 37 y 38 dejan todo como estaba; 39 y 40 necesitan el
   backend con «ver como» (B3).
 
+- `formaciones/` (2026-10-31, spec 022): las tres formaciones y su aislamiento (aprendiz de la Escuela y del Diplomado de 1 año, personal con dos
+  formaciones o sin ninguna, Administración → Formaciones y el traslado). **Escritos y sin correr**; ver su `README.md`.
+- `planificacion/` (spec 028, 2026-10-31): lo que se planifica por semana. `solo-esta-semana` (el editor de Planificar con «Todas las semanas»
+  | «Solo esta semana», el aviso solo esta semana, «Cambiado solo esta semana» y «Volver al plan de siempre») y `repetir-la-semana`
+  (la oferta «Repetir tu semana» en «Tus prácticas»: «Ver qué se repite», repetir en un toque, «Deshacer» y «Ahora no»). **Escritos y sin correr**; piden el backend con la spec 028 (V130 y V131), el hábito
+  propio «Meditar 10 minutos» sin cambios solo-semana (`reset-hoy.sql`) y que hoy no sea sábado ni domingo (lo dice arriba de cada archivo).
+- `planificacion/planificar-el-mes.yaml` (spec 028, 2026-10-31): Plan → «Planificar mi mes» (el plan de objetivos: los tres meses del programa, el objetivo del mes del eje abierto, sus semanas, corregir el de cualquier mes y organizar la semana de ahora). **Escrito y sin correr**; pide el Mapa activo y la semana armada (lo dice arriba del archivo).
 - `diseno-31/` (2026-10-31): los cambios de diseño del día (Hoy con la tarjeta de acciones y sin la frase ni Coherencia / Racha,
   Plan con el formato de la referencia, Training con la cabecera sin fase, los nombres en tipo oración, los rituales con texto y la
   última comida con círculo, Yo con el semáforo y sin la tira «Evidencia», y —`06-roles-en-yo`— Hoy solo con el programa propio y las
@@ -33,6 +40,17 @@ local (nunca contra producción).
   precondición. Desde ese día Administración, «Mi grupo» y «Mis mentores» se abren desde **Yo** (los flujos de `regresion/20–24`,
   `mi-radar/11–12` y `lider-ve-a-todos/01` ya entran por ahí). Los nombres de los hábitos ahora se ven en tipo oración: los flujos viejos que los buscaban en mayúsculas usan
   `(?i)` desde ese día.
+
+- `hoy-programa-propio/` (2026-11-01, issue #72): la frase del día siempre y la fila compacta del programa propio en Hoy y Plan, con sus tres
+  estados (`ESTADO` = `sin-programa` | `sin-dia-1` | `esperando`, este último el de «Tu programa empieza el …»). **Escrito y sin correr**; cada estado
+  pide su cuenta (lo dice arriba del archivo).
+
+- `cierre-en-plan/` (spec 033, 2026-10-31): «Cierra tu día» ya no está en Training; vive en una tarjeta de Plan, bajo «Acciones que
+  mueven la meta», con «Ver mañana en Plan» y los cierres de los días anteriores en la misma tarjeta (solo lectura). **Escritos y
+  sin correr**; cada archivo dice su precondición. Reemplaza a la carpeta `cierre/` (que probaba la fila de Training).
+- `codigo-renaser-en-fichas/` (spec 034, 2026-10-31): Administración enciende y apaga si el mentor, la guía y el líder ven el Código
+  Renaser (Más opciones → «Código Renaser en las fichas»); apagado de fábrica. **Escritos y sin correr**: piden el backend con la
+  spec 034 y, además de la cuenta de Administración, la de un mentor con un aprendiz que ya respondió el Radar; ver su `README.md`.
 
 ## Cómo correrla
 
@@ -74,3 +92,4 @@ a un teléfono de verdad: `killApp` (`adb shell am kill`, la muerte de proceso q
 mata la app si está en segundo plano, y lo está porque la cámara está al frente) y `setAirplaneMode` (se corta la red del
 emulador, no `adb reverse`). El 12 deja la pantalla partida de kilómetros a medias y el 13 el error con «REINTENTAR»: si un
 paso falla, mira `adb logcat -s ReactNativeJS` (las líneas `[evidencia] falló el paso …` dicen cuál fue).
+- `ficha-con-diagnostico/` (2026-10-31, spec 026): el diagnóstico de la persona (01–04), Administración → Fichas (10–13) y Plan/Hoy sin el Mapa (20–22). **Escritos y sin correr**; ver su `README.md`.

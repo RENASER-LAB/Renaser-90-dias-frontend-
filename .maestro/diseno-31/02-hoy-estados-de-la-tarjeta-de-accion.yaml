@@ -1,7 +1,10 @@
 # Los estados de la tarjeta de acciones de Hoy (2026-10-31). ESCRITO Y SIN CORRER. Cada estado pide su cuenta/precondición; se
-# corre de a uno cambiando ESTADO (mapa | sin-acciones | todo-cumplido).
-#  - mapa: aprendiz SIN el Mapa de Renacimiento activo y sin acciones hoy → «Hacer mi Mapa ›».
-#  - sin-acciones: Mapa activo, nada agendado hoy → «Agendar en Plan ›».
+# corre de a uno cambiando ESTADO (sin-objetivos | por-confirmar | sin-acciones | todo-cumplido).
+# (Spec 026: el estado `mapa` —«Hacer mi Mapa ›»— se fue con el Mapa de Renacimiento; lo reemplazan los dos primeros. Más a fondo:
+#  `ficha-con-diagnostico/21-hoy-sin-mapa.yaml`.)
+#  - sin-objetivos: sin sus tres objetivos de 90 días y sin acciones hoy → «Escribir mi objetivo ›» (lleva a Plan).
+#  - por-confirmar: objetivos del diagnóstico sin confirmar y sin acciones hoy → «Confirmar ›» (lleva a Plan).
+#  - sin-acciones: sus tres objetivos, nada agendado hoy → «Agendar en Plan ›».
 #  - todo-cumplido: todas las acciones de hoy selladas → «Cumpliste tus acciones de hoy» (sin botón).
 # cuenta: aprendiz
 appId: com.renaser.app
@@ -13,11 +16,19 @@ appId: com.renaser.app
     timeout: 30000
 - runFlow:
     when:
-      true: ${ESTADO == 'mapa'}
+      true: ${ESTADO == 'sin-objetivos'}
     commands:
-      - assertVisible: "Tu objetivo de 90 días nace de tu Mapa de Renacimiento\\."
-      - assertVisible: "Hacer mi Mapa"
-      - takeScreenshot: D02a-tarjeta-sin-mapa
+      - assertVisible: "Define tu objetivo de 90 días en Plan"
+      - assertVisible: "Escribir mi objetivo"
+      - assertNotVisible: ".*Mapa.*"
+      - takeScreenshot: D02a-tarjeta-sin-objetivos
+- runFlow:
+    when:
+      true: ${ESTADO == 'por-confirmar'}
+    commands:
+      - assertVisible: "Confirma tus objetivos de 90 días"
+      - assertNotVisible: ".*Mapa.*"
+      - takeScreenshot: D02a2-tarjeta-por-confirmar
 - runFlow:
     when:
       true: ${ESTADO == 'sin-acciones'}

@@ -11,6 +11,11 @@ import React from 'react';
 import TestRenderer, { act, type ReactTestInstance, type ReactTestRenderer } from 'react-test-renderer';
 import type { HabitItem } from '../../../../screens/TrainingScreen';
 
+jest.mock('../../../habits/categorias/hooks/useCategoriasDeHabito', () => {
+  /* Spec 023: sin sesión en la prueba, las categorías valen las de la Escuela (el respaldo) y ya están listas. */
+  const estado = { clave: null, listo: true, formacion: null, delServidor: false, categorias: [], dimensiones: [], recargar: () => undefined };
+  return { useCategoriasDeHabito: () => estado };
+});
 jest.mock('@react-native-async-storage/async-storage', () => require('@react-native-async-storage/async-storage/jest/async-storage-mock'));
 jest.mock('../../../../theme/ThemeContext', () => {
   const tokens = jest.requireActual<typeof import('../../../../theme/tokens')>('../../../../theme/tokens');
@@ -79,7 +84,14 @@ function montar(estado: EstadoDePracticas, extra: { cargando?: boolean } = {}) {
         estado,
         onEstado,
         habits: [habito('a', { done: true }), habito('b')],
-        planHabits: [habito('a'), habito('b'), habito('mente', { dimension: 'MENTE' })],
+        // Spec 023: una dimensión sin hábitos que le toquen a la persona no se dibuja; aquí hay de las cuatro.
+        planHabits: [
+          habito('a'),
+          habito('b'),
+          habito('mente', { dimension: 'MENTE' }),
+          habito('emo', { dimension: 'EMOCIONES' }),
+          habito('esp', { dimension: 'ESPÍRITU' }),
+        ],
         cargando: extra.cargando ?? false,
         error: null,
         onReintentar: () => undefined,

@@ -12,6 +12,10 @@ import type { EntradaRankingDto, RankingAgregadoDto } from '../api/rankingApi';
  */
 export type ClaveDeTabla = 'general' | 'coherencia' | 'kilometros' | 'gimnasio';
 
+/**
+ * Las cuatro pestañas posibles. Cuáles se OFRECEN lo decide `tablasQueSeOfrecen` (spec 023): «Kilómetros» y «Gimnasio» solo salen si el catálogo de
+ * hábitos de la formación de quien mira tiene KILÓMETROS DIARIOS o GIMNASIO. El servidor manda las cuatro tablas siempre (spec 024).
+ */
 export const TABLAS_DE_RANKING: ReadonlyArray<{ clave: ClaveDeTabla; titulo: string; explica: string }> = [
   { clave: 'general', titulo: 'General', explica: 'Hábitos, acciones y lecciones, todo junto' },
   { clave: 'coherencia', titulo: 'Coherencia', explica: 'Acciones diarias cumplidas de tu semana' },

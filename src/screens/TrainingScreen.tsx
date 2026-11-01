@@ -19,7 +19,11 @@ import {
 import { useTraining } from '../features/training/hooks/useTraining';
 import { TrainingPorHora } from '../features/training/components/TrainingPorHora';
 import { PracticasDeTraining } from '../features/training/components/PracticasDeTraining';
-import { DIMENSIONES_CONFIG } from '../features/training/data/dimensiones';
+import { nombreDeLaDimension } from '../features/training/data/dimensiones';
+import { AvisoDeProgramaEnOtraFormacion } from '../features/habits/components/AvisoDeProgramaEnOtraFormacion';
+import { useFormacionDeLaSesion } from '../features/formaciones/context/FormacionContext';
+import { useProgramaEnOtraFormacion } from '../features/formaciones/hooks/useProgramaEnOtraFormacion';
+import { llaveDeLasVistas } from '../features/formaciones/utils/vistaDeFormacion';
 import { PRACTICAS_ABIERTAS, PRACTICAS_CERRADAS, alRetroceder, type EstadoDePracticas } from '../features/training/utils/navegacionDePracticas';
 import { EvidenciaHabitoModal } from '../features/habits/components/EvidenciaHabitoModal';
 import { RegistroConFotoModal } from '../features/habits/components/RegistroConFotoModal';
@@ -88,7 +92,8 @@ const CLAVES_SOLO_HORA: ReadonlySet<string> = new Set(['WAKE_UP', 'SLEEP']);
 
 export interface HabitItem {
   id: string;
-  dimension: 'CUERPO' | 'MENTE' | 'EMOCIONES' | 'ESPÍRITU' | 'VIDA Y NEGOCIO';
+  /** La dimensión: una categoría de la formación de la persona (spec 023), «Mis hábitos» o `VIDA Y NEGOCIO`. */
+  dimension: DimensionDeTraining;
   title: string;
   time: string;
   tag: string;
@@ -217,10 +222,11 @@ export default function TrainingScreen() {
     recargar: recargarEntrenamiento,
     fechaDeHoy,
   } = useTraining(trainingActivo);
+  /* Spec 023, FR-030a: el personal con su programa propio en OTRA formación que la activa ve una línea que lo dice en lugar de la
+     lista; y una formación sin hábitos dice «Tu formación todavía no tiene hábitos.» (FR-014) en vez de quedar vacía. */
+  const programaEnOtraFormacion = useProgramaEnOtraFormacion();
   /* Spec 014: los eventos de la semana solo se piden si Eventos está prendido (Soporte TI). */
   const eventosPrendidos = useFuncionalidad(CLAVES.eventos);
-  /* Spec 017: «Cierra tu día» cuelga de las acciones del día, que tapa el interruptor `plan`. */
-  const planPrendido = useFuncionalidad(CLAVES.plan);
   useAlVolverAPrenderse(CLAVES.habitos, () => void recargarEntrenamiento());
   // Solo en desarrollo: pedidos al montar y tiempo hasta tener datos (V-1, 26/09/2026).
   useMedicionDePantalla('Training', !cargandoBackend);
@@ -246,6 +252,8 @@ export default function TrainingScreen() {
   /* D-260: tras «Elegir mi Día 1» se vuelve a preguntar, y el aviso de abajo se va solo. */
   const [versionArranque, setVersionArranque] = useState(0);
   const { user } = useAuth();
+  /* Las lecturas guardadas de Training (eventos, días cerrados, plan de la semana) se separan por cuenta Y formación (spec 022). */
+  const { formacion: formacionDeLaSesion } = useFormacionDeLaSesion();
   const arranque = useArranqueDelPrograma(!cargandoDiaPrograma && diaPrograma === 0, versionArranque, user?.id);
   const programaSinArrancar =
     arranque.estado === 'PENDIENTE_ELEGIR' || arranque.estado === 'ESPERANDO_INICIO';
@@ -905,7 +913,8 @@ export default function TrainingScreen() {
   }, [hoyIso, registroConFoto]);
   const estadoDeLaLista: 'cargando' | 'error' | 'listo' = cargandoBackend ? 'cargando' : errorBackend !== null ? 'error' : 'listo';
   /** «Tus prácticas» no ofrece nada que planificar antes de que el programa arranque. */
-  const practicasDeshabilitadas = programaSinArrancar || programaSinConfirmar || sinProgramaPropio;
+  const practicasDeshabilitadas = programaSinArrancar || programaSinConfirmar || sinProgramaPropio || programaEnOtraFormacion !== null;
+  const formacionSinHabitos = !cargandoBackend && errorBackend === null && planHabitsDelBackend.length === 0;
 
   /* Spec 002, fase 2: si «Hábitos» todavía no le toca a esta cuenta (despliegue, rol personalizado), la pestaña queda
      con un texto neutro, sin el ícono de mantenimiento: no está en arreglo, todavía no lo tiene. */
@@ -954,7 +963,7 @@ export default function TrainingScreen() {
           error={errorBackend}
           onReintentar={() => void recargarEntrenamiento(true)}
           deshabilitada={practicasDeshabilitadas}
-          sinLista={programaSinConfirmar || sinProgramaPropio}
+          sinLista={programaSinConfirmar || sinProgramaPropio || programaEnOtraFormacion !== null}
           userId={user?.id}
           renombre={renombre}
           onGuardado={texto => {
@@ -972,8 +981,8 @@ export default function TrainingScreen() {
           {/* El engranaje a la derecha (24 en una caja de 44 con `hitSlop`): «Tus prácticas», para planificar. */}
           <ScreenHeader
             title="TRAINING"
-            right="settings"
-            onPressRight={() => setPracticas(PRACTICAS_ABIERTAS)}
+            right={programaEnOtraFormacion ? undefined : 'settings'}
+            onPressRight={programaEnOtraFormacion ? undefined : () => setPracticas(PRACTICAS_ABIERTAS)}
             etiquetaRight="Tus prácticas: planificar"
           />
 
@@ -1023,19 +1032,30 @@ export default function TrainingScreen() {
 
             {/* Training por hora (spec 014): el día, la semana y una sola lista por hora. Mientras se comprueba el
                 programa, el mismo esqueleto de siempre; sin programa propio o sin confirmar, no hay lista. */}
-            {comprobandoPrograma && !sinProgramaPropio ? (
+            {programaEnOtraFormacion ? (
+              <AvisoDeProgramaEnOtraFormacion nombre={programaEnOtraFormacion.nombre} />
+            ) : comprobandoPrograma && !sinProgramaPropio ? (
               <View accessibilityLabel="Cargando tu entrenamiento" style={{ gap: 12 }}>
                 {[0, 1, 2, 3].map(i => (
                   <View key={i} style={[styles.esqueleto, { borderColor: c.border, backgroundColor: c.cardBg }]} />
                 ))}
               </View>
             ) : !programaSinConfirmar && !sinProgramaPropio && !programaSinArrancar ? (
+              <>
+              {formacionSinHabitos ? (
+                <Text
+                  style={[t.body, styles.formacionSinHabitos, { color: c.textSoft }]}
+                  accessibilityLiveRegion="polite"
+                >
+                  Tu formación todavía no tiene hábitos.
+                </Text>
+              ) : null}
               <TrainingPorHora
                 activa={trainingActivo}
                 estado={estadoDeLaLista}
                 mensajeDeError={errorBackend}
                 onReintentar={() => void recargarEntrenamiento(true)}
-                cuentaId={user?.id ?? 'anon'}
+                cuentaId={llaveDeLasVistas(user?.id ?? 'anon', formacionDeLaSesion)}
                 habits={habits}
                 planHabits={planHabits}
                 hoyIso={hoyIso}
@@ -1044,7 +1064,6 @@ export default function TrainingScreen() {
                 diaPrograma={cargandoDiaPrograma ? null : diaPrograma}
                 titulos={renombre.titulos}
                 eventosPrendidos={eventosPrendidos.prendida}
-                cierrePrendido={planPrendido.prendida && planPrendido.disponible}
                 confirmacion={confirmacion}
                 onConfirmacionTerminada={() => setConfirmacion(null)}
                 aperturaPedida={aperturaPedida}
@@ -1053,6 +1072,7 @@ export default function TrainingScreen() {
                 onMarcar={habit => toggleHabitState(habit.id)}
                 onAbrirEvento={eventoId => irAPestana('Comunidad', { abrirEventoId: eventoId })}
               />
+              </>
             ) : null}
           </ScrollView>
         </>
@@ -1092,7 +1112,7 @@ export default function TrainingScreen() {
             medicion={activeEvidenceHabit?.medicion ?? null}
             contexto={
               activeEvidenceHabit
-                ? `${DIMENSIONES_CONFIG.find(d => d.key === activeEvidenceHabit.dimension)?.nombre ?? activeEvidenceHabit.dimension} · ${activeEvidenceHabit.tag}`
+                ? `${nombreDeLaDimension(activeEvidenceHabit.dimension)} · ${activeEvidenceHabit.tag}`
                 : undefined
             }
             notaInicial={activeEvidenceHabit?.respuestaTexto ?? activeEvidenceHabit?.note ?? ''}
@@ -1184,6 +1204,7 @@ export default function TrainingScreen() {
 const styles = StyleSheet.create({
   // Aviso de "tu programa todavía no arrancó". Mismo lenguaje visual que el de Plan: recuadro
   // tenue con candado, no una alerta roja — no es un error, es que todavía no es el momento.
+  formacionSinHabitos: { fontSize: 16, lineHeight: 22, marginBottom: 12 },
   avisoSinArrancar: {
     borderWidth: 1,
     borderRadius: space.radius,

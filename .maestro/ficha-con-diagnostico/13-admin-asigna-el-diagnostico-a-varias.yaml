@@ -1,0 +1,31 @@
+# Spec 026-9 — Fichas → «Asignar a varias personas»: se busca, se marca y una sola confirmación las cambia a todas.
+# ESCRITO Y SIN CORRER. Precondición: el diagnóstico PUBLICADO (versión 1) y al menos un aprendiz que ya entró y no respondió su ficha.
+# `APRENDIZ_NOMBRE` (variable de entorno de Maestro, `-e`) es el nombre a buscar; sin él busca «Ana».
+# cuenta: admin
+appId: com.renaser.app
+env:
+  APRENDIZ_NOMBRE: "Ana"
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "YO"
+- scrollUntilVisible:
+    element: "Abrir Administración"
+    direction: DOWN
+- tapOn: "Abrir Administración"
+- tapOn: "Más opciones"
+- scrollUntilVisible:
+    element: "Fichas"
+    direction: DOWN
+- tapOn: "Fichas"
+- tapOn: "Asignar a varias personas"
+- extendedWaitUntil:
+    visible: "Con el diagnóstico inicial"
+    timeout: 30000
+- takeScreenshot: F13a-asignar-en-lote
+- tapOn: ".*${APRENDIZ_NOMBRE}.*"
+- takeScreenshot: F13b-una-marcada
+# El atrás sube un nivel: de aquí a la lista de fichas.
+- back
+- extendedWaitUntil:
+    visible: "Ficha inicial estándar"
+    timeout: 10000

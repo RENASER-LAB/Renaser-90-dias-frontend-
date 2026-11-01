@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 
 import { mensajeDeError } from '../../../services/http/apiClient';
+import { useFormacionDeLaSesion } from '../../formaciones/context/FormacionContext';
+import { llaveDeLasVistas } from '../../formaciones/utils/vistaDeFormacion';
 import { escucharPostPublicado } from '../../sparkie/events/avisoPrimerPost';
 import { escucharMuroModerado } from '../events/muroModerado';
 import * as wallApi from '../api/wallApi';
@@ -22,7 +24,15 @@ export const VIGENCIA_ULTIMA_PUBLICACION_MS = 2 * 60 * 1000;
  * La última lectura, compartida por todas las instancias del hook (Hoy se monta una vez, pero un
  * remontaje —cambio de cuenta, recarga en desarrollo— no tiene por qué volver a pedir).
  */
-let ultimaLectura: { publicacion: WallPost | null; leidaEn: number } | null = null;
+let ultimaLectura: { publicacion: WallPost | null; leidaEn: number; formacion: string } | null = null;
+
+/**
+ * La lectura es del Muro de UNA formación (spec 022/024): al cambiar la formación activa del personal, lo guardado de la anterior no sirve
+ * (E2E del 01/11: Hoy decía «Escuela Renaser» pero mostraba la última evidencia del Diplomado hasta pasar los 2 minutos).
+ */
+function sirveParaLaFormacion(lectura: { formacion: string } | null, formacion: string): boolean {
+  return lectura !== null && lectura.formacion === formacion;
+}
 
 /** Deja vencida la lectura guardada: la próxima vez que Hoy tome el foco, se vuelve a pedir. */
 export function invalidarUltimaPublicacionMuro(): void {
@@ -43,8 +53,12 @@ export function lecturaVigente(leidaEn: number | null, ahora: number): boolean {
  * `avisarPostPublicado` la invalida). `recargar` —el pull-to-refresh— siempre va al servidor.
  */
 export function useUltimaPublicacionMuro() {
-  const [publicacion, setPublicacion] = useState<WallPost | null>(ultimaLectura?.publicacion ?? null);
-  const [cargando, setCargando] = useState(ultimaLectura === null);
+  const { formacion: formacionDeLaSesion } = useFormacionDeLaSesion();
+  const formacion = llaveDeLasVistas(null, formacionDeLaSesion);
+  const [publicacion, setPublicacion] = useState<WallPost | null>(
+    sirveParaLaFormacion(ultimaLectura, formacion) ? (ultimaLectura?.publicacion ?? null) : null,
+  );
+  const [cargando, setCargando] = useState(!sirveParaLaFormacion(ultimaLectura, formacion));
   const [error, setError] = useState<string | null>(null);
 
   const recargar = useCallback(async () => {
@@ -55,7 +69,7 @@ export function useUltimaPublicacionMuro() {
       // Hoy solo debe destacar evidencias. Una publicación de texto sin media no ocupa esta
       // tarjeta ni desplaza la última prueba que la persona puede abrir y revisar.
       const ultima = pagina.posts.find(post => post.media.length > 0) ?? null;
-      ultimaLectura = { publicacion: ultima, leidaEn: Date.now() };
+      ultimaLectura = { publicacion: ultima, leidaEn: Date.now(), formacion };
       setPublicacion(ultima);
     } catch (e) {
       setPublicacion(null);
@@ -63,7 +77,7 @@ export function useUltimaPublicacionMuro() {
     } finally {
       setCargando(false);
     }
-  }, []);
+  }, [formacion]);
 
   // Una publicación propia recién confirmada puede ser justo la que Hoy tiene que mostrar.
   useEffect(() => escucharPostPublicado(invalidarUltimaPublicacionMuro), []);
@@ -72,13 +86,13 @@ export function useUltimaPublicacionMuro() {
 
   useFocusEffect(
     useCallback(() => {
-      if (ultimaLectura && lecturaVigente(ultimaLectura.leidaEn, Date.now())) {
+      if (ultimaLectura && sirveParaLaFormacion(ultimaLectura, formacion) && lecturaVigente(ultimaLectura.leidaEn, Date.now())) {
         setPublicacion(ultimaLectura.publicacion);
         setCargando(false);
         return;
       }
       void recargar();
-    }, [recargar])
+    }, [recargar, formacion])
   );
 
   return { publicacion, cargando, error, recargar };

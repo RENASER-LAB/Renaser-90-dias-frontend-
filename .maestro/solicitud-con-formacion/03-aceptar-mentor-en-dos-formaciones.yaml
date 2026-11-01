@@ -1,0 +1,35 @@
+# Aceptar a un mentor en la Escuela y el Diplomado: el bloque de formación deja marcar varias (spec 025, historia 2). ESCRITO Y SIN CORRER.
+# cuenta: admin
+# Precondición: una solicitud PENDIENTE de «Sol-Mentor Uno». Después, con la cuenta del mentor: elige en cuál formación trabaja (flujo formaciones/03).
+appId: com.renaser.app
+---
+- runFlow: comun-abrir-solicitudes.yaml
+- extendedWaitUntil:
+    visible: "Sol-Mentor Uno"
+    timeout: 30000
+- tapOn: "Aceptar a Sol-Mentor Uno"
+- extendedWaitUntil:
+    visible: "Aceptar solicitud"
+    timeout: 15000
+- tapOn: "2. Rol.*"
+- tapOn: "Mentor"
+- tapOn: "1. Formación.*"
+- assertVisible: "Puedes marcar una o varias."
+- tapOn: "Diplomado Renaser"
+- assertVisible: "Sol-Mentor Uno entrará a la Escuela Renaser y el Diplomado Renaser como Mentor, sin diagnóstico."
+- takeScreenshot: S03a-mentor-en-dos-formaciones
+# Cambiar a Administrador: ya no pide formación.
+- tapOn: "2. Rol.*"
+- tapOn: "Administrador"
+- assertVisible: "Sol-Mentor Uno entrará como Administrador y ve las tres formaciones, sin diagnóstico."
+- takeScreenshot: S03b-administracion-ve-las-tres
+# De vuelta a Mentor y se acepta.
+- tapOn: "Mentor"
+- tapOn: "1. Formación.*"
+- tapOn: "Diplomado Renaser"
+- tapOn:
+    text: "Aceptar"
+    index: 1
+- extendedWaitUntil:
+    visible: "Sol-Mentor Uno entró.*"
+    timeout: 20000

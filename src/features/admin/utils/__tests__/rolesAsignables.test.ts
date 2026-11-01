@@ -38,12 +38,13 @@ describe('pantallas de Administración', () => {
 
   /* Spec 002, fase 2: los roles salen de `useOpcionesDeRol` (los seis base de `ROLES_ASIGNABLES` y los personalizados
      de `GET /admin/roles-asignables`); con un personalizado va además `rolPersonalizadoId`. */
-  it('la aprobación ofrece los roles asignables y solo manda el rol cuando no es el de siempre', () => {
+  it('la aprobación ofrece los roles asignables y manda el rol elegido con su id personalizado', () => {
     const solicitudes = leer('SolicitudesAdminScreen.tsx');
-    expect(solicitudes).toMatch(/const opciones = useOpcionesDeRol\(\);/);
-    expect(solicitudes).toMatch(/\{opciones\.map\(rol => \(/);
-    expect(solicitudes).toMatch(/await aprobarSolicitud\(solicitud\.id, rol\.rolBase, rol\.rolPersonalizadoId\);/);
-    expect(solicitudes).toMatch(/await aprobarSolicitud\(solicitud\.id\);/);
+    expect(solicitudes).toMatch(/const roles = useOpcionesDeRol\(\);/);
+    expect(solicitudes).toMatch(/roles=\{roles\}/);
+    expect(solicitudes).toMatch(/await aprobarSolicitud\(persona\.id, rol\.rolBase, rol\.rolPersonalizadoId, eleccion\);/);
+    const hoja = readFileSync(join(__dirname, '..', '..', 'components', 'AceptarSolicitudSheet.tsx'), 'utf8');
+    expect(hoja).toMatch(/\{roles\.map\(opcion => \(/);
   });
 
   it('Equipo y roles usa la misma lista y pide role=TRAINEE para la sección de aprendices', () => {

@@ -18,8 +18,12 @@ import { useResponsive } from '../../../theme/responsive';
 import { useTheme } from '../../../theme/ThemeContext';
 import { tacto } from '../../../utils/tacto';
 import { ESPACIO_PARA_LANZADOR } from '../../renasia/components/RenasiaLauncher';
+import { TODAS_LAS_FORMACIONES } from '../api/habitosProgramaApi';
+import { CODIGOS_DE_FORMACION } from '../../formaciones/types/formaciones.types';
+import { nombreCortoDeFormacion, nombreLargoDeFormacion } from '../../formaciones/utils/nombreDeFormacion';
 import {
   cambiarActivoDelHabito,
+  copiarHabitoDelPrograma,
   crearHabitoDelPrograma,
   editarHabitoDelPrograma,
   eliminarHabitoDelPrograma,
@@ -30,8 +34,8 @@ import type { useHabitosProgramaAdmin } from '../hooks/useHabitosProgramaAdmin';
 import { confirmar } from '../utils/dialogo';
 import {
   alternarRol,
+  categoriasParaElegir,
   cuerpoDesde,
-  DIMENSIONES,
   EVIDENCIAS,
   faltaEnElFormulario,
   formularioDesde,
@@ -52,7 +56,22 @@ const ENTRADA_DE_LOS_ROLES = FadeIn.duration(180).easing(CURVA_SALIDA).reduceMot
  * solo se avisa.
  *
  * `id` nulo = hábito nuevo. Nada se guarda hasta «Guardar»; salir con cambios pregunta antes.
+ *
+ * **Spec 023:** el hábito es de UNA formación (la de la lista que se estaba mirando, o la suya al editar) y solo ofrece las categorías ACTIVAS de
+ * esa formación. «Copiar a otra formación» crea el mismo hábito allá, ya independiente: elegir la formación, elegir una categoría de ELLA y copiar.
  */
+/**
+ * Lo que falta para que «Copiar» se pueda tocar, dicho con palabras (E2E de las formaciones, 01/11/2026): el botón se queda apagado hasta
+ * elegir la formación y la categoría de destino, y antes no decía por qué. `null` = no falta nada (o ya hay un aviso propio: la formación de
+ * destino no tiene categorías).
+ */
+export function textoDeLoQueFaltaParaCopiar(destino: string | null, categoriaDestino: string | null, categoriasDelDestino: number): string | null {
+  if (!destino) return 'Elige la formación a la que quieres copiarlo.';
+  if (categoriasDelDestino === 0) return null;
+  if (!categoriaDestino) return `Elige la categoría en ${nombreCortoDeFormacion(destino)} para poder copiar.`;
+  return null;
+}
+
 export function HabitoProgramaFormScreen({
   id,
   estado,
@@ -67,11 +86,21 @@ export function HabitoProgramaFormScreen({
   const { horizontalPadding, contentMaxWidth } = useResponsive();
   const habito = id ? (estado.habitos?.find(h => h.id === id) ?? null) : null;
   const esNuevo = id === null;
-  const original = useMemo(() => formularioDesde(habito), [habito]);
+  const formacionDelHabito = habito ? (habito.formation ?? 'ESCUELA') : estado.formacion;
+  const categoriasDisponibles = useMemo(
+    () => categoriasParaElegir(formacionDelHabito, estado.categorias, estado.categoriasDelServidor, habito?.category),
+    [formacionDelHabito, estado.categorias, estado.categoriasDelServidor, habito?.category],
+  );
+  const original = useMemo(() => formularioDesde(habito, categoriasDisponibles[0]?.code ?? ''), [habito, categoriasDisponibles]);
+  /* Copiar a otra formación: adónde y en qué categoría de ESA formación. */
+  const [destino, setDestino] = useState<string | null>(null);
+  const [categoriaDestino, setCategoriaDestino] = useState<string | null>(null);
   const [formulario, setFormulario] = useState<FormularioDeHabito>(original);
   const [error, setError] = useState<string | null>(null);
-  const [ocupado, setOcupado] = useState<'guardar' | 'activar' | 'eliminar' | null>(null);
+  const [ocupado, setOcupado] = useState<'guardar' | 'activar' | 'eliminar' | 'copiar' | null>(null);
   const [confirmacion, setConfirmacion] = useState<{ clave: number; texto: string } | null>(null);
+  /* El aviso de «Copiado a …» va DENTRO de la sección de copiar: el de arriba (junto a «Guardar») queda fuera de la vista cuando se copia desde abajo. */
+  const [copiada, setCopiada] = useState<{ clave: number; texto: string } | null>(null);
   const cambiado = hayCambios(formulario, original);
   const scroll = useRef<ScrollView>(null);
   const campoNombre = useRef<TextInput>(null);
@@ -116,7 +145,7 @@ export function HabitoProgramaFormScreen({
     setOcupado('guardar');
     setError(null);
     try {
-      const cuerpo = cuerpoDesde(formulario, esNuevo);
+      const cuerpo = cuerpoDesde(formulario, esNuevo, formacionDelHabito);
       const guardado = esNuevo ? await crearHabitoDelPrograma(cuerpo) : await editarHabitoDelPrograma(id, cuerpo);
       estado.reemplazar(guardado);
       if (esNuevo) {
@@ -127,6 +156,28 @@ export function HabitoProgramaFormScreen({
       avisarListo(cambioDeRoles ? 'Guardado. Los roles rigen desde mañana.' : 'Guardado.');
     } catch (e) {
       setError(mensajeDeFallo(e, 'No se pudo guardar el hábito. Vuelve a intentar.'));
+    } finally {
+      setOcupado(null);
+    }
+  };
+
+  const categoriasDelDestino = destino ? categoriasParaElegir(destino, estado.categorias, estado.categoriasDelServidor) : [];
+  const queFaltaParaCopiar = textoDeLoQueFaltaParaCopiar(destino, categoriaDestino, categoriasDelDestino.length);
+
+  const copiar = async () => {
+    if (!habito || !destino || !categoriaDestino) return;
+    setOcupado('copiar');
+    setError(null);
+    try {
+      const copia = await copiarHabitoDelPrograma(habito.id, { formacion: destino, categoria: categoriaDestino });
+      // En «Todas» la copia también se ve en la lista; en una formación concreta no es de esa lista.
+      if (estado.formacion === TODAS_LAS_FORMACIONES) estado.reemplazar(copia);
+      tacto.logro();
+      setCopiada({ clave: Date.now(), texto: `Copiado a ${nombreLargoDeFormacion(destino)}. Desde ahora son dos hábitos independientes.` });
+      setDestino(null);
+      setCategoriaDestino(null);
+    } catch (e) {
+      setError(mensajeDeFallo(e, 'No se pudo copiar el hábito. Vuelve a intentar.'));
     } finally {
       setOcupado(null);
     }
@@ -178,7 +229,7 @@ export function HabitoProgramaFormScreen({
     <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
       <CabeceraAdmin
         titulo={esNuevo ? 'Nuevo hábito' : habito?.title ?? ''}
-        subtitulo={esNuevo ? 'Del programa, no personal' : habito?.isActive ? 'Activo' : 'Inactivo'}
+        subtitulo={`${esNuevo ? 'Del programa, no personal' : habito?.isActive ? 'Activo' : 'Inactivo'} · ${nombreLargoDeFormacion(formacionDelHabito)}`}
         onVolver={() => void salir()}
       />
       <ScrollView
@@ -224,12 +275,18 @@ export function HabitoProgramaFormScreen({
           numberOfLines={3}
         />
 
-        <Seccion titulo="Dimensión">
-          <View style={estilos.fila} accessibilityRole="radiogroup">
-            {DIMENSIONES.map(d => (
-              <ChipDeOpcion key={d.valor} etiqueta={d.etiqueta} activo={formulario.categoria === d.valor} onPress={() => cambiar('categoria', d.valor)} />
-            ))}
-          </View>
+        <Seccion titulo="Categoría" detalle={`Las de ${nombreCortoDeFormacion(formacionDelHabito)}: son las dimensiones que ve en Training.`}>
+          {categoriasDisponibles.length === 0 ? (
+            <Text style={ayuda}>
+              Esta formación todavía no tiene categorías activas. Crea una en «Categorías» y vuelve a este hábito.
+            </Text>
+          ) : (
+            <View style={estilos.fila} accessibilityRole="radiogroup">
+              {categoriasDisponibles.map(d => (
+                <ChipDeOpcion key={d.code} etiqueta={d.name} activo={formulario.categoria === d.code} onPress={() => cambiar('categoria', d.code)} />
+              ))}
+            </View>
+          )}
         </Seccion>
 
         {esNuevo ? (
@@ -301,10 +358,59 @@ export function HabitoProgramaFormScreen({
           etiqueta={esNuevo ? 'Crear hábito' : 'Guardar'}
           onPress={() => void guardar()}
           cargando={ocupado === 'guardar'}
-          deshabilitado={(!esNuevo && !cambiado) || ocupado !== null}
+          deshabilitado={(!esNuevo && !cambiado) || ocupado !== null || categoriasDisponibles.length === 0}
         />
         {confirmacion ? (
           <ConfirmacionEnLinea key={confirmacion.clave} texto={confirmacion.texto} onTerminar={() => setConfirmacion(null)} />
+        ) : null}
+
+        {habito ? (
+          <Seccion
+            titulo="Copiar a otra formación"
+            detalle="Crea este hábito en otra formación, con lo mismo. Después son dos hábitos independientes: cambiar uno no cambia el otro."
+          >
+            <View style={estilos.fila} accessibilityRole="radiogroup" accessibilityLabel="Formación de la copia">
+              {CODIGOS_DE_FORMACION.filter(f => f !== formacionDelHabito).map(f => (
+                <ChipDeOpcion
+                  key={f}
+                  etiqueta={nombreCortoDeFormacion(f)}
+                  activo={destino === f}
+                  onPress={() => {
+                    setDestino(f);
+                    setCategoriaDestino(null);
+                    setCopiada(null);
+                    setError(null);
+                  }}
+                  deshabilitado={ocupado !== null}
+                />
+              ))}
+            </View>
+            {destino ? (
+              categoriasDelDestino.length === 0 ? (
+                <Text style={ayuda}>
+                  {nombreLargoDeFormacion(destino)} todavía no tiene categorías activas. Crea una allá y vuelve a copiar.
+                </Text>
+              ) : (
+                <View style={{ gap: 8 }}>
+                  <Text style={[t.body, { color: c.textStrong, fontSize: 16, fontFamily: fuentes.media }]}>Categoría en {nombreCortoDeFormacion(destino)}</Text>
+                  <View style={estilos.fila} accessibilityRole="radiogroup">
+                    {categoriasDelDestino.map(d => (
+                      <ChipDeOpcion key={d.code} etiqueta={d.name} activo={categoriaDestino === d.code} onPress={() => setCategoriaDestino(d.code)} deshabilitado={ocupado !== null} />
+                    ))}
+                  </View>
+                </View>
+              )
+            ) : null}
+            {cambiado ? <Text style={ayuda}>Guarda los cambios antes de copiar: se copia lo guardado.</Text> : null}
+            {queFaltaParaCopiar ? <Text style={ayuda}>{queFaltaParaCopiar}</Text> : null}
+            {copiada ? <ConfirmacionEnLinea key={copiada.clave} texto={copiada.texto} onTerminar={() => setCopiada(null)} /> : null}
+            <BotonSecundario
+              etiqueta={destino ? `Copiar a ${nombreCortoDeFormacion(destino)}` : 'Copiar'}
+              onPress={() => void copiar()}
+              cargando={ocupado === 'copiar'}
+              deshabilitado={!destino || !categoriaDestino || cambiado || ocupado !== null}
+            />
+          </Seccion>
         ) : null}
 
         {habito ? (

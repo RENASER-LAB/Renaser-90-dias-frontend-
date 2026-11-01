@@ -32,6 +32,8 @@ import { GoldButton } from '../components/GoldButton';
 import { Interruptor } from '../components/Interruptor';
 import { Presionable } from '../components/Presionable';
 import { ConfirmacionEnLinea } from '../components/ConfirmacionEnLinea';
+import { SelectorDeFormacion } from '../features/formaciones/components/SelectorDeFormacion';
+import { useFormacionDeLaSesion } from '../features/formaciones/context/FormacionContext';
 import { tacto } from '../utils/tacto';
 import { CabeceraAdmin } from '../features/admin/components/CabeceraAdmin';
 import { FenixDeSerQuieto } from '../features/fenix/components/FenixDeSerQuieto';
@@ -40,12 +42,13 @@ import { MetodoEnPaginas, type FaseDelMetodo } from '../features/yo/components/M
 import { PactoFirmado } from '../features/yo/components/PactoFirmado';
 import { TarjetaDeFase } from '../features/yo/components/TarjetaDeFase';
 import { animalConfigurado } from '../features/yo/utils/animalConfigurado';
-import { faseEnCurso } from '../features/home/utils/faseEnCurso';
+import { faseEnCurso, fasesEnOrden } from '../features/home/utils/faseEnCurso';
 import { textoDelRecord } from '../features/home/utils/textoDelRecord';
 import { useAnimalesDeFase } from '../features/yo/hooks/useAnimalesDeFase';
 import { ANIMAL_DE_FASE } from '../features/yo/data/animalesDeFase';
 import { useCelebracionDelDia } from '../features/fenix/hooks/useCelebracionDelDia';
 import {
+  fechaDeFirma,
   origenTrasCambio,
   TITULO_DE_VISTA,
   vistaDeRegreso,
@@ -60,6 +63,9 @@ import {
   type ClaveDeFase,
 } from '../features/home/hooks/useResumenHome';
 import { useEtapasOnboarding } from '../features/onboarding/hooks/useEtapasOnboarding';
+import type { TerminosAceptadosApi } from '../features/onboarding/terminos/api/terminosSchemas';
+import { TerminosAceptadosVista } from '../features/onboarding/terminos/components/TerminosAceptadosVista';
+import { useTerminosAceptados } from '../features/onboarding/terminos/hooks/useTerminosAceptados';
 import { usePersistenciaOnboarding } from '../features/onboarding/hooks/usePersistenciaOnboarding';
 import { mapearPacto, PREGUNTA_FIRMA_PACTO } from '../features/onboarding/data/mapaPreguntas';
 import {
@@ -67,7 +73,13 @@ import {
   type SignatureCanvasHandle,
   type SignatureData,
 } from '../components/SignatureCanvas';
-import { MapaRenacimientoFlow } from '../features/mapa-renacimiento/MapaRenacimientoFlow';
+import { useEstadoDeMiDiagnostico } from '../features/diagnostico/hooks/useEstadoDeMiDiagnostico';
+import { MiDiagnosticoScreen } from '../features/diagnostico/screens/MiDiagnosticoScreen';
+import { CompletarDiagnosticoScreen } from '../features/diagnostico/screens/CompletarDiagnosticoScreen';
+import { filaDeMiDiagnostico } from '../features/yo/utils/filaDeMiDiagnostico';
+import { useMiIngreso } from '../features/pagos/hooks/useMiIngreso';
+import { MiIngresoScreen } from '../features/pagos/screens/MiIngresoScreen';
+import { detalleDeLaFila } from '../features/pagos/utils/vistaDeMiIngreso';
 import { elegirFotoDePerfil } from '../features/auth/utils/elegirFotoDePerfil';
 import * as authApi from '../features/auth/api/authApi';
 import { ESPACIO_PARA_LANZADOR } from '../features/renasia/components/RenasiaLauncher';
@@ -81,7 +93,7 @@ import { useMisEvidencias } from '../features/evidence/hooks/useMisEvidencias';
 import { resumenDeEvidencias } from '../features/evidence/resumenDeEvidencias';
 import { ESTADO_EVIDENCIA } from '../features/evidence/api/evidenceSchemas';
 import { MiniaturaDeEvidencia } from '../features/evidence/components/MiniaturaDeEvidencia';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { useMiCaja } from '../features/caja/hooks/useMiCaja';
 import { MiCajaScreen } from '../features/caja/screens/MiCajaScreen';
 import { EliminarMiCuentaScreen } from '../features/cuenta/screens/EliminarMiCuentaScreen';
@@ -223,12 +235,17 @@ const CONTENIDO_DEL_METODO: Record<
   },
 };
 
-const METODO_FASES: FaseDelMetodo[] = FASES_EN_ORDEN.map(fase => ({
-  numero: fase.numero,
-  titulo: fase.nombre,
-  rango: fase.rango,
-  ...CONTENIDO_DEL_METODO[fase.clave],
-}));
+/** Las cuatro fases de El Método con el rango de SU programa (spec 022): con 90 días son las de siempre; con 365 se estiran (Fase II: días 29–137). */
+function metodoFasesDe(duracionDias: number | null | undefined): FaseDelMetodo[] {
+  return fasesEnOrden(duracionDias).map(fase => ({
+    numero: fase.numero,
+    titulo: fase.nombre,
+    rango: fase.rango,
+    ...CONTENIDO_DEL_METODO[fase.clave],
+  }));
+}
+
+const METODO_FASES: FaseDelMetodo[] = metodoFasesDe(DIAS_DEL_PROGRAMA);
 
 function inicialesDe(nombre: string): string {
   const partes = nombre.trim().split(/\s+/).filter(Boolean);
@@ -238,17 +255,23 @@ function inicialesDe(nombre: string): string {
 }
 
 /**
- * Las 2 etapas actuales: solo el título y el orden son fijos. El estado de cada una lo decide
+ * Las etapas de «Mi onboarding»: solo el título y el orden son fijos. El estado de cada una lo decide
  * `useEtapasOnboarding` con datos reales — antes estaba escrito acá con `completed: true` en tres
  * de ellas, así que un aprendiz que no había hecho nada veía tres tildes verdes.
  *
- * Hoy solo El Pacto tiene marca en el backend (`pactSignedAt`). El Mapa de Renacimiento reúne
- * el formulario completo de esta fase y se muestra como una única segunda etapa.
+ * Hoy solo El Pacto tiene marca en el backend (`pactSignedAt`). La segunda etapa, el Mapa de Renacimiento, se retiró (spec 026,
+ * 2026-10-31): lo reemplaza el diagnóstico, que tiene su propia fila en Yo («Mi diagnóstico»).
  */
 const ONBOARDING_STAGES = [
   { id: 'st1', num: 1, title: 'El Pacto', descPendiente: 'Tu acto fundacional' },
-  { id: 'st2', num: 2, title: 'Mapa de Renacimiento', descPendiente: 'Tu mapa completo de transformación' },
 ] as const;
+
+/** «Versión 2 · aceptada el 31 de octubre de 2026»: lo que dice la fila de los términos en Mi onboarding (spec 027). */
+function descripcionDeLosTerminos(aceptados: TerminosAceptadosApi): string {
+  const fecha = fechaDeFirma(aceptados.acceptedAt);
+  const version = aceptados.version.number ? `Versión ${aceptados.version.number}` : 'Versión aceptada';
+  return fecha ? `${version} · aceptada el ${fecha} · toca para releer` : `${version} · toca para releer`;
+}
 
 const PACTO_CLAUSULAS = [
   '1. Cumplir mis 3 Objetivos diarios sin negociarlos conmigo.',
@@ -285,7 +308,10 @@ export default function YoScreen() {
   const { resumen, recargar: recargarResumen } = useResumenHome();
   /* La misma cuenta que «Fase actual» y «Arquitectura de tiempo» de Plan (`faseEnCurso`): número, nombre,
      rango y día dentro de la fase salen de un solo lugar, así Yo no puede decir otra cosa que Plan. */
-  const faseActual = faseEnCurso(resumen?.fase, resumen?.diaPrograma);
+  const faseActual = faseEnCurso(resumen?.fase, resumen?.diaPrograma, resumen?.duracionDias);
+  /* El Método dice los días de SU programa y las fases estiradas a ellos (spec 022); sin el dato, los 90 de siempre. */
+  const duracionDelPrograma = resumen?.duracionDias ?? DIAS_DEL_PROGRAMA;
+  const metodoFases = React.useMemo(() => metodoFasesDe(duracionDelPrograma), [duracionDelPrograma]);
   /* «¡Entraste en la Fase N!» es la pantalla completa de celebración desde el 2026-10-07 (pedido del dueño: reemplaza
      el momento chico de esta tarjeta). Yo también la revisa con lo que ya leyó, por si la fase nueva se ve acá primero. */
   useCelebracionDelDia(
@@ -366,6 +392,8 @@ export default function YoScreen() {
     setConfirmacion(actual => (actual && actual.vista !== activeView ? null : actual));
   }, [activeView]);
   const regreso = vistaDeRegreso(activeView, origen);
+  /* Spec 027 (FR-023): los términos que aceptó, para releerlos en Mi onboarding. Se leen al entrar a esa lista y se reusan en la vista de los términos. */
+  const terminosAceptados = useTerminosAceptados(activeView === 'onboarding' || activeView === 'terminos').lectura;
   const volver = useCallback(() => {
     if (regreso) setActiveView(regreso);
   }, [regreso]);
@@ -397,6 +425,24 @@ export default function YoScreen() {
      un aprendiz, desde el Día 0 (el servidor responde 403 a quien no lo es). Pedir no cambia el día. */
   const miEmergencia = useMiEmergencia();
   const [enEmergencia, setEnEmergencia] = useState(false);
+  /* Mi diagnóstico (spec 026): la fila aparece según el estado que dice el servidor (en curso o completado; también «Completa tu
+     diagnóstico» si todavía no lo empieza) y abre su lectura o el recorrido, a pantalla completa como la Caja y la emergencia.
+     Yo no se desmonta: el estado se vuelve a leer cada vez que la pestaña recupera el foco (pudo terminarse desde Hoy). */
+  const miDiagnostico = useEstadoDeMiDiagnostico();
+  const filaDelDiagnostico = filaDeMiDiagnostico(miDiagnostico.estado);
+  const [enDiagnostico, setEnDiagnostico] = useState<'ver' | 'completar' | null>(null);
+  const recargarMiDiagnostico = useRef(miDiagnostico.recargar);
+  recargarMiDiagnostico.current = miDiagnostico.recargar;
+  useFocusEffect(
+    useCallback(() => {
+      recargarMiDiagnostico.current();
+    }, []),
+  );
+  /* Mi ingreso (spec 032, maqueta del dueño del 2026-11-01): los pasos de la entrada y el cronograma de pagos. La fila aparece SOLO si el servidor dice
+     que hay un pago anotado (`GET /me/ingreso`): quien no tiene nada anotado ve Yo como siempre. A pantalla completa, como la Caja. El aviso de pago
+     del teléfono (`/mi-ingreso`) llega con `abrirMiIngreso`. Al leerlo, el hook también pone al día las alarmas de pago de este teléfono. */
+  const miIngreso = useMiIngreso(user?.id ?? null);
+  const [enMiIngreso, setEnMiIngreso] = useState(false);
   /* Mi Radar (spec 012, pedido del dueño del 2026-10-29): el Código Renaser desde el día 8, que la persona enciende y
      configura. La fila va justo debajo de «Tuve una emergencia», SOLO desde el día 8 y si el servidor lo ofrece (con un
      backend anterior no hay fila). A pantalla completa, como la emergencia. El aviso `/mi-radar` llega con
@@ -458,6 +504,10 @@ export default function YoScreen() {
     cargandoCapacidades,
     abrirElSemaforoDeAdministracion,
   });
+  /* «Cambiar de formación» (spec 022, historia 5): solo el personal asignado a más de una. La hoja deja elegir; al elegir, todas las
+     vistas se arman de nuevo con la formación nueva (ver la `key` de `RootNavigator`). */
+  const { formacion: formacionDeLaSesion } = useFormacionDeLaSesion();
+  const [eligiendoFormacion, setEligiendoFormacion] = useState(false);
   /* Avisos de Administración: la caja de un aprendiz (`/admin/caja/{id}`, D-219) y «Ver ficha» desde la info de un chat
      (D-222). Esperan a saber si la cuenta administra (lo dice el servidor); si no, se descartan. */
   useEffect(() => {
@@ -483,6 +533,16 @@ export default function YoScreen() {
     setEnSemaforo(true);
     (navegacionDeYo as unknown as { setParams: (p: Record<string, unknown>) => void }).setParams({ abrirSemaforo: undefined });
   }, [rutaDeYo.params, navegacionDeYo]);
+  useEffect(() => {
+    const params = rutaDeYo.params as { abrirMiIngreso?: boolean } | undefined;
+    if (!params?.abrirMiIngreso) return;
+    setEnMiIngreso(true);
+    (navegacionDeYo as unknown as { setParams: (p: Record<string, unknown>) => void }).setParams({ abrirMiIngreso: undefined });
+  }, [rutaDeYo.params, navegacionDeYo]);
+  useEffect(() => {
+    // Un aviso viejo, o un servidor que ya no tiene nada anotado, no deja la pantalla esperando abierta. Mientras se lee, espera.
+    if (enMiIngreso && !miIngreso.cargando && !miIngreso.visible) setEnMiIngreso(false);
+  }, [enMiIngreso, miIngreso.cargando, miIngreso.visible]);
   useEffect(() => {
     const params = rutaDeYo.params as { abrirMiRadar?: boolean } | undefined;
     if (!params?.abrirMiRadar) return;
@@ -636,30 +696,7 @@ export default function YoScreen() {
     if (!regreso) return false;
     setActiveView(regreso);
     return true;
-    // Con el Mapa de Renacimiento abierto manda SU handler (registrado después): tiene que poder
-    // retroceder paso por paso, no salir de la etapa entera de un toque.
-  }, activeView !== 'main' && activeView !== 'mapa_renacimiento');
-
-  /**
-   * Etapa 2 del onboarding (Mapa de Renacimiento). Se devuelve ANTES del
-   * `SafeAreaView` de esta pantalla porque la pantalla trae el suyo propio: anidarlos duplicaría
-   * los márgenes de seguridad del sistema.
-   */
-  if (activeView === 'mapa_renacimiento') {
-    return user ? (
-      <MapaRenacimientoFlow
-        userId={user.id}
-        onSalir={() => {
-          setActiveView('onboarding');
-          // El Mapa se abre y se cierra con este `useState`, sin navegación de por medio: la
-          // pestaña `Yo` nunca pierde el foco, así que el `useFocusEffect` de `useEtapasOnboarding`
-          // no se entera de que la etapa 2 acaba de terminarse. Sin esta relectura, quien activa su
-          // Mapa vuelve a "Tu proceso completo" y sigue viendo el contador de antes.
-          void recargarEtapasOnboarding();
-        }}
-      />
-    ) : null;
-  }
+  }, activeView !== 'main');
 
   if (enSoporteTi && veSoporteTi) {
     return <ConsolaSoporteTiScreen onSalir={() => setEnSoporteTi(false)} />;
@@ -694,6 +731,37 @@ export default function YoScreen() {
 
   if (enCaja && miCaja.visible && miCaja.caja) {
     return <MiCajaScreen caja={miCaja.caja} onVolver={() => setEnCaja(false)} onCambio={miCaja.recargar} />;
+  }
+
+  /* Mi diagnóstico, a pantalla completa. El atrás del sistema y la flecha los maneja la propia pantalla (sube un paso del recorrido y,
+     en el primero, llama a `onBack`). */
+  if (enDiagnostico === 'ver') {
+    return <MiDiagnosticoScreen onBack={() => setEnDiagnostico(null)} />;
+  }
+  if (enDiagnostico === 'completar') {
+    return (
+      <CompletarDiagnosticoScreen
+        onBack={() => setEnDiagnostico(null)}
+        onTerminado={() => {
+          setEnDiagnostico(null);
+          miDiagnostico.recargar();
+          void recargarResumen();
+        }}
+      />
+    );
+  }
+
+  /* Mi ingreso, a pantalla completa: su flecha y el atrás del sistema vuelven a Yo. */
+  if (enMiIngreso && miIngreso.visible && miIngreso.ingreso && user?.id) {
+    return (
+      <MiIngresoScreen
+        userId={user.id}
+        ingreso={miIngreso.ingreso}
+        onVolver={() => setEnMiIngreso(false)}
+        onConfirmar={miIngreso.confirmar}
+        onReintentar={() => void miIngreso.recargar()}
+      />
+    );
   }
 
   if (enEmergencia && miEmergencia.visible && miEmergencia.mia) {
@@ -819,7 +887,7 @@ export default function YoScreen() {
                   animal={animalConfigurado(ANIMAL_DE_FASE[faseActual.clave], animalesConfigurados[faseActual.numero])}
                   diasDeLaFase={faseActual.diasDeLaFase}
                   diaDelPrograma={resumen?.diaPrograma ?? null}
-                  diasDelPrograma={DIAS_DEL_PROGRAMA}
+                  diasDelPrograma={resumen?.duracionDias ?? DIAS_DEL_PROGRAMA}
                 />
               </View>
             ) : null}
@@ -963,6 +1031,17 @@ export default function YoScreen() {
                 onPress={() => paneles.ir({ tipo: 'misMentores' })}
               />
             ) : null}
+            {/* CAMBIAR DE FORMACIÓN (spec 022): solo si el servidor dice que esta persona trabaja en más de una. Su detalle es la que usa ahora. */}
+            {formacionDeLaSesion?.puedeElegir ? (
+              <FilaDeAjuste
+                key="cambiar-de-formacion"
+                icono="layoutGrid"
+                titulo="Cambiar de formación"
+                detalle={formacionDeLaSesion.activa?.nombre ?? null}
+                etiqueta={`Cambiar de formación. Ahora: ${formacionDeLaSesion.activa?.nombre ?? 'ninguna'}`}
+                onPress={() => setEligiendoFormacion(true)}
+              />
+            ) : null}
             {/* TUVE UNA EMERGENCIA (D-244): solo si el servidor dice que esta cuenta puede pedirlo. */}
             {miEmergencia.visible && esDisponible(CLAVES.emergencia) ? (
               <FilaDeAjuste
@@ -986,6 +1065,29 @@ export default function YoScreen() {
                   setMiRadarSinPrograma(!enMarchaMiRadar);
                   setEnMiRadar(true);
                 }}
+              />
+            ) : null}
+            {/* MI DIAGNÓSTICO (spec 026): solo para quien tiene la ficha con diagnóstico. Reemplaza al Mapa de Renacimiento, que se retiró. */}
+            {filaDelDiagnostico ? (
+              <FilaDeAjuste
+                key="mi-diagnostico"
+                icono="fileText"
+                titulo={filaDelDiagnostico.titulo}
+                detalle={filaDelDiagnostico.detalle}
+                etiqueta={`${filaDelDiagnostico.titulo}. ${filaDelDiagnostico.detalle}`}
+                onPress={() => setEnDiagnostico(filaDelDiagnostico.pantalla)}
+              />
+            ) : null}
+            {/* MI INGRESO (spec 032): solo si el servidor dice que hay un pago anotado. No repite «Mi onboarding» de Ajustes: esa es la de los
+                documentos (ficha, Términos, Pacto); esta es la de los pagos, con los pasos como orientación. */}
+            {miIngreso.visible && miIngreso.ingreso && esDisponible(CLAVES.pagos) ? (
+              <FilaDeAjuste
+                key="mi-ingreso"
+                icono="wallet"
+                titulo="Mi ingreso"
+                detalle={detalleDeLaFila(miIngreso.ingreso)}
+                etiqueta={`Mi ingreso. ${detalleDeLaFila(miIngreso.ingreso)}`}
+                onPress={() => setEnMiIngreso(true)}
               />
             ) : null}
           </GrupoDeAjustes>
@@ -1067,7 +1169,7 @@ export default function YoScreen() {
               <FilaDeAjuste
                 icono="listChecks"
                 titulo="Mi onboarding"
-                detalle="El Pacto y tu Mapa de Renacimiento"
+                detalle="Tu Pacto de Renacimiento"
                 onPress={() => setActiveView('onboarding')}
               />
               {esDisponible(CLAVES.evidencias) ? (
@@ -1274,21 +1376,15 @@ export default function YoScreen() {
             {/* Era 10 px y centrado: por debajo del mínimo de micro-etiqueta y desalineado
                 respecto del inicio de la barra que describe. */}
             <Text style={[t.small, styles.cifras, { color: c.textSoft }]}>
-              {etapasOnboarding.completadas} de {ONBOARDING_STAGES.length} etapas completadas
+              {etapasOnboarding.completadas} de {ONBOARDING_STAGES.length} {ONBOARDING_STAGES.length === 1 ? 'etapa completada' : 'etapas completadas'}
             </Text>
           </View>
 
-          {/* 2 Etapas */}
+          {/* Las etapas */}
           <View style={{ gap: space.gap, paddingBottom: 28 }}>
             {ONBOARDING_STAGES.map(stage => {
-              // El estado de cada etapa sale de datos reales, no del array: `pactSignedAt` para
-              // el Pacto y `stageCompleted` para el Mapa. La etapa 2 leia el estado del
-              // Cuestionario Profundo, que es otro flujo — por eso quien ya habia terminado su
-              // mapa seguia viendo "1 de 2 etapas completadas".
-              const estado =
-                stage.id === 'st1' ? etapasOnboarding.pacto
-                : stage.id === 'st2' ? etapasOnboarding.mapaRenacimiento
-                : 'pendiente';
+              // El estado de cada etapa sale de datos reales, no del array: `pactSignedAt` para el Pacto.
+              const estado = etapasOnboarding.pacto;
               const completada = estado === 'completada';
               const enProgreso = estado === 'en_progreso';
               const descripcion = completada
@@ -1302,15 +1398,7 @@ export default function YoScreen() {
                 key={stage.id}
                 accessibilityRole="button"
                 accessibilityLabel={`${stage.title}. ${descripcion}`}
-                onPress={() => {
-                  if (stage.id === 'st1') {
-                    setActiveView('pacto');
-                  } else {
-                    // Etapa 2 — el Mapa de Renacimiento contiene el formulario completo y
-                    // reanuda automáticamente desde el paso donde la persona quedó.
-                    setActiveView('mapa_renacimiento');
-                  }
-                }}
+                onPress={() => setActiveView('pacto')}
                 style={[
                   styles.stageCard,
                   {
@@ -1360,7 +1448,56 @@ export default function YoScreen() {
               </Presionable>
               );
             })}
+
+            {/* Spec 027 (FR-023): los términos que aceptó, en solo lectura. Solo si el servidor dice que aceptó unos: sin ellos
+                (un backend anterior, sin red) la fila no se dibuja, y no es una etapa: no cuenta en «N de 2 etapas». */}
+            {terminosAceptados?.tipo === 'listo' ? (
+              <Presionable
+                accessibilityRole="button"
+                accessibilityLabel={`Términos y condiciones. ${descripcionDeLosTerminos(terminosAceptados.aceptados)}`}
+                onPress={() => setActiveView('terminos')}
+                style={[styles.stageCard, { borderColor: c.border, backgroundColor: c.cardBg }]}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+                  <View style={[styles.stageCheckCircle, { backgroundColor: c.goldWash }]}>
+                    <Icon name="fileText" size={TAMANO_ICONO.chico} color={c.goldInk} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[t.cardTitle, { color: c.textStrong }]}>Términos y condiciones</Text>
+                    <Text style={[t.small, { color: c.textSoft }]}>{descripcionDeLosTerminos(terminosAceptados.aceptados)}</Text>
+                  </View>
+                </View>
+                <Icon name="chevron" size={20} color={c.chevron} />
+              </Presionable>
+            ) : null}
           </View>
+        </ScrollView>
+      )}
+
+      {/* Spec 027 (FR-023): los términos que aceptó, en solo lectura: versión, día, firma y texto. */}
+      {activeView === 'terminos' && (
+        <ScrollView
+          {...barraAlDesplazar}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={[
+            styles.content,
+            {
+              paddingHorizontal: horizontalPadding,
+              maxWidth: contentMaxWidth,
+              alignSelf: isTablet ? 'center' : 'stretch',
+              width: isTablet ? '100%' : undefined,
+              paddingBottom: 36,
+            },
+          ]}
+          showsVerticalScrollIndicator={false}
+        >
+          {terminosAceptados?.tipo === 'listo' ? (
+            <TerminosAceptadosVista aceptados={terminosAceptados.aceptados} />
+          ) : (
+            <Text style={[t.body, { color: c.textSoft }]}>
+              {terminosAceptados ? 'No pudimos leer tus términos. Vuelve a Mi onboarding e inténtalo de nuevo.' : 'Cargando tus términos…'}
+            </Text>
+          )}
         </ScrollView>
       )}
 
@@ -1834,10 +1971,10 @@ export default function YoScreen() {
                 <Icon name="compass" size={TAMANO_ICONO.grande} color={c.goldInk} />
               </View>
               <Text style={[t.screenTitle, { color: c.textStrong }]}>El Método Renaser</Text>
-              <Text style={[t.body, styles.metodoHeroSubtitle, { color: c.textSoft }]}>{`${METODO_FASES.length} fases en ${DIAS_DEL_PROGRAMA} días: verte sin filtros, desarmar el sabotaje, elegir desde el gozo y ejecutar.`}</Text>
+              <Text style={[t.body, styles.metodoHeroSubtitle, { color: c.textSoft }]}>{`${metodoFases.length} fases en ${duracionDelPrograma} días: verte sin filtros, desarmar el sabotaje, elegir desde el gozo y ejecutar.`}</Text>
             </View>
 
-            <MetodoEnPaginas fases={METODO_FASES} margenLateral={horizontalPadding} />
+            <MetodoEnPaginas fases={metodoFases} margenLateral={horizontalPadding} />
 
             {/* Era `t.micro` forzado a 12 y centrado: una frase se lee, no se rotula. Corta antes de la
                 franja del botón flotante de SER, como «Siguiente fase» (2026-10-05): en una pantalla
@@ -1887,7 +2024,7 @@ export default function YoScreen() {
           ]}
           showsVerticalScrollIndicator={false}
         >
-          {user?.id ? <SeccionAlarmas userId={user.id} /> : null}
+          {user?.id ? <SeccionAlarmas userId={user.id} pagos={miIngreso.ingreso?.pagos ?? null} /> : null}
         </ScrollView>
       )}
 
@@ -1898,6 +2035,7 @@ export default function YoScreen() {
         titulos={renombre.titulos}
       />
       <RegistroConFotoModal {...registroConFoto.modal} />
+      <SelectorDeFormacion visible={eligiendoFormacion} alCerrar={() => setEligiendoFormacion(false)} />
     </SafeAreaView>
   );
 }

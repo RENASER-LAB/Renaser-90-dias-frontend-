@@ -17,7 +17,12 @@ export type EstadoOnboardingApi = {
   lastActivityAt: string | null;
   completed: boolean;
   completedAt: string | null;
+  /** Spec 026: la ficha de ingreso que le toca. Siempre viene resuelta (sin el campo, `ESTANDAR`). */
+  ficha: FichaDeIngreso;
 };
+
+/** La ficha de ingreso de una persona: la estándar de siempre o el diagnóstico (spec 026). */
+export type FichaDeIngreso = 'ESTANDAR' | 'CON_DIAGNOSTICO';
 
 /**
  * Espejo de `AceptarHitoRequest.milestone` (backend, enum `HitoOnboarding`, SOLO LECTURA). Los 4

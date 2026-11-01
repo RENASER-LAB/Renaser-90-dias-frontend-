@@ -31,7 +31,7 @@ describe('«Mi grupo»', () => {
 });
 
 describe('«Mis mentores»', () => {
-  it.each(['consultas', 'mentores', 'todos'] as const)('«%s» vuelve a «Mis mentores» y de ahí a Yo', tipo => {
+  it.each(['consultas', 'mentores', 'todos', 'habitosDeTodos'] as const)('«%s» vuelve a «Mis mentores» y de ahí a Yo', tipo => {
     expect(recorrido({ tipo })).toEqual([tipo, 'misMentores', 'ninguna']);
   });
 
@@ -55,6 +55,7 @@ describe('Yo', () => {
       { tipo: 'consultas' },
       { tipo: 'mentores' },
       { tipo: 'todos' },
+      { tipo: 'habitosDeTodos' },
       { tipo: 'cumplimiento', grupo: null },
     ];
     for (const v of abiertas) expect({ v: v.tipo, abierto: hayPanelAbierto(v) }).toEqual({ v: v.tipo, abierto: true });

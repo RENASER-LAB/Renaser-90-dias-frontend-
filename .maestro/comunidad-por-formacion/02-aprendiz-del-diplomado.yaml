@@ -1,0 +1,30 @@
+# Comunidad vista por un aprendiz del Diplomado (spec 024). ESCRITO Y SIN CORRER.
+# cuenta: aprendiz  (la ranura apunta a un aprendiz del DIPLOMADO)
+# Precondición: en la Escuela hay una publicación «Solo para la Escuela» y un evento «Sesión de la Escuela»; en el Diplomado,
+# «Solo para el Diplomado». Esta cuenta ve la suya, tiene SU comunidad general y su ranking empieza por ella.
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "COMUNIDAD"
+- extendedWaitUntil:
+    visible: "Solo para el Diplomado"
+    timeout: 30000
+- assertNotVisible: "Solo para la Escuela"
+- takeScreenshot: C02a-muro-del-diplomado
+- tapOn: "Eventos"
+- extendedWaitUntil:
+    visible: "Calendario"
+    timeout: 30000
+- assertNotVisible: "Sesión de la Escuela"
+- tapOn: "Tribu"
+# Su comunidad general lleva el nombre de su formación; la de la Escuela no existe para él.
+- extendedWaitUntil:
+    visible: "Diplomado Renaser Global"
+    timeout: 30000
+- assertNotVisible: "Formación Renaser Global"
+- takeScreenshot: C02b-tribu-del-diplomado
+- tapOn: "Ranking"
+- extendedWaitUntil:
+    visible: "Tu posición"
+    timeout: 30000
+- takeScreenshot: C02c-ranking-del-diplomado

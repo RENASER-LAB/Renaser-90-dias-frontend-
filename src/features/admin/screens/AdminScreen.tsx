@@ -7,12 +7,16 @@ import { PersonaDelLiderScreen } from '../../lider-mentores/screens/PersonaDelLi
 import { CajaContenidoScreen } from '../../caja/screens/CajaContenidoScreen';
 import { CajaDetalleScreen } from '../../caja/screens/CajaDetalleScreen';
 import { CajaListaScreen } from '../../caja/screens/CajaListaScreen';
+import { FichasAdminScreen } from '../../diagnostico-admin/screens/FichasAdminScreen';
+import { FormacionDetalleAdminScreen } from '../../formaciones/screens/FormacionDetalleAdminScreen';
+import { FormacionesAdminScreen } from '../../formaciones/screens/FormacionesAdminScreen';
 import { AdminInicioScreen } from './AdminInicioScreen';
 import { AnimalDeFaseDetalleScreen } from './AnimalDeFaseDetalleScreen';
 import { AnimalesDeFaseAdminScreen } from './AnimalesDeFaseAdminScreen';
 import { BienvenidaAdminScreen } from './BienvenidaAdminScreen';
 import { useHabitosProgramaAdmin } from '../hooks/useHabitosProgramaAdmin';
 import { HabitosProgramaAdminScreen } from './HabitosProgramaAdminScreen';
+import { CategoriasDeHabitoAdminScreen } from './CategoriasDeHabitoAdminScreen';
 import { HabitoProgramaFormScreen } from './HabitoProgramaFormScreen';
 import { useAnimalesDeFaseAdmin } from '../hooks/useAnimalesDeFaseAdmin';
 import { FichaAprendizScreen } from './FichaAprendizScreen';
@@ -22,6 +26,10 @@ import { GruposAdminScreen } from './GruposAdminScreen';
 import { GuiasRecepcionScreen } from './GuiasRecepcionScreen';
 import { MasOpcionesScreen } from './MasOpcionesScreen';
 import { PersonasAdminScreen } from './PersonasAdminScreen';
+import { CodigoRenaserEnFichasAdminScreen } from './CodigoRenaserEnFichasAdminScreen';
+import { TerminosAdminScreen } from '../../onboarding/terminos/screens/TerminosAdminScreen';
+import { TerminosDeUnaFormacionScreen } from '../../onboarding/terminos/screens/TerminosDeUnaFormacionScreen';
+import { EditorDeTerminosScreen } from '../../onboarding/terminos/screens/EditorDeTerminosScreen';
 import { PublicacionesOcultasScreen } from './PublicacionesOcultasScreen';
 import { SemaforoAdminScreen } from './SemaforoAdminScreen';
 import { SemaforoGrupoAdminScreen } from './SemaforoGrupoAdminScreen';
@@ -41,10 +49,12 @@ import { StaffRolesScreen } from './StaffRolesScreen';
  */
 type Vista =
   | { nombre: 'inicio' }
-  | { nombre: 'grupos' }
+  | { nombre: 'grupos'; formacion?: string | null }
+  | { nombre: 'formaciones' }
+  | { nombre: 'formacion'; codigo: string }
   | { nombre: 'grupo'; grupoId: string }
   | { nombre: 'grupo-form'; grupoId: string | null }
-  | { nombre: 'personas'; soloSinGrupo: boolean }
+  | { nombre: 'personas'; soloSinGrupo: boolean; formacion?: string | null }
   | { nombre: 'ficha'; aprendiz: PersonaDeFicha }
   | { nombre: 'solicitudes' }
   | { nombre: 'semaforo' }
@@ -68,8 +78,15 @@ type Vista =
   | { nombre: 'animal-fase'; numero: number }
   | { nombre: 'habitos-programa' }
   | { nombre: 'habito-programa'; id: string | null }
+  | { nombre: 'categorias-habito' }
   | { nombre: 'publicaciones-ocultas' }
+  | { nombre: 'codigo-renaser-en-fichas' }
+  | { nombre: 'fichas' }
   | { nombre: 'mas' }
+  /* Los términos y condiciones editables, uno por formación (spec 027): la lista, los de una formación y su editor. */
+  | { nombre: 'terminos' }
+  | { nombre: 'terminos-formacion'; codigo: string }
+  | { nombre: 'terminos-editor'; codigo: string }
   | { nombre: 'caja' }
   | { nombre: 'caja-detalle'; aprendizId: string }
   | { nombre: 'caja-contenido' };
@@ -128,6 +145,7 @@ export function AdminScreen({ onSalir, abrirEn = 'inicio' }: { onSalir: () => vo
     case 'grupos':
       return (
         <GruposAdminScreen
+          formacionAlEntrar={vista.formacion ?? null}
           onVolver={volver}
           onAbrirGrupo={grupoId => entrar({ nombre: 'grupo', grupoId })}
           onCrear={() => entrar({ nombre: 'grupo-form', grupoId: null })}
@@ -158,7 +176,20 @@ export function AdminScreen({ onSalir, abrirEn = 'inicio' }: { onSalir: () => vo
         <PersonasAdminScreen
           onVolver={volver}
           soloSinGrupoAlEntrar={vista.soloSinGrupo}
+          formacionAlEntrar={vista.formacion ?? null}
           onAbrirFicha={aprendiz => entrar({ nombre: 'ficha', aprendiz })}
+        />
+      );
+    case 'formaciones':
+      return <FormacionesAdminScreen onVolver={volver} onAbrir={codigo => entrar({ nombre: 'formacion', codigo })} />;
+    case 'formacion':
+      return (
+        <FormacionDetalleAdminScreen
+          codigo={vista.codigo}
+          onVolver={volver}
+          onVerPersonas={codigo => entrar({ nombre: 'personas', soloSinGrupo: false, formacion: codigo })}
+          onVerGrupos={codigo => entrar({ nombre: 'grupos', formacion: codigo })}
+          onVerTerminos={codigo => entrar({ nombre: 'terminos-formacion', codigo })}
         />
       );
     case 'ficha':
@@ -274,13 +305,33 @@ export function AdminScreen({ onSalir, abrirEn = 'inicio' }: { onSalir: () => vo
           estado={habitosDelPrograma}
           onAbrir={id => entrar({ nombre: 'habito-programa', id })}
           onNuevo={() => entrar({ nombre: 'habito-programa', id: null })}
+          onCategorias={() => entrar({ nombre: 'categorias-habito' })}
           onVolver={volver}
         />
       );
+    case 'categorias-habito':
+      return <CategoriasDeHabitoAdminScreen estado={habitosDelPrograma} onVolver={volver} />;
     case 'habito-programa':
       return <HabitoProgramaFormScreen id={vista.id} estado={habitosDelPrograma} onVolver={volver} />;
     case 'publicaciones-ocultas':
       return <PublicacionesOcultasScreen onVolver={volver} />;
+    case 'codigo-renaser-en-fichas':
+      return <CodigoRenaserEnFichasAdminScreen onVolver={volver} />;
+    case 'terminos':
+      return <TerminosAdminScreen onVolver={volver} onAbrir={codigo => entrar({ nombre: 'terminos-formacion', codigo })} />;
+    case 'terminos-formacion':
+      return (
+        <TerminosDeUnaFormacionScreen
+          key={vista.codigo}
+          formacion={vista.codigo}
+          onVolver={volver}
+          onEditar={codigo => entrar({ nombre: 'terminos-editor', codigo })}
+        />
+      );
+    case 'terminos-editor':
+      return <EditorDeTerminosScreen key={vista.codigo} formacion={vista.codigo} onVolver={volver} />;
+    case 'fichas':
+      return <FichasAdminScreen onBack={volver} />;
     case 'mas':
       return (
         <MasOpcionesScreen
@@ -290,7 +341,10 @@ export function AdminScreen({ onSalir, abrirEn = 'inicio' }: { onSalir: () => vo
           onAbrirBienvenida={() => entrar({ nombre: 'bienvenida' })}
           onAbrirImagenesDeFases={() => entrar({ nombre: 'animales-fases' })}
           onAbrirHabitosDelPrograma={() => entrar({ nombre: 'habitos-programa' })}
+          onAbrirFichas={() => entrar({ nombre: 'fichas' })}
           onAbrirPublicacionesOcultas={() => entrar({ nombre: 'publicaciones-ocultas' })}
+          onAbrirCodigoRenaserEnFichas={() => entrar({ nombre: 'codigo-renaser-en-fichas' })}
+          onAbrirTerminos={() => entrar({ nombre: 'terminos' })}
         />
       );
     default:
@@ -303,6 +357,7 @@ export function AdminScreen({ onSalir, abrirEn = 'inicio' }: { onSalir: () => vo
             else if (seccion === 'personas') entrar({ nombre: 'personas', soloSinGrupo: false });
             else if (seccion === 'solicitudes') entrar({ nombre: 'solicitudes' });
             else if (seccion === 'semaforo') entrar({ nombre: 'semaforo' });
+            else if (seccion === 'formaciones') entrar({ nombre: 'formaciones' });
             else if (seccion === 'mas') entrar({ nombre: 'mas' });
             else if (seccion === 'caja') entrar({ nombre: 'caja' });
           }}
