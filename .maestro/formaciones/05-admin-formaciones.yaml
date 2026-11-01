@@ -24,8 +24,9 @@ appId: com.renaser.app
 - assertVisible: ".*3 meses · 1 año.*"
 - takeScreenshot: F05a-las-tres-formaciones
 - tapOn: "Diplomado Renaser.*"
+# «Por atender» está más abajo y fuera de la pantalla en un teléfono (segunda jornada del E2E, 01/11/2026): se espera lo de arriba.
 - extendedWaitUntil:
-    visible: "Por atender"
+    visible: "Resumen"
     timeout: 30000
 - assertVisible: "Resumen"
 - assertVisible: "Personas"
@@ -46,7 +47,7 @@ appId: com.renaser.app
 - takeScreenshot: F05c-personas-del-diplomado
 - back
 - extendedWaitUntil:
-    visible: "Por atender"
+    visible: "Resumen"
     timeout: 20000
 # Editar: la hoja abre con lo que hay y se cierra sin guardar.
 - scrollUntilVisible:
