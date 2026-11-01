@@ -25,6 +25,7 @@ import { CierreEnPlan } from '../features/cierre/components/CierreEnPlan';
 import { ejeDeLasAcciones } from '../features/cierre/utils/ejeDeLasAcciones';
 import { useResumenHome } from '../features/home/hooks/useResumenHome';
 import { FilaDelProgramaPropio } from '../features/programa/components/FilaDelProgramaPropio';
+import { PlanSinPrograma } from '../features/programa/components/PlanSinPrograma';
 import { useFilaDelProgramaPropio } from '../features/programa/hooks/useFilaDelProgramaPropio';
 import type { DiaDelPlan } from '../features/habits/utils/semanaDelPlan';
 import { cifraEscrita } from '../features/objetivos/api/planMensualApi';
@@ -126,10 +127,6 @@ const EJE_POR_DEFECTO: EjeObjetivo = 'CUERPO';
 
 /** Botones en tipo oración y a tamaño de lectura (`GoldButton` va en versales espaciadas por defecto). */
 const TEXTO_DE_BOTON = { fontSize: 15, letterSpacing: 0 } as const;
-
-/** Lo que dice Plan a quien todavía no tiene programa propio: su plan nace del programa. */
-export const TEXTO_DE_PLAN_SIN_PROGRAMA =
-  'Tu plan se arma con tu programa. Cuando elijas tu Día 1 podrás escribir tus objetivos y agendar tus acciones aquí.';
 
 export default function PlanScreen() {
   const { c, t } = useTheme();
@@ -548,14 +545,13 @@ export default function PlanScreen() {
         contentContainerStyle={estiloDelContenido}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.pantalla}>
-          {/* El programa propio, arriba de todo y sin hueco cuando no hay nada que decir (el hook ya sabe si hay fila). */}
-          {programaPropio.visible ? <FilaDelProgramaPropio programa={programaPropio} /> : null}
+        <View style={[styles.pantalla, sinProgramaPropio ? styles.pantallaSinPrograma : null]}>
+          {/* El programa propio, arriba de todo y sin hueco cuando no hay nada que decir (el hook ya sabe si hay fila). Sin programa propio el
+              estado vacío ya trae su botón «Elegir mi Día 1»: la fila solo queda si hubo un fallo al comprobar y hay que reintentar. */}
+          {programaPropio.visible && (!sinProgramaPropio || programaPropio.error !== null) ? <FilaDelProgramaPropio programa={programaPropio} /> : null}
 
           {sinProgramaPropio ? (
-            <Text style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 23 }]} accessibilityRole="text">
-              {TEXTO_DE_PLAN_SIN_PROGRAMA}
-            </Text>
+            <PlanSinPrograma alElegirDiaUno={programaPropio.alElegirDiaUno} />
           ) : (
             <>
           {/* Spec 026: mientras haya objetivos del diagnóstico por confirmar, lo primero es revisarlos. Al confirmarlos desaparece. */}
@@ -771,6 +767,8 @@ const styles = StyleSheet.create({
   },
   /** El eje elegido, su objetivo y lo de la semana: tarjetas una debajo de otra, con aire entre ellas. */
   pantalla: { gap: 14, paddingTop: 12, paddingBottom: 28 },
+  /* Sin programa propio el estado vacío llena el alto que sobra y se centra en él (issue #82). */
+  pantallaSinPrograma: { flexGrow: 1 },
   etiquetaDeCampo: {
     fontFamily: fuentes.media,
     fontSize: 14,
