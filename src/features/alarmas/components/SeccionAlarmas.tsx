@@ -27,6 +27,8 @@ import { pasarAlarmasAlSonido } from '../cambioDeSonido';
 import { textoDelCambioDeDespertar } from '../textoDelCambioDeDespertar';
 import { type SonidoDeAlarma } from '../sonidoDeAlarma';
 import { RecordatorioDeAcciones } from '../../objetivos/components/RecordatorioDeAcciones';
+import type { PagosDeLaPersona } from '../../pagos/api/pagosSchemas';
+import { ControlDeRecordatoriosDePago } from '../../pagos/components/ControlDeRecordatoriosDePago';
 import { AvisoAlarmaExacta } from './AvisoAlarmaExacta';
 import { GuiaDeBateria } from './GuiaDeBateria';
 import { SelectorDeSonido } from './SelectorDeSonido';
@@ -58,7 +60,7 @@ interface Despertar {
  *
  * En web y en Expo Go no hay alarmas locales: la sección lo dice y no ofrece nada que no funcione.
  */
-export function SeccionAlarmas({ userId }: { userId: string }) {
+export function SeccionAlarmas({ userId, pagos = null }: { userId: string; /** Spec 032: lo último que dijo el servidor del pago de la persona; con cronograma se ofrecen los recordatorios de pago. */ pagos?: PagosDeLaPersona | null }) {
   const { c } = useTheme();
   const [prefs, setPrefs] = useState<PreferenciasDeAlarmas>(PREFERENCIAS_POR_DEFECTO);
   const [despertar, setDespertar] = useState<Despertar | null | 'sin_habito' | 'fallo'>(null);
@@ -271,6 +273,14 @@ export function SeccionAlarmas({ userId }: { userId: string }) {
         <Text style={[estilos.titulo, { color: c.textStrong }]}>Acciones de tus objetivos</Text>
         <RecordatorioDeAcciones userId={userId} tonoDeYo={prefs.sonido} />
       </View>
+
+      {/* Spec 032: solo con un cronograma de pagos (quien no tiene nada que recordar no ve la sección). Es el mismo control que abre «Mi ingreso». */}
+      {pagos?.modo === 'CON_CRONOGRAMA' ? (
+        <View style={{ gap: 8 }}>
+          <Text style={[estilos.titulo, { color: c.textStrong }]}>Recordatorios de pago</Text>
+          <ControlDeRecordatoriosDePago userId={userId} pagos={pagos} />
+        </View>
+      ) : null}
 
       <View style={{ gap: 8 }}>
         <Text style={[estilos.titulo, { color: c.textStrong }]}>Sonido</Text>

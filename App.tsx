@@ -21,6 +21,7 @@ import { AbridorDeAvisos } from './src/features/alarmas/components/AbridorDeAvis
 import { RearmadorDeAlarmas } from './src/features/alarmas/components/RearmadorDeAlarmas';
 import { CargadorDeCategoriasDeHabito } from './src/features/habits/categorias/components/CargadorDeCategoriasDeHabito';
 import { SincronizadorDeAcciones } from './src/features/objetivos/components/SincronizadorDeAcciones';
+import { SincronizadorDePagos } from './src/features/pagos/components/SincronizadorDePagos';
 import { AnfitrionDeCelebraciones } from './src/features/fenix/components/AnfitrionDeCelebraciones';
 import { FormacionProvider } from './src/features/formaciones/context/FormacionContext';
 import { SincronizadorDeLaFormacionDeLaComunidad } from './src/features/formaciones/components/SincronizadorDeLaFormacionDeLaComunidad';
@@ -80,6 +81,9 @@ function Shell() {
           primer plano, solo si la persona pidio ese aviso. No pinta nada. Ver
           `features/objetivos/notificaciones/recordatoriosDeAcciones.ts`. */}
       <SincronizadorDeAcciones />
+      {/* Pone al día las alarmas de pago (recordatorios de las cuotas pendientes del cronograma, spec 032) al abrir y al volver a primer plano.
+          No pinta nada. Ver `features/pagos/notificaciones/alarmasDePagos.ts`. */}
+      <SincronizadorDePagos />
       {/* La pantalla completa de los momentos grandes (día completo, rachas de 7 y 30, fase nueva), una por día,
           donde ocurra el hito. Aca arriba por el mismo motivo que los otros: ninguna pantalla la dibuja. Se quita
           borrando esta linea. Ver `features/fenix/components/AnfitrionDeCelebraciones.tsx`. */}

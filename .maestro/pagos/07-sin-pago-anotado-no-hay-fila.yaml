@@ -1,0 +1,26 @@
+# Quien no tiene nada anotado no ve «Mi ingreso» y Yo queda como siempre (spec 032, SC-005). ESCRITO Y SIN CORRER.
+# cuenta: aprendiz
+# Precondición (base local): una cuenta sin pago anotado (nunca se le asignó nada, o entró por una app anterior).
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "YO"
+- extendedWaitUntil:
+    visible: "Tu evolución"
+    timeout: 30000
+- scrollUntilVisible:
+    element: "Tuve una emergencia"
+    direction: DOWN
+    timeout: 40000
+- assertNotVisible: "Mi ingreso"
+# Alarmas tampoco ofrece los recordatorios de pago.
+- tapOn: "Ajustes"
+- scrollUntilVisible:
+    element: "Alarmas"
+    direction: DOWN
+- tapOn: "Alarmas"
+- extendedWaitUntil:
+    visible: "Acciones de tus objetivos"
+    timeout: 15000
+- assertNotVisible: "Recordatorios de pago"
+- takeScreenshot: P07-sin-recordatorios-de-pago

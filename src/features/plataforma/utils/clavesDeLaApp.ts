@@ -27,6 +27,8 @@ export const CLAVES = {
   semaforo: 'semaforo',
   evidencias: 'evidencias',
   caja: 'caja',
+  /* «Mi ingreso» de la persona y los pagos de su ficha en Administración (spec 032). Soporte TI la apaga; la fila de Yo se esconde y la pantalla avisa mantenimiento. */
+  pagos: 'pagos',
   emergencia: 'emergencia',
   cuentaEliminar: 'cuenta.eliminar',
   notificaciones: 'notificaciones',

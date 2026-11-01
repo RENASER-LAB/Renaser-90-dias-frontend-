@@ -1,0 +1,62 @@
+# La sección «Pagos» de la ficha (spec 032): Administración marca cada cuota «Pagado» o la devuelve a «Pendiente» —queda quién y cuándo— y agrega una cuota. ESCRITO Y SIN CORRER.
+# cuenta: admin
+# Precondición (base local): «Sol-Pagos Uno» ya aceptada con un cronograma de 3 cuotas de US$ 1 000, todas pendientes (flujo 01).
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "YO"
+- scrollUntilVisible:
+    element: "Administración"
+    direction: DOWN
+    timeout: 40000
+- tapOn: "Administración"
+- scrollUntilVisible:
+    element: "Personas.*"
+    direction: DOWN
+    timeout: 40000
+- tapOn: "Personas.*"
+- extendedWaitUntil:
+    visible: "Sol-Pagos Uno"
+    timeout: 30000
+- tapOn: "Sol-Pagos Uno"
+- scrollUntilVisible:
+    element: "Pagos"
+    direction: DOWN
+    timeout: 40000
+- assertVisible: "Con cronograma en dólares \\(US\\$\\)\\. Todavía no lo confirmó\\."
+- assertVisible: "Pendiente"
+- takeScreenshot: P03a-la-seccion-pagos
+- tapOn:
+    text: "Marcar pagado"
+    index: 0
+- extendedWaitUntil:
+    visible: "Listo: cuota marcada como pagada."
+    timeout: 15000
+- assertVisible: "Pagado"
+- assertVisible: "Marcó pagada:.*"
+- assertVisible: "Volver a pendiente"
+- takeScreenshot: P03b-una-cuota-pagada
+# Lo pagado no se edita ni se quita.
+- assertNotVisible: "Reemplazar el cronograma"
+- assertVisible: "Con cuotas pagadas no se reemplaza el cronograma entero.*"
+- tapOn: "Volver a pendiente"
+- extendedWaitUntil:
+    visible: "Listo: la cuota volvió a pendiente."
+    timeout: 15000
+- assertVisible: "La devolvió a pendiente:.*"
+- assertVisible: "Reemplazar el cronograma"
+# Una cuota más.
+- tapOn: "Agregar una cuota"
+- extendedWaitUntil:
+    visible: "Agregar una cuota"
+    timeout: 10000
+- tapOn: "Fecha de la cuota"
+- tapOn: "LISTO"
+- tapOn: "Monto.*"
+- inputText: "500"
+- hideKeyboard
+- tapOn: "Guardar"
+- extendedWaitUntil:
+    visible: "Listo: agregaste una cuota."
+    timeout: 15000
+- takeScreenshot: P03c-una-cuota-mas

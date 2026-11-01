@@ -14,3 +14,7 @@ PENDIENTES sembradas en la base **local** (nunca producción). Cada archivo dice
 
 Criterio de aislamiento (SC-007), para el E2E: una persona aceptada en el Diplomado no aparece en ninguna lista, grupo ni chat de la Escuela, y entra a la recepción de **su** formación.
 `comun-abrir-solicitudes.yaml` solo lo incluyen los demás flujos de la carpeta.
+
+> **2026-11-01 (spec 032).** Contra el backend con la spec 032, la hoja «Aceptar» suma el bloque **«Pago»** y el aprendiz parte sin elegir cómo paga: «Aceptar» queda apagado
+> hasta que se elige. Los flujos `01`, `02` y `04` ahora lo eligen («Sin cronograma (pagó completo)») y su frase dice «… y pagó completo»; el `03` (mentor y Administración) no
+> cambia: el personal viene con «Sin cronograma» y no se anota nada. Los flujos de los pagos están en `.maestro/pagos/`.

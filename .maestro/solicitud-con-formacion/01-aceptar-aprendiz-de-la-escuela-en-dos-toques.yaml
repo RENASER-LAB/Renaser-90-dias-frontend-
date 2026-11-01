@@ -1,4 +1,4 @@
-# Aceptar a un aprendiz de la Escuela, sin diagnóstico: viene todo marcado, son DOS toques (spec 025, 025-4 B). ESCRITO Y SIN CORRER.
+# Aceptar a un aprendiz de la Escuela, sin diagnóstico: viene todo marcado (menos cómo paga, spec 032), así que son DOS toques más el del pago (spec 025, 025-4 B). ESCRITO Y SIN CORRER.
 # cuenta: admin  (Administración o Alquimista)
 # Precondición (base local, nunca producción): una solicitud PENDIENTE de «Sol-Escuela Uno»; la Escuela tiene una recepción abierta.
 # Se corre con: .maestro/correr.sh .maestro/solicitud-con-formacion/01-aceptar-aprendiz-de-la-escuela-en-dos-toques.yaml
@@ -10,11 +10,14 @@ appId: com.renaser.app
     timeout: 30000
 - takeScreenshot: S01a-por-decidir
 - tapOn: "Aceptar a Sol-Escuela Uno"
-# La hoja abre con todo marcado y la frase del resumen.
+# La hoja abre con todo marcado (menos el pago, spec 032) y la frase del resumen.
 - extendedWaitUntil:
     visible: "Aceptar solicitud"
     timeout: 15000
-- assertVisible: "Sol-Escuela Uno entrará a la Escuela Renaser como Aprendiz, sin diagnóstico."
+# Spec 032: el aprendiz elige cómo paga (no viene marcado). Estos flujos lo aceptan como «pagó completo».
+- tapOn: "Pago"
+- tapOn: "Sin cronograma \\(pagó completo\\)"
+- assertVisible: "Sol-Escuela Uno entrará a la Escuela Renaser como Aprendiz, sin diagnóstico y pagó completo."
 - assertVisible: "Formación"
 - assertVisible: "Rol"
 - assertVisible: "Ficha de entrada"

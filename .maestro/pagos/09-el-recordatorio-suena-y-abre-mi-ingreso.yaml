@@ -1,0 +1,54 @@
+# PROBAR LOS RECORDATORIOS (spec 032, pedido del dueño: «probar los recordatorios»): una cuota que vence HOY, la hora del aviso en el próximo múltiplo de 5 min,
+# y tocar la alarma abre Yo → «Mi ingreso». ESCRITO Y SIN CORRER.
+# cuenta: aprendiz
+# Parámetros (los pone quien corre el flujo): HORA y MINUTO, la hora del teléfono del emulador redondeada hacia arriba a un múltiplo de 5 (p. ej. -e HORA=14 -e MINUTO=35).
+# Precondición (base local): un cronograma con una cuota PENDIENTE que vence hoy; permiso de avisos concedido.
+# Después de la última línea el emulador queda con la alarma ya tocada: no se repite sola.
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "YO"
+- extendedWaitUntil:
+    visible: "Tu evolución"
+    timeout: 30000
+- tapOn: "Ajustes"
+- scrollUntilVisible:
+    element: "Alarmas"
+    direction: DOWN
+- tapOn: "Alarmas"
+- scrollUntilVisible:
+    element: "Recordatorios de pago"
+    direction: DOWN
+    timeout: 30000
+# Solo «el mismo día» y la hora de la prueba.
+- assertVisible: "El mismo día"
+- tapOn: "Cambiar la hora.*"
+- extendedWaitUntil:
+    visible: "ELEGIR HORA"
+    timeout: 10000
+- tapOn: "${HORA}"
+- tapOn: "${MINUTO}"
+- tapOn: "✓ GUARDAR HORA"
+- assertVisible: ".*· ${HORA}:${MINUTO}"
+- takeScreenshot: P09a-la-hora-de-la-prueba
+# Se manda la app a segundo plano y se espera la alarma en la bandeja.
+- pressKey: home
+# La alarma puede asomar como aviso flotante; si no, se abre la cortina de notificaciones.
+- extendedWaitUntil:
+    visible: "Tu cuota vence hoy"
+    timeout: 400000
+    optional: true
+- swipe:
+    start: 50%, 0%
+    end: 50%, 70%
+- extendedWaitUntil:
+    visible: "Tu cuota vence hoy"
+    timeout: 30000
+- takeScreenshot: P09b-la-alarma-en-la-bandeja
+- tapOn: "Tu cuota vence hoy"
+# Tocar el aviso abre Yo → Mi ingreso.
+- extendedWaitUntil:
+    visible: "Tus fechas de pago"
+    timeout: 30000
+- assertVisible: "Pendiente"
+- takeScreenshot: P09c-abrio-mi-ingreso

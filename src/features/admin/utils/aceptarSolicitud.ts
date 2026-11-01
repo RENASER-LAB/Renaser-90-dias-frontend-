@@ -1,6 +1,16 @@
 import type { EleccionAlAceptar, OpcionDeRol } from '../api/adminApi';
 import type { AceptacionDeSolicitudApi, OpcionesDeAceptacionApi } from '../api/adminSchemas';
 import { etiquetaDeDuracion } from '../../formaciones/utils/etiquetaDeDuracion';
+import {
+  cantidadDeCuotasEnPalabras,
+  paraElPedido,
+  pagoInicial,
+  problemaDelBorrador,
+  totalDelBorrador,
+  type BorradorDePago,
+  type PagoParaElPedido,
+} from '../../pagos/utils/borradorDelCronograma';
+import { montoConMoneda } from '../../pagos/utils/dinero';
 import { nombreCortoDeFormacion } from '../../formaciones/utils/nombreDeFormacion';
 import { fechaCorta } from './fechas';
 import { etiquetaDeRol } from './rolesAsignables';
@@ -37,7 +47,16 @@ export type BorradorDeAceptacion = {
   duracionDias: number | null;
   rolClave: string;
   conDiagnostico: boolean;
+  /** Spec 032: cómo paga. Un aprendiz parte sin elegir (no se anota «pagó completo» por descuido); el personal, con «Sin cronograma». */
+  pago: BorradorDePago;
 };
+
+/** Solo el aprendiz paga por su programa: cualquier otro rol (mentor, guía, líder, Administración, Alquimista) es personal. */
+export const ROL_BASE_DEL_APRENDIZ = 'TRAINEE';
+
+export function esPersonalElRol(rolBase: string): boolean {
+  return rolBase !== ROL_BASE_DEL_APRENDIZ;
+}
 
 /** Viene marcado (decisión 025-4 B del dueño): Escuela, Aprendiz y sin diagnóstico. */
 export const FORMACION_MARCADA_AL_ACEPTAR = 'ESCUELA';
@@ -61,6 +80,7 @@ export function borradorInicial(opciones: OpcionesDeAceptacionApi | null): Borra
     duracionDias: duracionUnica(marcada),
     rolClave: ROL_MARCADO_AL_ACEPTAR,
     conDiagnostico: false,
+    pago: pagoInicial(false),
   };
 }
 
@@ -68,15 +88,36 @@ export function borradorInicial(opciones: OpcionesDeAceptacionApi | null): Borra
  * Cambia el rol y ajusta la formación a lo que ese rol pide, conservando lo que siga siendo válido (US2, escenario 4): de mentor con dos
  * formaciones a aprendiz queda la primera; a Administración no queda ninguna; de vuelta a un rol con formación, la marcada por defecto.
  */
-export function alElegirRol(borrador: BorradorDeAceptacion, rol: OpcionDeRol, opciones: OpcionesDeAceptacionApi | null): BorradorDeAceptacion {
+export function alElegirRol(
+  borrador: BorradorDeAceptacion,
+  rol: OpcionDeRol,
+  opciones: OpcionesDeAceptacionApi | null,
+  /** El rol base que tenía elegido antes: para saber si «Sin cronograma» venía puesto por ser personal (spec 032). */
+  rolBaseAnterior?: string,
+): BorradorDeAceptacion {
   const modo = modoDeFormacionDelRol(rol.rolBase);
-  const siguiente = { ...borrador, rolClave: rol.clave };
+  const siguiente = { ...borrador, rolClave: rol.clave, pago: pagoAlCambiarDeRol(borrador.pago, rol.rolBase, rolBaseAnterior) };
   if (!opciones) return siguiente;
   if (modo === 'ninguna') return { ...siguiente, formaciones: [], duracionDias: null };
   const conservadas = borrador.formaciones.filter(codigo => formacionDe(opciones, codigo));
   const base = conservadas.length > 0 ? conservadas : borradorInicial(opciones).formaciones;
   const formaciones = modo === 'una' ? base.slice(0, 1) : base;
   return { ...siguiente, formaciones, duracionDias: duracionAlCambiarDeFormacion(formaciones, borrador, modo, opciones) };
+}
+
+/**
+ * Spec 032: el personal viene con «Sin cronograma» y el aprendiz sin elegir. Al cambiar de rol solo se mueve lo que venía puesto por el rol: lo que
+ * Administración ya armó («Con cronograma» y sus cuotas) no se pierde, y un «Sin cronograma» del personal no pasa a ser un «pagó completo» del aprendiz
+ * sin que nadie lo elija.
+ */
+function pagoAlCambiarDeRol(pago: BorradorDePago, rolBase: string, rolBaseAnterior: string | undefined): BorradorDePago {
+  if (esPersonalElRol(rolBase)) return pago.modo === null ? { ...pago, modo: 'sin' } : pago;
+  const veniaDelPersonal = rolBaseAnterior !== undefined && esPersonalElRol(rolBaseAnterior);
+  return pago.modo === 'sin' && veniaDelPersonal ? { ...pago, modo: null } : pago;
+}
+
+export function alElegirPago(borrador: BorradorDeAceptacion, pago: BorradorDePago): BorradorDeAceptacion {
+  return { ...borrador, pago };
 }
 
 /** Marca una formación: elige la única (aprendiz) o suma o quita (personal). */
@@ -145,13 +186,59 @@ export function loQueFalta(borrador: BorradorDeAceptacion, modo: ModoDeFormacion
   if (duracionesParaElegir(borrador, modo, opciones).length > 0 && borrador.duracionDias === null) {
     return 'Elige la duración del programa.';
   }
+  // Spec 032: solo si este servidor anota el pago. Un aprendiz tiene que elegir cómo paga; con cronograma, que esté completo.
+  if (opciones.paymentScheduleAvailable) return problemaDelBorrador(borrador.pago);
   return null;
 }
 
+/**
+ * Lo que se manda del pago (spec 032): «Con cronograma» siempre; «Sin cronograma (pagó completo)» solo para un aprendiz. Para el personal, dejar «Sin
+ * cronograma» (lo que viene puesto) **no anota nada**: no verá «Tu pago fue cancelado» por algo que nunca pagó. Sin este servidor, nada.
+ */
+export function pagoParaElPedido(
+  borrador: BorradorDeAceptacion,
+  rolBase: string,
+  opciones: OpcionesDeAceptacionApi | null,
+): PagoParaElPedido | null {
+  if (!opciones?.paymentScheduleAvailable) return null;
+  if (borrador.pago.modo === 'sin' && esPersonalElRol(rolBase)) return null;
+  return paraElPedido(borrador.pago);
+}
+
 /** El cuerpo del pedido. Sin opciones del servidor no se manda nada de formación (ver `leerOpcionesDeAceptacion`). */
-export function eleccionParaElPedido(borrador: BorradorDeAceptacion, opciones: OpcionesDeAceptacionApi | null): EleccionAlAceptar | null {
+export function eleccionParaElPedido(
+  borrador: BorradorDeAceptacion,
+  opciones: OpcionesDeAceptacionApi | null,
+  /** El rol base con el que entra, para decidir si «Sin cronograma» se anota (solo para el aprendiz). */
+  rolBase: string = ROL_BASE_DEL_APRENDIZ,
+): EleccionAlAceptar | null {
   if (!opciones) return null;
-  return { formaciones: borrador.formaciones, duracionDias: borrador.duracionDias, conDiagnostico: borrador.conDiagnostico };
+  return {
+    formaciones: borrador.formaciones,
+    duracionDias: borrador.duracionDias,
+    conDiagnostico: borrador.conDiagnostico,
+    pago: pagoParaElPedido(borrador, rolBase, opciones),
+  };
+}
+
+/** Lo que dice el bloque «Pago» cerrado: «Sin elegir», «Sin cronograma» o «Con cronograma · 3 cuotas · US$ 3 000». */
+export function valorDelPago(borrador: BorradorDeAceptacion): string {
+  const pago = borrador.pago;
+  if (pago.modo === null) return 'Sin elegir';
+  if (pago.modo === 'sin') return 'Sin cronograma';
+  if (pago.filas.length === 0) return 'Con cronograma';
+  const total = totalDelBorrador(pago);
+  const monto = pago.moneda && total > 0 ? ` · ${montoConMoneda(total, pago.moneda)}` : '';
+  return `Con cronograma · ${cantidadDeCuotasEnPalabras(pago.filas.length)}${monto}`;
+}
+
+/** La parte de la frase del resumen que habla del pago: « y con cronograma de 3 cuotas», « y pagó completo» o nada (todavía sin elegir; el personal sin cronograma). */
+function fraseDelPago(borrador: BorradorDeAceptacion, rol: OpcionDeRol, opciones: OpcionesDeAceptacionApi): string {
+  if (!opciones.paymentScheduleAvailable) return '';
+  const { modo, filas } = borrador.pago;
+  if (modo === 'con') return filas.length > 0 ? ` y con cronograma de ${cantidadDeCuotasEnPalabras(filas.length)}` : ' y con cronograma';
+  if (modo === 'sin' && !esPersonalElRol(rol.rolBase)) return ' y pagó completo';
+  return '';
 }
 
 function nombreDeFormacion(opciones: OpcionesDeAceptacionApi, codigo: string): string {
@@ -176,7 +263,7 @@ export function frase(
   if (!opciones) return `${quien} ${verbo} ${comoRol}.`;
   const ficha = borrador.conDiagnostico ? 'con diagnóstico' : 'sin diagnóstico';
   const modo = modoDeFormacionDelRol(rol.rolBase);
-  if (modo === 'ninguna') return `${quien} ${verbo} ${comoRol} y ve las tres formaciones, ${ficha}.`;
+  if (modo === 'ninguna') return `${quien} ${verbo} ${comoRol} y ve las tres formaciones, ${ficha}${fraseDelPago(borrador, rol, opciones)}.`;
   const nombres = borrador.formaciones.map(codigo => conArticulo(nombreDeFormacion(opciones, codigo)));
   const donde = nombres.length === 0 ? 'a ninguna formación' : aLa(unir(nombres));
   const unica = borrador.formaciones.length === 1 ? formacionDe(opciones, borrador.formaciones[0]) : undefined;
@@ -184,7 +271,7 @@ export function frase(
     modo === 'una' && borrador.duracionDias !== null && unica && unica.durationsDays.length > 1
       ? ` de ${etiquetaDeLaDuracion(unica, borrador.duracionDias)}`
       : '';
-  return `${quien} ${verbo} ${donde}${duracion} ${comoRol}, ${ficha}.`;
+  return `${quien} ${verbo} ${donde}${duracion} ${comoRol}, ${ficha}${fraseDelPago(borrador, rol, opciones)}.`;
 }
 
 /** «la Escuela Renaser», «el Diplomado Renaser»: el artículo que lleva cada nombre de fábrica. Un nombre que Administración cambió va sin artículo. */
@@ -252,11 +339,15 @@ let ultima: BorradorDeAceptacion | null = null;
 
 /** Recuerda lo que se acaba de aceptar, solo en esta sesión de la app: no se guarda en ningún lado. */
 export function recordarLaUltima(borrador: BorradorDeAceptacion): void {
-  ultima = { ...borrador, formaciones: [...borrador.formaciones] };
+  ultima = copiaDelBorrador(borrador);
 }
 
 export function laUltimaEleccion(): BorradorDeAceptacion | null {
-  return ultima ? { ...ultima, formaciones: [...ultima.formaciones] } : null;
+  return ultima ? copiaDelBorrador(ultima) : null;
+}
+
+function copiaDelBorrador(borrador: BorradorDeAceptacion): BorradorDeAceptacion {
+  return { ...borrador, formaciones: [...borrador.formaciones], pago: { ...borrador.pago, filas: borrador.pago.filas.map(f => ({ ...f })) } };
 }
 
 export function olvidarLaUltima(): void {

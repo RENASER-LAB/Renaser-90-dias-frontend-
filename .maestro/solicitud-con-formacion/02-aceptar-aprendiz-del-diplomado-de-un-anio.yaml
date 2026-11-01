@@ -28,7 +28,10 @@ appId: com.renaser.app
 # 3. Ficha: con diagnóstico.
 - tapOn: "3. Ficha de entrada.*"
 - tapOn: "Con diagnóstico.*"
-- assertVisible: "Sol-Diplomado Uno entrará al Diplomado Renaser de 1 año como Aprendiz, con diagnóstico."
+# Spec 032: el aprendiz elige cómo paga (no viene marcado). Estos flujos lo aceptan como «pagó completo».
+- tapOn: "Pago"
+- tapOn: "Sin cronograma \\(pagó completo\\)"
+- assertVisible: "Sol-Diplomado Uno entrará al Diplomado Renaser de 1 año como Aprendiz, con diagnóstico y pagó completo."
 - takeScreenshot: S02b-el-resumen
 - tapOn:
     text: "Aceptar"

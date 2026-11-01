@@ -1,0 +1,38 @@
+# Quien ya estaba dentro sin pago anotado: Administración le asigna el pago desde su ficha (spec 032, respuesta 8 del dueño). ESCRITO Y SIN CORRER.
+# cuenta: admin
+# Precondición (base local): una persona «Antigua Uno» aceptada antes de esta función, sin nada anotado.
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "YO"
+- scrollUntilVisible:
+    element: "Administración"
+    direction: DOWN
+    timeout: 40000
+- tapOn: "Administración"
+- scrollUntilVisible:
+    element: "Personas.*"
+    direction: DOWN
+    timeout: 40000
+- tapOn: "Personas.*"
+- extendedWaitUntil:
+    visible: "Antigua Uno"
+    timeout: 30000
+- tapOn: "Antigua Uno"
+- scrollUntilVisible:
+    element: "Pagos"
+    direction: DOWN
+    timeout: 40000
+- assertVisible: "Todavía no tiene su pago anotado."
+- assertVisible: "Asignar un cronograma"
+- takeScreenshot: P04a-sin-nada-anotado
+- tapOn: "Marcar sin cronograma \\(pagó completo\\)"
+- extendedWaitUntil:
+    visible: "¿Marcar a Antigua Uno sin cronograma\\?"
+    timeout: 10000
+- tapOn: "Marcar"
+- extendedWaitUntil:
+    visible: "Sin cronograma: pagó completo\\..*"
+    timeout: 15000
+- assertVisible: "Armar un cronograma"
+- takeScreenshot: P04b-sin-cronograma

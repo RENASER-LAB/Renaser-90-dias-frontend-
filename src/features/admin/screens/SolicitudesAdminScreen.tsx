@@ -201,7 +201,7 @@ export function SolicitudesAdminScreen({
     if (!porAceptar) return;
     setErrorDeLaHoja(null);
     const opcionesDeLaHoja = opciones ?? null;
-    const eleccion = eleccionParaElPedido(borrador, opcionesDeLaHoja);
+    const eleccion = eleccionParaElPedido(borrador, opcionesDeLaHoja, rol.rolBase);
     const resultado = await aceptarUnaPorUna(
       porAceptar,
       async persona => {
