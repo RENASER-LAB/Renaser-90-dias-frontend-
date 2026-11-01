@@ -34,7 +34,10 @@ export const terminosDeMiFormacionSchema = z
   })
   .passthrough();
 
-export const terminosAceptadosSchema = z.object({ version: versionDeTerminosSchema, acceptedAt: z.string() }).passthrough();
+/** `signatureUrl`: la firma que dibujó al aceptar (enlace de lectura de 15 minutos); ausente si no quedó firma o es un backend anterior. */
+export const terminosAceptadosSchema = z
+  .object({ version: versionDeTerminosSchema, acceptedAt: z.string(), signatureUrl: z.string().nullish().catch(null) })
+  .passthrough();
 
 export const resumenDeTerminosSchema = z
   .object({

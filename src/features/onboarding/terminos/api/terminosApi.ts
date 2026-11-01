@@ -1,4 +1,4 @@
-import { apiFetch } from '../../../../services/http/apiClient';
+import { ApiError, apiFetch } from '../../../../services/http/apiClient';
 import {
   constanciaSchema,
   detalleDeTerminosSchema,
@@ -34,13 +34,19 @@ export async function leerMisTerminos(): Promise<TerminosDeMiFormacionApi | null
   }
 }
 
-/** `GET /api/v1/onboarding/terms/accepted`: el texto de la versión que acepté (aunque haya otra más nueva). `null` si nunca acepté o no se ofrece. */
-export async function leerTerminosAceptados(): Promise<TerminosAceptadosApi | null> {
+/** Lo que dice el servidor de los términos que acepté: el texto (con su firma), que nunca acepté unos (404) o que no se pudo leer. */
+export type LecturaDeLoAceptado = { tipo: 'listo'; aceptados: TerminosAceptadosApi } | { tipo: 'nunca' } | { tipo: 'error' };
+
+/**
+ * `GET /api/v1/onboarding/terms/accepted`: el texto de la versión que acepté (aunque haya otra más nueva), cuándo y con qué firma. Se distingue «nunca
+ * acepté» (404) de «no pude leerlo» (red, 5xx, una forma que no calza): quien relee sus términos no puede leer un fallo de red como «no aceptaste nada».
+ */
+export async function leerTerminosAceptados(): Promise<LecturaDeLoAceptado> {
   try {
     const r = terminosAceptadosSchema.safeParse(await apiFetch<unknown>('/api/v1/onboarding/terms/accepted', { timeoutMs: 15_000 }));
-    return r.success ? r.data : null;
-  } catch {
-    return null;
+    return r.success ? { tipo: 'listo', aceptados: r.data } : { tipo: 'error' };
+  } catch (e) {
+    return e instanceof ApiError && e.status === 404 ? { tipo: 'nunca' } : { tipo: 'error' };
   }
 }
 

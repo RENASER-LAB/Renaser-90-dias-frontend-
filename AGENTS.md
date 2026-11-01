@@ -675,8 +675,14 @@ Alquimista los de la Escuela, releer desde Yo, texto plano, editan Administraci�
   se puede ver **quiénes la aceptaron y quiénes faltan** (`VersionDeTerminosSheet`).
 * **La ficha de la persona** (Administración) suma «Aceptó los términos de Escuela Renaser, versión 2, el 31 oct 2026» con «Ver su firma» (`ConstanciaDeTerminos`); sin aceptar, «Todavía no aceptó los
   términos». **La hoja «Aceptar» de la spec 025** apaga la formación que todavía no tiene términos publicados («Todavía no tiene términos publicados.»): no recibe personas nuevas.
+* **Yo → Mi onboarding → «Términos y condiciones»** (P3, FR-023; `TerminosAceptadosVista`, vista `terminos` de Yo, solo lectura): bajo las dos etapas, una fila «Términos y condiciones · Versión 2 · aceptada
+  el 31 de octubre de 2026 · toca para releer» (`useTerminosAceptados`, que lee `GET /onboarding/terms/accepted` al entrar a Mi onboarding). La vista muestra el número de versión, el día, **la firma que
+  dibujó al aceptar** (`signatureUrl`, enlace de 15 minutos; sin ella, o si la imagen no carga, no se dibuja el recuadro) y el texto **tal como lo aceptó**, aunque Administración haya publicado otro
+  después. Sin botones: no se acepta ni se firma de nuevo desde ahí. No es una etapa: **no cuenta** en «N de 2 etapas completadas». La fila solo se dibuja si el servidor dice que aceptó unos (un 404, un
+  backend anterior o un fallo de red la esconden; la vista distingue «no pude leerlo» de «nunca aceptó»). El atrás sube un nivel: términos → Mi onboarding. **Es la única parte de Yo que toca esta spec**
+  (autorizada por el dueño: «releer desde Yo», decisión Q6-A del 31/10); el resto de Yo no cambia.
 * **No cambian:** el diseño y los textos de la pantalla de Términos para quien entra a la Escuela sin que nadie edite, el resto del onboarding, los demás tabs, ni el Pacto. Sin dependencias nuevas.
-* **Pruebas:** Jest `borradorDeTerminos`, `terminosDeLaPersona` (la versión en el hito, la lectura tolerante, la pantalla que bloquea, la API de Administración y la lista). Maestro, escritos y sin correr:
+* **Pruebas:** Jest `borradorDeTerminos`, `terminosDeLaPersona` (la versión en el hito, la lectura tolerante, la pantalla que bloquea, la API de Administración y la lista) y `releerLoAceptado` (la lectura de lo aceptado con su firma, «nunca aceptó» frente a «no se pudo leer», la vista de solo lectura y su lugar en Yo). Maestro, escritos y sin correr:
   `.maestro/terminos-editables/`.
 * **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire) y el backend con la spec 027 antes; contra uno anterior la app usa el texto que lleva y la sección de Administración no
   encuentra datos.

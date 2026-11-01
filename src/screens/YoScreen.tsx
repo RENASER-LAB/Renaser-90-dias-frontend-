@@ -48,6 +48,7 @@ import { useAnimalesDeFase } from '../features/yo/hooks/useAnimalesDeFase';
 import { ANIMAL_DE_FASE } from '../features/yo/data/animalesDeFase';
 import { useCelebracionDelDia } from '../features/fenix/hooks/useCelebracionDelDia';
 import {
+  fechaDeFirma,
   origenTrasCambio,
   TITULO_DE_VISTA,
   vistaDeRegreso,
@@ -62,6 +63,9 @@ import {
   type ClaveDeFase,
 } from '../features/home/hooks/useResumenHome';
 import { useEtapasOnboarding } from '../features/onboarding/hooks/useEtapasOnboarding';
+import type { TerminosAceptadosApi } from '../features/onboarding/terminos/api/terminosSchemas';
+import { TerminosAceptadosVista } from '../features/onboarding/terminos/components/TerminosAceptadosVista';
+import { useTerminosAceptados } from '../features/onboarding/terminos/hooks/useTerminosAceptados';
 import { usePersistenciaOnboarding } from '../features/onboarding/hooks/usePersistenciaOnboarding';
 import { mapearPacto, PREGUNTA_FIRMA_PACTO } from '../features/onboarding/data/mapaPreguntas';
 import {
@@ -257,6 +261,13 @@ const ONBOARDING_STAGES = [
   { id: 'st2', num: 2, title: 'Mapa de Renacimiento', descPendiente: 'Tu mapa completo de transformación' },
 ] as const;
 
+/** «Versión 2 · aceptada el 31 de octubre de 2026»: lo que dice la fila de los términos en Mi onboarding (spec 027). */
+function descripcionDeLosTerminos(aceptados: TerminosAceptadosApi): string {
+  const fecha = fechaDeFirma(aceptados.acceptedAt);
+  const version = aceptados.version.number ? `Versión ${aceptados.version.number}` : 'Versión aceptada';
+  return fecha ? `${version} · aceptada el ${fecha} · toca para releer` : `${version} · toca para releer`;
+}
+
 const PACTO_CLAUSULAS = [
   '1. Cumplir mis 3 Objetivos diarios sin negociarlos conmigo.',
   '2. Subir las evidencias que el sistema me exija.',
@@ -376,6 +387,8 @@ export default function YoScreen() {
     setConfirmacion(actual => (actual && actual.vista !== activeView ? null : actual));
   }, [activeView]);
   const regreso = vistaDeRegreso(activeView, origen);
+  /* Spec 027 (FR-023): los términos que aceptó, para releerlos en Mi onboarding. Se leen al entrar a esa lista y se reusan en la vista de los términos. */
+  const terminosAceptados = useTerminosAceptados(activeView === 'onboarding' || activeView === 'terminos').lectura;
   const volver = useCallback(() => {
     if (regreso) setActiveView(regreso);
   }, [regreso]);
@@ -1385,7 +1398,56 @@ export default function YoScreen() {
               </Presionable>
               );
             })}
+
+            {/* Spec 027 (FR-023): los términos que aceptó, en solo lectura. Solo si el servidor dice que aceptó unos: sin ellos
+                (un backend anterior, sin red) la fila no se dibuja, y no es una etapa: no cuenta en «N de 2 etapas». */}
+            {terminosAceptados?.tipo === 'listo' ? (
+              <Presionable
+                accessibilityRole="button"
+                accessibilityLabel={`Términos y condiciones. ${descripcionDeLosTerminos(terminosAceptados.aceptados)}`}
+                onPress={() => setActiveView('terminos')}
+                style={[styles.stageCard, { borderColor: c.border, backgroundColor: c.cardBg }]}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+                  <View style={[styles.stageCheckCircle, { backgroundColor: c.goldWash }]}>
+                    <Icon name="fileText" size={TAMANO_ICONO.chico} color={c.goldInk} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[t.cardTitle, { color: c.textStrong }]}>Términos y condiciones</Text>
+                    <Text style={[t.small, { color: c.textSoft }]}>{descripcionDeLosTerminos(terminosAceptados.aceptados)}</Text>
+                  </View>
+                </View>
+                <Icon name="chevron" size={20} color={c.chevron} />
+              </Presionable>
+            ) : null}
           </View>
+        </ScrollView>
+      )}
+
+      {/* Spec 027 (FR-023): los términos que aceptó, en solo lectura: versión, día, firma y texto. */}
+      {activeView === 'terminos' && (
+        <ScrollView
+          {...barraAlDesplazar}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={[
+            styles.content,
+            {
+              paddingHorizontal: horizontalPadding,
+              maxWidth: contentMaxWidth,
+              alignSelf: isTablet ? 'center' : 'stretch',
+              width: isTablet ? '100%' : undefined,
+              paddingBottom: 36,
+            },
+          ]}
+          showsVerticalScrollIndicator={false}
+        >
+          {terminosAceptados?.tipo === 'listo' ? (
+            <TerminosAceptadosVista aceptados={terminosAceptados.aceptados} />
+          ) : (
+            <Text style={[t.body, { color: c.textSoft }]}>
+              {terminosAceptados ? 'No pudimos leer tus términos. Vuelve a Mi onboarding e inténtalo de nuevo.' : 'Cargando tus términos…'}
+            </Text>
+          )}
         </ScrollView>
       )}
 
