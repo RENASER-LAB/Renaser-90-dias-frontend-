@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { BotonPrincipal } from '../../../components/Legible';
 import { HojaDesdeAbajo } from '../../../components/hojaDesdeAbajo/HojaDesdeAbajo';
@@ -113,7 +113,9 @@ export function AceptarSolicitudSheet({
         </View>
       }
     >
-      <View style={estilos.cuerpo}>
+      {/* El cuerpo se desliza por encima del pie fijo (#87): `HojaDesdeAbajo` de tamaño grande solo reserva el alto y espera que su contenido traiga su
+          propio `ScrollView`. Con formación, rol y ficha cabía; con el bloque de pago y su lista de cuotas ya no, y el pie tapaba lo de abajo. */}
+      <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={estilos.cuerpo}>
         <View style={[estilos.resumen, { backgroundColor: c.goldWash, borderColor: c.borderStrong }]}>
           <Text accessibilityRole="summary" style={[t.body, { color: c.textStrong, fontSize: 17, lineHeight: 24 }]}>
             {resumen}
@@ -288,7 +290,7 @@ export function AceptarSolicitudSheet({
             ) : null}
           </BloqueDeAceptacion>
         ) : null}
-      </View>
+      </ScrollView>
     </HojaDesdeAbajo>
   );
 }
