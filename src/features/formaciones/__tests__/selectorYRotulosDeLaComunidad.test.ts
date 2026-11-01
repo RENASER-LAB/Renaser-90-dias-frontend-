@@ -30,6 +30,14 @@ const CERTIFICACION = { codigo: 'CERTIFICACION', nombre: 'Certificación Renaser
 const LAS_TRES = [ESCUELA, DIPLOMADO, CERTIFICACION];
 
 let raiz: ReactTestRenderer | null = null;
+/** Sin ningún elemento nativo dibujado (los tipos mínimos de `react-test-renderer` no traen `toJSON`). */
+const sinNada = (r: ReactTestRenderer) => r.root.findAll(x => typeof x.type === 'string').length === 0;
+/** El primer nodo con esas props (los tipos mínimos no traen `findByProps`); falla si no existe. */
+const conProps = (r: ReactTestRenderer, props: Record<string, unknown>) => {
+  const nodo = r.root.findAll(x => Object.entries(props).every(([k, v]) => x.props[k] === v))[0];
+  if (!nodo) throw new Error(`No hay un nodo con ${JSON.stringify(props)}`);
+  return nodo;
+};
 const montar = (elemento: React.ReactElement) =>
   act(() => {
     raiz = TestRenderer.create(elemento);
@@ -98,9 +106,9 @@ describe('el selector de formación de la Comunidad', () => {
   it('el aprendiz, el mentor y el líder no ven nada: ni un segmento ni la palabra «formación»', () => {
     prepararLaFormacionDeLaComunidad('aprendiz-1', false, { disponibles: [ESCUELA], activa: ESCUELA });
     montar(React.createElement(SelectorDeFormacionDeLaComunidad));
-    expect(raiz!.toJSON()).toBeNull();
+    expect(sinNada(raiz!)).toBe(true);
     act(() => prepararLaFormacionDeLaComunidad('mentor-1', false, { disponibles: [DIPLOMADO, CERTIFICACION], activa: DIPLOMADO }));
-    expect(raiz!.toJSON()).toBeNull();
+    expect(sinNada(raiz!)).toBe(true);
   });
 });
 
@@ -110,7 +118,7 @@ describe('el rótulo de formación de una fila', () => {
     fijarLaEleccionRecordada('admin-1', null);
     montar(React.createElement(RotuloDeFormacion, { formation: 'DIPLOMADO' }));
     expect(textos(raiz!)).toEqual(['Diplomado']);
-    expect(raiz!.root.findByProps({ accessibilityLabel: 'Formación: Diplomado Renaser' })).toBeTruthy();
+    expect(conProps(raiz!, { accessibilityLabel: 'Formación: Diplomado Renaser' })).toBeTruthy();
   });
 
   it('con una formación elegida ya no hace falta: no se dibuja', () => {
@@ -118,7 +126,7 @@ describe('el rótulo de formación de una fila', () => {
     fijarLaEleccionRecordada('admin-1', null);
     elegirFormacionDeLaComunidad('DIPLOMADO');
     montar(React.createElement(RotuloDeFormacion, { formation: 'DIPLOMADO' }));
-    expect(raiz!.toJSON()).toBeNull();
+    expect(sinNada(raiz!)).toBe(true);
     act(() => elegirFormacionDeLaComunidad(null)); // volver a «Todas»: reaparece
     expect(textos(raiz!)).toEqual(['Diplomado']);
   });
@@ -126,18 +134,18 @@ describe('el rótulo de formación de una fila', () => {
   it('para las demás cuentas nunca se dibuja, y una fila sin formación (o con un valor raro) tampoco', () => {
     prepararLaFormacionDeLaComunidad('aprendiz-1', false, { disponibles: [ESCUELA], activa: ESCUELA });
     montar(React.createElement(RotuloDeFormacion, { formation: 'ESCUELA' }));
-    expect(raiz!.toJSON()).toBeNull();
+    expect(sinNada(raiz!)).toBe(true);
 
     act(() => {
       prepararLaFormacionDeLaComunidad('admin-1', true, { disponibles: LAS_TRES });
       fijarLaEleccionRecordada('admin-1', null);
     });
     act(() => raiz!.update(React.createElement(RotuloDeFormacion, { formation: undefined })));
-    expect(raiz!.toJSON()).toBeNull();
+    expect(sinNada(raiz!)).toBe(true);
     act(() => raiz!.update(React.createElement(RotuloDeFormacion, { formation: 42 as unknown as string })));
-    expect(raiz!.toJSON()).toBeNull();
+    expect(sinNada(raiz!)).toBe(true);
     act(() => raiz!.update(React.createElement(RotuloDeFormacion, { formation: '   ' })));
-    expect(raiz!.toJSON()).toBeNull();
+    expect(sinNada(raiz!)).toBe(true);
   });
 });
 
@@ -145,6 +153,6 @@ describe('«Elige una formación arriba…»', () => {
   it('es una línea (no un diálogo) con el texto de lo que se quiso hacer', () => {
     montar(React.createElement(AvisoDeFormacionPorElegir, { texto: 'Elige una formación arriba para publicar.' }));
     expect(textos(raiz!)).toEqual(['Elige una formación arriba para publicar.']);
-    expect(raiz!.root.findByProps({ accessibilityRole: 'alert' })).toBeTruthy();
+    expect(conProps(raiz!, { accessibilityRole: 'alert' })).toBeTruthy();
   });
 });

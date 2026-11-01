@@ -23,12 +23,18 @@ import { BotonDescargarPodio } from '../BotonDescargarPodio';
 
 const entradas: EntradaRankingDto[] = [{ participanteId: 'a', fullName: 'Ana', posicion: 1, puntaje: 10 }];
 let raiz: ReactTestRenderer | null = null;
+/** El primer nodo con esas props (los tipos mínimos no traen `findByProps`); falla si no existe. */
+const conProps = (r: ReactTestRenderer, props: Record<string, unknown>) => {
+  const nodo = r.root.findAll(x => Object.entries(props).every(([k, v]) => x.props[k] === v))[0];
+  if (!nodo) throw new Error(`No hay un nodo con ${JSON.stringify(props)}`);
+  return nodo;
+};
 const montar = (props: Record<string, unknown>) => {
   act(() => {
     raiz = TestRenderer.create(React.createElement(BotonDescargarPodio, { entradas, tabla: 'general', fechaDelCorte: '2026-10-19', ...props }));
   });
 };
-const tocarDescargar = () => act(() => raiz!.root.findByProps({ accessibilityLabel: 'Descargar la imagen del podio' }).props.onPress());
+const tocarDescargar = () => act(() => conProps(raiz!, { accessibilityLabel: 'Descargar la imagen del podio' }).props.onPress());
 const textos = () => raiz!.root.findAll(x => (x.type as unknown) === 'Text').map(x => x.props.children);
 
 beforeEach(() => {

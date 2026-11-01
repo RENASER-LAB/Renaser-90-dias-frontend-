@@ -37,6 +37,8 @@ const comunidad = (cambios: Partial<Record<'GENERAL' | 'GRUPO' | 'SOPORTE' | 'DI
 });
 
 let raiz: ReactTestRenderer | null = null;
+/** Sin ningún elemento nativo dibujado (los tipos mínimos de `react-test-renderer` no traen `toJSON`). */
+const sinNada = (r: ReactTestRenderer) => r.root.findAll(x => typeof x.type === 'string').length === 0;
 const montar = async () => {
   await act(async () => {
     raiz = TestRenderer.create(React.createElement(SeccionComunidadDeLaFormacion, { codigo: 'DIPLOMADO' }));
@@ -171,7 +173,7 @@ describe('«Comunidad» en el detalle de una formación', () => {
   it('contra un backend anterior (404) la sección no se dibuja', async () => {
     leer.mockRejectedValue(new ApiError(404, 'Not Found'));
     await montar();
-    expect(raiz!.toJSON()).toBeNull();
+    expect(sinNada(raiz!)).toBe(true);
   });
 
   it('sin red dice qué pasó y ofrece «Reintentar»', async () => {
