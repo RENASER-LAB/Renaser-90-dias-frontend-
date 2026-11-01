@@ -5,6 +5,8 @@ import path from 'node:path';
 const leer = (relativa: string) => fs.readFileSync(path.resolve(__dirname, relativa), 'utf8');
 const FICHA = leer('../components/PagosDeLaPersona.tsx');
 const MI_INGRESO = leer('../components/FilaDeCuota.tsx');
+/** El código sin sus comentarios: un comentario que explica por qué ya no se usa `adjustsFontSizeToFit` no debe contar como usarlo. */
+const sinComentarios = (fuente: string) => fuente.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 
 /**
  * E2E de las formaciones (01/11/2026, issues #89 y #91). #89: al marcar una cuota como pagada y volver a pendiente, el monto de esa fila se dibujaba cortado
@@ -17,7 +19,8 @@ describe('el monto de una cuota nunca se recorta ni se parte', () => {
   it.each([
     ['la ficha (Pagos)', FICHA],
     ['«Mi ingreso»', MI_INGRESO],
-  ])('%s: sin `adjustsFontSizeToFit` ni `numberOfLines` en el monto', (_nombre, fuente) => {
+  ])('%s: sin `adjustsFontSizeToFit` ni `numberOfLines` en el monto', (_nombre, original) => {
+    const fuente = sinComentarios(original);
     expect(fuente).not.toContain('adjustsFontSizeToFit');
     const monto = fuente.indexOf('visible.monto') >= 0 ? fuente.indexOf('visible.monto') : fuente.indexOf('cuota.monto');
     expect(monto).toBeGreaterThan(0);
