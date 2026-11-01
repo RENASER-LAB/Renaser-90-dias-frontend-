@@ -4,6 +4,12 @@ import { mensajeDeError } from '../../../services/http/apiClient';
 import * as objetivosApi from '../api/objetivosApi';
 import { esRocaMaestraFija } from '../utils/objetivoFijo';
 import type { DefinicionRocaMaestra, EjeObjetivo, RocaMaestraApi } from '../types/objetivos.types';
+import type { ObjetivoParaConfirmar } from '../utils/objetivosPorConfirmar';
+
+/** Lo que devuelve `confirmar`: todo confirmado, o en qué eje falló (y cuáles ya se habían confirmado antes). */
+export type ResultadoDeConfirmar =
+  | { ok: true; confirmados: EjeObjetivo[] }
+  | { ok: false; confirmados: EjeObjetivo[]; falloEn: EjeObjetivo; mensaje: string };
 
 /**
  * El objetivo de 90 días del aprendiz, traído del backend. Se define una vez y queda fijo (D-234); después solo
@@ -76,10 +82,41 @@ export function useRocasMaestras() {
     }
   }, [cargar]);
 
+  /**
+   * Confirma los objetivos que nacieron del diagnóstico (spec 026): un `PUT /rocks/master/{eje}` por eje, **en serie**, solo
+   * con el texto (sin meta: el servidor lo marca confirmado). Se detiene en el primer fallo y dice en qué eje fue; los que ya
+   * se confirmaron quedan confirmados (cada respuesta reemplaza a su roca en memoria) y no se repiten.
+   */
+  const confirmar = useCallback(async (items: readonly ObjetivoParaConfirmar[]): Promise<ResultadoDeConfirmar> => {
+    setGuardando(true);
+    const confirmados: EjeObjetivo[] = [];
+    try {
+      for (const item of items) {
+        try {
+          const guardada = await objetivosApi.definirRocaMaestra(item.eje, { objetivo: item.objetivo });
+          setRocas(previas => [...previas.filter(r => r.eje !== item.eje), guardada]);
+          confirmados.push(item.eje);
+        } catch (e) {
+          // Si otro teléfono ya lo confirmó con otro texto, lo guardado manda: se vuelve a leer.
+          if (esRocaMaestraFija(e)) void cargar();
+          return {
+            ok: false,
+            confirmados,
+            falloEn: item.eje,
+            mensaje: mensajeDeError(e, 'No pudimos confirmar tu objetivo.'),
+          };
+        }
+      }
+      return { ok: true, confirmados };
+    } finally {
+      setGuardando(false);
+    }
+  }, [cargar]);
+
   const deEje = useCallback(
     (eje: EjeObjetivo) => rocas.find(r => r.eje === eje) ?? null,
     [rocas]
   );
 
-  return { rocas, deEje, cargando, error, guardando, definir, recargar: cargar };
+  return { rocas, deEje, cargando, error, guardando, definir, confirmar, recargar: cargar };
 }

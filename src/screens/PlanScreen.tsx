@@ -22,12 +22,15 @@ import { EditarObjetivoDelMesModal } from '../features/objetivos/components/Edit
 import { usePlanMensual } from '../features/objetivos/hooks/usePlanMensual';
 import { PlanDelEje } from '../features/objetivos/components/PlanDelEje';
 import { TarjetaDelObjetivo } from '../features/objetivos/components/TarjetasDelPlan';
+import { HojaConfirmarObjetivos } from '../features/objetivos/components/HojaConfirmarObjetivos';
+import { TarjetaRevisaTusObjetivos } from '../features/objetivos/components/TarjetaRevisaTusObjetivos';
 import { useRocasMaestras } from '../features/objetivos/hooks/useRocasMaestras';
 import type { EjeObjetivo, RocaMaestraApi } from '../features/objetivos/types/objetivos.types';
 import { EJES, ETIQUETA_CORTA_EJE, ETIQUETA_EJE } from '../features/objetivos/types/objetivos.types';
 import { conPrincipalPrimero, usePrioridadPrincipal } from '../features/objetivos/hooks/usePrioridadPrincipal';
 import { definicionConAvance, LINEA_OBJETIVO_FIJO } from '../features/objetivos/utils/objetivoFijo';
 import { iconoDelEje } from '../features/objetivos/utils/iconoDelEje';
+import { estaPorConfirmar, rocasPorConfirmar, type ObjetivoParaConfirmar } from '../features/objetivos/utils/objetivosPorConfirmar';
 import { semanaDe } from '../features/objetivos/utils/periodoDelPrograma';
 import { ESPACIO_PARA_LANZADOR } from '../features/renasia/components/RenasiaLauncher';
 import { useOcultarBarraAlDesplazar } from '../navigation/barraAlDesplazar/BarraInferior';
@@ -213,6 +216,8 @@ export default function PlanScreen() {
   const objetivoFijo = rocaAbierta != null;
   /** Fijo y sin número (Relaciones, por ejemplo): no hay nada que anotar, así que no hay botón. */
   const sinAvanceQueAnotar = objetivoFijo && rocaAbierta.meta == null;
+  /** Spec 026: un objetivo del diagnóstico sin confirmar no pide «anotar avance» sino revisarlo y confirmarlo (una vez). */
+  const abiertaPorConfirmar = estaPorConfirmar(rocaAbierta);
 
   /* El objetivo de ESTE MES para el eje abierto, calculado por el servidor (ver la cabecera de
      `api/planMensualApi.ts`). */
@@ -220,6 +225,18 @@ export default function PlanScreen() {
   const mesDelEjeAbierto = planMensual.mesEnCursoDe(ejeAbierto);
   const planDelEjeAbierto = planMensual.porEje.get(ejeAbierto);
   const [editandoMes, setEditandoMes] = useState(false);
+
+  /* Los objetivos que nacieron del diagnóstico y esperan confirmación (spec 026): tarjeta arriba y hoja para revisarlos. */
+  const pendientes = useMemo(() => rocasPorConfirmar(objetivos.rocas, ejesOrdenados), [objetivos.rocas, ejesOrdenados]);
+  const [revisando, setRevisando] = useState(false);
+  const confirmarObjetivos = async (items: ObjetivoParaConfirmar[]) => {
+    const resultado = await objetivos.confirmar(items);
+    if (resultado.ok) {
+      setRevisando(false);
+      confirmar('Tus objetivos de 90 días quedaron confirmados.');
+    }
+    return resultado;
+  };
 
   const cifraDelMesAbierto =
     mesDelEjeAbierto?.cifra != null && planDelEjeAbierto
@@ -262,12 +279,16 @@ export default function PlanScreen() {
   // GESTOS TÁCTILES DEL SISTEMA (BACKHANDLER)
   // =========================================================================
   useSystemBackHandler(() => {
+    if (revisando) {
+      setRevisando(false);
+      return true;
+    }
     if (editGoalModalVisible) {
       setEditGoalModalVisible(false);
       return true;
     }
     return false;
-  }, editGoalModalVisible);
+  }, editGoalModalVisible || revisando);
 
   // =========================================================================
   // HANDLERS
@@ -443,6 +464,9 @@ export default function PlanScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.pantalla}>
+          {/* Spec 026: mientras haya objetivos del diagnóstico por confirmar, lo primero es revisarlos. Al confirmarlos desaparece. */}
+          {pendientes.length > 0 ? <TarjetaRevisaTusObjetivos cantidad={pendientes.length} alRevisar={() => setRevisando(true)} /> : null}
+
           {/* El eje elegido manda sobre todo lo de abajo; el de la prioridad principal de la persona va primero. */}
           <ControlSegmentado
             opciones={ejesOrdenados.map(eje => ({
@@ -464,7 +488,7 @@ export default function PlanScreen() {
             cargando={objetivos.cargando}
             error={objetivos.error}
             cifraDelMes={cifraDelMesAbierto}
-            alAbrirOpciones={sinAvanceQueAnotar ? undefined : () => openEditGoalModal()}
+            alAbrirOpciones={abiertaPorConfirmar ? () => setRevisando(true) : sinAvanceQueAnotar ? undefined : () => openEditGoalModal()}
             alCambiarElMes={() => setEditandoMes(true)}
           />
 
@@ -484,6 +508,15 @@ export default function PlanScreen() {
           />
         </View>
       </ScrollView>
+
+      {/* HOJA: REVISAR Y CONFIRMAR LOS OBJETIVOS QUE NACIERON DEL DIAGNÓSTICO (spec 026) */}
+      <HojaConfirmarObjetivos
+        visible={revisando && pendientes.length > 0}
+        pendientes={pendientes}
+        guardando={objetivos.guardando}
+        alCerrar={() => setRevisando(false)}
+        alConfirmar={confirmarObjetivos}
+      />
 
       {/* ========================================================================= */}
       {/* HOJA: EL OBJETIVO DE 90 DÍAS (DEFINIRLO O ANOTAR EL AVANCE)               */}
