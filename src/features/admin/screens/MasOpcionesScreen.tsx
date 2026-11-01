@@ -32,6 +32,7 @@ export function MasOpcionesScreen({
   onAbrirImagenesDeFases,
   onAbrirHabitosDelPrograma,
   onAbrirPublicacionesOcultas,
+  onAbrirCodigoRenaserEnFichas,
 }: {
   onVolver: () => void;
   onAbrirStaff: () => void;
@@ -40,6 +41,7 @@ export function MasOpcionesScreen({
   onAbrirImagenesDeFases: () => void;
   onAbrirHabitosDelPrograma: () => void;
   onAbrirPublicacionesOcultas: () => void;
+  onAbrirCodigoRenaserEnFichas: () => void;
 }) {
   const barraAlDesplazar = useOcultarBarraAlDesplazar();
   const { c, t } = useTheme();
@@ -83,6 +85,14 @@ export function MasOpcionesScreen({
       detalle: 'Devolver al Muro lo que se ocultó, o eliminarlo para siempre',
       onPress: onAbrirPublicacionesOcultas,
       clave: CLAVES.muro,
+    },
+    /* Quién ve el Código Renaser en las fichas: un solo interruptor para el mentor, la guía y el líder (pedido del dueño del
+       31/10, backend D-299, spec 034). Apagado de fábrica. */
+    {
+      titulo: 'Código Renaser en las fichas',
+      detalle: 'Si el mentor y el líder ven el Código Renaser de los aprendices',
+      onPress: onAbrirCodigoRenaserEnFichas,
+      clave: CLAVES.admin,
     },
     {
       titulo: 'Equipo y roles',

@@ -36,6 +36,13 @@ local (nunca contra producción).
   `mi-radar/11–12` y `lider-ve-a-todos/01` ya entran por ahí). Los nombres de los hábitos ahora se ven en tipo oración: los flujos viejos que los buscaban en mayúsculas usan
   `(?i)` desde ese día.
 
+- `cierre-en-plan/` (spec 033, 2026-10-31): «Cierra tu día» ya no está en Training; vive en una tarjeta de Plan, bajo «Acciones que
+  mueven la meta», con «Ver mañana en Plan» y los cierres de los días anteriores en la misma tarjeta (solo lectura). **Escritos y
+  sin correr**; cada archivo dice su precondición. Reemplaza a la carpeta `cierre/` (que probaba la fila de Training).
+- `codigo-renaser-en-fichas/` (spec 034, 2026-10-31): Administración enciende y apaga si el mentor, la guía y el líder ven el Código
+  Renaser (Más opciones → «Código Renaser en las fichas»); apagado de fábrica. **Escritos y sin correr**: piden el backend con la
+  spec 034 y, además de la cuenta de Administración, la de un mentor con un aprendiz que ya respondió el Radar; ver su `README.md`.
+
 ## Cómo correrla
 
 1. Backend local (worktree propio, base clonada) con las fotos en local (`docs/DESPLIEGUE_Y_CI.md` §1.3 del backend).

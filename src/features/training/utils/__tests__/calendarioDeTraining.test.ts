@@ -672,7 +672,7 @@ describe('caso 9 · pasado el día 90 (graduado), sin día del programa, sin fas
   });
 
   it('GRADUADO: la lista del día y su resumen con nada, con horas rotas o todo sin hora, no dan NaN ni se caen', () => {
-    expect(armarListaDelDia([], m('10:00'))).toEqual({ enCurso: [], primero: null, marcaDelPrimero: null, sinHora: [], atrasados: [], cerrados: [], hechos: [], cierre: null });
+    expect(armarListaDelDia([], m('10:00'))).toEqual({ enCurso: [], primero: null, marcaDelPrimero: null, sinHora: [], atrasados: [], cerrados: [], hechos: [] });
     const roto: ItemBase[] = ['', null, '25:61', 'abc', '7', '07:5', '99:99'].map((hora, i) => ({ clave: `k${i}`, tipo: 'habito', hora, hecho: false }));
     const lista = armarListaDelDia(roto, m('10:00'));
     expect(claves(lista.sinHora)).toEqual(roto.map(x => x.clave));
