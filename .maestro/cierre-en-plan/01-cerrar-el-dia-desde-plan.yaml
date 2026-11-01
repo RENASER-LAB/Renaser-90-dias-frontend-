@@ -1,0 +1,68 @@
+# CP01 — «Cierra tu día» en Plan (spec 033; antes estaba en Training, spec 017): la tarjeta está bajo «Acciones que mueven la
+# meta», la hoja pregunta solo por lo que ya llegó a su hora (y por lo que no tiene hora), guardar deja la tarjeta en verde y
+# «Ver mañana en Plan» lleva a las acciones que Plan muestra de mañana.
+# ESCRITO Y SIN CORRER: se corre cuando haya emulador libre, con el backend local (base clonada, nunca producción).
+# Precondición: una cuenta con el Mapa de Renacimiento ACTIVO, el día SIN cerrar y dos acciones de hoy sin cumplir:
+# «Revisar las facturas» (con hora ya pasada) y «Llamar a mi mentor» (sin hora). Si el servidor no las da por llegadas
+# (reloj de prueba), el flujo falla a propósito: es lo que prueba.
+# Se corre con: .maestro/correr.sh .maestro/cierre-en-plan/01-cerrar-el-dia-desde-plan.yaml
+# cuenta: aprendiz
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "PLAN"
+- extendedWaitUntil:
+    visible: "Acciones que mueven la meta"
+    timeout: 30000
+# La tarjeta va DESPUÉS de las acciones (cerrar es lo último que se hace) y no lleva hora.
+- scrollUntilVisible:
+    element: "Cierra tu día"
+    direction: DOWN
+    timeout: 60000
+- assertVisible: "2 minutos · opcional, no da puntos"
+- takeScreenshot: CP01a-tarjeta-en-plan
+- tapOn: "Cierra tu día"
+- extendedWaitUntil:
+    visible: "Guardar mi cierre"
+    timeout: 30000
+- assertVisible: "¿Qué pasó?"
+- assertVisible: "Era a las 20:30 · quedó pendiente"
+# Primera tarjeta («Revisar las facturas»)…
+- tapOn:
+    text: "No me alcanzó el tiempo"
+    index: 0
+- tapOn:
+    text: "Hacerla a otra hora"
+    index: 0
+# …y segunda («Llamar a mi mentor»), que va debajo de su título.
+- scrollUntilVisible:
+    element: "Quedó pendiente"
+    direction: DOWN
+    centerElement: true
+    timeout: 30000
+- tapOn:
+    text: "Surgió otra cosa"
+    below: "Quedó pendiente"
+- tapOn:
+    text: "Pedir ayuda"
+    below: "Quedó pendiente"
+- takeScreenshot: CP01b-respondido
+- tapOn: "Guardar mi cierre"
+- extendedWaitUntil:
+    visible: "Día cerrado"
+    timeout: 30000
+# Ya no dice «Ver mañana en Training»: Training no tiene el cierre.
+- assertVisible: "Ver mañana en Plan"
+- assertNotVisible: "Ver mañana en Training"
+- takeScreenshot: CP01c-dia-cerrado
+# «Ver mañana en Plan» solo mueve: cierra la hoja y deja a la vista las acciones que vienen.
+- tapOn: "Ver mañana en Plan"
+- extendedWaitUntil:
+    visible: "Acciones que mueven la meta"
+    timeout: 30000
+- takeScreenshot: CP01d-acciones-de-manana
+- scrollUntilVisible:
+    element: "Día cerrado"
+    direction: DOWN
+    timeout: 60000
+- takeScreenshot: CP01e-tarjeta-verde

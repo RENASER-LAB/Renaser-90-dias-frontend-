@@ -1,5 +1,5 @@
 import { fuentes } from '../theme/fuentes';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput } from 'react-native';
 import { Alert } from '../components/Alerta';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -16,6 +16,9 @@ import { ControlSegmentado } from '../components/ControlSegmentado';
 import { ConfirmacionEnLinea } from '../components/ConfirmacionEnLinea';
 import { HojaDesdeAbajo } from '../components/hojaDesdeAbajo/HojaDesdeAbajo';
 import { tacto } from '../utils/tacto';
+import { useReducedMotion } from 'react-native-reanimated';
+import { CierreEnPlan } from '../features/cierre/components/CierreEnPlan';
+import { ejeDeLasAcciones } from '../features/cierre/utils/ejeDeLasAcciones';
 import { useResumenHome } from '../features/home/hooks/useResumenHome';
 import type { DiaDelPlan } from '../features/habits/utils/semanaDelPlan';
 import { useMapaRenacimientoAbierto } from '../features/mapa-renacimiento/MapaRenacimientoContext';
@@ -25,6 +28,7 @@ import { usePlanMensual } from '../features/objetivos/hooks/usePlanMensual';
 import { PlanDelEje } from '../features/objetivos/components/PlanDelEje';
 import { TarjetaDelObjetivo } from '../features/objetivos/components/TarjetasDelPlan';
 import { PuertaDelMapa } from '../features/objetivos/components/PuertaDelMapa';
+import { useAccionesDeHoy } from '../features/objetivos/hooks/useAccionesDeHoy';
 import { usePuertaDeObjetivos } from '../features/objetivos/hooks/usePuertaDeObjetivos';
 import { useRocasMaestras } from '../features/objetivos/hooks/useRocasMaestras';
 import type { EjeObjetivo, RocaMaestraApi } from '../features/objetivos/types/objetivos.types';
@@ -200,6 +204,29 @@ export default function PlanScreen() {
     user?.id ?? null,
     mapaAbierto,
   );
+  /**
+   * **«Cierra tu día»** (spec 033, 2026-10-31, pedido del dueño: «Cerrar el día se mueve a Plan»). Está siempre, con o sin Mapa
+   * (decisión 033-3 A): bajo «Acciones que mueven la meta» cuando hay Mapa y bajo «Primero tu Mapa de Renacimiento» cuando no.
+   * El eje de cada acción pendiente de la hoja sale de las acciones de hoy (el servidor no lo manda en el cierre).
+   */
+  const { rocas: rocasDeHoy } = useAccionesDeHoy();
+  const ejeDeLaAccion = useMemo(() => ejeDeLasAcciones(rocasDeHoy), [rocasDeHoy]);
+  const scrollRef = useRef<React.ComponentRef<typeof ScrollView>>(null);
+  const accionesRef = useRef<View>(null);
+  const interiorRef = useRef<View>(null);
+  const movimientoReducido = useReducedMotion();
+  /** «Ver mañana en Plan» (decisión 033-2 A, solo mover): lleva el scroll hasta «Acciones que mueven la meta», que ya muestra lo que viene. */
+  const verMananaEnPlan = useCallback(() => {
+    const scroll = scrollRef.current;
+    const destino = accionesRef.current;
+    const interior = interiorRef.current;
+    if (!scroll || !destino || !interior) return;
+    destino.measureLayout(
+      interior,
+      (_x, y) => scroll.scrollTo({ y: Math.max(0, y - 12), animated: !movimientoReducido }),
+      () => undefined,
+    );
+  }, [movimientoReducido]);
   /** El eje que se está mirando. */
   const [ejeAbierto, setEjeAbierto] = useState<EjeObjetivo>(EJE_POR_DEFECTO);
   /**
@@ -430,6 +457,17 @@ export default function PlanScreen() {
   // `principalPercent` se eliminó: el porcentaje lo calcula el backend y viaja en la respuesta, para
   // que no haya dos versiones de la misma regla (incluido el tope al 100 %).
 
+  const cierreDelDia = user?.id ? (
+    <CierreEnPlan
+      cuentaId={user.id}
+      diaPrograma={diaPrograma > 0 ? diaPrograma : null}
+      habitosHoy={resumen?.habitosHoy ?? null}
+      ejeDe={ejeDeLaAccion}
+      puedeVerManana={puerta === 'abierta'}
+      onVerManana={verMananaEnPlan}
+    />
+  ) : null;
+
   const estiloDelContenido = [
     styles.content,
     {
@@ -454,6 +492,8 @@ export default function PlanScreen() {
 
       <ScrollView
         {...barraAlDesplazar}
+        ref={scrollRef}
+        innerViewRef={interiorRef as React.RefObject<View>}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={estiloDelContenido}
         showsVerticalScrollIndicator={false}
@@ -463,6 +503,7 @@ export default function PlanScreen() {
         {puerta !== 'abierta' ? (
           <View style={{ marginTop: space.gap, paddingBottom: 28 }}>
             <PuertaDelMapa puerta={puerta} onHacerMapa={abrirMapa} onReintentar={reintentarPuerta} />
+            {cierreDelDia ? <View style={{ marginTop: 14 }}>{cierreDelDia}</View> : null}
           </View>
         ) : (
           <View style={styles.pantalla}>
@@ -503,6 +544,8 @@ export default function PlanScreen() {
               ejeAbierto={ejeAbierto}
               objetivoSugeridoDe={planMensual.objetivoSugeridoDe}
               onIrAlMapa={abrirMapa}
+              cierre={cierreDelDia}
+              registrarLasAcciones={accionesRef}
             />
           </View>
         )}

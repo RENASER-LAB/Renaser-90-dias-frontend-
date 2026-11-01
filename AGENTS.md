@@ -567,6 +567,45 @@ animaciones, íconos ni dependencias nuevas. Cada punto es un commit aparte de l
   `recordatoriosDeLasAcciones` (la fila, la hoja con el mismo control, las alarmas con la hoja cerrada) y `planDelEje`.
 * **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
 
+## Cambio por pedido del dueño — 2026-10-31 — «Cierra tu día» pasa de Training a Plan (spec 033)
+
+Textual: «Cerrar el día se mueve a Plan, todo de acuerdo a Plan.» Decisiones del dueño del mismo día: **todo la opción A** (spec y
+decisiones en `Renaser-90-dias-backend/specs/033-cierre-del-dia-en-plan/`; D-298). **Solo la app: el servidor no cambia** (`GET/PUT
+/api/v1/rocks/day-closure` y las lecturas de las fichas son las de la spec 017). Lo que cambia y nada más:
+* **Plan suma una tarjeta «Cierra tu día»** (`features/cierre/components/CierreEnPlan`, con `TarjetaDelCierreEnPlan`): medallón de luna, el título,
+  «2 minutos · opcional, no da puntos» y el chevron; toda la parte de arriba es un solo botón de 48 o más. Ya cerrada queda en verde con el
+  check, «Día cerrado» y lo que dijo para mañana («Mañana: «Revisar las facturas» a otra hora»), y se puede volver a abrir para cambiarlo mientras
+  el día no termine. **Es del día completo: no cambia con el selector de eje.** Va **bajo «Acciones que mueven la meta»** (cerrar es lo último que
+  se hace) y, **sin Mapa activo, bajo «Primero tu Mapa de Renacimiento»**: está **siempre** (decisión 033-3 A), con o sin Mapa, con o sin acciones
+  agendadas (una formación sin objetivos cierra igual, con su nota del día). Se calla donde ya se callaba la fila de Training: mientras no se sabe
+  (nada de parpadeos), contra un servidor anterior a la spec 017 (404), ante un fallo de red (se reintenta al volver al foco) y con el interruptor
+  `plan` de Soporte TI apagado (`CLAVES.plan`, que sigue tapando «Cierra tu día»).
+* **La hoja es la misma** (`HojaDelCierre`, pantalla completa; sus reglas, textos, el 409 y el cambio de día a medianoche no cambian). Sus cambios:
+  cada acción pendiente lleva **el ícono de su eje** (`iconoDelEje`; el servidor no manda el eje en el cierre, así que sale de las acciones de hoy
+  que Plan ya lee con `GET /rocks/today`, por id: `cierre/utils/ejeDeLasAcciones`; la que no figura lleva el ícono neutro `target`, nunca un eje
+  inventado) y el enlace de la pantalla final dice **«Ver mañana en Plan»**.
+* **«Ver mañana en Plan» solo mueve** (decisión 033-2 A): lleva el scroll hasta «Acciones que mueven la meta», que ya muestra lo que viene (hoy,
+  mañana y los próximos días). Sin automatismos ni atajos nuevos. **Se ofrece todos los días, también el domingo** (Plan muestra lo que viene), pero
+  solo si Plan muestra acciones, o sea con el Mapa activo (`puedeVerManana`). Espera a que la hoja se vaya antes de mover el scroll.
+* **Los días anteriores, en la misma tarjeta** (decisión 033-1 A): bajo la tarjeta, «Tus cierres de la semana» con los siete días de lunes a
+  domingo (`CierresAnterioresDeLaSemana`, `utils/semanaDelCierre`, puro). Se pueden tocar los que ya pasaron (hasta el lunes y desde el Día 1; hoy y
+  los que vienen no); la fila no se dibuja si no hay ninguno (lunes o Día 1). Tocar uno **solo lo lee**: «Miércoles 28 · Cerrado a las 21:40» con lo
+  que respondió de cada pendiente y la nota del día, o «Sin cerrar»; **nunca ofrece cerrarlo** (un día que terminó no se cierra tarde, D-259).
+  Se lee **solo al tocar, una vez por fecha y cuenta** (`useCierresAnteriores`, `lecturaDeCierres`: lo mismo que la spec 017); un fallo de red dice
+  «No pudimos cargar este día.» con «Reintentar»; un 400/403/404 o una respuesta que no calza, «No hay un cierre de ese día para mostrar.». Cambiar
+  de cuenta o de semana limpia la memoria. Cambio instantáneo y el «tic» de selección, sin animación.
+* **Training deja de tener «Cierra tu día»**: se borraron `FilaDelCierre`, el campo `cierre` de `ListaDelDia`, el tipo `cierre` de las filas, la
+  lectura del cierre de `TrainingPorHora`, la fila «Cerrado» / «Sin cerrar» de los días anteriores y las escuchas de `plan` / el cierre en
+  `TrainingScreen`. `itemDelCierre` pasó a `tarjetaDelCierre` (los textos de la tarjeta, sin la fila). Training queda como antes **menos** esa fila;
+  los hábitos, las acciones, los eventos, «N hechos hoy» y todo lo demás no cambian.
+* **No cambian**: la hoja por dentro, el servidor, las fichas del mentor, el líder y Administración («Cierres del día»), el semáforo, los puntos
+  (cerrar el día sigue sin dar puntos ni cumplir acciones), la barra de pestañas ni los demás tabs. Sin dependencias nuevas ni código nativo.
+* **Pruebas:** Jest `cierreEnPlan` (la tarjeta siempre, sin Mapa, 404, fallo de red, `plan` apagado, fuera de foco, medianoche, la hoja, el ícono de
+  eje, «Ver mañana» todos los días y solo con Mapa, el 409, los días anteriores y los cuatro casos de quien trabaja de noche),
+  `tarjetaDelCierre`, `semanaDelCierre`, `ejeDeLasAcciones`, `hojaDelCierre` y `trainingSinElCierre` (Training ya no monta nada del cierre);
+  se ajustaron `listaDelDia` y `calendarioDeTraining`. Maestro, escritos y sin correr: `.maestro/cierre-en-plan/`.
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). **Sin backend nuevo.**
+
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
 Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel especializado en React Native, Expo y TypeScript. Al crear, refactorizar o modificar cualquier pantalla o componente, debes cumplir OBLIGATORIAMENTE con los siguientes estándares:
@@ -1007,6 +1046,10 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     para quien hace su programa de 90 días, también el personal que lo hace). Decisiones del dueño del mismo día: lo ven la persona
     **y su acompañamiento** (mentor o guía, líder, Administración y Alquimista, en la ficha); es **opcional y sin puntos**, nunca
     resta ni cuenta en el semáforo, y un día sin cerrar solo dice «Sin cerrar». Lo que cambia y nada más:
+    > **Corregido 2026-10-31 (spec 033, pedido del dueño: «Cerrar el día se mueve a Plan, todo de acuerdo a Plan»).** «Cierra tu día»
+    > **ya no está en Training**: la fila (`FilaDelCierre`), el tipo `cierre` de la lista de hoy, la fila «Cerrado» / «Sin cerrar» de los días
+    > anteriores de Training y «Ver mañana en Training» se borraron. Vive en **Plan**, en una tarjeta. La hoja, las lecturas, el guardado, el
+    > servidor y las fichas **no cambian**. Ver la entrada «Cierra tu día en Plan (spec 033)», al final de las del 2026-10-31.
     * **La fila** (`features/cierre/components/FilaDelCierre`, un tipo nuevo `cierre` de la lista de hoy): «Cierra tu día · 2
       minutos», con fondo dorado suave (`goldWash`) y el ícono de luna; es **la última de hoy**, a la hora de Dormir de hoy **menos 30
       minutos**, y **a las 21:30 si Dormir no tiene hora** (sin Dormir hoy, pausado, o sin hora legible). Si Dormir cae pasada la
