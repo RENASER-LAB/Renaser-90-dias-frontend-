@@ -1,0 +1,45 @@
+# Aceptar a un aprendiz del Diplomado de 1 año con diagnóstico (spec 025, historia 1). ESCRITO Y SIN CORRER.
+# cuenta: admin
+# Precondición: una solicitud PENDIENTE de «Sol-Diplomado Uno»; el Diplomado activo con duraciones 90 y 365; un diagnóstico PUBLICADO (spec 026) para que
+# «Con diagnóstico» no esté apagado; el Diplomado tiene una recepción abierta.
+# Después de aceptar: con la cuenta de la persona se ve «Diplomado Renaser» en Hoy y su Día 1 con 365 días (flujo formaciones/02).
+appId: com.renaser.app
+---
+- runFlow: comun-abrir-solicitudes.yaml
+- extendedWaitUntil:
+    visible: "Sol-Diplomado Uno"
+    timeout: 30000
+- tapOn: "Aceptar a Sol-Diplomado Uno"
+- extendedWaitUntil:
+    visible: "Aceptar solicitud"
+    timeout: 15000
+# 1. Formación: el Diplomado pide la duración.
+- tapOn: "1. Formación.*"
+- tapOn:
+    text: "Diplomado Renaser"
+    index: 0
+- assertVisible: "¿Cuánto dura su programa?"
+- assertVisible: "3 meses"
+- assertVisible: "1 año"
+# Sin elegir la duración no se puede aceptar y la hoja dice qué falta.
+- assertVisible: "Elige la duración del programa."
+- takeScreenshot: S02a-pide-la-duracion
+- tapOn: "1 año"
+# 3. Ficha: con diagnóstico.
+- tapOn: "3. Ficha de entrada.*"
+- tapOn: "Con diagnóstico.*"
+- assertVisible: "Sol-Diplomado Uno entrará al Diplomado Renaser de 1 año como Aprendiz, con diagnóstico."
+- takeScreenshot: S02b-el-resumen
+- tapOn:
+    text: "Aceptar"
+    index: 1
+- extendedWaitUntil:
+    visible: "Sol-Diplomado Uno entró al Diplomado Renaser de 1 año como Aprendiz, con diagnóstico.*"
+    timeout: 20000
+- tapOn: "Aceptadas"
+- tapOn: "Diplomado"
+- extendedWaitUntil:
+    visible: "Sol-Diplomado Uno"
+    timeout: 20000
+- assertVisible: "Diplomado 1 año · Aprendiz · con diagnóstico"
+- takeScreenshot: S02c-filtradas-por-diplomado

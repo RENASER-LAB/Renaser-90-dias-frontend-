@@ -625,6 +625,34 @@ Muro, cursos, ranking— llega con las siguientes):
   (V125–V128). Con el APK nuevo contra un backend anterior todo queda como hoy; con el APK anterior contra el backend nuevo también (la formación
   por defecto es la Escuela).
 
+## Cambio por pedido del dueño — 2026-10-31 — Administración → Solicitudes: aceptar eligiendo formación, duración, rol y ficha (spec 025)
+
+Pedido del dueño (textual): «Al aceptar a la persona, primero se elige a qué formación entra; si es el Diplomado, si es de 3 meses o de 1 año. Luego, qué rol ocupará dentro de la app.
+Debe activarse con diagnóstico o sin diagnóstico.» Decisiones del 31/10 (025-1 a 025-8): «con diagnóstico» vale para cualquier rol; se puede cambiar la duración de quien ya empezó; se acepta una
+por una y varias a la vez; **viene marcado Escuela, Aprendiz y sin diagnóstico**. Backend D-302 (`specs/025-solicitud-con-formacion/`). Lo que cambia y nada más:
+* **«Aceptar» abre una hoja** (`AceptarSolicitudSheet`, `HojaDesdeAbajo`) en lugar de la fila de chips de rol que cada solicitud llevaba. Tres bloques numerados que se abren de a uno
+  (`BloqueDeAceptacion`): **1 Formación** (con la **duración** debajo si el Diplomado ofrece más de una: «3 meses» / «1 año», con las palabras que manda el servidor), **2 Rol** (los mismos
+  chips y orden de siempre, con los roles personalizados) y **3 Ficha de entrada** («Sin diagnóstico» / «Con diagnóstico»). Arriba, una **frase de resumen** («María entrará al Diplomado Renaser de
+  1 año como Aprendiz, con diagnóstico.») y «Aceptar» fijo abajo, apagado con una línea que dice qué falta. Aceptar a un aprendiz de la Escuela son **dos toques** (Aceptar y Aceptar). La hoja no
+  acepta sola: devuelve lo elegido y la pantalla hace el pedido.
+* **El rol decide cuántas formaciones se piden** (`modoDeFormacionDelRol`, en `utils/aceptarSolicitud`): el aprendiz, una; mentor, guía de aprendiz y líder, una o varias; Administración y
+  Alquimista, ninguna («ven las tres»). Cambiar el rol ajusta la formación conservando lo que siga valiendo. Un rol personalizado se pide según su rol base.
+* **Aceptar varias** (025-3 C): «Seleccionar varias» marca solicitudes (`Checkbox`) y «Aceptar N solicitudes» abre la misma hoja con **una misma elección**; se hacen **una por una**
+  (`aceptarUnaPorUna`): una que falla (la decidió otra persona) no deshace las demás; queda en la hoja con su motivo para reintentar. «La misma que la última» (solo en esta sesión) repite la
+  elección anterior sin aceptar por sí sola.
+* **La lista tiene tres vistas** (`ControlSegmentado`): Por decidir, Aceptadas y Rechazadas. Las aceptadas dicen «Aceptada por Ana el 31 oct» y qué se eligió («Diplomado 1 año · Aprendiz ·
+  con diagnóstico»; las de antes de las formaciones, «Escuela · sin diagnóstico»), con el filtro `FiltroDeFormacion` de la 022. Las rechazadas, el motivo.
+* **Contra un backend anterior** (sin `GET /account-requests/acceptance-options`, 404) la hoja pide solo el rol y **no manda formaciones**: el servidor viejo las ignoraría en silencio y la
+  persona entraría a la Escuela sin que quien la acepta lo sepa. «Con diagnóstico» no se ofrece mientras el servidor diga `diagnosisAvailable: false` (no hay diagnóstico publicado, spec 026).
+* **Cambiar la duración de quien ya empezó** (025-2 A): en la ficha de la persona (`FormacionDeLaPersona`), «Cambiar la duración» (`CambiarDuracionSheet`) pide la nueva duración entre las que
+  ofrece su formación y un motivo de 3 a 280 letras; conserva su día y mueve el último; el último ajuste de la ficha lo dice («su programa pasó de 3 meses a 1 año»). Quien todavía no empezó
+  se corrige con «Pasar a otra formación» (022).
+* **Pruebas:** Jest `aceptarSolicitud` (reglas por rol, duración, frase, descripción), `aceptarVarias`, `aceptarSolicitudApi` (cuerpo, filtro, opciones, servidor anterior) y `cambioDeDuracion`.
+  Maestro, escritos y sin correr: `.maestro/solicitud-con-formacion/`.
+* **No cambian:** Rechazar y borrar solicitudes, los demás tabs, «Equipo y roles», el resto de la ficha ni el onboarding de la persona (la ficha con o sin diagnóstico la pone la 026). Sin
+  dependencias nuevas ni código nativo.
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire) y el backend con la spec 025 antes.
+
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
 Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel especializado en React Native, Expo y TypeScript. Al crear, refactorizar o modificar cualquier pantalla o componente, debes cumplir OBLIGATORIAMENTE con los siguientes estándares:

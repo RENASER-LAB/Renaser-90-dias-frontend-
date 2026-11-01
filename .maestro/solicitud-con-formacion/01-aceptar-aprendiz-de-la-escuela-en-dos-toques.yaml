@@ -1,0 +1,38 @@
+# Aceptar a un aprendiz de la Escuela, sin diagnóstico: viene todo marcado, son DOS toques (spec 025, 025-4 B). ESCRITO Y SIN CORRER.
+# cuenta: admin  (Administración o Alquimista)
+# Precondición (base local, nunca producción): una solicitud PENDIENTE de «Sol-Escuela Uno»; la Escuela tiene una recepción abierta.
+# Se corre con: .maestro/correr.sh .maestro/solicitud-con-formacion/01-aceptar-aprendiz-de-la-escuela-en-dos-toques.yaml
+appId: com.renaser.app
+---
+- runFlow: comun-abrir-solicitudes.yaml
+- extendedWaitUntil:
+    visible: "Sol-Escuela Uno"
+    timeout: 30000
+- takeScreenshot: S01a-por-decidir
+- tapOn: "Aceptar a Sol-Escuela Uno"
+# La hoja abre con todo marcado y la frase del resumen.
+- extendedWaitUntil:
+    visible: "Aceptar solicitud"
+    timeout: 15000
+- assertVisible: "Sol-Escuela Uno entrará a la Escuela Renaser como Aprendiz, sin diagnóstico."
+- assertVisible: "Formación"
+- assertVisible: "Rol"
+- assertVisible: "Ficha de entrada"
+- takeScreenshot: S01b-la-hoja-con-todo-marcado
+- tapOn:
+    text: "Aceptar"
+    index: 1
+# Se acepta, la hoja se cierra y la solicitud sale de «Por decidir».
+- extendedWaitUntil:
+    visible: "Sol-Escuela Uno entró a la Escuela Renaser como Aprendiz.*"
+    timeout: 20000
+- assertNotVisible: "Aceptar a Sol-Escuela Uno"
+- takeScreenshot: S01c-aceptada
+# En «Aceptadas» dice quién y qué se eligió.
+- tapOn: "Aceptadas"
+- extendedWaitUntil:
+    visible: "Sol-Escuela Uno"
+    timeout: 20000
+- assertVisible: "Aceptada por.*"
+- assertVisible: "Escuela · Aprendiz · sin diagnóstico"
+- takeScreenshot: S01d-en-aceptadas

@@ -151,6 +151,20 @@ export const paginaAprendicesSchema = z
   })
   .passthrough();
 
+/**
+ * Lo que se eligió al aceptar una solicitud (spec 025, backend D-302): formaciones, duración, rol y si fue con diagnóstico. Todo es
+ * tolerante: un backend anterior no lo manda y un campo de más no rompe nada. Las aceptadas antes de las formaciones traen «Escuela,
+ * sin diagnóstico» y sin rol ni duración.
+ */
+export const aceptacionDeSolicitudSchema = z
+  .object({
+    formations: z.array(z.string()).catch([]),
+    durationDays: z.number().nullish().catch(null),
+    role: z.string().nullish().catch(null),
+    withDiagnosis: z.boolean().catch(false),
+  })
+  .passthrough();
+
 export const solicitudSchema = z
   .object({
     id: z.string(),
@@ -159,6 +173,34 @@ export const solicitudSchema = z
     status: z.string(),
     createdAt: z.string().nullish(),
     phone: z.string().nullish(),
+    reviewedAt: z.string().nullish(),
+    reviewedByName: z.string().nullish(),
+    rejectionReason: z.string().nullish(),
+    acceptance: aceptacionDeSolicitudSchema.nullish().catch(null),
+  })
+  .passthrough();
+
+/**
+ * `GET /api/v1/account-requests/acceptance-options` (spec 025): las formaciones que reciben personas nuevas, con sus duraciones y cómo se
+ * dicen, y si «Con diagnóstico» se puede ofrecer. Una respuesta rara se lee como «el servidor no lo ofrece» y la hoja queda sin esos bloques.
+ */
+export const opcionesDeAceptacionSchema = z
+  .object({
+    formations: z
+      .array(
+        z
+          .object({
+            code: z.string(),
+            name: z.string(),
+            description: z.string().nullish(),
+            durationsDays: z.array(z.number()).min(1),
+            durationLabels: z.array(z.string()).catch([]),
+            defaultDurationDays: z.number().nullish(),
+          })
+          .passthrough(),
+      )
+      .min(1),
+    diagnosisAvailable: z.boolean().catch(false),
   })
   .passthrough();
 
@@ -241,6 +283,8 @@ export type AprendizCandidatoApi = z.infer<typeof aprendizCandidatoSchema>;
 export type AprendizAdminApi = z.infer<typeof aprendizAdminSchema>;
 export type PaginaAprendicesApi = z.infer<typeof paginaAprendicesSchema>;
 export type SolicitudApi = z.infer<typeof solicitudSchema>;
+export type AceptacionDeSolicitudApi = z.infer<typeof aceptacionDeSolicitudSchema>;
+export type OpcionesDeAceptacionApi = z.infer<typeof opcionesDeAceptacionSchema>;
 export type PaginaSolicitudesApi = z.infer<typeof paginaSolicitudesSchema>;
 export type UsuarioStaffApi = z.infer<typeof usuarioStaffSchema>;
 export type PaginaStaffApi = z.infer<typeof paginaStaffSchema>;
@@ -258,6 +302,9 @@ export const ultimoAjusteDiaSchema = z
     motivo: z.string().nullish(),
     adjustedBy: z.string().nullish(),
     adjustedAt: z.string().nullish(),
+    /** Spec 025: solo cuando el ajuste cambió la duración del programa (el día no se movió). */
+    previousDuration: z.number().nullish(),
+    newDuration: z.number().nullish(),
   })
   .passthrough();
 
