@@ -1,0 +1,47 @@
+# Cambiar la duración del programa de un aprendiz del Diplomado que ya empezó: conserva su día (spec 025, 025-2 A). ESCRITO Y SIN CORRER.
+# cuenta: admin
+# Precondición: «Dip-Empezó Uno», aprendiz del Diplomado de 3 meses con su Día 1 elegido y en curso (no terminó). Sale en Administración → Personas.
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "YO"
+- scrollUntilVisible:
+    element: "Administración"
+    direction: DOWN
+    timeout: 40000
+- tapOn: "Administración"
+- scrollUntilVisible:
+    element: "Personas.*"
+    direction: DOWN
+    timeout: 40000
+- tapOn: "Personas.*"
+- tapOn: "Buscar por nombre o correo"
+- inputText: "Dip-Empezó"
+- tapOn: "Dip-Empezó Uno.*"
+- scrollUntilVisible:
+    element: "Cambiar la duración"
+    direction: DOWN
+    timeout: 40000
+- tapOn: "Cambiar la duración"
+- extendedWaitUntil:
+    visible: "Nueva duración"
+    timeout: 20000
+- assertVisible: "Hoy dura 3 meses. Seguirá en el mismo día; solo cambia cuándo termina."
+- tapOn: "1 año.*"
+- tapOn: "Por qué se cambia.*"
+- inputText: "Pidió más tiempo"
+- takeScreenshot: S05a-cambiar-la-duracion
+- tapOn:
+    text: "Cambiar la duración"
+    index: 1
+- extendedWaitUntil:
+    visible: "¿Cambiar la duración?"
+    timeout: 10000
+    optional: true
+- tapOn:
+    text: "Cambiar la duración"
+    optional: true
+- extendedWaitUntil:
+    visible: "Diplomado Renaser · 1 año"
+    timeout: 30000
+- takeScreenshot: S05b-un-anio

@@ -894,6 +894,42 @@ programa. Lo decide y filtra **siempre el servidor**; la app solo lo dibuja. Lo 
 * **Hace falta un APK nuevo** (solo JavaScript: no hay código nativo nuevo, pero la app no se actualiza por aire) **y el backend de la spec 023 antes**
   (V134–V136, y la 022).
 
+## Cambio por pedido del dueño — 2026-10-31 — Administración → Solicitudes: aceptar eligiendo formación, duración, rol y ficha (spec 025)
+
+Pedido del dueño (textual): «Al aceptar a la persona, primero se elige a qué formación entra; si es el Diplomado, si es de 3 meses o de 1 año. Luego, qué rol ocupará dentro de la app.
+Debe activarse con diagnóstico o sin diagnóstico.» Decisiones del 31/10 (025-1 a 025-8): «con diagnóstico» vale para cualquier rol; se puede cambiar la duración de quien ya empezó; se acepta una
+por una y varias a la vez; **viene marcado Escuela, Aprendiz y sin diagnóstico**. Backend D-302 (`specs/025-solicitud-con-formacion/`). Lo que cambia y nada más:
+* **«Aceptar» abre una hoja** (`AceptarSolicitudSheet`, `HojaDesdeAbajo`) en lugar de la fila de chips de rol que cada solicitud llevaba. Tres bloques numerados que se abren de a uno
+  (`BloqueDeAceptacion`): **1 Formación** (con la **duración** debajo si el Diplomado ofrece más de una: «3 meses» / «1 año», con las palabras que manda el servidor), **2 Rol** (los mismos
+  chips y orden de siempre, con los roles personalizados) y **3 Ficha de entrada** («Sin diagnóstico» / «Con diagnóstico»). Arriba, una **frase de resumen** («María entrará al Diplomado Renaser de
+  1 año como Aprendiz, con diagnóstico.») y «Aceptar» fijo abajo, apagado con una línea que dice qué falta. Aceptar a un aprendiz de la Escuela son **dos toques** (Aceptar y Aceptar). La hoja no
+  acepta sola: devuelve lo elegido y la pantalla hace el pedido.
+* **El rol decide cuántas formaciones se piden** (`modoDeFormacionDelRol`, en `utils/aceptarSolicitud`): el aprendiz, una; mentor, guía de aprendiz y líder, una o varias; Administración y
+  Alquimista, ninguna («ven las tres»). Cambiar el rol ajusta la formación conservando lo que siga valiendo. Un rol personalizado se pide según su rol base.
+* **Aceptar varias** (025-3 C): «Seleccionar varias» marca solicitudes (`Checkbox`) y «Aceptar N solicitudes» abre la misma hoja con **una misma elección**; se hacen **una por una**
+  (`aceptarUnaPorUna`): una que falla (la decidió otra persona) no deshace las demás; queda en la hoja con su motivo para reintentar. «La misma que la última» (solo en esta sesión) repite la
+  elección anterior sin aceptar por sí sola.
+* **La lista tiene tres vistas** (`ControlSegmentado`): Por decidir, Aceptadas y Rechazadas. Las aceptadas dicen «Aceptada por Ana el 31 oct» y qué se eligió («Diplomado 1 año · Aprendiz ·
+  con diagnóstico»; las de antes de las formaciones, «Escuela · sin diagnóstico»), con el filtro `FiltroDeFormacion` de la 022. Las rechazadas, el motivo.
+* **Contra un backend anterior** (sin `GET /account-requests/acceptance-options`, 404) la hoja pide solo el rol y **no manda formaciones**: el servidor viejo las ignoraría en silencio y la
+  persona entraría a la Escuela sin que quien la acepta lo sepa. «Con diagnóstico» no se ofrece mientras el servidor diga `diagnosisAvailable: false` (no hay diagnóstico publicado, spec 026).
+* **La ficha de la persona dice cómo entró** (US4, escenario 1; `AceptacionDeLaPersona`, entre «Su formación» y «Día del programa» de `FichaAprendizScreen`): «Cómo entró», «Aceptada por Ana el 31 de
+  octubre» y debajo lo que se eligió («Diplomado 1 año · Aprendiz · con diagnóstico»). **Dice exactamente lo mismo que la lista de «Aceptadas»**: las dos usan `textoDeLaAceptada`
+  (`utils/aceptarSolicitud`) y el servidor manda la misma forma `acceptance` en `GET /account-requests` y en `GET /admin/trainees/{id}` (con `acceptedByName` y `acceptedAt`). Es la foto de ese día:
+  la formación y la duración de HOY están en las secciones de arriba y pueden haber cambiado. Una cuenta que no entró por una solicitud (la invitó Administración) o un backend anterior: la sección
+  no se dibuja.
+* **El rol personalizado queda en la foto** (V142): si se aceptó con «Mentor junior», la lista y la ficha dicen «Mentor junior (Mentor)» —el nombre que tenía ese día y, entre paréntesis, su rol base—
+  (`customRoleId`, `customRoleName`; tolerantes: un backend anterior no los manda y se dice solo el rol base). Renombrar o borrar el rol después no cambia lo que dice lo aceptado.
+* **Cambiar de formación en la hoja vuelve a pedir la duración** (o la aplica sola si la nueva ofrece una única): no se arrastra en silencio la que quedó de la formación anterior.
+* **Cambiar la duración de quien ya empezó** (025-2 A): en la ficha de la persona (`FormacionDeLaPersona`), «Cambiar la duración» (`CambiarDuracionSheet`) pide la nueva duración entre las que
+  ofrece su formación y un motivo de 3 a 280 letras; conserva su día y mueve el último; el último ajuste de la ficha lo dice («su programa pasó de 3 meses a 1 año»). Quien todavía no empezó
+  se corrige con «Pasar a otra formación» (022).
+* **Pruebas:** Jest `aceptarSolicitud` (reglas por rol, duración, frase, descripción, rol personalizado, `textoDeLaAceptada`), `aceptarVarias`, `aceptarSolicitudApi` (cuerpo, filtro, opciones, servidor anterior), `cambioDeDuracion` y `aceptacionEnLaFicha` (la lista y la ficha dicen lo mismo).
+  Maestro, escritos y sin correr: `.maestro/solicitud-con-formacion/`.
+* **No cambian:** Rechazar y borrar solicitudes, los demás tabs, «Equipo y roles», el resto de la ficha ni el onboarding de la persona (la ficha con o sin diagnóstico la pone la 026). Sin
+  dependencias nuevas ni código nativo.
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire) y el backend con la spec 025 antes.
+
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
 Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel especializado en React Native, Expo y TypeScript. Al crear, refactorizar o modificar cualquier pantalla o componente, debes cumplir OBLIGATORIAMENTE con los siguientes estándares:

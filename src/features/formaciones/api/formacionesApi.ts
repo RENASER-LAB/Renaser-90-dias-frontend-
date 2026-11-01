@@ -74,3 +74,15 @@ export async function asignarFormaciones(personaId: string, formaciones: string[
 export async function trasladarAprendiz(personaId: string, datos: DatosDeTraslado): Promise<void> {
   await apiFetch<unknown>(`/api/v1/admin/trainees/${encodeURIComponent(personaId)}/formacion`, { method: 'POST', body: datos });
 }
+
+/**
+ * `POST /api/v1/admin/trainees/{id}/duracion` (spec 025, decisión 025-2 A): cambia la duración del programa de un aprendiz que YA empezó, con un
+ * motivo escrito. Conserva su día y mueve el último; queda en la bitácora de ajustes del reloj. 409 si ya terminó, si ya tiene esa duración o si su
+ * día actual no cabe en la nueva; 400 si la formación no ofrece esa duración.
+ */
+export async function cambiarDuracionDelPrograma(personaId: string, duracionDias: number, motivo: string): Promise<void> {
+  await apiFetch<unknown>(`/api/v1/admin/trainees/${encodeURIComponent(personaId)}/duracion`, {
+    method: 'POST',
+    body: { duracionDias, motivo },
+  });
+}

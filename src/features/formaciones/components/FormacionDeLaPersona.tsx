@@ -8,6 +8,7 @@ import { useFormacionDeUnaPersona } from '../hooks/useFormacionDeUnaPersona';
 import { etiquetaDeDuracion } from '../utils/etiquetaDeDuracion';
 import { detalleDeLaParticipacion, tituloDeLaParticipacion } from '../utils/historialDeFormaciones';
 import { nombreLargoDeFormacion } from '../utils/nombreDeFormacion';
+import { CambiarDuracionSheet } from './CambiarDuracionSheet';
 import { TrasladarAprendizSheet } from './TrasladarAprendizSheet';
 
 /**
@@ -31,6 +32,7 @@ export function FormacionDeLaPersona({
   const { c, t } = useTheme();
   const { datos, disponible, recargar } = useFormacionDeUnaPersona(personaId);
   const [trasladando, setTrasladando] = useState(false);
+  const [cambiandoDuracion, setCambiandoDuracion] = useState(false);
 
   if (!disponible || !datos) return null;
   const actual = datos.formacion;
@@ -64,7 +66,18 @@ export function FormacionDeLaPersona({
 
       {esAprendiz && actual ? (
         <>
+          {/* Spec 025 (025-2 A): quien ya empezó puede cambiar de duración sin cambiar de formación (p. ej. del Diplomado de 3 meses al de 1 año). */}
+          {datos.programaActivado ? <BotonSecundario etiqueta="Cambiar la duración" onPress={() => setCambiandoDuracion(true)} /> : null}
           <BotonSecundario etiqueta="Pasar a otra formación" onPress={() => setTrasladando(true)} />
+          <CambiarDuracionSheet
+            visible={cambiandoDuracion}
+            personaId={personaId}
+            nombre={nombre}
+            formacion={actual}
+            duracionActual={datos.duracionDias}
+            alCerrar={() => setCambiandoDuracion(false)}
+            alCambiar={() => void recargar()}
+          />
           <TrasladarAprendizSheet
             visible={trasladando}
             personaId={personaId}

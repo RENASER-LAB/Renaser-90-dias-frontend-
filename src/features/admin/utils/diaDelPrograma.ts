@@ -1,3 +1,4 @@
+import { etiquetaDeDuracion } from '../../formaciones/utils/etiquetaDeDuracion';
 import { ApiError } from '../../../services/http/apiClient';
 import { ultimoAjusteDiaSchema } from '../api/adminSchemas';
 
@@ -118,6 +119,9 @@ export type UltimoAjusteDia = {
   motivo: string | null;
   ajustadoPor: string | null;
   ajustadoEn: string | null;
+  /** Spec 025: solo si el ajuste fue un cambio de DURACIÓN del programa (el día no se movió). */
+  duracionAnterior?: number | null;
+  duracionNueva?: number | null;
 };
 
 /**
@@ -135,6 +139,8 @@ export function leerUltimoAjuste(dato: unknown): UltimoAjusteDia | null {
     motivo: a.motivo?.trim() || null,
     ajustadoPor: a.adjustedBy ?? null,
     ajustadoEn: a.adjustedAt ?? null,
+    duracionAnterior: a.previousDuration ?? null,
+    duracionNueva: a.newDuration ?? null,
   };
 }
 
@@ -151,7 +157,10 @@ const MESES = [
  * quien mira.
  */
 export function textoDelUltimoAjuste(ajuste: UltimoAjusteDia, quien: string | null): string {
-  let texto = `Último ajuste: del día ${ajuste.diaAnterior} al ${ajuste.diaNuevo} por ${quien || 'alguien del equipo'}`;
+  const cambioLaDuracion = ajuste.duracionNueva != null && ajuste.duracionAnterior != null;
+  let texto = cambioLaDuracion
+    ? `Último ajuste: su programa pasó de ${etiquetaDeDuracion(ajuste.duracionAnterior as number)} a ${etiquetaDeDuracion(ajuste.duracionNueva as number)} por ${quien || 'alguien del equipo'}`
+    : `Último ajuste: del día ${ajuste.diaAnterior} al ${ajuste.diaNuevo} por ${quien || 'alguien del equipo'}`;
   const fecha = ajuste.ajustadoEn ? new Date(ajuste.ajustadoEn) : null;
   if (fecha && !Number.isNaN(fecha.getTime())) {
     texto += `, el ${fecha.getDate()} de ${MESES[fecha.getMonth()]}`;

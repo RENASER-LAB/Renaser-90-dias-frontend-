@@ -43,6 +43,7 @@ import { CambiarDiaScreen } from './CambiarDiaScreen';
 import { EliminarCuentaAdminScreen } from './EliminarCuentaAdminScreen';
 import { rotuloDeFase } from '../../home/hooks/useResumenHome';
 import { FormacionDeLaPersona } from '../../formaciones/components/FormacionDeLaPersona';
+import { AceptacionDeLaPersona } from '../components/AceptacionDeLaPersona';
 import { useOcultarBarraAlDesplazar } from '../../../navigation/barraAlDesplazar/BarraInferior';
 
 /**
@@ -275,6 +276,13 @@ export function FichaAprendizScreen({
             setAvisoFinal(`Listo: ${nombre} pasó a ${destino}.`);
             void programa.recargar();
           }}
+        />
+
+        {/* Cómo entró: lo que se decidió al aceptar su solicitud, igual que la lista de «Aceptadas» (spec 025, US4). */}
+        <AceptacionDeLaPersona
+          aceptacion={programa.detalle?.acceptance}
+          aceptadaPor={programa.detalle?.acceptedByName}
+          aceptadaEn={programa.detalle?.acceptedAt}
         />
 
         {/* Día del programa (26/09, D-82). El botón aparece solo si el servidor entregó el detalle
