@@ -20,7 +20,8 @@ export type IconName =
   | 'wrench' | 'toggleRight'
   | 'bellOff'
   | 'chartNoAxesColumn'
-  | 'ellipsis';
+  | 'ellipsis'
+  | 'wallet';
 
 /**
  * Grosor del trazo, en píxeles REALES de pantalla, a cualquier tamaño (decisión del dueño,
@@ -982,6 +983,14 @@ export function Icon({ name, size = 20, color, strokeWidth }: Props) {
           <Circle {...s24} cx={12} cy={12} r={1} />
           <Circle {...s24} cx={19} cy={12} r={1} />
           <Circle {...s24} cx={5} cy={12} r={1} />
+        </Svg>
+      );
+    /* Mi ingreso (2026-11-01, spec 032): la billetera de la fila de Yo que lleva a los pagos. Forma de Lucide (ISC, `wallet`), caja de 24 y trazo `s24`. */
+    case 'wallet':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Path {...s24} d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1" />
+          <Path {...s24} d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4" />
         </Svg>
       );
     case 'chevron':

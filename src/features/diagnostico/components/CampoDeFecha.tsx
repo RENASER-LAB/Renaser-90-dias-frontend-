@@ -30,6 +30,11 @@ interface CampoDeFechaProps {
   valor: string;
   alCambiar: (valor: string) => void;
   hayError?: boolean;
+  /**
+   * Spec 032 (cronograma de pagos): una fila de una lista, no una pregunta. La fecha se dice corta («15 nov 2026»), sin chevron y con
+   * menos relleno, para que entren la fecha, el monto y el botón de quitar en una sola línea. Las ruedas y lo que guarda son los mismos.
+   */
+  compacto?: boolean;
 }
 
 /**
@@ -38,7 +43,7 @@ interface CampoDeFechaProps {
  * fecha cualquiera. Guarda `DD/MM/AAAA`, igual que el selector de la ficha. Cerrar la hoja de otro modo que «Listo» no cambia
  * la fecha.
  */
-export function CampoDeFecha({ etiqueta, valor, alCambiar, hayError = false }: CampoDeFechaProps) {
+export function CampoDeFecha({ etiqueta, valor, alCambiar, hayError = false, compacto = false }: CampoDeFechaProps) {
   const { c, t } = useTheme();
   const hoy = useMemo(() => hoyEnLima(), []);
   const [abierta, setAbierta] = useState(false);
@@ -68,7 +73,7 @@ export function CampoDeFecha({ etiqueta, valor, alCambiar, hayError = false }: C
     setAbierta(false);
   };
 
-  const texto = elegida ? fechaEnPalabras(elegida) : '';
+  const texto = elegida ? (compacto ? `${elegida.dia} ${MESES[elegida.mes - 1].slice(0, 3)} ${elegida.anio}` : fechaEnPalabras(elegida)) : '';
 
   return (
     <View>
@@ -77,16 +82,16 @@ export function CampoDeFecha({ etiqueta, valor, alCambiar, hayError = false }: C
         accessibilityRole="button"
         accessibilityLabel={`${etiqueta}: ${texto || 'sin elegir'}`}
         accessibilityHint="Abre las ruedas de día, mes y año"
-        style={[estilos.campo, { borderColor: hayError ? c.danger : c.borderStrong, backgroundColor: c.cardBgAlt }]}
+        style={[estilos.campo, compacto && estilos.campoCompacto, { borderColor: hayError ? c.danger : c.borderStrong, backgroundColor: c.cardBgAlt }]}
       >
         <Icon name="calendar" size={20} color={c.goldInk} />
         <Text
           numberOfLines={1}
           style={[t.body, estilos.valor, texto ? { color: c.textStrong, fontFamily: fuentes.media } : { color: c.tabInactive }]}
         >
-          {texto || 'Elige la fecha'}
+          {texto || (compacto ? 'Fecha' : 'Elige la fecha')}
         </Text>
-        <Icon name="chevron" size={16} color={c.chevron} />
+        {compacto ? null : <Icon name="chevron" size={16} color={c.chevron} />}
       </Presionable>
 
       <HojaDesdeAbajo
@@ -118,6 +123,7 @@ const estilos = StyleSheet.create({
     minHeight: 56,
     gap: 12,
   },
+  campoCompacto: { paddingHorizontal: 10, gap: 6 },
   valor: { flex: 1, fontSize: 16 },
   ruedas: { flexDirection: 'row', paddingHorizontal: 20, paddingVertical: 8, gap: 4 },
   franja: {
