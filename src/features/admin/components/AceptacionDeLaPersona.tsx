@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { MicroLabel } from '../../../components/ui';
+import { TituloDeSeccion } from '../../../components/Legible';
 import { fuentes } from '../../../theme/fuentes';
 import { useTheme } from '../../../theme/ThemeContext';
 import type { AceptacionDeSolicitudApi } from '../api/adminSchemas';
@@ -31,7 +31,7 @@ export function AceptacionDeLaPersona({
       accessibilityLabel={`Cómo entró. ${titulo}. ${detalle ?? ''}`}
       style={[estilos.tarjeta, { backgroundColor: c.cardBg, borderColor: c.border }]}
     >
-      <MicroLabel>Cómo entró</MicroLabel>
+      <TituloDeSeccion>Cómo entró</TituloDeSeccion>
       <Text style={[t.body, { color: c.textStrong, fontSize: 16, lineHeight: 23, fontFamily: fuentes.media }]}>{titulo}</Text>
       {detalle ? <Text style={[t.body, { color: c.text, fontSize: 16, lineHeight: 23 }]}>{detalle}</Text> : null}
     </View>

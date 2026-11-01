@@ -136,6 +136,6 @@ describe('dónde vive en Yo', () => {
     expect(yo).toMatch(/terminosAceptados\?\.tipo === 'listo' \? \(\s*<Presionable[\s\S]*?setActiveView\('terminos'\)/);
     expect(yo).toMatch(/\{activeView === 'terminos' && \(/);
     expect(yo).toMatch(/<TerminosAceptadosVista aceptados=\{terminosAceptados\.aceptados\} \/>/);
-    expect(yo).toContain('{etapasOnboarding.completadas} de {ONBOARDING_STAGES.length} etapas completadas');
+    expect(yo).toContain("{etapasOnboarding.completadas} de {ONBOARDING_STAGES.length} {ONBOARDING_STAGES.length === 1 ? 'etapa completada' : 'etapas completadas'}");
   });
 });

@@ -94,9 +94,9 @@ export function AceptarSolicitudSheet({
       etiquetaCerrar="Cerrar sin aceptar"
       pie={
         <View style={estilos.pie}>
-          {falta ? <Text style={[t.small, estilos.aviso, { color: c.textSoft }]}>{falta}</Text> : null}
+          {falta ? <Text style={[t.small, estilos.aviso, { color: c.textSoft, fontSize: 16 }]}>{falta}</Text> : null}
           {error ? (
-            <Text accessibilityRole="alert" style={[t.small, estilos.aviso, { color: c.danger }]}>
+            <Text accessibilityRole="alert" style={[t.small, estilos.aviso, { color: c.danger, fontSize: 16 }]}>
               {error}
             </Text>
           ) : null}
@@ -145,7 +145,7 @@ export function AceptarSolicitudSheet({
               <Text style={[t.body, { color: c.textSoft, fontSize: 16 }]}>Administración y Alquimista ven las tres formaciones: no hace falta elegir.</Text>
             ) : (
               <>
-                <Text style={[t.small, { color: c.textSoft, fontSize: 14 }]}>
+                <Text style={[t.small, { color: c.textSoft, fontSize: 16 }]}>
                   {modo === 'una' ? 'Un aprendiz entra a una sola formación.' : 'Puedes marcar una o varias.'}
                 </Text>
                 {opciones.formations.map(formacion => {
@@ -171,7 +171,7 @@ export function AceptarSolicitudSheet({
                       <View style={{ flex: 1, gap: 2 }}>
                         <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 17 }]}>{formacion.name}</Text>
                         {sinTerminos ? (
-                          <Text style={[t.small, { color: c.textSoft, fontSize: 15 }]}>Todavía no tiene términos publicados.</Text>
+                          <Text style={[t.small, { color: c.textSoft, fontSize: 16 }]}>Todavía no tiene términos publicados.</Text>
                         ) : null}
                       </View>
                       {marcada ? <Icon name="check" size={20} color={c.goldInk} /> : null}
@@ -180,7 +180,7 @@ export function AceptarSolicitudSheet({
                 })}
                 {duraciones.length > 0 ? (
                   <View style={{ gap: 8 }}>
-                    <Text style={[t.small, { color: c.textSoft, fontSize: 14 }]}>¿Cuánto dura su programa?</Text>
+                    <Text style={[t.small, { color: c.textSoft, fontSize: 16 }]}>¿Cuánto dura su programa?</Text>
                     <View accessibilityRole="radiogroup" accessibilityLabel="Duración del programa" style={estilos.chips}>
                       {duraciones.map(dias => (
                         <ChipDeOpcion
@@ -222,7 +222,7 @@ export function AceptarSolicitudSheet({
               />
             ))}
           </View>
-          {rol ? <Text style={[t.small, { color: c.textSoft, fontSize: 15 }]}>{queImplicaLaOpcion(rol)}</Text> : null}
+          {rol ? <Text style={[t.small, { color: c.textSoft, fontSize: 16 }]}>{queImplicaLaOpcion(rol)}</Text> : null}
         </BloqueDeAceptacion>
 
         {opciones ? (
@@ -296,7 +296,7 @@ function OpcionDeFicha({
     >
       <View style={{ flex: 1, gap: 2 }}>
         <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 17 }]}>{etiqueta}</Text>
-        <Text style={[t.small, { color: c.textSoft, fontSize: 15, fontFamily: fuentes.regular }]}>{ayuda}</Text>
+        <Text style={[t.small, { color: c.textSoft, fontSize: 16, fontFamily: fuentes.regular }]}>{ayuda}</Text>
       </View>
       {marcada ? <Icon name="check" size={20} color={c.goldInk} /> : null}
     </Pressable>
@@ -306,7 +306,7 @@ function OpcionDeFicha({
 const estilos = StyleSheet.create({
   cuerpo: { gap: 12, paddingHorizontal: 20, paddingBottom: 24 },
   pie: { gap: 8, paddingHorizontal: 20, paddingBottom: 8 },
-  aviso: { fontSize: 15, lineHeight: 21 },
+  aviso: { fontSize: 16, lineHeight: 22 },
   resumen: { borderWidth: 1, borderRadius: 14, padding: 14 },
   laMisma: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 48, paddingHorizontal: 14, borderWidth: 1, borderRadius: 14 },
   fila: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 56, paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1, borderRadius: 12 },

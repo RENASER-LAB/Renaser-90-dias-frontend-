@@ -46,10 +46,10 @@ export function BloqueDeAceptacion({
         style={estilos.cabecera}
       >
         <View style={[estilos.numero, { backgroundColor: abierto ? c.gold : c.goldWash }]}>
-          <Text style={[t.small, { color: abierto ? c.onGold : c.goldInk, fontFamily: fuentes.negrita, fontSize: 14 }]}>{numero}</Text>
+          <Text style={[t.small, { color: abierto ? c.onGold : c.goldInk, fontFamily: fuentes.negrita, fontSize: 16 }]}>{numero}</Text>
         </View>
         <View style={estilos.textos}>
-          <Text style={[t.small, { color: c.textSoft, fontSize: 14 }]}>{titulo}</Text>
+          <Text style={[t.small, { color: c.textSoft, fontSize: 16 }]}>{titulo}</Text>
           <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 17 }]} numberOfLines={abierto ? undefined : 2}>
             {valor}
           </Text>
