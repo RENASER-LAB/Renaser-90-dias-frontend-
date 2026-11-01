@@ -23,9 +23,12 @@ export function lineaDeCifras(tarjeta: Pick<TarjetaDeFormacion, 'aprendicesActiv
   ].join(' · ');
 }
 
-/** Cuánto hay por atender en total: la suma de las tres colas, que es lo que dice la tarjeta. */
+/**
+ * Lo que dice «N por atender» en la tarjeta: los grupos sin mentor y los aprendices sin grupo DE ESA formación. El personal sin ninguna
+ * formación no es de ninguna, así que no se suma a ninguna tarjeta (se ve aparte en el detalle y en «Equipo y roles»).
+ */
 export function totalPorAtender(porAtender: DetalleDeFormacion['porAtender']): number {
-  return porAtender.gruposSinMentor + porAtender.aprendicesSinGrupo + porAtender.personalSinFormacion;
+  return porAtender.gruposSinMentor + porAtender.aprendicesSinGrupo;
 }
 
 /** El estado en una palabra: lo que se ve en el detalle bajo el nombre. */

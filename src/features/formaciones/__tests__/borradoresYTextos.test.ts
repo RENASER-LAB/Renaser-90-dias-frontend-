@@ -136,7 +136,8 @@ describe('los textos del centro', () => {
     expect(lineaDeDuraciones(resumen({ etiquetasDeDuracion: [] }))).toBe('Sin duración');
     expect(lineaDeCifras({ aprendicesActivos: 1, personal: 0, grupos: 1 })).toBe('1 aprendiz · 0 de personal · 1 grupo');
     expect(lineaDeCifras({ aprendicesActivos: 12, personal: 3, grupos: 2 })).toBe('12 aprendices · 3 de personal · 2 grupos');
-    expect(totalPorAtender({ gruposSinMentor: 2, aprendicesSinGrupo: 3, personalSinFormacion: 1 })).toBe(6);
+    // El número de la tarjeta: solo lo de esa formación; el personal sin formación no es de ninguna.
+    expect(totalPorAtender({ gruposSinMentor: 2, aprendicesSinGrupo: 3, personalSinFormacion: 1 })).toBe(5);
     expect(estadoDeLaFormacion(resumen())).toBe('Disponible');
     expect(estadoDeLaFormacion(resumen({ activa: false }))).toBe('No disponible');
   });

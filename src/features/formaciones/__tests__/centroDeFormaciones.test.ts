@@ -154,6 +154,16 @@ describe('Formaciones: el detalle de una', () => {
   });
 });
 
+describe('Formaciones: el personal sin formación', () => {
+  it('se dice aparte, «en todo Renaser», porque no es de esta formación ni de otra', () => {
+    mockCentro.detalle = detalle({ porAtender: { gruposSinMentor: 0, aprendicesSinGrupo: 0, personalSinFormacion: 2 } });
+    montar(React.createElement(FormacionDetalleAdminScreen, { codigo: 'DIPLOMADO', onVolver: jest.fn(), onVerPersonas: jest.fn(), onVerGrupos: jest.fn() }));
+    expect(textos()).not.toContain('Nada por atender en esta formación.');
+    expect(conEtiqueta('Personal sin formación (en todo Renaser): 2')).toBeDefined();
+    expect(conEtiqueta('Grupos sin mentor: 0')).toBeDefined();
+  });
+});
+
 describe('Formaciones: editar', () => {
   const abrir = (alGuardar = jest.fn(), alCerrar = jest.fn()) => {
     montar(React.createElement(EditarFormacionSheet, { visible: true, resumen: resumen(), alCerrar, alGuardar }));

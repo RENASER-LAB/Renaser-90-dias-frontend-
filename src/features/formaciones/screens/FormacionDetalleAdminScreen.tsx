@@ -109,13 +109,16 @@ export function FormacionDetalleAdminScreen({
             <View style={estilos.seccion}>
               <TituloDeSeccion>Por atender</TituloDeSeccion>
               <View style={[estilos.caja, { backgroundColor: c.cardBg, borderColor: c.border }]}>
-                {porAtender === 0 ? (
+                {porAtender === 0 && detalle.porAtender.personalSinFormacion === 0 ? (
                   <Text style={[t.body, estilos.texto, { color: c.textSoft }]}>Nada por atender en esta formación.</Text>
                 ) : (
                   <>
                     <Fila etiqueta="Grupos sin mentor" valor={detalle.porAtender.gruposSinMentor} resaltar />
                     <Fila etiqueta="Aprendices sin grupo" valor={detalle.porAtender.aprendicesSinGrupo} resaltar />
-                    <Fila etiqueta="Personal sin formación" valor={detalle.porAtender.personalSinFormacion} resaltar />
+                    {/* No es de esta formación ni de otra (no tiene ninguna): se cuenta en todo Renaser y no se suma al número de la tarjeta. */}
+                    {detalle.porAtender.personalSinFormacion > 0 ? (
+                      <Fila etiqueta="Personal sin formación (en todo Renaser)" valor={detalle.porAtender.personalSinFormacion} resaltar />
+                    ) : null}
                   </>
                 )}
               </View>
