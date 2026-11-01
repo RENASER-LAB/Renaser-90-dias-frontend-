@@ -546,7 +546,7 @@ export default function PlanScreen() {
         contentContainerStyle={estiloDelContenido}
         showsVerticalScrollIndicator={false}
       >
-        <View style={[styles.pantalla, sinProgramaPropio ? styles.pantallaSinPrograma : null]}>
+        <View style={styles.pantalla}>
           {/* El programa propio, arriba de todo y sin hueco cuando no hay nada que decir (el hook ya sabe si hay fila). Sin programa propio el
               estado vacío ya trae su botón «Elegir mi Día 1»: la fila solo queda si hubo un fallo al comprobar y hay que reintentar. */}
           {programaPropio.visible && (!sinProgramaPropio || programaPropio.error !== null) ? <FilaDelProgramaPropio programa={programaPropio} /> : null}
@@ -768,8 +768,6 @@ const styles = StyleSheet.create({
   },
   /** El eje elegido, su objetivo y lo de la semana: tarjetas una debajo de otra, con aire entre ellas. */
   pantalla: { gap: 14, paddingTop: 12, paddingBottom: 28 },
-  /* Sin programa propio el estado vacío llena el alto que sobra y se centra en él (issue #82). */
-  pantallaSinPrograma: { flexGrow: 1 },
   etiquetaDeCampo: {
     fontFamily: fuentes.media,
     fontSize: 14,

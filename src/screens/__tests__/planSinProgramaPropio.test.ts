@@ -36,10 +36,13 @@ describe('Plan sin programa propio', () => {
     expect(PLAN).toContain('programaPropio.visible && (!sinProgramaPropio || programaPropio.error !== null) ? <FilaDelProgramaPropio');
   });
 
-  it('el estado vacío llena el alto que sobra y se centra (nada de media pantalla en blanco)', () => {
-    expect(PLAN).toContain('<View style={[styles.pantalla, sinProgramaPropio ? styles.pantallaSinPrograma : null]}>');
-    expect(PLAN).toMatch(/pantallaSinPrograma: \{ flexGrow: 1 \}/);
-    expect(ESTADO_VACIO).toMatch(/cuerpo: \{ flexGrow: 1, alignItems: 'center', justifyContent: 'center'/);
+  it('E2E #85: el estado vacío va ARRIBA, pegado a la cabecera y con el aire normal entre secciones, no centrado en la pantalla', () => {
+    expect(PLAN).toContain('<View style={styles.pantalla}>');
+    expect(PLAN).not.toContain('pantallaSinPrograma');
+    // Una tarjeta más de Plan: nada que estire el bloque ni lo centre.
+    expect(ESTADO_VACIO).toMatch(/tarjeta: \{ borderWidth: 1, borderRadius: 16, padding: 17, gap: 12 \}/);
+    expect(ESTADO_VACIO).not.toContain('flexGrow');
+    expect(ESTADO_VACIO).not.toMatch(/cuerpo:/);
   });
 
   it('dice qué pasa y trae el botón «Elegir mi Día 1» (el mismo selector de siempre)', () => {
