@@ -606,6 +606,43 @@ decisiones en `Renaser-90-dias-backend/specs/033-cierre-del-dia-en-plan/`; D-298
   se ajustaron `listaDelDia` y `calendarioDeTraining`. Maestro, escritos y sin correr: `.maestro/cierre-en-plan/`.
 * **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). **Sin backend nuevo.**
 
+## Cambio por pedido del dueño — 2026-10-31 — «Código Renaser en las fichas»: Administración decide si el mentor y el líder lo ven (spec 034)
+
+Textual: «El líder de mentores y el mentor no pueden ver el Código Renaser: un interruptor para activar y desactivar.» Decisiones del dueño del
+mismo día (spec y decisiones en `Renaser-90-dias-backend/specs/034-codigo-renaser-visible-por-admin/`; D-299): **de fábrica apagado**, **un solo**
+interruptor para el mentor, la guía y el líder juntos, apagado **no ven nada** (ni un indicador de «registró / no registró»), lo deciden
+**Administración, Alquimista y Soporte TI**, **sin motivo escrito** y **sin avisar** a la persona, al mentor ni al líder. Lo que cambia y nada más:
+* **El servidor lo hace cumplir** (no es solo esconder la sección): es una funcionalidad más del catálogo de Soporte TI, `radar.fichas` («Código Renaser
+  en las fichas», hija de `radar`), que nace apagada para MENTOR, TRAINEE_GUIDE y MENTOR_LEAD. Apagada **se esconde** (404
+  `FUNCIONALIDAD_NO_DISPONIBLE`, no el aviso de mantenimiento) en las tres lecturas ajenas del Código Renaser —`GET /mentor/groups/{g}/learners/{u}/radar`,
+  `GET /leadership/groups/{g}/people/{p}/radar` y `GET /leadership/people/{p}/radar`— y entra en `noDisponibles` de `GET /funcionalidades/mias`. El 403
+  de siempre gana al 404. Administración y Alquimista no están entre los roles que se apagan, y la propia persona no pasa por ahí (`/radar/**`).
+* **En la app, las tres fichas** (`CodigoRenaserDelAlumno` es el mismo componente de `AlumnoScreen`, `PersonaDelLiderScreen` y `FichaAprendizScreen`):
+  con `radar.fichas` apagada o no disponible la sección «Código Renaser» **no se dibuja ni se pide** (sin hueco, sin error y sin aviso de
+  mantenimiento). Un 404 del servidor que llegue igual tampoco la dibuja. Administración y Alquimista siguen viéndola siempre.
+* **Administración → Más opciones → «Código Renaser en las fichas»** (`CodigoRenaserEnFichasAdminScreen`, vista nueva de la pila de `AdminScreen`; sigue la
+  disponibilidad de Administración, `CLAVES.admin`): un `Interruptor` «El mentor y el líder ven el Código Renaser» con una frase que dice qué pasa en
+  cada estado («El mentor, la guía y el líder no lo ven. Tú, Alquimista y la propia persona lo siguen viendo.») y «Último cambio: Ana Pérez, 31 oct 2026,
+  18:40». **Cambiarlo pide una confirmación que dice qué va a pasar** («Mostrar el Código Renaser» / «Ocultar el Código Renaser»; sin motivo y con «No se
+  avisa a nadie») y rige en el acto. El interruptor es el del servidor: no se mueve hasta que éste acepta (`useCodigoRenaserEnFichas`); un cambio doble
+  manda un solo pedido; si falla, queda donde estaba y se dice por qué («Tu cuenta no puede cambiar esto.» en 403, «Esta opción todavía no está
+  disponible…» en 404, «Sin conexión con el servidor.», «No se pudo cargar esta opción.») con «Reintentar» donde tiene sentido. Al quedar guardado,
+  `tacto.logro()` una vez y «Listo: el mentor y el líder ya ven / ya no ven el Código Renaser.» Si Soporte TI dejó los tres roles distintos desde su
+  consola, lo dice («Soporte TI lo dejó distinto para cada rol…») y no afirma que lo ven todos; cambiarlo aquí los iguala.
+* **`GET/PUT /api/v1/admin/codigo-renaser-en-fichas`** (`admin/api/codigoRenaserEnFichasApi`, esquema tolerante): `{ visible, mixto, porRol, ultimoCambio }`
+  y `PUT { visible }`. Solo ADMIN, ALCHEMIST e IT_SUPPORT activos; cualquier otro, 403 del servidor. Deja una fila de auditoría y no crea ninguna
+  notificación. Soporte TI también lo ve en su consola, rol por rol (sin cambios en la app).
+* **Quien publique el backend primero** (sin migración nueva): al publicar, **el mentor, la guía y el líder dejan de ver el Código Renaser hasta que
+  Administración lo encienda**. Contra un backend anterior la pantalla nueva dice que todavía no está disponible (404) y las fichas quedan como estaban.
+* **No cambian**: lo que se ve cuando está encendido (la sección es la de siempre, incluida la marca de dictado de la spec 030, que sale por las mismas
+  tres lecturas), el Código Renaser de la propia persona, Hoy, Yo → Mi Radar, los demás tabs ni la barra. Sin dependencias nuevas ni código nativo.
+* **Pruebas:** Jest `codigoRenaserEnFichasApi` (ruta, verbos, cuerpo sin motivo y esquema tolerante), `codigoRenaserEnFichas` (los textos y la
+  confirmación), `useCodigoRenaserEnFichas` (el servidor es la verdad, fallos, «Reintentar», un solo pedido),
+  `codigoRenaserEnFichasEnAdministracion` (el cableado y la pantalla) y `codigoRenaserDelAlumnoEnFichas` (apagado: ni se dibuja ni se pide); se ajustó
+  `pilaDeAdministracion`. Maestro, escritos y sin correr: `.maestro/codigo-renaser-en-fichas/` (apagado de fábrica, Administración lo enciende y el
+  mentor lo ve, lo apaga y ya no).
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire) **y el backend con la spec 034 antes** (sin migración).
+
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
 Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel especializado en React Native, Expo y TypeScript. Al crear, refactorizar o modificar cualquier pantalla o componente, debes cumplir OBLIGATORIAMENTE con los siguientes estándares:
@@ -800,6 +837,11 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     > igual: los días 1 a 7, la fila de Yo desde el día 8, el interruptor opcional, la invitación del día 8, los canales y el minuto de los avisos,
     > el formulario y las fichas (salvo su línea de resumen). **Ya no están en Yo → Mi Radar** los registros de hoy, el «Historial» ni los
     > «Patrones» (corregido el mismo día: ver «Mi Radar automático y personalizado (spec 019)»).
+    > **Corregido 2026-10-31 (spec 034, D-299, pedido del dueño: «El líder de mentores y el mentor no pueden ver el Código Renaser: un
+    > interruptor para activar y desactivar»).** Lo de las **fichas** de abajo («`CodigoRenaserDelAlumno` … la usan `AlumnoScreen` (mentor),
+    > `FichaAprendizScreen` … y `PersonaDelLiderScreen` (líder)») **ya no es incondicional**: el mentor, la guía y el líder solo ven la sección «Código
+    > Renaser» de una ficha si Administración la encendió (de fábrica está **apagada**). Administración, Alquimista y la propia persona no cambian.
+    > Ver la entrada «Código Renaser en las fichas (spec 034)», al final de las del 2026-10-31.
     * **Yo → fila «Mi Radar»** (`compass`), justo debajo de «Tuve una emergencia», **solo desde el día 8** y solo si el
       servidor la ofrece (`GET /api/v1/radar/mi-radar`; un 404 o 403 la esconde). Dice `Encendido · 09:00, 14:00 y 20:00` o
       `Apagado` y abre `MiRadarScreen` a pantalla completa. Los días 1 a 7 no hay fila: el Código Renaser se abre solo.
