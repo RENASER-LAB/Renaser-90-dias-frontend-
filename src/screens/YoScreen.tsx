@@ -32,6 +32,8 @@ import { GoldButton } from '../components/GoldButton';
 import { Interruptor } from '../components/Interruptor';
 import { Presionable } from '../components/Presionable';
 import { ConfirmacionEnLinea } from '../components/ConfirmacionEnLinea';
+import { SelectorDeFormacion } from '../features/formaciones/components/SelectorDeFormacion';
+import { useFormacionDeLaSesion } from '../features/formaciones/context/FormacionContext';
 import { tacto } from '../utils/tacto';
 import { CabeceraAdmin } from '../features/admin/components/CabeceraAdmin';
 import { FenixDeSerQuieto } from '../features/fenix/components/FenixDeSerQuieto';
@@ -285,7 +287,7 @@ export default function YoScreen() {
   const { resumen, recargar: recargarResumen } = useResumenHome();
   /* La misma cuenta que «Fase actual» y «Arquitectura de tiempo» de Plan (`faseEnCurso`): número, nombre,
      rango y día dentro de la fase salen de un solo lugar, así Yo no puede decir otra cosa que Plan. */
-  const faseActual = faseEnCurso(resumen?.fase, resumen?.diaPrograma);
+  const faseActual = faseEnCurso(resumen?.fase, resumen?.diaPrograma, resumen?.duracionDias);
   /* «¡Entraste en la Fase N!» es la pantalla completa de celebración desde el 2026-10-07 (pedido del dueño: reemplaza
      el momento chico de esta tarjeta). Yo también la revisa con lo que ya leyó, por si la fase nueva se ve acá primero. */
   useCelebracionDelDia(
@@ -458,6 +460,10 @@ export default function YoScreen() {
     cargandoCapacidades,
     abrirElSemaforoDeAdministracion,
   });
+  /* «Cambiar de formación» (spec 022, historia 5): solo el personal asignado a más de una. La hoja deja elegir; al elegir, todas las
+     vistas se arman de nuevo con la formación nueva (ver la `key` de `RootNavigator`). */
+  const { formacion: formacionDeLaSesion } = useFormacionDeLaSesion();
+  const [eligiendoFormacion, setEligiendoFormacion] = useState(false);
   /* Avisos de Administración: la caja de un aprendiz (`/admin/caja/{id}`, D-219) y «Ver ficha» desde la info de un chat
      (D-222). Esperan a saber si la cuenta administra (lo dice el servidor); si no, se descartan. */
   useEffect(() => {
@@ -819,7 +825,7 @@ export default function YoScreen() {
                   animal={animalConfigurado(ANIMAL_DE_FASE[faseActual.clave], animalesConfigurados[faseActual.numero])}
                   diasDeLaFase={faseActual.diasDeLaFase}
                   diaDelPrograma={resumen?.diaPrograma ?? null}
-                  diasDelPrograma={DIAS_DEL_PROGRAMA}
+                  diasDelPrograma={resumen?.duracionDias ?? DIAS_DEL_PROGRAMA}
                 />
               </View>
             ) : null}
@@ -961,6 +967,17 @@ export default function YoScreen() {
                 detalle="Grupos, consultas y reporte del mes"
                 etiqueta="Abrir Mis mentores"
                 onPress={() => paneles.ir({ tipo: 'misMentores' })}
+              />
+            ) : null}
+            {/* CAMBIAR DE FORMACIÓN (spec 022): solo si el servidor dice que esta persona trabaja en más de una. Su detalle es la que usa ahora. */}
+            {formacionDeLaSesion?.puedeElegir ? (
+              <FilaDeAjuste
+                key="cambiar-de-formacion"
+                icono="layoutGrid"
+                titulo="Cambiar de formación"
+                detalle={formacionDeLaSesion.activa?.nombre ?? null}
+                etiqueta={`Cambiar de formación. Ahora: ${formacionDeLaSesion.activa?.nombre ?? 'ninguna'}`}
+                onPress={() => setEligiendoFormacion(true)}
               />
             ) : null}
             {/* TUVE UNA EMERGENCIA (D-244): solo si el servidor dice que esta cuenta puede pedirlo. */}
@@ -1898,6 +1915,7 @@ export default function YoScreen() {
         titulos={renombre.titulos}
       />
       <RegistroConFotoModal {...registroConFoto.modal} />
+      <SelectorDeFormacion visible={eligiendoFormacion} alCerrar={() => setEligiendoFormacion(false)} />
     </SafeAreaView>
   );
 }
