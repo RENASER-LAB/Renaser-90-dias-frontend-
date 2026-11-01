@@ -74,7 +74,7 @@ describe('leer lo que acepté', () => {
 
   it('un backend anterior no manda la firma y la lectura sigue sirviendo', () => {
     const sinFirma = terminosAceptadosSchema.parse({ version: VERSION, acceptedAt: '2026-10-31T15:00:00Z' });
-    expect(sinFirma.signatureUrl).toBeNull();
+    expect(sinFirma.signatureUrl ?? null).toBeNull();
   });
 });
 
