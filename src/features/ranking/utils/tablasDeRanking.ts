@@ -12,6 +12,8 @@ import type { EntradaRankingDto, RankingAgregadoDto } from '../api/rankingApi';
  */
 export type ClaveDeTabla = 'general' | 'coherencia' | 'kilometros' | 'gimnasio';
 
+// spec 023: «Kilómetros» y «Gimnasio» se ocultarán según los hábitos que ofrezca cada formación. Hasta que llegue esa spec salen las cuatro
+// pestañas en todas las formaciones (la spec 024 del backend manda las cuatro tablas siempre); el punto de enganche es esta lista.
 export const TABLAS_DE_RANKING: ReadonlyArray<{ clave: ClaveDeTabla; titulo: string; explica: string }> = [
   { clave: 'general', titulo: 'General', explica: 'Hábitos, acciones y lecciones, todo junto' },
   { clave: 'coherencia', titulo: 'Coherencia', explica: 'Acciones diarias cumplidas de tu semana' },
