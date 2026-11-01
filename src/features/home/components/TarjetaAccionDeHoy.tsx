@@ -4,7 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { GoldButton } from '../../../components/GoldButton';
 import { Icon, TAMANO_ICONO, type IconName } from '../../../components/Icon';
-import { Presionable } from '../../../components/Presionable';
+import { FilaCompacta } from '../../../components/FilaCompacta';
 import { useTheme } from '../../../theme/ThemeContext';
 import { rangoDeHoraDeLaAccion } from '../../objetivos/utils/accionesDeHoy';
 import type { VistaDeLaAccionDeHoy } from '../utils/vistaDeLaAccionDeHoy';
@@ -40,28 +40,18 @@ export function TarjetaAccionDeHoy({
 
   /* Sin objetivos de 90 días, o con los del diagnóstico por confirmar (spec 026; antes aquí iba «Haz tu Mapa de Renacimiento»):
      una fila compacta, toda tocable, del alto que tenía Coherencia / Racha (corregido 2026-10-31, el dueño: «no tan grande»),
-     en lugar de la tarjeta con botón dorado. Lleva a Plan. */
+     en lugar de la tarjeta con botón dorado. Lleva a Plan. Es `FilaCompacta`, la misma de la entrada al programa propio. */
   if (vista.tipo === 'sin-objetivos' || vista.tipo === 'por-confirmar') {
     const titulo = vista.tipo === 'sin-objetivos' ? `Define tu objetivo de ${plazo} en Plan` : `Confirma tus objetivos de ${plazo}`;
     const accion = vista.tipo === 'sin-objetivos' ? 'Escribir mi objetivo' : 'Confirmar';
     return (
-      <Presionable
+      <FilaCompacta
+        icono="flag"
+        titulo={titulo}
+        linea={accion}
         onPress={alIrAPlan}
-        accessibilityRole="button"
         accessibilityLabel={`${titulo}. ${accion}.`}
-        style={[estilos.tarjeta, estilos.compacta, { borderColor: c.border, backgroundColor: c.cardBg }]}
-      >
-        <Icon name="flag" size={TAMANO_ICONO.normal} color={c.goldInk} />
-        <View style={estilos.textos}>
-          <Text style={[t.cardTitle, estilos.tituloCompacto, { color: c.textStrong }]} numberOfLines={2}>
-            {titulo}
-          </Text>
-          <Text style={[t.small, estilos.lineaCompacta, { color: c.goldInk, fontFamily: fuentes.negrita }]} numberOfLines={1}>
-            {accion}
-          </Text>
-        </View>
-        <Icon name="chevron" size={TAMANO_ICONO.chico} color={c.textSoft} />
-      </Presionable>
+      />
     );
   }
 
@@ -120,10 +110,6 @@ export function TarjetaAccionDeHoy({
 
 const estilos = StyleSheet.create({
   tarjeta: { borderWidth: 1, borderRadius: 16, padding: 17 },
-  compacta: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14, minHeight: 72 },
-  textos: { flex: 1, gap: 2 },
-  tituloCompacto: { fontSize: 16, lineHeight: 22, fontFamily: fuentes.negrita },
-  lineaCompacta: { fontSize: 14, lineHeight: 20 },
   fila: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   /** Cifras que cambian: ancho de dígito fijo (AGENTS.md §4). */
   hora: { fontSize: 16, lineHeight: 22, fontFamily: fuentes.negrita, fontVariant: ['tabular-nums'], flexShrink: 1 },

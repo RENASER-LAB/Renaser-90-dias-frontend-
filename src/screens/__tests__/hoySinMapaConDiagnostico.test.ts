@@ -42,7 +42,7 @@ describe('Hoy: la tarjeta de acciones y los objetivos', () => {
 describe('Hoy: el diagnóstico pendiente', () => {
   it('su tarjeta va debajo del programa propio y antes de «Hábitos de hoy» y el Radar, y al tocarla abre el recorrido', () => {
     expect(HOY).toMatch(/<TarjetaDelDiagnosticoPendiente alAbrir=\{\(\) => setDiagnosticoAbierto\(true\)\} \/>/);
-    expect(HOY.indexOf('<TarjetaDelDiagnosticoPendiente')).toBeGreaterThan(HOY.indexOf('<EntradaAlProgramaPropio'));
+    expect(HOY.indexOf('<TarjetaDelDiagnosticoPendiente')).toBeGreaterThan(HOY.indexOf('<FilaDelProgramaPropio'));
     expect(HOY.indexOf('<TarjetaDelDiagnosticoPendiente')).toBeLessThan(HOY.indexOf('<TarjetaHabitoYRadar'));
   });
 

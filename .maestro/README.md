@@ -41,6 +41,10 @@ local (nunca contra producción).
   `mi-radar/11–12` y `lider-ve-a-todos/01` ya entran por ahí). Los nombres de los hábitos ahora se ven en tipo oración: los flujos viejos que los buscaban en mayúsculas usan
   `(?i)` desde ese día.
 
+- `hoy-programa-propio/` (2026-11-01, issue #72): la frase del día siempre y la fila compacta del programa propio en Hoy y Plan, con sus tres
+  estados (`ESTADO` = `sin-programa` | `sin-dia-1` | `esperando`, este último el de «Tu programa empieza el …»). **Escrito y sin correr**; cada estado
+  pide su cuenta (lo dice arriba del archivo).
+
 - `cierre-en-plan/` (spec 033, 2026-10-31): «Cierra tu día» ya no está en Training; vive en una tarjeta de Plan, bajo «Acciones que
   mueven la meta», con «Ver mañana en Plan» y los cierres de los días anteriores en la misma tarjeta (solo lectura). **Escritos y
   sin correr**; cada archivo dice su precondición. Reemplaza a la carpeta `cierre/` (que probaba la fila de Training).

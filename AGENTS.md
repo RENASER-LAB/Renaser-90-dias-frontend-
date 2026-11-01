@@ -292,6 +292,8 @@ Pedidos del dueño del 31/10 con capturas; **todo es de la app, sin backend**. C
   > Coherencia / Racha: «no tan grande»), sin botón dorado. Los otros estados de la tarjeta no cambian. Hace falta APK nuevo.
   > Y sin Mapa **no se repite la tarjeta «Mapa de renacimiento · Diseña tu mapa»** de más abajo (el dueño: «sí, quita la de abajo»):
   > la invitación ya está arriba. Con el Mapa empezado o activo esa tarjeta sigue, porque es la entrada para verlo (`mostrarTarjetaDelMapa`).
+  > **Corregido 2026-11-01.** La frase **sale siempre**, también sin día de programa (personal sin programa, Día 0, sin Día 1 elegido): ver la
+  > entrada «Hoy (y Plan): la frase siempre, el programa propio en una fila y la fecha de inicio» del 2026-11-01.
 * **Se quita el bloque Coherencia / Racha** («Coherencia 0 %», «Consistencia del día», «Racha 2 días», «Récord histórico»): **Yo ya
   los muestra** (Coherencia con su %, Puntos de liga y Racha con «días»). Comprobado en `YoScreen`. Lo único que Hoy mostraba y Yo no
   es el «Récord histórico» (`rachaMaxima`) y las dos líneas de apoyo («Consistencia del día», «Nivel de excelencia»): se van con el
@@ -523,6 +525,8 @@ cambia y nada más:
   escuchas de avisos** y de `abrirCajaAprendizId` / `abrirFichaAprendiz`. La raya dorada ya no depende de ningún papel y nada queda
   «oculto pero montado». **Se conserva** la invitación «Elegir mi Día 1» para el personal que no hace su programa
   (`EntradaAlProgramaPropio`) y el color del semáforo que recibe el fénix (`usePublicarSemaforoDeHoy(resumen?.semaforo, …, null)`).
+  > **Corregido 2026-11-01.** Esa invitación ya no es la tarjeta grande `EntradaAlProgramaPropio` bajo el fénix: en Hoy es una fila compacta
+  > (`FilaDelProgramaPropio`) justo debajo de la frase. La tarjeta grande se conserva solo en Yo.
 * **Yo suma una fila por panel de rol, con la misma forma que «Administración»** (`FilaDeAjuste`, en la misma lista, entre
   «Administración» y «Tuve una emergencia»): **«Mi grupo»** (ícono `users`, «Tus aprendices») y **«Mis mentores»** (ícono `award`,
   «Grupos, consultas y reporte del mes»; no `usersThree`, que es el de la pestaña Comunidad y `barraDePestanasIconos.test.ts` no deja usar en otra parte). **Las reglas de quién las ve son las de siempre, sin inventar ninguna** (`paneles-de-rol/utils/
@@ -1379,6 +1383,55 @@ Dos decisiones del dueño que aparecieron al integrar las specs 022 a 034 (solo 
   («Escuela Renaser 90 días»), ni lo que dicen el onboarding y los términos del programa de 90 días de la Escuela como hecho. Los textos de error de los hooks
   (`useRocasMaestras`, `useRocasSemanales`) no saben la duración y siguen igual.
 * **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire).
+
+## Cambio por pedido del dueño — 2026-11-01 — tab `Hoy` (y Plan): la frase siempre, el programa propio en una fila y la fecha de inicio
+
+Pedido del dueño del 1/11 con capturas de Hoy de una cuenta del personal sin programa propio: «recuerda la frase y abajo va ese de los 90 días con
+menos texto, el tamaño que antes de coherencia y racha bro, y luego el fénix… ok bro que salga pese que no inició su programa» y, sobre quien ya
+eligió su Día 1: «¿y por qué no le salió cuándo empezar? eso es un bug». Todo es de la app, sin backend. Cada punto es un commit aparte de la rama
+`hoy-frase-y-dia-uno`. Lo que cambia y nada más:
+* **La frase del día sale siempre** (`TarjetaConfrontacion`, con su raya dorada): también sin día de programa (personal sin programa, Día 0 y quien no
+  eligió su Día 1). Con día de programa es la de siempre. **Sin día de programa se elige por la FECHA del calendario** (`fraseDelDia(dia, fechaDeHoy)`):
+  `f(fecha)`, derivada y sin guardar nada (nueve frases, días seguidos dan frases seguidas). **Supuesto:** `/home` no manda la fecha de hoy, así que es el día
+  civil del teléfono (`fechaLocalISO`); aquí no corre el riesgo de E-91 (no hay contador): un huso distinto solo cambia cuál de las nueve toca. Hoy da la fecha
+  solo cuando ya se sabe si hay día de programa (`/home` respondió o falló), para que quien sí lo tiene no vea primero la del calendario y se le cambie.
+  Sin día ni fecha sigue sin dibujar nada.
+* **El programa propio es una fila compacta y sube**: justo debajo de la frase y antes del fénix (`FilaDelProgramaPropio`, sobre `components/FilaCompacta`),
+  del alto que tenía Coherencia / Racha (72 de mínimo), toda tocable, título en negrita (16), una línea corta en dorado, chevron, **sin botón dorado**. Es la
+  misma fila compacta que ya usaba la tarjeta de acciones («Define tu objetivo de 90 días en Plan»), que ahora comparte el componente. Reemplaza a la tarjeta
+  grande «Tu programa · Hacer mi programa de 90 días · Puedes recorrerlo tú también… · Elegir mi Día 1 / Ahora no» (`EntradaAlProgramaPropio`), que **Yo
+  conserva** (y Training conserva su invitación). Textos (`programa/utils/filaDelPrograma`, pura):
+  | Estado | Título | Línea | Al tocar |
+  |---|---|---|---|
+  | Sin fila en el programa y el servidor dice que puede empezar | «Haz tu programa de {plazo}» | «Elige tu Día 1» | el selector del Día 1 de siempre; con una ✕ «Ahora no» |
+  | Con fila, sin Día 1 elegido | «Todavía no elegiste tu Día 1» | «Elige cuándo empiezas» | el selector del Día 1 |
+  | Eligió su Día 1 y la fecha no llega (día 0) | «Tu programa empieza el martes 3 de noviembre» | — | nada (sin chevron) |
+  | Esperando y el servidor no mandó la fecha | «Tu programa empieza pronto» | — | nada |
+  `{plazo}` es «90 días», «3 meses» o «1 año» según SU programa (`plazoDelObjetivo`, el mismo con que se nombra el objetivo grande). «Ahora no» se conserva como
+  una **✕ chica de 48 de área** a la derecha, fuera de la fila tocable, y hace lo mismo que el botón de antes: deja de ofrecer la invitación a esa cuenta en
+  ese teléfono, sin borrar nada. Si una lectura falló, en su lugar va el aviso de siempre «No pudimos comprobar tu Día 1» con «Reintentar Día 1». Igual en todos los
+  roles y formaciones: lo decide el servidor (`canStartProgram`, `activated`). **Ningún pedido nuevo en Hoy**: las mismas lecturas que hacía la tarjeta.
+* **Sin hueco vacío antes del fénix**: el bloque entre la frase y el fénix solo existe si tiene algo que dibujar (la fila, la tarjeta de acciones o el error de `/home`).
+  Vacío dejaba sus dos separaciones de 28 (`gapLg`) y a la cuenta sin programa le quedaba un hueco grande entre «Escuela Renaser» y «Tu acompañante». Si hay fila y
+  también tarjeta de acciones, la fila va primero. Para saberlo antes de dibujar, el hook `useFilaDelProgramaPropio` vive en Hoy (y en Plan), no dentro de la fila.
+* **BUG (issue #72): quien ya eligió su Día 1 y espera no veía cuándo empieza.** El Día 1 nunca puede ser hoy (`ActivarProgramaScreen`), así que todo aprendiz recién
+  activado pasa al menos un día en el día 0; desde el 31/10 Hoy ya no tiene la cabecera de fase y día y ningún texto decía «empieza el…» (Training lo decía solo si
+  faltaba más de un día). La fecha **ya la entrega `GET /onboarding/activate-program`** (`startDate`), que Hoy ya leía con `useDiaUnoPorElegir` (solo inscrito y día 0):
+  no hace falta backend. `useArranqueDelPrograma` suma `fechaInicio` al estado `EN_CURSO` cuando la fecha es posterior a hoy (empieza mañana: el programa ya cuenta como
+  «en curso» para planificar, D-103, pero la fecha se dice), y `useDiaUnoPorElegir` expone `esperando` y `fechaInicio`. Una fecha de hoy o pasada no se dice (D-90): «pronto».
+  La fecha se escribe con `formatearFechaLarga` (español, sin pasar por UTC).
+* **Plan lleva la misma fila**, arriba de todo y sin hueco si no hay nada que decir: mismo hook, mismo componente, misma función pura (un solo lugar para los textos; una
+  prueba vigila que Hoy y Plan no los repitan). **Plan suma lecturas que antes no hacía**, las mismas que Hoy: las capacidades (`GET /mentor/context`, que ya leen Hoy,
+  Yo y Comunidad) y la del programa personal solo para el personal, y `GET /onboarding/activate-program` solo con `inscrito` y día 0. Quien ya está en su programa no ve
+  nada nuevo en Plan.
+* **No cambian**: Yo (conserva la tarjeta grande), Training, las reglas de quién puede empezar un programa, el selector del Día 1, `TarjetaAccionDeHoy` en sus estados
+  (solo comparte la fila), el diagnóstico pendiente, los demás tabs, ni el backend. Sin animaciones nuevas (`Presionable` y la `Aparicion` que ya tenía el bloque), sin
+  íconos nuevos (`calendarRange`, `close`, `chevron`), sin dependencias ni código nativo.
+* **Pruebas:** Jest `fraseDelDia` y `tarjetaConfrontacion` (la frase por calendario), `filaDelPrograma` (los textos y la fecha en español), `filaDelProgramaPropio` (los tres
+  estados con el hook real, por rol y por formación, la ✕, el selector, el error), `filaCompacta`, `hoyFilaDelPrograma` y `planFilaDelPrograma` (el orden y el cableado). Se
+  ajustaron `hoyIconosYTextos`, `panelesDeRolEnYo` y `hoySinMapaConDiagnostico`. Maestro, escrito y sin correr: `.maestro/hoy-programa-propio/01-fila-del-programa-en-hoy-y-plan.yaml`
+  (`ESTADO` = `sin-programa` | `sin-dia-1` | `esperando`).
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
 
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
@@ -3496,6 +3549,9 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       sigue sin «volver» y tragándose el gesto). Está en la tarjeta de Training y, como tarjeta «Todavía no elegiste tu
       Día 1», en Hoy y Yo (`EntradaAlProgramaPropio`, que solo consulta con `inscrito` y día 0). Al elegir, el aviso se va
       solo (`useArranqueDelPrograma` acepta una `version` para volver a consultar).
+      > **Corregido 2026-11-01.** En Hoy (y en Plan) ya no es una tarjeta: es una fila compacta, «Todavía no elegiste tu Día 1 · Elige cuándo
+      > empiezas ›», y la invitación sin fila es «Haz tu programa de 90 días · Elige tu Día 1 ›» sin el párrafo «Puedes recorrerlo tú también…».
+      > Yo conserva la tarjeta. Ver la entrada del 2026-11-01.
     * **Sin fila (personal que nunca empezó):** Training muestra la invitación «Hacer mi programa de 90 días · Empezar»
       en vez de «No pudimos cargar tu entrenamiento» con el uuid. La tarjeta salió de Hoy a
       `programa/components/InvitacionProgramaPropio` (mismo texto, mismos botones); «Empezar» sigue siendo

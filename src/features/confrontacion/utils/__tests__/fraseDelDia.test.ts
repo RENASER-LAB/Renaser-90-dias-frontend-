@@ -49,14 +49,67 @@ describe('fraseDelDia', () => {
     }
   });
 
-  it('sin día de programa no inventa nada', () => {
-    // Día 0 = cuenta aprobada pero el reloj sin arrancar. Mostrarle la frase del día 1 a alguien
-    // que todavía no empezó sería mentirle sobre dónde está.
+  it('sin día de programa NI fecha todavía no se sabe nada: no inventa la del día 1', () => {
+    // Día 0 = cuenta aprobada pero el reloj sin arrancar. Sin fecha del calendario tampoco hay de dónde sacar una: null, como antes.
     expect(fraseDelDia(0)).toBeNull();
     expect(fraseDelDia(null)).toBeNull();
     expect(fraseDelDia(undefined)).toBeNull();
     expect(fraseDelDia(-3)).toBeNull();
     expect(fraseDelDia(Number.NaN)).toBeNull();
+    expect(fraseDelDia(0, null)).toBeNull();
+    expect(fraseDelDia(0, undefined)).toBeNull();
+  });
+
+  describe('sin día de programa, por la fecha del calendario (2026-11-01)', () => {
+    const SIN_DIA = [0, null, undefined, -1, Number.NaN] as const;
+
+    it('sale siempre: personal sin programa, Día 0 y sin Día 1 elegido', () => {
+      for (const dia of SIN_DIA) {
+        expect(fraseDelDia(dia, '2026-11-01')?.texto).toBeTruthy();
+      }
+    });
+
+    it('siete frases distintas en cualquier semana, con las fechas de varios meses (también al cruzar el fin de mes y de año)', () => {
+      for (const primerDia of ['2026-11-01', '2026-02-24', '2026-12-28', '2028-02-26']) {
+        const semana = [0, 1, 2, 3, 4, 5, 6].map(i => {
+          const [a, m, d] = primerDia.split('-').map(Number);
+          const fecha = new Date(Date.UTC(a, m - 1, d + i)).toISOString().slice(0, 10);
+          return fraseDelDia(0, fecha)?.id;
+        });
+        expect(new Set(semana).size).toBe(7);
+      }
+    });
+
+    it('derivada: la misma fecha da siempre la misma frase y un día sin abrir la app no desfasa nada', () => {
+      expect(fraseDelDia(0, '2026-11-01')).toBe(fraseDelDia(null, '2026-11-01'));
+      const total = FRASES_DE_CONFRONTACION.length;
+      const hoy = fraseDelDia(0, '2026-11-05')?.id;
+      // Nueve días después vuelve a tocar la misma: no hay contador que se pueda perder.
+      expect(fraseDelDia(0, '2026-11-14')?.id).toBe(hoy);
+      expect(total).toBe(9);
+    });
+
+    it('días seguidos dan frases seguidas del catálogo, sin saltos', () => {
+      const indice = (fecha: string) => FRASES_DE_CONFRONTACION.findIndex(f => f.id === fraseDelDia(0, fecha)?.id);
+      const total = FRASES_DE_CONFRONTACION.length;
+      expect(indice('2026-11-02')).toBe((indice('2026-11-01') + 1) % total);
+      expect(indice('2027-01-01')).toBe((indice('2026-12-31') + 1) % total);
+    });
+
+    it('con día de programa manda el día, no la fecha', () => {
+      expect(fraseDelDia(12, '2026-11-01')).toBe(fraseDelDia(12));
+      expect(fraseDelDia(12, '2030-06-15')).toBe(fraseDelDia(12));
+    });
+
+    it('una fecha que no existe o mal escrita cuenta como «no se sabe»', () => {
+      for (const mala of ['', '2026-02-31', '2026-13-01', '2026-11-1', '01/11/2026', 'hoy', '2026-11-01T10:00:00']) {
+        expect(fraseDelDia(0, mala)).toBeNull();
+      }
+    });
+
+    it('una fecha anterior a 1970 no rompe el índice', () => {
+      expect(fraseDelDia(0, '1969-12-31')?.texto).toBeTruthy();
+    });
   });
 
   it('ninguna frase del catálogo está vacía ni repetida', () => {

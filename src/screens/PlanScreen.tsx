@@ -24,6 +24,8 @@ import { useReducedMotion } from 'react-native-reanimated';
 import { CierreEnPlan } from '../features/cierre/components/CierreEnPlan';
 import { ejeDeLasAcciones } from '../features/cierre/utils/ejeDeLasAcciones';
 import { useResumenHome } from '../features/home/hooks/useResumenHome';
+import { FilaDelProgramaPropio } from '../features/programa/components/FilaDelProgramaPropio';
+import { useFilaDelProgramaPropio } from '../features/programa/hooks/useFilaDelProgramaPropio';
 import type { DiaDelPlan } from '../features/habits/utils/semanaDelPlan';
 import { cifraEscrita } from '../features/objetivos/api/planMensualApi';
 import { EditarObjetivoDelMesModal } from '../features/objetivos/components/EditarObjetivoDelMesModal';
@@ -148,6 +150,15 @@ export default function PlanScreen() {
   /* El plazo con el que se nombra el objetivo de ESTA persona («90 días», «3 meses», «1 año»); el resto de Plan lo lee del contexto. */
   const plazo = plazoDelObjetivo(resumen?.duracionDias, resumen?.formacion);
   const diaPrograma = resumen?.diaPrograma ?? 0;
+  /* La misma fila compacta de Hoy (2026-11-01): quien no tiene programa («Haz tu programa de 90 días»), no eligió su Día 1 o ya lo eligió y
+     espera («Tu programa empieza el martes 3 de noviembre») lo ve arriba de Plan. Un solo hook y una sola función pura para las dos
+     pantallas (`useFilaDelProgramaPropio`). Para quien ya está en su programa no existe y Plan es el de siempre. */
+  const programaPropio = useFilaDelProgramaPropio({
+    inscrito: resumen?.inscrito,
+    diaPrograma: resumen?.diaPrograma,
+    duracionDias: resumen?.duracionDias,
+    formacion: resumen?.formacion,
+  });
 
   /**
    * La fase del aprendiz, **la que dice el backend**, no una calculada acá.
@@ -530,6 +541,9 @@ export default function PlanScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.pantalla}>
+          {/* El programa propio, arriba de todo y sin hueco cuando no hay nada que decir (el hook ya sabe si hay fila). */}
+          {programaPropio.visible ? <FilaDelProgramaPropio programa={programaPropio} /> : null}
+
           {/* Spec 026: mientras haya objetivos del diagnóstico por confirmar, lo primero es revisarlos. Al confirmarlos desaparece. */}
           {pendientes.length > 0 ? <TarjetaRevisaTusObjetivos cantidad={pendientes.length} alRevisar={() => setRevisando(true)} /> : null}
 
