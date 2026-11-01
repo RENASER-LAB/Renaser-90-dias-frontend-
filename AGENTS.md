@@ -567,6 +567,58 @@ animaciones, íconos ni dependencias nuevas. Cada punto es un commit aparte de l
   `recordatoriosDeLasAcciones` (la fila, la hoja con el mismo control, las alarmas con la hoja cerrada) y `planDelEje`.
 * **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
 
+## Cambio por pedido del dueño — 2026-10-31 — formaciones: Escuela, Diplomado y Certificación (spec 022)
+
+Pedido del dueño del 31/10 (decisiones en `~/.config/renaser-e2e/formaciones/decisiones-del-dueno-2026-10-31.md`; spec, plan y contrato en el backend,
+`specs/022-formaciones/`, D-295). Renaser deja de ser un solo programa de 90 días: hay **tres formaciones fijas** —**Escuela Renaser** (90 días),
+**Diplomado Renaser** (3 meses = 90 días, o 1 año = 365) y **Certificación Renaser** (90 días)— con los mismos roles pero **aisladas entre sí**. Lo
+decide y lo filtra **siempre el servidor**; la app solo lo muestra. Lo que cambia y nada más (esta spec es la base: el contenido por formación —hábitos,
+Muro, cursos, ranking— llega con las siguientes):
+* **Autorizado en los cinco tabs, y nada más que esto:** (1) en **Hoy**, una línea con el **nombre de la formación** sobre la frase del día, solo si la
+  persona tiene más de una o no es de la Escuela (`NombreDeLaFormacion`); para el aprendiz de la Escuela Hoy queda **idéntico**; (2) en **Yo**, la fila
+  **«Cambiar de formación»** (ícono `layoutGrid`, ya existente) con la activa como detalle, **solo** para el personal asignado a más de una, que abre
+  una `HojaDesdeAbajo`; (3) en **Yo**, la tarjeta de fase y «Día N de M» usan la **duración de cada persona**; (4) en **Administración**, la sección
+  **«Formaciones»** (en «Más» de la raíz) y los filtros/fichas de abajo. Los tabs, la barra y los diseños de las otras pantallas **no cambian**.
+* **La sesión trae la formación** (`formacion` en `/auth/me`, login y social; `GET /api/v1/me/formacion`): `{ activa, disponibles, puedeElegir,
+  veTodas, sinFormacion, duracionDias, fases }`. `FormacionProvider` (en `App.tsx`, dentro de la sesión) la guarda, la relee al volver al frente (así
+  un traslado se nota sin cerrar la app) y expone `elegir`. **Un backend anterior no la manda: la persona se trata como de la Escuela** (nunca se
+  inventa una elección ni un selector). El esquema es tolerante (`formaciones/api/formacionesSchemas`): una opción rota se pierde ella, no la sesión.
+* **Al cambiar de formación todo se arma de nuevo**: la `key` de `MainTabs` (en `RootNavigator`) es `cuenta|formaciónActiva` (`llaveDeLasVistas`), el
+  mismo mecanismo de «ver como». No queda a la vista nada de la formación anterior ni por un instante. Sin formación conocida la `key` es la de siempre.
+* **La pregunta de la primera vez** (`EleccionDeFormacionScreen`): «¿En qué formación vas a trabajar hoy?», una fila por formación, **una sola vez por
+  teléfono y cuenta** (`renaser.formacion.eligio.<cuenta>` en AsyncStorage; si el almacenamiento falla, no se pregunta) y solo para el personal con
+  varias. Después el servidor recuerda la última. Sin ✕ ni «atrás» (no hay a dónde volver). **No lleva cifras por formación** (aprendices, pendientes):
+  el servidor no las manda a esta cuenta y no se inventan.
+* **Personal sin ninguna formación** (`SinFormacionScreen`): «Administración todavía no te asignó una formación.» con «Volver a revisar» y «Cerrar
+  sesión»; nada más. Administración, Alquimista y Soporte TI **ven las tres** (`veTodas`) y no tienen selector ni nombre en Hoy.
+* **Días y fases por duración.** `/home` suma `duracionDias` y `formacion`. Las cuatro fases se estiran: con 90 días son 1, 8, 35 y 65; con 365, **1, 29,
+  138 y 260** (`formaciones/utils/fasesDeLaDuracion`, la misma cuenta que el servidor; `faseEnCurso(fase, día, duración)`). Los nombres y las claves de
+  fase no cambian (son contrato). «Los días que quedan» del Mapa usa la duración (`diasQueQuedan(día, duración)`). **No se tocó** «El Método»
+  (texto fijo de «4 fases en 90 días»), el plan de objetivos/acciones ni las pastillas de hábitos: siguen en 90 hasta sus specs.
+* **Administración → Formaciones** (`formaciones/screens/FormacionesAdminScreen` y `FormacionDetalleAdminScreen`, **solo Administración y Alquimista**):
+  las tres con nombre, duraciones, cifras y «N por atender»; el detalle (Resumen, Personas, Grupos, Por atender) y **«Ver personas» / «Ver grupos»,
+  que abren esas listas ya filtradas por la formación** (las cifras salen de las mismas consultas que las listas). «Editar» (`EditarFormacionSheet`):
+  nombre (3–80), descripción (≤ 600), «Disponible» y las duraciones (3 meses / 1 año); guarda con `version` (409 si otra persona la cambió antes). Cambiar
+  las duraciones rige solo para quien entre o se traslade después. Las secciones «Ficha y términos» y «Hábitos y contenido» del detalle **no se dibujan
+  todavía**: llegan con las specs 026/027 y 023.
+* **Filtro «Formación»** (`FiltroDeFormacion`: Todas · Escuela · Diplomado · Certificación) en **Personas** (va al servidor, `?formation=`) y en
+  **Grupos** (sobre `formation` de cada grupo); cada fila nombra la formación si no es la Escuela.
+* **Ficha de una persona** (`FormacionDeLaPersona`): su formación y duración, **lo que cursó antes** (historial) y, para un **aprendiz**, **«Pasar a otra
+  formación»** (`TrasladarAprendizSheet`): destino entre las disponibles, duración que ese destino ofrece, y «Darla por terminada» con un **motivo** (3–500)
+  si todavía no terminó. Una confirmación dice que **empieza de cero allí** (día 0, sin grupo ni mentor, 100 puntos) y que su historial queda. Un 409
+  («todavía no terminó») abre el motivo. **Equipo y roles** suma **«Formaciones en las que trabaja»** (`FormacionesDelPersonal`) para mentor, guía y
+  líder: marcar una o más, cuál queda activa; el servidor impide quitar una donde lidera un grupo y dice cuál. Si el servidor no ofrece estas secciones
+  (backend anterior), no se dibujan.
+* **Sin animaciones nuevas** (se ven poco y son de consulta): `Presionable`, `HojaDesdeAbajo`, `tacto.seleccion()` al elegir y `tacto.logro()` al
+  quedar guardado. Textos en tipo oración y tuteo; áreas táctiles de 48 o más; un solo scroll por pantalla; la fuente solo por los roles de
+  `theme/fuentes.ts`. Sin íconos, dependencias ni código nativo nuevos.
+* **Pruebas:** Jest en `src/features/formaciones/__tests__` (fases y duraciones, tolerancia de la sesión, el nombre/pregunta/aviso, el proveedor, la
+  API, el centro, la edición, el traslado, las formaciones del personal y el cableado) y los tres guardas de texto de `src/screens/__tests__` que
+  cambian con `duracionDias`. Maestro, escritos y sin correr: `.maestro/formaciones/` (`README.md` explica las cuentas).
+* **Hace falta un APK nuevo** (solo JavaScript: no hay código nativo nuevo, pero la app no se actualiza por aire) **y el backend de la spec 022 antes**
+  (V125–V128). Con el APK nuevo contra un backend anterior todo queda como hoy; con el APK anterior contra el backend nuevo también (la formación
+  por defecto es la Escuela).
+
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
 Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel especializado en React Native, Expo y TypeScript. Al crear, refactorizar o modificar cualquier pantalla o componente, debes cumplir OBLIGATORIAMENTE con los siguientes estándares:
