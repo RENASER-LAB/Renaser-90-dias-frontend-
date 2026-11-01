@@ -215,6 +215,10 @@ export default function HoyScreen() {
    * > inventado es peor que no mostrarlo. Reportado por el dueño el día que se registró.
    */
   const diaConocido = resumen?.diaPrograma ?? null;
+  /* Sin día de programa (el personal sin programa, quien no eligió su Día 1 o está en el día 0) no hay hábitos de hoy que contar: la tarjeta
+     decía «0/0» y «Lidera tu energía diaria.», un dato inventado (E2E de las formaciones, 01/11/2026, issue #86). Se espera a que `/home` llegue
+     para no hacer saltar la pantalla de todos; el hueco no queda porque el contenedor separa con `gap`, no con márgenes de cada hijo. */
+  const sinDiaDePrograma = !cargandoResumen && resumen !== null && (resumen.diaPrograma ?? 0) <= 0;
   /* La fecha de hoy para la frase del día de quien NO tiene día de programa (personal sin programa, Día 0, sin Día 1 elegido): `/home` no la
      manda, así que es el día civil del teléfono (supuesto anotado en `fraseDelDia`). Se da solo cuando ya se sabe si hay día de programa
      (`/home` respondió o falló): antes, quien sí lo tiene vería primero la frase del calendario y se le cambiaría por la de su día. */
@@ -436,7 +440,7 @@ export default function HoyScreen() {
               `features/radar/utils/mitadDelRadar.ts`. Sin Día 1 (o sin Mi Radar en el backend) es solo la mitad de hábitos. */}
           {programaEnOtraFormacion ? (
             <AvisoDeProgramaEnOtraFormacion nombre={programaEnOtraFormacion.nombre} />
-          ) : (
+          ) : sinDiaDePrograma ? null : (
           <TarjetaHabitoYRadar
             sinHabitos={sinHabitosEnLaFormacion({
               formacion: categorias.formacion,
