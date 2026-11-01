@@ -20,6 +20,7 @@ export type VistaDeYo =
   | 'evidencias'
   | 'onboarding'
   | 'pacto'
+  | 'terminos'
   | 'mapa_renacimiento'
   | 'metodo'
   | 'notificaciones'
@@ -33,8 +34,8 @@ export type OrigenDeYo = 'main' | 'hub';
 export function vistaDeRegreso(vista: VistaDeYo, origen: OrigenDeYo): VistaDeYo | null {
   if (vista === 'main') return null;
   if (vista === 'hub') return 'main';
-  // El Pacto y el Mapa son etapas de «Mi onboarding»: se vuelve a la lista de etapas.
-  if (vista === 'pacto' || vista === 'mapa_renacimiento') return 'onboarding';
+  // El Pacto, el Mapa y los términos que aceptó son partes de «Mi onboarding»: se vuelve a su lista.
+  if (vista === 'pacto' || vista === 'mapa_renacimiento' || vista === 'terminos') return 'onboarding';
   return origen;
 }
 
@@ -57,6 +58,7 @@ export const TITULO_DE_VISTA: Record<Exclude<VistaDeYo, 'main' | 'mapa_renacimie
   evidencias: 'Mis evidencias',
   onboarding: 'Mi onboarding',
   pacto: 'El Pacto',
+  terminos: 'Términos y condiciones',
   metodo: 'El Método Renaser',
   notificaciones: 'Notificaciones',
   alarmas: 'Alarmas',

@@ -150,6 +150,8 @@ export function AceptarSolicitudSheet({
                 </Text>
                 {opciones.formations.map(formacion => {
                   const marcada = borrador.formaciones.includes(formacion.code);
+                  /* Spec 027: una formación sin términos publicados no recibe personas nuevas (nadie podría aceptarlos): se ve, apagada y con el porqué. */
+                  const sinTerminos = formacion.termsPublished === false;
                   return (
                     <Pressable
                       key={formacion.code}
@@ -157,13 +159,21 @@ export function AceptarSolicitudSheet({
                         tacto.seleccion();
                         setBorrador(b => alMarcarFormacion(b, modo, formacion.code, opciones));
                       }}
-                      disabled={bloqueado}
+                      disabled={bloqueado || sinTerminos}
                       accessibilityRole={modo === 'una' ? 'radio' : 'checkbox'}
-                      accessibilityState={{ selected: marcada, checked: marcada }}
-                      accessibilityLabel={formacion.name}
-                      style={[estilos.fila, { borderColor: marcada ? c.gold : c.border, backgroundColor: marcada ? c.goldWash : c.cardBgAlt }]}
+                      accessibilityState={{ selected: marcada, checked: marcada, disabled: sinTerminos }}
+                      accessibilityLabel={sinTerminos ? `${formacion.name}. Todavía no tiene términos publicados.` : formacion.name}
+                      style={[
+                        estilos.fila,
+                        { borderColor: marcada ? c.gold : c.border, backgroundColor: marcada ? c.goldWash : c.cardBgAlt, opacity: sinTerminos ? 0.6 : 1 },
+                      ]}
                     >
-                      <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 17, flex: 1 }]}>{formacion.name}</Text>
+                      <View style={{ flex: 1, gap: 2 }}>
+                        <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 17 }]}>{formacion.name}</Text>
+                        {sinTerminos ? (
+                          <Text style={[t.small, { color: c.textSoft, fontSize: 15 }]}>Todavía no tiene términos publicados.</Text>
+                        ) : null}
+                      </View>
                       {marcada ? <Icon name="check" size={20} color={c.goldInk} /> : null}
                     </Pressable>
                   );

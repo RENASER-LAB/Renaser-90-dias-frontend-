@@ -1,4 +1,5 @@
 import { useCallback, useRef } from 'react';
+import { ApiError } from '../../../services/http/apiClient';
 import * as onboardingApi from '../api/onboardingApi';
 import { obtenerCatalogoPreguntas } from '../data/catalogoPreguntas';
 import { AvanzarEstadoInput, HitoOnboarding, RespuestaPorClaveInput } from '../types/onboarding.types';
@@ -22,6 +23,9 @@ import { AvanzarEstadoInput, HitoOnboarding, RespuestaPorClaveInput } from '../t
  * que no se puede resolver NUNCA se manda con un id adivinado: queda pendiente, que es lo que hace
  * que la pantalla avise en vez de dar por guardado algo que no lo está.
  */
+/** El desenlace de dejar la constancia de los Términos: quedó, o no — y si no, si fue porque el texto cambió mientras leía. */
+export type ResultadoDeAceptarTerminos = { ok: true } | { ok: false; cambiaron: boolean };
+
 export function usePersistenciaOnboarding() {
   // Respuestas que fallaron y todavía no se confirmaron guardadas.
   const pendientesRef = useRef<RespuestaPorClaveInput[]>([]);
@@ -125,6 +129,20 @@ export function usePersistenciaOnboarding() {
   }, []);
 
   /**
+   * Spec 027: deja la constancia de que aceptó los Términos y de QUÉ versión. A diferencia de {@link aceptarHito}, esto SÍ puede fallar y quien llama debe
+   * enterarse (FR-013): aceptar unos términos sin que quede constancia es peor que no avanzar. Un 409 es «los términos cambiaron mientras leías» (FR-012).
+   */
+  const aceptarTerminos = useCallback(async (versionId: string | null): Promise<ResultadoDeAceptarTerminos> => {
+    try {
+      await onboardingApi.aceptarHito('TERMINOS', versionId);
+      return { ok: true };
+    } catch (error) {
+      if (error instanceof ApiError && error.esConflicto) return { ok: false, cambiaron: true };
+      return { ok: false, cambiaron: false };
+    }
+  }, []);
+
+  /**
    * Sube una firma (capturada como PNG por `SignatureCanvas.capturarComoPngBase64`) a S3 y guarda la
    * respuesta correspondiente con su `mediaId` — los 3 pasos de CLAUDE.md ("firmas del
    * onboarding"): `POST /media/upload-url` -> `PUT` a S3 -> `POST /media` -> `POST /answers` con
@@ -204,5 +222,5 @@ export function usePersistenciaOnboarding() {
     [enviarRespuestas]
   );
 
-  return { guardarCapitulo, reintentarPendientes, avanzarEstado, aceptarHito, guardarFirma };
+  return { guardarCapitulo, reintentarPendientes, avanzarEstado, aceptarHito, aceptarTerminos, guardarFirma };
 }

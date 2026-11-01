@@ -1,0 +1,74 @@
+# Administración edita los términos de la Escuela, mira la vista previa, guarda el borrador y publica sin pedir aceptar de nuevo (spec 027, historia 1). ESCRITO Y SIN CORRER.
+# cuenta: admin
+# Precondición (base local): la migración V148–V150 aplicada (la Escuela con su versión 1 publicada).
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "YO"
+- scrollUntilVisible:
+    element: "Administración"
+    direction: DOWN
+    timeout: 40000
+- tapOn: "Administración"
+- scrollUntilVisible:
+    element: "Más opciones.*"
+    direction: DOWN
+    timeout: 40000
+- tapOn: "Más opciones.*"
+- scrollUntilVisible:
+    element: "Términos y condiciones"
+    direction: DOWN
+    timeout: 40000
+- tapOn: "Términos y condiciones"
+- extendedWaitUntil:
+    visible: "Escuela Renaser"
+    timeout: 30000
+- assertVisible: "Versión 1.*"
+- assertVisible: "Diplomado Renaser"
+- assertVisible: "Por revisar"
+- takeScreenshot: T01a-las-tres-formaciones
+- tapOn: "Escuela Renaser.*"
+- extendedWaitUntil:
+    visible: "Versión 1 · vigente"
+    timeout: 20000
+- tapOn: "Editar"
+- extendedWaitUntil:
+    visible: "Cláusula 1"
+    timeout: 20000
+# Sin cambios no se publica.
+- assertVisible: "No hay cambios respecto de la versión vigente."
+- tapOn: "Agregar una cláusula"
+- scrollUntilVisible:
+    element: "Cláusula 24"
+    direction: DOWN
+    timeout: 20000
+- assertVisible: "La cláusula 24 está vacía."
+- tapOn: "Texto de la cláusula 24"
+- inputText: "Cláusula de prueba del E2E."
+- takeScreenshot: T01b-editando
+- tapOn: "Vista previa"
+- extendedWaitUntil:
+    visible: "Cláusula de prueba del E2E."
+    timeout: 15000
+- takeScreenshot: T01c-vista-previa
+- tapOn: "Cerrar"
+- tapOn: "Guardar borrador"
+- extendedWaitUntil:
+    visible: "Borrador guardado"
+    timeout: 10000
+- tapOn: "Publicar"
+- extendedWaitUntil:
+    visible: "Lo verán las personas que entren desde ahora"
+    timeout: 15000
+- tapOn: "Nota del cambio"
+- inputText: "Una cláusula de prueba"
+- takeScreenshot: T01d-publicar
+- tapOn:
+    text: "Publicar"
+    index: 1
+- extendedWaitUntil:
+    visible: "Versión 2 · vigente"
+    timeout: 30000
+- assertVisible: "Historial"
+- assertVisible: "Versión 1.*"
+- takeScreenshot: T01e-historial

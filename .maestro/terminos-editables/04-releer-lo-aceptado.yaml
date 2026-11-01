@@ -1,0 +1,26 @@
+# Yo → Ajustes → Mi onboarding → «Términos y condiciones»: la persona relee, en solo lectura, la versión que aceptó, con su día y su firma (spec 027, historia 6, P3). ESCRITO Y SIN CORRER.
+# cuenta: aprendiz  (de la Escuela, con los términos ya aceptados)
+# Precondición: la cuenta aceptó la versión 1. Si Administración publicó una versión 2 SIN pedir aceptar de nuevo, la vista sigue mostrando la 1.
+appId: com.renaser.app
+---
+- runFlow: ../comun/despejar-capas.yaml
+- tapOn: "Yo"
+- tapOn: "Ajustes"
+- tapOn: "Mi onboarding"
+- assertVisible: "Tu proceso"
+# La fila no es una etapa: la cuenta de etapas no cambia.
+- assertVisible: "de 2 etapas completadas"
+- scrollUntilVisible:
+    element: "Términos y condiciones.*"
+- takeScreenshot: T04a-fila-de-terminos
+- tapOn: "Términos y condiciones.*"
+- assertVisible: "Versión 1"
+- assertVisible: "Aceptada el .*"
+- assertVisible: "Términos y condiciones"
+- takeScreenshot: T04b-lo-que-acepte
+# Solo lectura: no hay casilla, firma ni botón de aceptar.
+- assertNotVisible: "ACEPTAR"
+- assertNotVisible: "Acepto"
+# El atrás sube un nivel: términos → Mi onboarding.
+- back
+- assertVisible: "Tu proceso"

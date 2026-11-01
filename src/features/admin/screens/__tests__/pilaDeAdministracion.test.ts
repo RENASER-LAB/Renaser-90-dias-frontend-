@@ -29,6 +29,9 @@ jest.mock('../../../caja/screens/CajaListaScreen', () => ({}));
 jest.mock('../../../lider-mentores/screens/PersonaDelLiderScreen', () => ({}));
 jest.mock('../../../formaciones/screens/FormacionDetalleAdminScreen', () => ({}));
 jest.mock('../../../formaciones/screens/FormacionesAdminScreen', () => ({}));
+jest.mock('../../../onboarding/terminos/screens/TerminosAdminScreen', () => ({}));
+jest.mock('../../../onboarding/terminos/screens/TerminosDeUnaFormacionScreen', () => ({}));
+jest.mock('../../../onboarding/terminos/screens/EditorDeTerminosScreen', () => ({}));
 
 import { pilaInicial, pilaTrasEliminarCuenta } from '../AdminScreen';
 

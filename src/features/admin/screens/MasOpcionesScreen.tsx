@@ -33,6 +33,7 @@ export function MasOpcionesScreen({
   onAbrirHabitosDelPrograma,
   onAbrirPublicacionesOcultas,
   onAbrirCodigoRenaserEnFichas,
+  onAbrirTerminos,
 }: {
   onVolver: () => void;
   onAbrirStaff: () => void;
@@ -42,6 +43,7 @@ export function MasOpcionesScreen({
   onAbrirHabitosDelPrograma: () => void;
   onAbrirPublicacionesOcultas: () => void;
   onAbrirCodigoRenaserEnFichas: () => void;
+  onAbrirTerminos: () => void;
 }) {
   const barraAlDesplazar = useOcultarBarraAlDesplazar();
   const { c, t } = useTheme();
@@ -93,6 +95,13 @@ export function MasOpcionesScreen({
       detalle: 'Si el mentor y el líder ven el Código Renaser de los aprendices',
       onPress: onAbrirCodigoRenaserEnFichas,
       clave: CLAVES.admin,
+    },
+    /* El texto legal que firma cada persona al entrar, editable y con versiones, uno por formación (pedido del dueño del 31/10, backend D-304). */
+    {
+      titulo: 'Términos y condiciones',
+      detalle: 'Editar y publicar los términos de cada formación, con su historial',
+      onPress: onAbrirTerminos,
+      clave: CLAVES.adminPersonas,
     },
     {
       titulo: 'Equipo y roles',
