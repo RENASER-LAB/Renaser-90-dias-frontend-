@@ -9,6 +9,8 @@ import { tacto } from '../../../utils/tacto';
 import * as onboardingApi from '../api/onboardingApi';
 import { ApiError, mensajeDeError } from '../../../services/http/apiClient';
 import { avisarDiaUnoElegido } from '../../programa/events/avisoDiaUnoElegido';
+import { useFormacionDeLaSesion } from '../../formaciones/context/FormacionContext';
+import { introduccionDelDiaUno } from '../utils/textoDelDiaUno';
 
 /**
  * Último paso del onboarding, entre Términos y el Home: elegir el Día 1 del programa. (El Pacto —
@@ -63,6 +65,8 @@ function formatearFecha(iso: string): string {
 
 export function ActivarProgramaScreen({ onActivated, alVolver }: ActivarProgramaScreenProps) {
   const { c, t } = useTheme();
+  /* El plazo que se nombra es el del programa de esta persona (90 días, 3 meses, 1 año), no siempre 90 días. */
+  const { formacion } = useFormacionDeLaSesion();
 
   const [cargando, setCargando] = useState(true);
   const [fechas, setFechas] = useState<string[]>([]);
@@ -155,10 +159,7 @@ export function ActivarProgramaScreen({ onActivated, alVolver }: ActivarPrograma
         <Text accessibilityRole="header" style={[t.screenTitle, { color: c.textStrong }]}>
           Elige tu Día 1
         </Text>
-        <Text style={[t.body, { color: c.textSoft }]}>
-          Tu programa de 90 días arranca el día que elijas. No puede ser hoy, para que puedas
-          planificarte y dejar listos tus hábitos antes de que empiece a correr la cuenta.
-        </Text>
+        <Text style={[t.body, { color: c.textSoft }]}>{introduccionDelDiaUno(formacion?.duracionDias, formacion?.activa?.codigo)}</Text>
       </View>
 
       {cargando ? (
