@@ -3,7 +3,6 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { Icon, TAMANO_ICONO } from '../../../components/Icon';
 import { Presionable } from '../../../components/Presionable';
-import { FilaDelCierre } from '../../cierre/components/FilaDelCierre';
 import { MicroLabel } from '../../../components/ui';
 import { useTheme } from '../../../theme/ThemeContext';
 import { modoDeHoy, type ModoDeLaFila } from '../utils/filaDelDia';
@@ -19,15 +18,10 @@ import { FilaDelDia } from './FilaDelDia';
  * 2. «Sin hora»;
  * 3. «Se te pasó la hora · todavía puedes registrarlos hoy»;
  * 4. lo que ya no se puede registrar (su día cerró), si lo hay;
- * 5. plegado, «N hechos hoy»;
- * 6. de última, «Cierra tu día».
+ * 5. plegado, «N hechos hoy».
  *
  * Lo hecho sale con un fundido y la lista se acomoda (`FilaDelDia`). Los que se acaban de cumplir (`retenidos`)
  * se quedan en su lugar el tiempo justo para que el check se llene y suba su «+N».
- *
- * **«Cierra tu día»** (spec 017) es una fila aparte (`FilaDelCierre`) que está SIEMPRE y va **de última**, después de todo lo
- * del día (también de lo hecho y de Dormir): no lleva hora, no lleva «Te toca ahora», no se despide al cerrarse y no cuenta
- * para «Terminaste lo de hoy». No depende de ningún hábito (pedido del dueño, 2026-10-30).
  */
 export function ListaDeHoy({
   items,
@@ -47,7 +41,6 @@ export function ListaDeHoy({
   const { c, t } = useTheme();
   const [hechosAbiertos, setHechosAbiertos] = useState(false);
   const lista = useMemo(() => armarListaDelDia(items, minutosDeAhora(ahoraMs), retenidos), [items, ahoraMs, retenidos]);
-  // La fila de «Cierra tu día» no es algo que quede por hacer: va aparte (`lista.cierre`) y no entra en esta cuenta.
   const quedaAlgo = lista.enCurso.length + lista.sinHora.length + lista.atrasados.length + lista.cerrados.length > 0;
   const hayHechos = lista.hechos.length > 0;
   // Los que se despiden cuentan como hechos para el plegado, pero siguen en su lugar hasta irse.
@@ -132,13 +125,6 @@ export function ListaDeHoy({
           Van en el orden y a la hora que planificaste. Lo que haces desaparece y sube lo que sigue.
         </Text>
       ) : null}
-
-      {/* «Cierra tu día»: siempre, de última, sin hora. El modo da igual: la hoja se abre igual cerrada o no. */}
-      {lista.cierre ? (
-        <View style={estilos.cierre}>
-          <FilaDelCierre item={lista.cierre} onAbrir={elegido => onAbrir(elegido, 'hoy')} />
-        </View>
-      ) : null}
     </View>
   );
 }
@@ -150,5 +136,4 @@ const estilos = StyleSheet.create({
   // 48 de alto: el plegado se toca con una mano, y va alineado con el texto de las filas (46 + 10 de hueco).
   plegado: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 48, paddingLeft: 56 },
   pie: { marginTop: 12 },
-  cierre: { marginTop: 8 },
 });

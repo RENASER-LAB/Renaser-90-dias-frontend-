@@ -34,6 +34,9 @@ local (nunca contra producción).
   `mi-radar/11–12` y `lider-ve-a-todos/01` ya entran por ahí). Los nombres de los hábitos ahora se ven en tipo oración: los flujos viejos que los buscaban en mayúsculas usan
   `(?i)` desde ese día.
 
+- `cierre-en-plan/` (spec 033, 2026-10-31): «Cierra tu día» ya no está en Training; vive en una tarjeta de Plan, bajo «Acciones que
+  mueven la meta», con «Ver mañana en Plan» y los cierres de los días anteriores en la misma tarjeta (solo lectura). **Escritos y
+  sin correr**; cada archivo dice su precondición. Reemplaza a la carpeta `cierre/` (que probaba la fila de Training).
 ## Cómo correrla
 
 1. Backend local (worktree propio, base clonada) con las fotos en local (`docs/DESPLIEGUE_Y_CI.md` §1.3 del backend).

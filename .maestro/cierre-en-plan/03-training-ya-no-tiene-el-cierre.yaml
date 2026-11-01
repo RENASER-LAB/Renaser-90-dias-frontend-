@@ -1,0 +1,16 @@
+# CP03 — Training ya no tiene «Cierra tu día» (spec 033): ni la fila al final de hoy ni la fila «Cerrado» / «Sin cerrar» de un
+# día anterior. Todo lo demás de Training sigue (la lista, «N hechos hoy», «Tus prácticas»).
+# ESCRITO Y SIN CORRER. Se corre con: .maestro/correr.sh .maestro/cierre-en-plan/03-training-ya-no-tiene-el-cierre.yaml
+# cuenta: aprendiz
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- runFlow: ../comun/abrir-training.yaml
+# La fila vivía al final de la lista de hoy: se baja hasta el fondo antes de mirar.
+- repeat:
+    times: 6
+    commands:
+      - scroll
+- assertNotVisible: "Cierra tu día"
+- assertNotVisible: "Día cerrado.*"
+- takeScreenshot: CP03a-training-sin-el-cierre

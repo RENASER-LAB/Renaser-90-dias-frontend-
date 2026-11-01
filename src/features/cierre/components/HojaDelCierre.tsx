@@ -20,10 +20,12 @@ import {
   PREGUNTA_DEL_MOTIVO,
   planEnFrase,
 } from '../data/textosDelCierre';
+import { iconoDelEje } from '../../objetivos/utils/iconoDelEje';
+import type { EjeObjetivo } from '../../objetivos/types/objetivos.types';
 import { useHojaDelCierre, type ResultadoDeGuardar } from '../hooks/useHojaDelCierre';
 import type { AccionDelCierre, CierreDelDia } from '../types/cierre.types';
 import { NOTA_MAXIMA, aPreguntarDe, cumplidasDe, pendientesDe, porLlegarDe } from '../utils/borradorDelCierre';
-import { horaDeUnInstante } from '../utils/itemDelCierre';
+import { horaDeUnInstante } from '../utils/tarjetaDelCierre';
 import { ChipDelCierre } from './ChipDelCierre';
 
 export const TITULO_DE_LA_HOJA = 'Cierra tu día';
@@ -34,7 +36,7 @@ export const TEXTO_SIN_PENDIENTES = 'No te quedó nada pendiente. No hace falta 
 export const TEXTO_SOLO_POR_LLEGAR = 'Lo que falta por hacer todavía no llega a su hora. No hace falta responder nada.';
 export const TEXTO_DEL_CAMPO_DE_NOTA = 'Si quieres, cuéntalo con tus palabras';
 
-/** «14 de 18 hechos hoy»: lo que Training ya sabe de los hábitos de hoy, sin contar el cierre. */
+/** «14 de 18 hechos hoy»: lo que `/home` dice de los hábitos de hoy. */
 export function textoDeLosHabitos(hechos: number, total: number): string {
   return `${hechos} de ${total} ${total === 1 ? 'hecho' : 'hechos'} hoy. No hace falta responder nada.`;
 }
@@ -55,7 +57,9 @@ export function textoDeLaSemana(cumplidas: number, planificadas: number): string
  * - **Un día sin acciones** dice «Hoy no tenías acciones.»; con todo cumplido, no queda nada que preguntar. En los dos
  *   casos hay una nota del día, opcional.
  * - **Al guardar** el formulario da paso, con un fundido, a «Día cerrado» con lo que dijiste para mañana y «Ver mañana
- *   en Training» (no el domingo: mañana cae fuera de la semana).
+ *   en Plan» (todos los días, también el domingo: Plan muestra lo que viene; spec 033, decisión del dueño del 2026-10-31).
+ * - **Cada acción pendiente lleva el ícono de su eje** (spec 033): el eje lo pone quien monta la hoja (`ejeDe`, sale de las
+ *   acciones de hoy de Plan, porque `GET /rocks/day-closure` no lo trae). Sin él, el ícono neutro: nunca se inventa un eje.
  *
  * Movimiento (`emil-design-eng`, `animate-expo`): lo único que se mueve es ese fundido al guardar (`DURACION_MS.paso`,
  * ease-out, solo `opacity`); con «reducir movimiento» aparece al instante. Los chips no se animan.
@@ -68,6 +72,7 @@ export function HojaDelCierre({
   habitosHechos,
   habitosTotal,
   puedeVerManana,
+  ejeDe,
   onCerrar,
   alTerminarDeCerrar,
   alLeer,
@@ -81,12 +86,15 @@ export function HojaDelCierre({
   diaPrograma: number | null;
   habitosHechos: number;
   habitosTotal: number;
+  /** ¿Se ofrece «Ver mañana en Plan»? Solo si Plan muestra acciones (con el Mapa activo). */
   puedeVerManana: boolean;
+  /** El eje de una acción por su id, o `null` si no se sabe. */
+  ejeDe?: (idDeLaAccion: string) => EjeObjetivo | null;
   onCerrar: () => void;
   alTerminarDeCerrar?: () => void;
   alLeer?: (vista: CierreDelDia) => void;
   alGuardar?: (vista: CierreDelDia) => void;
-  /** El día ya no es el de hoy: Training cierra la hoja, relee y avisa. */
+  /** El día ya no es el de hoy: Plan cierra la hoja, relee y avisa. */
   alSalirPorDiaCerrado: () => void;
   onVerManana: () => void;
 }) {
@@ -116,8 +124,8 @@ export function HojaDelCierre({
     fase === 'guardado' ? (
       <View style={{ gap: 8 }}>
         {puedeVerManana ? (
-          <Presionable onPress={onVerManana} accessibilityRole="button" accessibilityLabel="Ver mañana en Training" style={estilos.enlace}>
-            <Text style={[t.body, { color: c.goldInk, fontFamily: fuentes.negrita, fontSize: 16 }]}>Ver mañana en Training</Text>
+          <Presionable onPress={onVerManana} accessibilityRole="button" accessibilityLabel="Ver mañana en Plan" style={estilos.enlace}>
+            <Text style={[t.body, { color: c.goldInk, fontFamily: fuentes.negrita, fontSize: 16 }]}>Ver mañana en Plan</Text>
             <Icon name="chevron" size={TAMANO_ICONO.chico} color={c.goldInk} />
           </Presionable>
         ) : null}
@@ -177,6 +185,7 @@ export function HojaDelCierre({
             hoja={hoja}
             habitosHechos={habitosHechos}
             habitosTotal={habitosTotal}
+            ejeDe={ejeDe}
           />
         </ScrollView>
       ) : null}
@@ -199,11 +208,13 @@ function Formulario({
   hoja,
   habitosHechos,
   habitosTotal,
+  ejeDe,
 }: {
   vista: CierreDelDia;
   hoja: ReturnType<typeof useHojaDelCierre>;
   habitosHechos: number;
   habitosTotal: number;
+  ejeDe?: (idDeLaAccion: string) => EjeObjetivo | null;
 }) {
   const { c, t } = useTheme();
   const cumplidas = cumplidasDe(vista);
@@ -221,7 +232,7 @@ function Formulario({
             <LineaCumplida key={accion.id} accion={accion} />
           ))}
           {aPreguntar.map(accion => (
-            <TarjetaPendiente key={accion.id} accion={accion} hoja={hoja} />
+            <TarjetaPendiente key={accion.id} accion={accion} hoja={hoja} eje={ejeDe?.(accion.id) ?? null} />
           ))}
           {porLlegar.map(accion => (
             <LineaPorLlegar key={accion.id} accion={accion} />
@@ -296,13 +307,25 @@ function LineaPorLlegar({ accion }: { accion: AccionDelCierre }) {
   );
 }
 
-function TarjetaPendiente({ accion, hoja }: { accion: AccionDelCierre; hoja: ReturnType<typeof useHojaDelCierre> }) {
+function TarjetaPendiente({
+  accion,
+  hoja,
+  eje,
+}: {
+  accion: AccionDelCierre;
+  hoja: ReturnType<typeof useHojaDelCierre>;
+  eje: EjeObjetivo | null;
+}) {
   const { c, t } = useTheme();
   const respuesta = hoja.borrador.porAccion[accion.id];
   const cuando = accion.horaInicio ? `Era a las ${accion.horaInicio} · quedó pendiente` : 'Quedó pendiente';
   return (
     <View style={[estilos.tarjeta, { borderColor: c.border, backgroundColor: c.cardBg }]}>
-      <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 17 }]}>{accion.titulo}</Text>
+      {/* El ícono de su eje, como las acciones de Plan; sin eje conocido, el neutro (`target`). */}
+      <View style={estilos.cabeceraDeLaAccion}>
+        <Icon name={eje ? iconoDelEje(eje) : 'target'} size={TAMANO_ICONO.normal} color={c.goldInk} />
+        <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 17, flex: 1 }]}>{accion.titulo}</Text>
+      </View>
       <Text style={[t.small, { color: c.textSoft, fontVariant: ['tabular-nums'] }]}>{cuando}</Text>
 
       <Text style={[t.body, estilos.pregunta, { color: c.textStrong }]}>{PREGUNTA_DEL_MOTIVO}</Text>
@@ -382,6 +405,7 @@ const estilos = StyleSheet.create({
   estado: { paddingHorizontal: 20, paddingVertical: 24, gap: 12 },
   lineaCumplida: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 48, paddingHorizontal: 12, borderRadius: 12 },
   tarjeta: { gap: 6, padding: 14, borderWidth: 1, borderRadius: 16 },
+  cabeceraDeLaAccion: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   pregunta: { marginTop: 10, fontFamily: fuentes.negrita, fontSize: 16 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   campo: {

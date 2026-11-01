@@ -210,17 +210,17 @@ describe('al guardar', () => {
     expect(puts).toHaveLength(1);
     expect(puts[0].cuerpo).toEqual({ fecha: HOY, acciones: [{ id: 'a-2', motivo: 'SIN_TIEMPO', manana: 'OTRA_HORA' }] });
     expect(textos()).toEqual(expect.arrayContaining(['Día cerrado', 'Mañana: «Revisar las facturas», a otra hora.']));
-    expect(hay('Ver mañana en Training')).toBe(true);
+    expect(hay('Ver mañana en Plan')).toBe(true);
     expect(mockLogro).toHaveBeenCalledTimes(1);
     expect(alGuardar).toHaveBeenCalledTimes(1);
     expect(hay('Guardar mi cierre')).toBe(false);
   });
 
-  it('«Ver mañana en Training» lleva a Training; el DOMINGO no se ofrece (mañana cae fuera de la semana)', async () => {
+  it('«Ver mañana en Plan» lleva a lo que Plan muestra de mañana; solo se ofrece si Plan muestra acciones (spec 033)', async () => {
     await montar();
     await responder();
     await guardar();
-    await act(async () => { tocableCon('Ver mañana en Training').props.onPress(); });
+    await act(async () => { tocableCon('Ver mañana en Plan').props.onPress(); });
     expect(onVerManana).toHaveBeenCalledTimes(1);
     act(() => raiz!.unmount());
 
@@ -228,7 +228,7 @@ describe('al guardar', () => {
     await responder();
     await guardar();
     expect(hay('Día cerrado')).toBe(true);
-    expect(hay('Ver mañana en Training')).toBe(false);
+    expect(hay('Ver mañana en Plan')).toBe(false);
   });
 
   it('guardar no completa nada: ningún pedido toca la evidencia, el registro del hábito ni los puntos', async () => {
