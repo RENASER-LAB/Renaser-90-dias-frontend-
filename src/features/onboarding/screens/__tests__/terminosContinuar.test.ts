@@ -43,8 +43,12 @@ jest.mock('../../hooks/usePersistenciaOnboarding', () => ({
     guardarCapitulo: (respuestas: unknown) => mockGuardarCapitulo(respuestas),
     guardarFirma: (firma: unknown) => mockGuardarFirma(firma),
     aceptarHito: async () => undefined,
+    aceptarTerminos: async () => ({ ok: true }),
     avanzarEstado: async () => undefined,
   }),
+}));
+jest.mock('../../terminos/hooks/useMisTerminos', () => ({
+  useMisTerminos: () => ({ terminos: null, cargada: true, recargar: async () => null }),
 }));
 
 import { TerminosScreen } from '../TerminosScreen';

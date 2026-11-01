@@ -32,7 +32,9 @@ describe('aceptar los términos con su versión (FR-011, FR-012)', () => {
 });
 
 describe('leer los términos de mi formación', () => {
-  beforeEach(() => mockApiFetch.mockReset());
+  beforeEach(() => {
+    mockApiFetch.mockReset();
+  });
 
   it('lee la versión vigente y qué se me pide', async () => {
     mockApiFetch.mockResolvedValue({ formation: { code: 'ESCUELA', name: 'Escuela Renaser' }, version, pending: 'NEW_VERSION', blocks: true, lastAcceptedNumber: 1, changeNote: 'Cambió el reembolso' });
@@ -71,7 +73,9 @@ describe('leer los términos de mi formación', () => {
 });
 
 describe('Administración', () => {
-  beforeEach(() => mockApiFetch.mockReset());
+  beforeEach(() => {
+    mockApiFetch.mockReset();
+  });
 
   it('guarda el borrador con la base que tenía a la vista, y publica con su nota y si pide aceptar de nuevo', async () => {
     mockApiFetch.mockResolvedValue({ ...version, state: 'BORRADOR', number: null });

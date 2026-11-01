@@ -22,9 +22,9 @@ import { OPCIONES_BASE } from '../rolesAsignables';
 
 const OPCIONES: OpcionesDeAceptacionApi = {
   formations: [
-    { code: 'ESCUELA', name: 'Escuela Renaser', durationsDays: [90], durationLabels: ['90 días'], defaultDurationDays: 90 },
-    { code: 'DIPLOMADO', name: 'Diplomado Renaser', durationsDays: [90, 365], durationLabels: ['3 meses', '1 año'], defaultDurationDays: 90 },
-    { code: 'CERTIFICACION', name: 'Certificación Renaser', durationsDays: [90], durationLabels: ['90 días'], defaultDurationDays: 90 },
+    { code: 'ESCUELA', name: 'Escuela Renaser', durationsDays: [90], durationLabels: ['90 días'], defaultDurationDays: 90, termsPublished: true },
+    { code: 'DIPLOMADO', name: 'Diplomado Renaser', durationsDays: [90, 365], durationLabels: ['3 meses', '1 año'], defaultDurationDays: 90, termsPublished: true },
+    { code: 'CERTIFICACION', name: 'Certificación Renaser', durationsDays: [90], durationLabels: ['90 días'], defaultDurationDays: 90, termsPublished: true },
   ],
   diagnosisAvailable: true,
 };
