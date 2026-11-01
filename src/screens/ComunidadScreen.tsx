@@ -157,6 +157,7 @@ import { TarjetaDeTestimonio } from '../features/community/components/TarjetaDeT
 import type { CitaDelMensaje, WireMensaje } from '../features/chat/types/chat.types';
 import { marcarChatMontado } from '../features/renasia/state/chatEnPantalla';
 import { useRanking } from '../features/ranking/hooks/useRanking';
+import { useTablasDelRanking } from '../features/ranking/hooks/useTablasDelRanking';
 import { BotonDescargarPodio } from '../features/ranking/components/BotonDescargarPodio';
 import {
   entradasDeLaTabla,
@@ -164,7 +165,6 @@ import {
   miEntradaEnLaTabla,
   nombreEnElRanking,
   invitacionSinPosiciones,
-  TABLAS_DE_RANKING,
   textoDeMiPuntaje,
   textoDelPuntaje,
   type ClaveDeTabla,
@@ -1634,7 +1634,11 @@ function ComunidadPorFormacion({
    * > otras dos **no se veían nunca**: el ranking por coherencia existía en el servidor, se
    * > calculaba y se guardaba, y ninguna pantalla lo mostraba.
    */
-  const [tipoRanking, setTipoRanking] = useState<ClaveDeTabla>('general');
+  const [tipoRankingElegido, setTipoRanking] = useState<ClaveDeTabla>('general');
+  /* Spec 023: «Kilómetros» y «Gimnasio» solo se ofrecen si el catálogo de hábitos de la formación que se mira tiene ese hábito. Si la pestaña
+     elegida deja de ofrecerse (llegó el catálogo), se vuelve a «General». */
+  const tablasDelRanking = useTablasDelRanking(recursosPedidos.ranking);
+  const tipoRanking: ClaveDeTabla = tablasDelRanking.some(tabla => tabla.clave === tipoRankingElegido) ? tipoRankingElegido : 'general';
 
   const apiRankingEntries = useMemo(() => entradasDeLaTabla(rankingData, tipoRanking), [rankingData, tipoRanking]);
 
@@ -3312,7 +3316,7 @@ function ComunidadPorFormacion({
                   > es el `ControlSegmentado` de la app (píldora que viaja, tic de selección). */}
               <View style={{ marginBottom: 14 }}>
                 <ControlSegmentado
-                  opciones={TABLAS_DE_RANKING.map(tabla => ({
+                  opciones={tablasDelRanking.map(tabla => ({
                     valor: tabla.clave,
                     etiqueta: tabla.titulo,
                     accessibilityLabel: `${tabla.titulo}: ${tabla.explica}`,
@@ -3330,7 +3334,7 @@ function ComunidadPorFormacion({
                   > `canExportRanking`; sin él la fila es la de siempre, con el texto a todo el ancho. */}
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 }}>
                 <Text style={[t.small, { color: c.textSoft, flex: 1 }]}>
-                  {TABLAS_DE_RANKING.find(tabla => tabla.clave === tipoRanking)?.explica}
+                  {tablasDelRanking.find(tabla => tabla.clave === tipoRanking)?.explica}
                 </Text>
                 {/* Spec 024: la imagen lleva el nombre de la formación que se mira; con «Todas» pide elegir una antes de descargar. */}
                 <BotonDescargarPodio
