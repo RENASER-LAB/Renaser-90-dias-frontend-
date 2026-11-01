@@ -22,11 +22,10 @@ import { Icon, TAMANO_ICONO } from '../components/Icon';
 import { Presionable } from '../components/Presionable';
 import { tacto } from '../utils/tacto';
 import { Aparicion } from '../components/Aparicion';
-import { useEsMentor } from '../features/mentor/hooks/useEsMentor';
-import { EntradaAlProgramaPropio } from '../features/programa/components/EntradaAlProgramaPropio';
+import { FilaDelProgramaPropio } from '../features/programa/components/FilaDelProgramaPropio';
+import { useFilaDelProgramaPropio } from '../features/programa/hooks/useFilaDelProgramaPropio';
 import { usePublicarSemaforoDeHoy } from '../features/semaforo/estado/useSemaforoVigente';
 import { useCelebracionDelDia } from '../features/fenix/hooks/useCelebracionDelDia';
-import { useCapacidades } from '../features/admin/hooks/useCapacidades';
 import { useResumenHome } from '../features/home/hooks/useResumenHome';
 import { AvisoDeProgramaEnOtraFormacion } from '../features/habits/components/AvisoDeProgramaEnOtraFormacion';
 import { useCategoriasDeHabito } from '../features/habits/categorias/hooks/useCategoriasDeHabito';
@@ -84,17 +83,17 @@ export default function HoyScreen() {
   const categorias = useCategoriasDeHabito();
   const programaEnOtraFormacion = useProgramaEnOtraFormacion();
   const { user } = useAuth();
-  /* Rol Mentor: solo para saber si la invitación al programa propio le corresponde. Sus paneles («Mi grupo» y «Mis mentores») ya
-     no están en Hoy: viven en Yo, como Administración (2026-10-31, pedido del dueño: Hoy es solo el programa propio). */
-  const esMentor = useEsMentor();
-  /* Quien puede administrar lo dice el SERVIDOR, no el rol leido en el telefono. Un rol nuevo
-     manana no dejaria la entrada colgada, y una capacidad falseada abre pantallas vacias: cada
-     endpoint vuelve a autorizar (SDD 003, ARF-15). */
-  const { capacidades, error: errorCapacidades, recargar: recargarCapacidades } = useCapacidades();
-  /* Ya no `esMentor`: la invitacion al programa propio es para todo el staff, ADMIN y ALQUIMISTA
-     incluidos. Atarla a "es mentor" los dejaba fuera de un programa que el backend si les
-     permitia iniciar — el bloqueo estaba aca, no en el permiso (ARF-16). */
-  const programaPropioActivo = esMentor || capacidades.administrar || capacidades.puedeIniciarPrograma;
+  /* El programa propio (D-260) como una fila compacta (2026-11-01, pedido del dueño), justo debajo de la frase del día: «Haz tu programa de
+     90 días» a quien no tiene fila, «Todavía no elegiste tu Día 1» a quien la tiene sin Día 1. Quién puede tener un programa propio lo
+     dice el servidor, no el rol del teléfono (ARF-16); los paneles de rol («Mi grupo», «Mis mentores») no están en Hoy sino en Yo. El hook
+     vive aquí y no dentro de la fila para saber, antes de dibujar, si hay algo: un bloque vacío deja igual sus dos separaciones de 28. */
+  const programaPropio = useFilaDelProgramaPropio({
+    inscrito: resumen?.inscrito,
+    diaPrograma: resumen?.diaPrograma,
+    duracionDias: resumen?.duracionDias,
+    formacion: resumen?.formacion,
+  });
+  const { recargarCapacidades } = programaPropio;
   // El orbe del centro (2026-09-23): conversación por voz con el acompañante, y su chat para
   // confirmar propuestas o leer la respuesta completa.
   const voz = useVozDelOrbe();
@@ -233,6 +232,8 @@ export default function HoyScreen() {
     [accionesDeHoy, objetivosDeNoventaDias],
   );
   const metaDeLaAccion = useMetaDeLaAccion(vistaDeLaAccion?.tipo === 'accion' ? vistaDeLaAccion.accion : null);
+  /* La tarjeta de acciones solo se dibuja cuando ya se sabe qué decir y, si es una acción, su meta (sin parpadeo). */
+  const hayTarjetaDeAccion = Boolean(vistaDeLaAccion && metaDeLaAccion.lista);
   /* Los dos textos de la primera tarjeta. El estado lo decide `habitoDelMomento`; acá solo se
      redacta. `sin-datos` cae al texto genérico de siempre —Día 0, cuenta recién aprobada, o el
      endpoint falló— porque inventar un hábito sería peor que no decir nada. */
@@ -320,11 +321,18 @@ export default function HoyScreen() {
         {/* ========================================================================= */}
         </Aparicion>
 
-        <Aparicion retardo={70}>
+        {/* Corregido 2026-11-01 (pedido del dueño): este bloque solo existe si tiene algo que dibujar. Vacío dejaba sus dos separaciones de 28
+            y a la cuenta sin programa le quedaba un hueco grande entre la frase y el fénix. */}
+        {programaPropio.visible || hayTarjetaDeAccion || errorResumen ? (
+        <Aparicion retardo={70} style={{ gap: space.gap }}>
+        {/* El programa propio, justo debajo de la frase (2026-11-01): una fila compacta, del alto que tenía Coherencia / Racha. Va antes que la
+            acción de hoy: sin programa (o sin Día 1) no hay acciones que mostrar todavía. */}
+        <FilaDelProgramaPropio programa={programaPropio} />
+
         {/* Pedido del dueño, 2026-10-31: se quitaron la frase del día y Coherencia / Racha (ya están en Yo) y, en su lugar y antes
             de «Tu acompañante», va la tarjeta de «Acciones y objetivos» con el diseño nuevo: la que sigue hoy, su meta y un
             botón que lleva a Training. Mientras no se sabe qué mostrar no se dibuja nada (sin parpadeo). */}
-        {vistaDeLaAccion && metaDeLaAccion.lista ? (
+        {hayTarjetaDeAccion && vistaDeLaAccion ? (
           <PlazoDelObjetivoProvider duracionDias={resumen?.duracionDias} formacion={resumen?.formacion}>
             <TarjetaAccionDeHoy
               vista={vistaDeLaAccion}
@@ -343,11 +351,12 @@ export default function HoyScreen() {
             </Text>
           </View>
         )}
+        </Aparicion>
+        ) : null}
 
         {/* ========================================================================= */}
         {/* 3. HERO: CÍRCULOS CONCÉNTRICOS & TU ÚNICO FOCO (ROCA PRIORITARIA DE HOY)  */}
         {/* ========================================================================= */}
-        </Aparicion>
 
         <Aparicion retardo={140}>
         <View style={styles.hero}>
@@ -416,19 +425,6 @@ export default function HoyScreen() {
 
         <Aparicion retardo={210} style={{ paddingBottom: 24 }}>
         <View style={{ gap: space.gap }}>
-          {/* El programa propio (D-260): «Hacer mi programa de 90 días» a quien no tiene fila y, a quien
-              la tiene sin Día 1, «Elegir mi Día 1». La tarjeta vive en `EntradaAlProgramaPropio`,
-              la misma de Yo y Training. «Ahora no» sigue siendo solo de Hoy. */}
-          <EntradaAlProgramaPropio
-            lugar="hoy"
-            activo={programaPropioActivo}
-            usuarioId={user?.id ?? null}
-            inscrito={resumen?.inscrito}
-            diaPrograma={resumen?.diaPrograma}
-            errorCapacidades={errorCapacidades}
-            reintentarCapacidades={() => void recargarCapacidades()}
-          />
-
           {/* El diagnóstico de quien ya estaba dentro y lo recibió después (spec 026), en el lugar donde estaba la tarjeta del Mapa de Renacimiento (retirado).
               La tarjeta no se dibuja si no hay nada pendiente; al tocarla se abre el recorrido a pantalla completa. */}
           <TarjetaDelDiagnosticoPendiente alAbrir={() => setDiagnosticoAbierto(true)} />
@@ -614,7 +610,7 @@ const styles = StyleSheet.create({
     borderRadius: space.radiusSm,
     paddingVertical: 10,
     paddingHorizontal: 12,
-    marginTop: space.gap,
+    /* Sin `marginTop`: el bloque que lo contiene ya separa a sus hijos con `space.gap` (2026-11-01). */
   },
   /**
    * La sección del fénix mide lo que ocupa su contenido (rótulo, fénix, rótulo de la fase y, con la voz abierta,

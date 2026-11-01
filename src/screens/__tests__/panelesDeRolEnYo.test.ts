@@ -67,8 +67,9 @@ describe('Hoy: solo el programa propio', () => {
     expect(HOY).not.toMatch(/consumirRutaPendiente|alAbrirAviso|abrirCajaAprendizId|abrirFichaAprendiz/);
   });
 
-  it('sigue ofreciendo «Elegir mi Día 1» a quien no hace su programa (personal sin Día 1)', () => {
-    expect(HOY).toContain('EntradaAlProgramaPropio');
+  it('sigue ofreciendo «Elegir mi Día 1» a quien no hace su programa (personal sin Día 1), ahora como una fila compacta', () => {
+    expect(HOY).toContain('<FilaDelProgramaPropio');
+    expect(HOY).not.toContain('EntradaAlProgramaPropio');
   });
 
   it('el fénix sigue recibiendo el color del semáforo de /home', () => {

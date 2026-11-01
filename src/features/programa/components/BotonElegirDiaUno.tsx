@@ -16,19 +16,44 @@ import { ActivarProgramaScreen } from '../../onboarding/screens/ActivarProgramaS
  * pantalla completa y con la flecha para volver sin elegir.
  */
 export function BotonElegirDiaUno({ onActivado }: { onActivado: () => void }) {
+  const selector = useSelectorDelDiaUno(onActivado);
+
+  return (
+    <>
+      <GoldButton label="Elegir mi Día 1" icon="calendar" onPress={selector.abrir} />
+      <SelectorDelDiaUno {...selector} />
+    </>
+  );
+}
+
+/**
+ * El estado del selector del Día 1 y su apertura: separado del botón dorado para que otra entrada —la fila compacta de Hoy y de Plan,
+ * `FilaDelProgramaPropio`— abra EXACTAMENTE el mismo selector, sin copiar el modal.
+ */
+export function useSelectorDelDiaUno(onActivado: () => void) {
   const [abierto, setAbierto] = useState(false);
+  const abrir = useCallback(() => setAbierto(true), []);
   const cerrar = useCallback(() => setAbierto(false), []);
   const alActivar = useCallback(() => {
     setAbierto(false);
     onActivado();
   }, [onActivado]);
+  return { abierto, abrir, cerrar, alActivar };
+}
 
+/** El modal con `ActivarProgramaScreen`, a pantalla completa y con la flecha para volver sin elegir. */
+export function SelectorDelDiaUno({
+  abierto,
+  cerrar,
+  alActivar,
+}: {
+  abierto: boolean;
+  cerrar: () => void;
+  alActivar: () => void;
+}) {
   return (
-    <>
-      <GoldButton label="Elegir mi Día 1" icon="calendar" onPress={() => setAbierto(true)} />
-      <Modal visible={abierto} animationType="slide" onRequestClose={cerrar} statusBarTranslucent>
-        {abierto ? <ActivarProgramaScreen alVolver={cerrar} onActivated={alActivar} /> : null}
-      </Modal>
-    </>
+    <Modal visible={abierto} animationType="slide" onRequestClose={cerrar} statusBarTranslucent>
+      {abierto ? <ActivarProgramaScreen alVolver={cerrar} onActivated={alActivar} /> : null}
+    </Modal>
   );
 }
