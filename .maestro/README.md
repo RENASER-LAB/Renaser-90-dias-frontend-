@@ -26,6 +26,8 @@ local (nunca contra producción).
   escribe con `inputText`, que tarda ~10 s por letra (ver abajo). 37 y 38 dejan todo como estaba; 39 y 40 necesitan el
   backend con «ver como» (B3).
 
+- `formaciones/` (2026-10-31, spec 022): las tres formaciones y su aislamiento (aprendiz de la Escuela y del Diplomado de 1 año, personal con dos
+  formaciones o sin ninguna, Administración → Formaciones y el traslado). **Escritos y sin correr**; ver su `README.md`.
 - `diseno-31/` (2026-10-31): los cambios de diseño del día (Hoy con la tarjeta de acciones y sin la frase ni Coherencia / Racha,
   Plan con el formato de la referencia, Training con la cabecera sin fase, los nombres en tipo oración, los rituales con texto y la
   última comida con círculo, Yo con el semáforo y sin la tira «Evidencia», y —`06-roles-en-yo`— Hoy solo con el programa propio y las

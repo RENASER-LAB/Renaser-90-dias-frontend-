@@ -1,3 +1,4 @@
+import { leerFormacionDeLaSesion } from '../../formaciones/api/formacionesSchemas';
 import type { User, UsuarioApi } from '../types/auth.types';
 
 /**
@@ -20,5 +21,6 @@ export function aUsuario(api: UsuarioApi): User {
       api.rolPersonalizado?.id && api.rolPersonalizado.nombre?.trim()
         ? { id: api.rolPersonalizado.id, nombre: api.rolPersonalizado.nombre.trim() }
         : null,
+    formacion: leerFormacionDeLaSesion(api.formacion),
   };
 }

@@ -1,0 +1,22 @@
+# Un aprendiz del Diplomado de 1 año (spec 022). ESCRITO Y SIN CORRER.
+# cuenta: aprendiz  (la ranura apunta a un aprendiz del DIPLOMADO con duracion_dias = 365, en su fase 1: día 1 a 28)
+# El nombre de su formación se ve fijo y discreto en Hoy; las fases se estiran con su duración (Fase I: días 1–28).
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "HOY"
+- extendedWaitUntil:
+    visible: "Diplomado Renaser"
+    timeout: 30000
+- takeScreenshot: F02a-hoy-del-diplomado
+- tapOn: "YO"
+- scrollUntilVisible:
+    element: "Tu evolución"
+    direction: DOWN
+    timeout: 40000
+# Con 365 días la Fase I va del día 1 al 28 (con 90 sería del 1 al 7).
+- assertVisible: ".*Días 1–28.*"
+- assertNotVisible: ".*Días 1–7.*"
+# Es de una sola formación: no hay selector.
+- assertNotVisible: "Cambiar de formación"
+- takeScreenshot: F02b-yo-del-diplomado-fase-estirada

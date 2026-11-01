@@ -40,6 +40,8 @@ export const grupoResumenSchema = z
     learnerCount: z.number().nullish(),
     /** `null` en recepción: no tiene tope comercial. */
     capacity: z.number().nullish(),
+    /** Spec 022: la formación del grupo (código). Un backend anterior no la manda: es de la Escuela. */
+    formation: z.string().nullish(),
   })
   .passthrough();
 
@@ -134,6 +136,9 @@ export const aprendizAdminSchema = z
      */
     deletionScheduledFor: z.string().nullish(),
     rolPersonalizado: rolPersonalizadoDeLaPersonaSchema,
+    /** Spec 022: su formación (código) y los días de su programa. Un backend anterior no los manda: Escuela y 90. */
+    formation: z.string().nullish(),
+    programDuration: z.number().nullish(),
   })
   .passthrough();
 
@@ -280,6 +285,9 @@ export const detalleAprendizSchema = z
     /** D-243: cerró su cuenta y se borra en esa fecha (ISO). Ausente o `null` = nada pendiente. */
     deletionScheduledFor: z.string().nullish(),
     rolPersonalizado: rolPersonalizadoDeLaPersonaSchema,
+    /** Spec 022: su formación (código) y los días de su programa. Un backend anterior no los manda: Escuela y 90. */
+    formation: z.string().nullish(),
+    programDuration: z.number().nullish(),
   })
   .passthrough();
 

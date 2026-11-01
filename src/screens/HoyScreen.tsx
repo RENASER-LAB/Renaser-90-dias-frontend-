@@ -10,6 +10,7 @@ import {
   Pressable,
 } from 'react-native';
 import { TarjetaConfrontacion } from '../features/confrontacion/components/TarjetaConfrontacion';
+import { NombreDeLaFormacion } from '../features/formaciones/components/NombreDeLaFormacion';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BORDES_DE_UNA_PESTANA } from '../navigation/bordesDeUnaPestana';
 import { useNavigation } from '@react-navigation/native';
@@ -235,7 +236,7 @@ export default function HoyScreen() {
   // > `cargando: false` a propósito: Hoy se vuelve a pedir en cada foco con el resumen anterior a la
   // > vista, y el texto no tiene que parpadear a «lo que queda del programa» en cada recarga.
   const lapsoDelMapa = lapsoQueQueda(
-    diasQueQuedanSiSeSabe({ diaPrograma: resumen?.diaPrograma, inscrito: resumen?.inscrito, cargando: false }),
+    diasQueQuedanSiSeSabe({ diaPrograma: resumen?.diaPrograma, inscrito: resumen?.inscrito, cargando: false, duracionDias: resumen?.duracionDias }),
   );
   const mostrarMapa = MAPA_DIA7_HABILITADO && !!user;
   /* La tarjeta de acciones de arriba (2026-10-31): qué muestra lo decide `vistaDeLaAccionDeHoy`, con las acciones de hoy que
@@ -321,6 +322,8 @@ export default function HoyScreen() {
         <Aparicion>
         {/* Corregido 2026-10-31 (el dueño): lo que se quita de Hoy es la cabecera (fase, «Día n de 90» y puntos, que ya están
             en Yo), NO la frase del día. La frase sube y ocupa su lugar, con su raya dorada corta. */}
+        {/* El nombre de la formación (spec 022, FR-014): una línea chica, solo para quien tiene más de una o no es de la Escuela. */}
+        <NombreDeLaFormacion />
         <TarjetaConfrontacion diaPrograma={diaConocido} />
 
         {/* ========================================================================= */}

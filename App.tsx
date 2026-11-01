@@ -22,6 +22,7 @@ import { AbridorDeAvisos } from './src/features/alarmas/components/AbridorDeAvis
 import { RearmadorDeAlarmas } from './src/features/alarmas/components/RearmadorDeAlarmas';
 import { SincronizadorDeAcciones } from './src/features/objetivos/components/SincronizadorDeAcciones';
 import { AnfitrionDeCelebraciones } from './src/features/fenix/components/AnfitrionDeCelebraciones';
+import { FormacionProvider } from './src/features/formaciones/context/FormacionContext';
 import { FuncionalidadesProvider } from './src/features/plataforma/estado/FuncionalidadesProvider';
 import { FranjaVerComo, SinBordeDeArriba } from './src/features/soporte-ti/verComo/FranjaVerComo';
 
@@ -104,6 +105,8 @@ export default function App() {
           {/* Los interruptores de Soporte TI (spec 002): qué está apagado para esta sesión. Relee al entrar, al
               volver al frente, cada 60 s y cuando el servidor responde 503 FUNCIONALIDAD_APAGADA. */}
           <FuncionalidadesProvider>
+          {/* La formación de la sesión (spec 022): Escuela, Diplomado o Certificación. Nace del login y se relee al volver al frente. */}
+          <FormacionProvider>
           {/* El Mapa de Renacimiento (Día 7) se abre a pantalla completa por encima de las
               pestañas; este proveedor guarda si está abierto. Ver RootNavigator. */}
           <MapaRenacimientoProvider>
@@ -113,6 +116,7 @@ export default function App() {
               <Shell />
             </RadarProvider>
           </MapaRenacimientoProvider>
+          </FormacionProvider>
           </FuncionalidadesProvider>
         </AuthProvider>
       </ThemeProvider>

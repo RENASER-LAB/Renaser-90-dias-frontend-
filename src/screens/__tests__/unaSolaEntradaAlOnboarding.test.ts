@@ -66,7 +66,7 @@ describe('Yo sin versales espaciadas', () => {
     // texto suelto de Yo. Los dice `TarjetaDeFase` («FASE N DE 4», «Día N de 90 en total») con la misma fase
     // y el mismo día del resumen, que Yo le pasa por props.
     expect(yo).toContain('diaDelPrograma={resumen?.diaPrograma ?? null}');
-    expect(yo).toContain('diasDelPrograma={DIAS_DEL_PROGRAMA}');
+    expect(yo).toContain('diasDelPrograma={resumen?.duracionDias ?? DIAS_DEL_PROGRAMA}'); // spec 022: los días de SU programa
     expect(yo).toContain('nombreDeLaFase={faseActual.nombre}');
   });
 
