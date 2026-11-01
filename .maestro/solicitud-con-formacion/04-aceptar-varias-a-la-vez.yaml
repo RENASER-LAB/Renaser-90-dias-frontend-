@@ -17,7 +17,10 @@ appId: com.renaser.app
 - extendedWaitUntil:
     visible: "Aceptar 3 solicitudes"
     timeout: 15000
-- assertVisible: "Las 3 personas entrarán a la Escuela Renaser como Aprendiz, sin diagnóstico."
+# Spec 032: el aprendiz elige cómo paga (no viene marcado). Estos flujos lo aceptan como «pagó completo».
+- tapOn: "Pago"
+- tapOn: "Sin cronograma \\(pagó completo\\)"
+- assertVisible: "Las 3 personas entrarán a la Escuela Renaser como Aprendiz, sin diagnóstico y pagó completo."
 - tapOn:
     text: "Aceptar a 3 personas"
 - extendedWaitUntil:

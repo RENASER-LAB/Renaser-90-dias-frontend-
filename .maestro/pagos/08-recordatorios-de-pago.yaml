@@ -1,0 +1,53 @@
+# Los recordatorios de pago (spec 032, «que le salga en Yo los recordatorios»): Yo → Alarmas y la fila de «Mi ingreso» abren el MISMO control. ESCRITO Y SIN CORRER.
+# cuenta: aprendiz
+# Precondición (base local): la cuenta tiene un cronograma con cuotas pendientes (ver el README) y el permiso de avisos concedido.
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "YO"
+- extendedWaitUntil:
+    visible: "Tu evolución"
+    timeout: 30000
+- tapOn: "Ajustes"
+- scrollUntilVisible:
+    element: "Alarmas"
+    direction: DOWN
+- tapOn: "Alarmas"
+- scrollUntilVisible:
+    element: "Recordatorios de pago"
+    direction: DOWN
+    timeout: 30000
+# Por defecto: encendido, 3 días antes y el mismo día, a las 09:00.
+- assertVisible: "Recordarme mis cuotas"
+- assertVisible: "3 días antes y el mismo día · 09:00"
+- takeScreenshot: P08a-por-defecto
+- tapOn: "1 día antes"
+- assertVisible: "3 días antes, 1 día antes y el mismo día · 09:00"
+- tapOn: "3 días antes"
+- assertVisible: "1 día antes y el mismo día · 09:00"
+# Apagar los quita; encender los vuelve a poner.
+- tapOn:
+    text: "Recordarme mis cuotas"
+    index: 1
+- assertVisible: "Apagados en este teléfono"
+- assertNotVisible: "El mismo día"
+- takeScreenshot: P08b-apagados
+- tapOn:
+    text: "Recordarme mis cuotas"
+    index: 1
+- assertVisible: "El mismo día"
+# Lo mismo desde «Mi ingreso»: una fila que abre una hoja con el mismo control.
+- back
+- back
+- assertVisible: "Tu evolución"
+- tapOn: "Mi ingreso"
+- scrollUntilVisible:
+    element: "Recordatorios de pago"
+    direction: DOWN
+    timeout: 30000
+- assertVisible: "1 día antes y el mismo día · 09:00"
+- tapOn: "Recordatorios de pago"
+- extendedWaitUntil:
+    visible: "Recordarme mis cuotas"
+    timeout: 10000
+- takeScreenshot: P08c-la-hoja-de-mi-ingreso

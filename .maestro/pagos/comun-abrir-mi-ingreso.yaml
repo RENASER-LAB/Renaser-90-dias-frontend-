@@ -1,0 +1,16 @@
+# Entra a Yo → «Mi ingreso» (spec 032). Lo usan los demás flujos de esta carpeta. La fila solo existe si el servidor tiene un pago anotado.
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "YO"
+- extendedWaitUntil:
+    visible: "Tu evolución"
+    timeout: 30000
+- scrollUntilVisible:
+    element: "Mi ingreso"
+    direction: DOWN
+    timeout: 40000
+- tapOn: "Mi ingreso"
+- extendedWaitUntil:
+    visible: "Pagos"
+    timeout: 20000

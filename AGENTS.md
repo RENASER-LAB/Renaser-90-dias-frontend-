@@ -1380,6 +1380,56 @@ Dos decisiones del dueño que aparecieron al integrar las specs 022 a 034 (solo 
   (`useRocasMaestras`, `useRocasSemanales`) no saben la duración y siguen igual.
 * **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire).
 
+## Cambio por pedido del dueño — 2026-11-01 — cronograma de pagos: «Mi ingreso» en Yo, el bloque «Pago» al aceptar, los pagos en la ficha y los recordatorios de pago (spec 032)
+
+Pedido del dueño (textual, con su maqueta «Mi ingreso»): «al momento de solicitud del usuario sin cronograma o con cronograma de pagos; sin cronograma es que pagó y en Yo debe de salir su pago fue cancelado;
+con cronograma de pagos se calendariza de esta forma [la maqueta]… es por fecha como sale la cantidad y el administrador o alquimista puede decir se pagó o no… si es cronograma le debe de salir en Yo su
+cronograma y debe de tener recordatorios… si no paga no pasa nada, no se inhabilita la cuenta, ya que gerencia decidió eso… que le salga en Yo los recordatorios y probar los recordatorios». **La app no cobra
+ni mueve dinero: solo anota.** Backend D-307 (`specs/032-cronograma-de-pagos/`, V158). Todo vive en `src/features/pagos/`. Lo que cambia y nada más:
+* **Yo → fila «Mi ingreso»** (`FilaDeAjuste`, ícono `wallet` nuevo —Lucide, caja de 24, `s24`—, después de «Mi diagnóstico»): **solo si el servidor dice que hay un pago anotado** (`GET /api/v1/me/ingreso` con
+  `payments` distinto de `null`; un 404, un 403 o una función apagada la esconden; un fallo de red conserva lo último). Su línea dice «Tu pago fue cancelado», «2 cuotas pendientes» o «Todas tus cuotas figuran
+  pagadas» (`detalleDeLaFila`). Quien no tiene nada anotado ve Yo exactamente como antes. Se relee al volver Yo al foco (`useMiIngreso`). **No duplica «Mi onboarding» de Ajustes**: esa es la de los documentos
+  (ficha, Términos, Pacto, y desde la 026 «Mi diagnóstico»); esta es la de los pagos, y sus pasos son orientación, no atajos (no se tocan).
+* **`MiIngresoScreen`** (pantalla completa de Yo como la Caja; el atrás del sistema y la flecha vuelven a Yo; un solo scroll): la cabecera de la maqueta (`PasosDelIngreso`: Diagnóstico → Acuerdo → Pagos, con ✓ dorado,
+  aro dorado en el que toca y círculo vacío; **un paso que no aplica —sin diagnóstico asignado— no se dibuja**), y debajo:
+  * **Sin cronograma:** «Tu pago fue cancelado» (texto del dueño; en el Perú, pagado por completo) y una línea «No tienes cuotas por pagar.» para quien lo lea de otro modo. Sin cuotas, sin casilla, sin botón.
+  * **Con cronograma:** «Tus fechas de pago · Revisa el cronograma acordado.», una fila por cuota (`FilaDeCuota`: calendario, fecha corta «15 nov» —con el año si no es el actual—, monto con su moneda «US$ 1 000» y
+    «✓ Pagado» en verde o «Pendiente» con reloj en dorado; ícono Y palabra, nunca solo color; la fila se lee como una frase), los recordatorios de pago y, **una sola vez**, la casilla «Revisé mis fechas y montos.»,
+    «Tu nombre» y «Confirmar cronograma» (`ConfirmarElCronograma`). Sin la casilla o sin el nombre no manda nada, dice qué falta y vibra con `tacto.error()`; el doble toque manda un solo pedido; al confirmar, una línea
+    «Cronograma confirmado» (`tacto.logro()`) y la pantalla dice «Confirmaste tu cronograma el 3 de noviembre. Firmó: …». **Si Administración cambia fechas o montos, la confirmación se vuelve a pedir**
+    («Tu cronograma cambió. Revísalo y confírmalo de nuevo.»; lo decide el servidor con una huella de lo acordado; marcar un pago no la invalida). **Nunca bloquea nada.**
+  * **«Pendiente» no es un reproche**: una cuota con la fecha pasada se dice igual (ni «atrasada» ni «vencida»); una prueba lo vigila.
+  * Con la funcionalidad `pagos` apagada por Soporte TI, `AvisoDeMantenimiento` reemplaza el contenido. Sin animaciones propias (se ve de vez en cuando): solo `Presionable` y la línea de confirmación.
+* **Hoja «Aceptar» de Solicitudes (025): un bloque 4 «Pago»** (`BloqueDeAceptacion`), solo si el servidor lo ofrece (`paymentScheduleAvailable` en `acceptance-options`; contra un backend anterior la hoja queda como era):
+  «Sin cronograma (pagó completo)» o «Con cronograma», **para cualquier rol**. Con cronograma, el editor (`EditorDeCronograma`, el mismo de la ficha): la **moneda S/ o US$ sin valor por defecto**, el atajo «Armar cuotas
+  mensuales» (cuántas, de cuánto y desde cuándo; un día 31 cae el último día de los meses cortos y vuelve al 31; después se edita cada fila) y las filas (fecha con las ruedas de siempre en `CampoDeFecha compacto`,
+  monto, quitar; hasta 60). **El aprendiz parte sin elegir** (así no se anota «pagó completo» por descuido): «Aceptar» espera y la hoja dice «Elige cómo paga…». **El personal viene con «Sin cronograma» y eso NO anota nada**
+  (no verá «Tu pago fue cancelado» por algo que nunca pagó; supuesto a confirmar con el dueño). Al aceptar varias a la vez, todas reciben el mismo cronograma. La frase del resumen suma «y con cronograma de 3 cuotas» o «y
+  pagó completo». Un plan inválido es 400 y deshace la aceptación entera (una sola transacción en el servidor). **Los flujos de la 025 (`01`, `02`, `04`) piden un toque más: elegir el pago.**
+* **Administración → ficha de la persona: sección «Pagos»** (`PagosDeLaPersona`, después de la ficha de ingreso; solo Administración y Alquimista: el servidor responde 403 a los demás y la sección no se dibuja):
+  el cronograma con su moneda, quién confirmó y cuándo; por cuota, «Marcar pagado» / «Volver a pendiente» (un toque, sin confirmación; queda **quién y cuándo**), editar y quitar **solo las pendientes** (una pagada
+  no se edita ni se quita; quitar pregunta) y «Agregar una cuota» (`HojaDeUnaCuota`); «Asignar un cronograma» o «Marcar sin cronograma (pagó completo)» a quien ya estaba dentro sin nada (respuesta 8 del dueño),
+  y «Reemplazar el cronograma» / «Marcar sin cronograma» solo si **no hay cuotas pagadas** (409 en el servidor). **Nada se recalcula solo.** Cada escritura devuelve el pago entero y la sección queda al día.
+* **Recordatorios de pago** (alarmas locales como las de eventos y acciones; `notificaciones/`): una alarma por cuota **pendiente** y aviso, **por defecto 3 días antes y el mismo día a las 09:00**, de este teléfono y por
+  cuenta (`renaser.pagos.preferencias.<cuenta>`; no viajan). Se configuran en **un solo control** (`ControlDeRecordatoriosDePago`: encendido, avisos «3 días antes» / «1 día antes» / «El mismo día», uno o varios, y la hora
+  con `HoraPickerModal`): en **Yo → Alarmas → «Recordatorios de pago»** (solo con un cronograma) y en **Mi ingreso**, como la fila «Recordatorios de pago ›» que abre una hoja con el mismo control (como «Recordatorios de
+  tus acciones» en Plan). **Su propio canal con vibración** (`recordatorios-pagos-vib`, E-641; sonido del teléfono). Identificador `pago-<instante>`: programar con el mismo id REEMPLAZA, y dos avisos al mismo instante
+  se juntan en uno (E-410). **Se ponen al día** al abrir la app y al volver al frente (`SincronizadorDePagos`, cada 10 min como el rearmado) y cada vez que se lee Mi ingreso, comparando con lo que el sistema tiene
+  (`getAllScheduledNotificationsAsync`): una cuota que Administración marcó pagada **deja de recordarse en la siguiente lectura**, una alarma que el teléfono olvidó se vuelve a poner y lo que no cambió no se toca.
+  Una pendiente con la fecha ya pasada no suena (ni reproche ni ruido). Un fallo de red no toca las alarmas. Sin permiso de avisos no se programa nada y el control lo dice (el permiso se pide solo con un toque de la
+  persona). **Tocar el aviso abre Yo → «Mi ingreso»** (ruta `/mi-ingreso` → `abrirMiIngreso`, como `/caja` y `/mi-radar`; espera a que se cierre una capa obligatoria). Cerrar sesión suelta las alarmas y lo que el teléfono
+  guarda de ellas; las preferencias quedan. Sin alarmas locales (web, Expo Go) no se dibuja el control.
+* **Lo único que se toca fuera de `pagos/`**, todo aditivo: `CampoDeFecha` suma `compacto` (la fecha corta y sin chevron, para una fila de una lista); `Icon` suma `wallet`; `CLAVES.pagos`; `YoScreen` (la fila, el estado, el parámetro
+  `abrirMiIngreso` y la pantalla); `SeccionAlarmas` (`pagos`); `avisosApi` y `abrirAviso` (el destino `miIngreso`); `alarmasDeLaCuenta` (un prefijo); `App.tsx` (`SincronizadorDePagos`); la hoja `AceptarSolicitudSheet` y
+  `aceptarSolicitud` (el bloque y sus reglas); `FichaAprendizScreen` (la sección).
+* **Compatibilidad:** sin backend nuevo (404) no hay fila, ni bloque «Pago», ni sección «Pagos», y la app queda como antes. Un APK anterior contra el backend nuevo no manda `payment` y nadie queda con un pago anotado.
+* **No cambian:** ningún bloqueo ni pausa de la cuenta por no pagar (decisión de gerencia), los demás tabs, «Mi onboarding», la Caja, los términos, el diagnóstico ni los avisos de las demás alarmas.
+* **Pruebas:** Jest en `src/features/pagos/__tests__` (`dineroYFechas`, `borradorDelCronograma`, `pagosSchemas`, `pagosApi`, `vistaDeMiIngreso`, `planDeAlarmasDePago`, `preferenciasDePagos`, `alarmasDePagos`,
+  `miIngresoScreen`, `pagosDeLaPersona`, `controlDeRecordatoriosDePago`), `aceptarSolicitudConPago` y el pago en `aceptarSolicitudApi`, y `avisoDeMiIngreso`. Maestro, escritos y sin correr: `.maestro/pagos/` (aceptar con y
+  sin cronograma, marcar pagado desde la ficha, asignar a quien ya estaba, «Mi ingreso» con y sin cronograma, confirmar, la fila que no existe sin pago anotado, los recordatorios y probar que la alarma suena y abre «Mi ingreso»).
+* **Sin comprobar en pantalla** (solo se ve con el emulador): el aspecto de «Mi ingreso» contra la maqueta, el editor de cuotas en un teléfono de 360 dp, el aviso de la alarma con el teléfono en reposo y el permiso de avisos.
+* **Hace falta un APK nuevo** (solo JavaScript: ni `package.json`, ni `app.json`, ni código nativo; la app no se actualiza por aire) **y el backend con la spec 032 antes** (V158).
+
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
 Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel especializado en React Native, Expo y TypeScript. Al crear, refactorizar o modificar cualquier pantalla o componente, debes cumplir OBLIGATORIAMENTE con los siguientes estándares:
