@@ -1,0 +1,56 @@
+# «Copiar a otra formación» (spec 023, historia 3). ESCRITO Y SIN CORRER.
+# cuenta: admin  (Administración o Alquimista)
+# Precondición: la Certificación tiene al menos una categoría activa (créala antes con «Categorías» si no) y ningún hábito «Agua tibia con limón».
+# Copia un hábito de la Escuela a la Certificación, en una categoría de ELLA; la copia aparece en la lista de la Certificación y la original sigue en la Escuela.
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "YO"
+- scrollUntilVisible:
+    element: "Administración"
+    direction: DOWN
+    timeout: 40000
+- tapOn: "Administración"
+- scrollUntilVisible:
+    element: "Más opciones"
+    direction: DOWN
+    timeout: 40000
+- tapOn: "Más opciones"
+- scrollUntilVisible:
+    element: "Hábitos del programa"
+    direction: DOWN
+    timeout: 40000
+- tapOn: "Hábitos del programa"
+- extendedWaitUntil:
+    visible: "Escuela"
+    timeout: 30000
+- tapOn: "Escuela"
+- extendedWaitUntil:
+    visible: "(?i).*Agua tibia con limón.*"
+    timeout: 30000
+- tapOn: "(?i).*Agua tibia con limón.*"
+- scrollUntilVisible:
+    element: "Copiar a otra formación"
+    direction: DOWN
+    timeout: 30000
+# Elige la Certificación y una categoría de ella.
+- tapOn:
+    text: "Certificación"
+    index: 0
+- takeScreenshot: H04a-copiar-a-la-certificacion
+- tapOn: "Copiar a Certificación"
+- extendedWaitUntil:
+    visible: ".*Copiado.*|.*copiado.*|.*Certificación.*"
+    timeout: 30000
+- back
+- back
+# La Certificación ya lo tiene y la Escuela sigue con el suyo.
+- tapOn: "Certificación"
+- extendedWaitUntil:
+    visible: "(?i).*Agua tibia con limón.*"
+    timeout: 30000
+- takeScreenshot: H04b-la-certificacion-tiene-la-copia
+- tapOn: "Escuela"
+- extendedWaitUntil:
+    visible: "(?i).*Agua tibia con limón.*"
+    timeout: 30000

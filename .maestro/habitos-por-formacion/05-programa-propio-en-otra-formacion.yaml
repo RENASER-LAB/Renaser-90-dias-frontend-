@@ -1,0 +1,25 @@
+# «Mi programa» solo en la formación de su programa (spec 023, historia 5 y decisión del dueño). ESCRITO Y SIN CORRER.
+# cuenta: aprendiz  (un mentor con la Escuela y el Diplomado asignadas, su programa propio en la ESCUELA y el DIPLOMADO como formación activa)
+# Training y Hoy dicen en una línea dónde está su programa y llevan a cambiar de formación; no muestran la lista de hábitos de la Escuela.
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- runFlow: ../comun/abrir-training.yaml
+- extendedWaitUntil:
+    visible: "Tu programa propio está en Escuela Renaser.*"
+    timeout: 60000
+- assertVisible: "Cambiar de formación"
+- takeScreenshot: H05a-training-programa-en-otra-formacion
+- assertNotVisible: "(?i).*Despertar.*"
+# Hoy tampoco dibuja «Hábitos de hoy».
+- tapOn: "HOY"
+- extendedWaitUntil:
+    visible: "Tu programa propio está en Escuela Renaser.*"
+    timeout: 30000
+- takeScreenshot: H05b-hoy-programa-en-otra-formacion
+# El aviso lleva al selector de formación (spec 022).
+- tapOn: "Cambiar de formación"
+- extendedWaitUntil:
+    visible: "Escuela Renaser"
+    timeout: 30000
+- takeScreenshot: H05c-selector-de-formacion

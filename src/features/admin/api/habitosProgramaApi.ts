@@ -25,9 +25,19 @@ async function pedirHabito(metodo: 'POST', ruta: string, body: unknown): Promise
   );
 }
 
-/** Todo el catálogo (activos e inactivos). Con `rol`, los que le aplican, «para todos» incluidos. */
-export async function leerHabitosDelPrograma(rol?: string | null): Promise<HabitoDelProgramaApi[]> {
-  const ruta = rol ? `${BASE}?role=${encodeURIComponent(rol)}` : BASE;
+/** El valor de `formation` que pide las tres formaciones juntas (solo lectura): cada hábito trae la suya. */
+export const TODAS_LAS_FORMACIONES = 'ALL';
+
+/**
+ * El catálogo de UNA formación (activos e inactivos) o, con `TODAS_LAS_FORMACIONES`, el de las tres (spec 023). Con `rol`, los que le
+ * aplican, «para todos» incluidos. Sin `formacion` no se manda nada: el servidor responde la Escuela, que es lo que esperaba la app anterior.
+ */
+export async function leerHabitosDelPrograma(rol?: string | null, formacion?: string | null): Promise<HabitoDelProgramaApi[]> {
+  const parametros = [
+    ...(rol ? [`role=${encodeURIComponent(rol)}`] : []),
+    ...(formacion ? [`formation=${encodeURIComponent(formacion)}`] : []),
+  ];
+  const ruta = parametros.length > 0 ? `${BASE}?${parametros.join('&')}` : BASE;
   return validarRespuesta<HabitoDelProgramaApi[]>(catalogoDelProgramaSchema, await apiFetch<unknown>(ruta), `GET ${ruta}`);
 }
 
@@ -41,6 +51,14 @@ export const crearHabitoDelPrograma = (cuerpo: CuerpoHabitoDelPrograma) => pedir
 
 export const editarHabitoDelPrograma = (id: string, cuerpo: CuerpoHabitoDelPrograma) =>
   pedirHabito('POST', `/${id}`, cuerpo);
+
+/**
+ * «Copiar a otra formación» (spec 023): el mismo hábito, ya INDEPENDIENTE, en la formación elegida y en una categoría de ESA formación.
+ * 201 con el hábito copiado; 400 si la categoría no es de esa formación o está desactivada; 409 si ya hay uno con ese título o con la
+ * misma función. El servidor explica el motivo.
+ */
+export const copiarHabitoDelPrograma = (id: string, destino: { formacion: string; categoria: string }) =>
+  pedirHabito('POST', `/${id}/copy`, { formation: destino.formacion, category: destino.categoria });
 
 export const cambiarActivoDelHabito = (id: string, activo: boolean) =>
   pedirHabito('POST', `/${id}/toggle`, { isActive: activo });

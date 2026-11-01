@@ -15,17 +15,28 @@ import { habitoDelMomento, type HabitoDelMomento } from '../utils/habitoDelMomen
  *
  * Un fallo no rompe la tarjeta ni muestra un error: se devuelve `sin-datos` y la pantalla vuelve
  * al texto genérico. Esta tarjeta es informativa; que no cargue no puede tapar el resto de Hoy.
+ *
+ * `registrosLeidos` y `registrosDeHoy` (spec 023): cuántos registros trajo la lectura, y si de verdad se leyó. Hoy los usa para no dibujar
+ * «Hábitos de hoy» en una formación que todavía no tiene hábitos; un fallo NO cuenta como «cero registros».
  */
-export function useHabitoDelMomento(): { habito: HabitoDelMomento; recargar: () => Promise<void> } {
+export function useHabitoDelMomento(): {
+  habito: HabitoDelMomento;
+  recargar: () => Promise<void>;
+  registrosLeidos: boolean;
+  registrosDeHoy: number;
+} {
   const [tracks, setTracks] = useState<TrackDelDiaApi[]>([]);
+  const [leidos, setLeidos] = useState(false);
   const ahora = useMinutoActual();
 
   const recargar = useCallback(async () => {
     try {
       setTracks(await obtenerTracksDeHoy());
+      setLeidos(true);
     } catch (e) {
       console.warn('[Hoy] no se pudieron leer los hábitos de hoy:', e);
       setTracks([]);
+      setLeidos(false);
     }
   }, []);
 
@@ -36,5 +47,5 @@ export function useHabitoDelMomento(): { habito: HabitoDelMomento; recargar: () 
   );
 
   const habito = useMemo(() => habitoDelMomento(tracks, ahora), [tracks, ahora]);
-  return { habito, recargar };
+  return { habito, recargar, registrosLeidos: leidos, registrosDeHoy: tracks.length };
 }

@@ -28,6 +28,10 @@ import { usePublicarSemaforoDeHoy } from '../features/semaforo/estado/useSemafor
 import { useCelebracionDelDia } from '../features/fenix/hooks/useCelebracionDelDia';
 import { useCapacidades } from '../features/admin/hooks/useCapacidades';
 import { useResumenHome } from '../features/home/hooks/useResumenHome';
+import { AvisoDeProgramaEnOtraFormacion } from '../features/habits/components/AvisoDeProgramaEnOtraFormacion';
+import { useCategoriasDeHabito } from '../features/habits/categorias/hooks/useCategoriasDeHabito';
+import { useProgramaEnOtraFormacion } from '../features/formaciones/hooks/useProgramaEnOtraFormacion';
+import { sinHabitosEnLaFormacion } from '../features/home/utils/sinHabitosEnLaFormacion';
 import { useHabitoDelMomento } from '../features/habits/hooks/useHabitoDelMomento';
 import { TarjetaHabitoYRadar } from '../features/home/components/TarjetaHabitoYRadar';
 import { useUltimaPublicacionMuro } from '../features/community/hooks/useUltimaPublicacionMuro';
@@ -73,7 +77,11 @@ export default function HoyScreen() {
   /* El hábito de ESTA hora para la primera tarjeta. Vive acá y no dentro de la tarjeta porque
      `useFocusEffect` tiene que correr con la pantalla montada, y porque el pull-to-refresh de
      Hoy también lo recarga. */
-  const { habito: habitoAhora, recargar: recargarHabitoAhora } = useHabitoDelMomento();
+  const { habito: habitoAhora, recargar: recargarHabitoAhora, registrosLeidos, registrosDeHoy } = useHabitoDelMomento();
+  /* Spec 023: «Hábitos de hoy» es de la formación de la persona. Sin hábitos en su formación no se dibuja, y quien tiene su programa
+     propio en OTRA formación que la activa ve una línea que lo dice en lugar de la tarjeta. */
+  const categorias = useCategoriasDeHabito();
+  const programaEnOtraFormacion = useProgramaEnOtraFormacion();
   const { user } = useAuth();
   /* Rol Mentor: solo para saber si la invitación al programa propio le corresponde. Sus paneles («Mi grupo» y «Mis mentores») ya
      no están en Hoy: viven en Yo, como Administración (2026-10-31, pedido del dueño: Hoy es solo el programa propio). */
@@ -478,7 +486,18 @@ export default function HoyScreen() {
               se opera. Derecha: el Radar. Los días 1 a 7 reemplaza a la tarjeta aparte del Código Renaser, que iba primera;
               desde el día 8 dice si Mi Radar está apagado, qué sigue o que hoy no hay. Qué dice y qué hace cada caso vive en
               `features/radar/utils/mitadDelRadar.ts`. Sin Día 1 (o sin Mi Radar en el backend) es solo la mitad de hábitos. */}
+          {programaEnOtraFormacion ? (
+            <AvisoDeProgramaEnOtraFormacion nombre={programaEnOtraFormacion.nombre} />
+          ) : (
           <TarjetaHabitoYRadar
+            sinHabitos={sinHabitosEnLaFormacion({
+              formacion: categorias.formacion,
+              delServidor: categorias.delServidor,
+              diaPrograma: resumen?.diaPrograma,
+              registrosLeidos,
+              registrosDeHoy,
+              habitosHoyTotal: resumen?.habitosHoy?.total,
+            })}
             habitos={{
               cifra: cifrasDeHabitos(resumen?.habitosHoy),
               titulo: tituloHabitoAhora,
@@ -489,6 +508,7 @@ export default function HoyScreen() {
             inscrito={resumen?.inscrito}
             onAbrirMiRadar={() => (navigation as any).navigate('Yo', { abrirMiRadar: true })}
           />
+          )}
 
           {/* Última evidencia real del Muro: se omiten publicaciones de texto sin evidencia.
               Rediseño de Hoy (2026-10-05): la tarjeta entera responde al dedo (`Presionable`), el
