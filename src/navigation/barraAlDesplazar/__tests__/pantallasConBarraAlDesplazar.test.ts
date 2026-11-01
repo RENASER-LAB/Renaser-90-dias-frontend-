@@ -27,7 +27,8 @@ const PANTALLAS: Record<string, number> = {
   // reemplaza al Muro, a Eventos y a Cursos cuando Soporte TI los apaga (spec 002).
   'src/screens/ComunidadScreen.tsx': 9,
   'src/features/eventos/components/SeccionEventos.tsx': 1,
-  'src/screens/YoScreen.tsx': 11,
+  // 12: la lista de Yo, Ajustes, Mi onboarding… y «Términos y condiciones» (spec 027, releer lo aceptado).
+  'src/screens/YoScreen.tsx': 12,
   // «Mis mentores» del líder, una fila de Yo (2026-10-31).
   'src/features/paneles-de-rol/screens/MisMentoresEnYo.tsx': 1,
   // Administración

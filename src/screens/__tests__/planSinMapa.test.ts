@@ -59,7 +59,8 @@ describe('Plan siempre dibuja el selector de eje y todo lo del eje', () => {
 
   it('la cabecera («Plan» y «Tu dirección en 90 días») sigue arriba', () => {
     expect(PLAN.indexOf('<ScreenHeader title="Plan" />')).toBeGreaterThan(0);
-    expect(PLAN).toContain('Tu dirección en 90 días');
+    // Desde la decisión del dueño del 31/10 el plazo sigue la duración del programa (90 días, 3 meses o 1 año).
+    expect(PLAN).toContain('Tu dirección en ${plazo}');
   });
 
   it('hay un solo scroll en Plan', () => {

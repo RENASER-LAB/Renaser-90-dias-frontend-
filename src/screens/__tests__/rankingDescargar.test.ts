@@ -116,7 +116,7 @@ describe('ComunidadScreen solo suma el botón', () => {
   });
 
   it('el botón vive junto a la línea de lo que mide la tabla, y esa línea sigue ahí', () => {
-    expect(COMUNIDAD).toMatch(/TABLAS_DE_RANKING\.find\(tabla => tabla\.clave === tipoRanking\)\?\.explica/);
+    expect(COMUNIDAD).toMatch(/tablasDelRanking\.find\(tabla => tabla\.clave === tipoRanking\)\?\.explica/);
     const iBoton = COMUNIDAD.indexOf('<BotonDescargarPodio');
     const iExplica = COMUNIDAD.indexOf('?.explica');
     expect(iBoton).toBeGreaterThan(iExplica);

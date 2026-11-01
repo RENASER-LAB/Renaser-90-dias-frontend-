@@ -28,7 +28,7 @@ describe('Plan con objetivos por confirmar', () => {
 
   it('confirmar manda los objetivos por el hook, cierra la hoja y avisa con la línea de siempre', () => {
     expect(PLAN).toMatch(/const resultado = await objetivos\.confirmar\(items\);/);
-    expect(PLAN).toMatch(/setRevisando\(false\);\s*confirmar\('Tus objetivos de 90 días quedaron confirmados\.'\);/);
+    expect(PLAN).toMatch(/setRevisando\(false\);\s*confirmar\(`Tus objetivos de \$\{plazo\} quedaron confirmados\.`\);/);
     expect(PLAN).toMatch(/<HojaConfirmarObjetivos[\s\S]*?alConfirmar=\{confirmarObjetivos\}/);
   });
 
