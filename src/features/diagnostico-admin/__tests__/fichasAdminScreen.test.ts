@@ -16,6 +16,7 @@ jest.mock('react-native-safe-area-context', () => ({
 jest.mock('../../../utils/tacto', () => ({ tacto: { seleccion: () => undefined, error: () => undefined, logro: () => undefined } }));
 jest.mock('../../admin/utils/dialogo', () => ({ confirmar: async () => true, avisar: () => undefined }));
 const mockLeer = jest.fn<() => Promise<unknown>>();
+jest.mock('../../admin/api/adminApi', () => ({ listarAprendices: async () => ({ content: [], total: 0, page: 0, size: 20 }) }));
 jest.mock('../api/diagnosticoAdminApi', () => ({
   ...(jest.requireActual('../api/diagnosticoAdminApi') as object),
   leerBorradorDelDiagnostico: () => mockLeer(),
@@ -85,6 +86,16 @@ describe('Fichas', () => {
     expect(hay('¿Cuál es tu nombre completo?')).toBe(false);
     await act(async () => { raiz!.root.findAll(n => n.props.accessibilityLabel === 'Volver' && typeof n.props.onPress === 'function')[0].props.onPress(); });
     expect(onBack).toHaveBeenCalledTimes(1);
+  });
+
+  it('«Asignar a varias personas» abre la asignación en lote y el atrás vuelve a la lista', async () => {
+    await montar();
+    await tocar('Asignar a varias personas');
+    expect(hay('Marca a las personas que quieres incluir')).toBe(true);
+    expect(hay('Con el diagnóstico inicial')).toBe(true);
+    await act(async () => { raiz!.root.findAll(n => n.props.accessibilityLabel === 'Volver' && typeof n.props.onPress === 'function')[0].props.onPress(); });
+    expect(hay('Ficha inicial estándar')).toBe(true);
+    expect(onBack).not.toHaveBeenCalled();
   });
 
   it('cargando, sin permiso y sin la función del servidor, lo dice sin pantalla rota', async () => {

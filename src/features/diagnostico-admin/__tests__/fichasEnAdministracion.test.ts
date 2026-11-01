@@ -40,9 +40,16 @@ describe('Fichas en Administración', () => {
     expect(leer('admin/screens/AdminInicioScreen.tsx')).not.toMatch(/titulo: 'Fichas'/);
   });
 
+  it('la ficha de la persona en Administración muestra su ficha de ingreso, debajo de la formación', () => {
+    const ficha = leer('admin/screens/FichaAprendizScreen.tsx');
+    expect(ficha).toMatch(/<FichaDeIngresoDeLaPersona personaId=\{aprendiz\.id\} nombre=\{nombre\} alCambiar=\{setAvisoFinal\} \/>/);
+    expect(ficha.indexOf('<FormacionDeLaPersona')).toBeLessThan(ficha.indexOf('<FichaDeIngresoDeLaPersona'));
+  });
+
   it('las pantallas atienden el gesto atrás del sistema, una por nivel', () => {
     expect(leer('diagnostico-admin/screens/FichasAdminScreen.tsx')).toMatch(/useSystemBackHandler\(alVolver, vista === 'lista'\)/);
     expect(leer('diagnostico-admin/screens/DiagnosticoEditorScreen.tsx')).toMatch(/useSystemBackHandler/);
+    expect(leer('diagnostico-admin/screens/AsignarDiagnosticoVariasScreen.tsx')).toMatch(/useSystemBackHandler/);
   });
 
   it('la carpeta revisa que hay archivos de verdad', () => {

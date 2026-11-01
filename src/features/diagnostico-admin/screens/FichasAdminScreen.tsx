@@ -16,17 +16,18 @@ import { useDiagnosticoAdmin } from '../hooks/useDiagnosticoAdmin';
 import { textoDeLaPublicacion } from '../utils/publicar';
 import { resumenDeContenido } from '../utils/resumenDeLaFicha';
 import { textoDelFallo } from '../utils/textos';
+import { AsignarDiagnosticoVariasScreen } from './AsignarDiagnosticoVariasScreen';
 import { DiagnosticoEditorScreen } from './DiagnosticoEditorScreen';
 
-type Vista = 'lista' | 'editor';
+type Vista = 'lista' | 'editor' | 'asignar';
 
 /**
  * Administración → Más opciones → «Fichas» (spec 026): las dos fichas con las que alguien puede entrar al programa. La estándar es la de
  * siempre y no se edita acá; el diagnóstico se arma, se publica y se asigna desde aquí. Solo ADMIN y ALQUIMISTA llegan (Administración se
  * muestra por `canAdminister`); un 403 igual se dice con palabras.
  *
- * Es un subnivel de la pila de `AdminScreen`: guarda su propia vista (lista ↔ editor) y el atrás del sistema sube un nivel por vez
- * (editor → lista → Más opciones). El borrador se lee una vez y lo comparten la lista y el editor.
+ * Es un subnivel de la pila de `AdminScreen`: guarda su propia vista (lista ↔ editor ↔ asignar en lote) y el atrás del sistema sube un
+ * nivel por vez (editor → lista → Más opciones). El borrador se lee una vez y lo comparten la lista y el editor.
  */
 export function FichasAdminScreen({ onBack }: { onBack: () => void }) {
   const barraAlDesplazar = useOcultarBarraAlDesplazar();
@@ -44,6 +45,9 @@ export function FichasAdminScreen({ onBack }: { onBack: () => void }) {
 
   if (vista === 'editor') {
     return <DiagnosticoEditorScreen estado={estado} onVolver={() => setVista('lista')} />;
+  }
+  if (vista === 'asignar') {
+    return <AsignarDiagnosticoVariasScreen onVolver={() => setVista('lista')} />;
   }
 
   const cuerpo = [t.body, { color: c.textSoft, fontSize: 16, lineHeight: 23 }];
@@ -120,6 +124,11 @@ export function FichasAdminScreen({ onBack }: { onBack: () => void }) {
             <Text style={[t.body, { color: c.textSoft, fontSize: 16 }]}>La de siempre. No se edita aquí.</Text>
           </View>
         </View>
+
+        <TituloDeSeccion detalle="Cambia la ficha de ingreso de quienes ya están dentro. Una persona suelta se cambia desde su ficha en Personas.">
+          Personas
+        </TituloDeSeccion>
+        <BotonSecundario etiqueta="Asignar a varias personas" icono="users" onPress={() => setVista('asignar')} />
       </ScrollView>
     </SafeAreaView>
   );

@@ -42,6 +42,7 @@ import { grupoParaVerSusDias } from '../utils/susDiasYEvidencias';
 import { CambiarDiaScreen } from './CambiarDiaScreen';
 import { EliminarCuentaAdminScreen } from './EliminarCuentaAdminScreen';
 import { rotuloDeFase } from '../../home/hooks/useResumenHome';
+import { FichaDeIngresoDeLaPersona } from '../../diagnostico-admin/components/FichaDeIngresoDeLaPersona';
 import { FormacionDeLaPersona } from '../../formaciones/components/FormacionDeLaPersona';
 import { useOcultarBarraAlDesplazar } from '../../../navigation/barraAlDesplazar/BarraInferior';
 
@@ -275,6 +276,10 @@ export function FichaAprendizScreen({
             void programa.recargar();
           }}
         />
+
+        {/* Su ficha de ingreso (spec 026-9): «Estándar» o «Con diagnóstico», con «Asignar el diagnóstico» a quien ya estaba dentro y
+            «Volver a la ficha estándar». Si el servidor no la ofrece (backend anterior), no se dibuja. */}
+        <FichaDeIngresoDeLaPersona personaId={aprendiz.id} nombre={nombre} alCambiar={setAvisoFinal} />
 
         {/* Día del programa (26/09, D-82). El botón aparece solo si el servidor entregó el detalle
             administrativo —mismo permiso que el PUT— y su programa ya empezó. */}
