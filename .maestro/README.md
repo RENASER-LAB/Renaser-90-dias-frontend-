@@ -26,6 +26,11 @@ local (nunca contra producción).
   escribe con `inputText`, que tarda ~10 s por letra (ver abajo). 37 y 38 dejan todo como estaba; 39 y 40 necesitan el
   backend con «ver como» (B3).
 
+- `planificacion/` (spec 028, 2026-10-31): lo que se planifica por semana. `solo-esta-semana` (el editor de Planificar con «Todas las semanas»
+  | «Solo esta semana», el aviso solo esta semana, «Cambiado solo esta semana» y «Volver al plan de siempre») y `repetir-la-semana`
+  (la oferta «Repetir tu semana» en «Tus prácticas»: «Ver qué se repite», repetir en un toque, «Deshacer» y «Ahora no»). **Escritos y sin correr**; piden el backend con la spec 028 (V130 y V131), el hábito
+  propio «Meditar 10 minutos» sin cambios solo-semana (`reset-hoy.sql`) y que hoy no sea sábado ni domingo (lo dice arriba de cada archivo).
+
 - `diseno-31/` (2026-10-31): los cambios de diseño del día (Hoy con la tarjeta de acciones y sin la frase ni Coherencia / Racha,
   Plan con el formato de la referencia, Training con la cabecera sin fase, los nombres en tipo oración, los rituales con texto y la
   última comida con círculo, Yo con el semáforo y sin la tira «Evidencia», y —`06-roles-en-yo`— Hoy solo con el programa propio y las

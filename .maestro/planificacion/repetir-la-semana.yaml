@@ -1,0 +1,105 @@
+# Repetir la semana (spec 028, decisiones del dueño 028-1 A y 028-3): con un cambio «solo esta semana», «Tus prácticas» ofrece
+# «Repetir tu semana» (la en curso, en la siguiente) con «Repetir», «Ahora no» y «Ver qué se repite»; repetir la deja igual en un
+# toque y se puede «Deshacer». «Ahora no» no vuelve mientras la semana modelo no cambie.
+# ESCRITO Y SIN CORRER (no se usó el emulador). Precondición: backend con la spec 028; aprendiz con el Día 1 elegido y el hábito propio
+# «Meditar 10 minutos» (`reset-hoy.sql`) SIN aviso ni cambios solo-semana, y la semana siguiente sin cambios propios; hoy no es sábado
+# ni domingo (con un cambio solo en la semana en curso hace falta al menos un día por delante).
+# cuenta: aprendiz
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- runFlow: ../comun/abrir-training.yaml
+- tapOn: "Tus prácticas: planificar"
+- extendedWaitUntil:
+    visible: "Tus prácticas"
+    timeout: 15000
+# Sin cambios solo esta semana no hay oferta.
+- assertNotVisible: "Repetir tu semana"
+# Se hace un cambio solo esta semana (un aviso «A la hora» en «Meditar 10 minutos»).
+- tapOn: "Mente: .* de .* cumplidos hoy"
+- extendedWaitUntil:
+    visible: "Toca uno para cambiarle la hora\\."
+    timeout: 15000
+- tapOn: "Meditar 10 minutos, a las 20:15"
+- extendedWaitUntil:
+    visible: "Guardar .*"
+    timeout: 15000
+- tapOn: "El cambio vale solo para esta semana"
+- extendedWaitUntil:
+    visible: "Toda esta semana"
+    timeout: 15000
+- tapOn: "A la hora exacta"
+- tapOn: "Guardar aviso · solo esta semana"
+- extendedWaitUntil:
+    visible: "Queda con aviso nuevo .* solo esta semana\\..*"
+    timeout: 20000
+# Cerrar la hoja: «Tus prácticas» vuelve a leer y ofrece repetir.
+- back
+- back
+- extendedWaitUntil:
+    visible: "Repetir tu semana"
+    timeout: 20000
+- assertVisible: "Tu semana del .* al .*, en la del .* al .*"
+- assertVisible: "Ver qué se repite"
+- assertVisible: "Ahora no"
+- takeScreenshot: R01a-oferta
+# Ver qué se repite: el resumen por hábito, sin enviar nada.
+- tapOn: "Ver qué se repite"
+- extendedWaitUntil:
+    visible: "Qué se repite"
+    timeout: 15000
+- assertVisible: "Meditar 10 minutos"
+- assertVisible: ".*aviso a la hora.*"
+- takeScreenshot: R01b-que-se-repite
+- back
+- extendedWaitUntil:
+    visible: "Repetir tu semana"
+    timeout: 15000
+# Repetir en un toque: la semana siguiente queda como esta, se dice y se puede deshacer.
+- tapOn: "Repetir"
+- extendedWaitUntil:
+    visible: "Tu semana del .* quedó como esta"
+    timeout: 20000
+- assertVisible: "Deshacer"
+- assertNotVisible: "Repetir tu semana"
+- takeScreenshot: R01c-repetida
+- tapOn: "Deshacer: volver al plan de siempre"
+- extendedWaitUntil:
+    visible: "Tu semana del .* volvió al plan de siempre"
+    timeout: 20000
+# La semana modelo sigue con su cambio, así que la oferta vuelve a salir.
+- extendedWaitUntil:
+    visible: "Repetir tu semana"
+    timeout: 20000
+# «Ahora no» no vuelve mientras la semana modelo no cambie.
+- tapOn: "Ahora no repetir la semana"
+- assertNotVisible: "Repetir tu semana"
+- takeScreenshot: R01d-ahora-no
+- back
+- extendedWaitUntil:
+    visible: "Tus prácticas: planificar"
+    timeout: 20000
+- tapOn: "Tus prácticas: planificar"
+- extendedWaitUntil:
+    visible: "Tus prácticas"
+    timeout: 15000
+- assertNotVisible: "Repetir tu semana"
+# Limpieza: el cambio solo esta semana de «Meditar 10 minutos» vuelve al plan de siempre.
+- tapOn: "Mente: .* de .* cumplidos hoy"
+- extendedWaitUntil:
+    visible: "Toca uno para cambiarle la hora\\."
+    timeout: 15000
+- tapOn: "Meditar 10 minutos, a las 20:15"
+- extendedWaitUntil:
+    visible: "Guardar .*"
+    timeout: 15000
+- tapOn: "El cambio vale solo para esta semana"
+- extendedWaitUntil:
+    visible: "Volver al plan de siempre los .*"
+    timeout: 15000
+- tapOn: "Volver al plan de siempre los .*"
+- extendedWaitUntil:
+    visible: "Vuelve al plan de siempre los .* de esta semana\\."
+    timeout: 20000
+- back
+- back
