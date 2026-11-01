@@ -161,6 +161,9 @@ export const aceptacionDeSolicitudSchema = z
     formations: z.array(z.string()).catch([]),
     durationDays: z.number().nullish().catch(null),
     role: z.string().nullish().catch(null),
+    /** V142: el rol personalizado con el que entró y cómo se llamaba ese día. Un backend anterior no lo manda. */
+    customRoleId: z.string().nullish().catch(null),
+    customRoleName: z.string().nullish().catch(null),
     withDiagnosis: z.boolean().catch(false),
   })
   .passthrough();
@@ -337,6 +340,10 @@ export const detalleAprendizSchema = z
     /** Spec 022: su formación (código) y los días de su programa. Un backend anterior no los manda: Escuela y 90. */
     formation: z.string().nullish(),
     programDuration: z.number().nullish(),
+    /** Spec 025: lo que se decidió al aceptar a la persona (la misma forma que en la lista de solicitudes), quién y cuándo. Ausente = no entró por una solicitud. */
+    acceptance: aceptacionDeSolicitudSchema.nullish().catch(null),
+    acceptedByName: z.string().nullish(),
+    acceptedAt: z.string().nullish(),
   })
   .passthrough();
 

@@ -9,6 +9,7 @@ import {
   alMarcarFormacion,
   borradorInicial,
   descripcionDeLaAceptacion,
+  textoDeLaAceptada,
   duracionesParaElegir,
   eleccionParaElPedido,
   frase,
@@ -189,6 +190,43 @@ describe('lo que dice una solicitud ya decidida (US4)', () => {
   it('sin aceptación (pendiente o backend anterior) no hay nada que decir', () => {
     expect(descripcionDeLaAceptacion(null)).toBeNull();
     expect(descripcionDeLaAceptacion(undefined)).toBeNull();
+  });
+});
+
+describe('el rol personalizado con el que se aceptó (V142)', () => {
+  it('dice el nombre que tenía ese día y, entre paréntesis, su rol base', () => {
+    expect(
+      descripcionDeLaAceptacion({
+        formations: ['ESCUELA'],
+        durationDays: null,
+        role: 'MENTOR',
+        customRoleId: 'r-1',
+        customRoleName: 'Mentor junior',
+        withDiagnosis: false,
+      }),
+    ).toBe('Escuela · Mentor junior (Mentor) · sin diagnóstico');
+  });
+
+  it('un backend anterior no manda el rol personalizado y la línea es la de siempre', () => {
+    expect(descripcionDeLaAceptacion({ formations: ['ESCUELA'], durationDays: null, role: 'MENTOR', withDiagnosis: false })).toBe(
+      'Escuela · Mentor · sin diagnóstico',
+    );
+  });
+});
+
+describe('quién aceptó y cuándo: lo mismo en la lista y en la ficha (US4)', () => {
+  const aceptacion = { formations: ['DIPLOMADO'], durationDays: 365, role: 'TRAINEE', withDiagnosis: true };
+
+  it('«Aceptada por Ana el 31 de octubre» y debajo lo que se eligió', () => {
+    expect(textoDeLaAceptada('Ana Quispe', '2026-10-31T15:00:00Z', aceptacion)).toEqual({
+      titulo: 'Aceptada por Ana Quispe el 31 de octubre',
+      detalle: 'Diplomado 1 año · Aprendiz · con diagnóstico',
+    });
+  });
+
+  it('sin quién o sin cuándo (la cuenta ya no existe, o es de antes) solo dice lo que sabe', () => {
+    expect(textoDeLaAceptada(null, null, aceptacion).titulo).toBe('Aceptada');
+    expect(textoDeLaAceptada(undefined, '2026-10-31T15:00:00Z', aceptacion).titulo).toBe('Aceptada el 31 de octubre');
   });
 });
 
