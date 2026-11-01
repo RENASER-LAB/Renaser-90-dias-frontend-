@@ -163,4 +163,13 @@ export interface PropiedadesDelRecorrido {
   onSalir: () => void;
   /** Después del cierre, «Continuar». */
   onContinuar?: () => void;
+  /**
+   * Quién responde: con él el recorrido guarda lo que se escribe en el paso en curso (`renaser.diagnostico.<usuario>.<versión>`)
+   * para no perderlo si se cierra la app antes de «Siguiente». Sin él (o en la vista previa) no se guarda nada en el teléfono.
+   */
+  usuarioId?: string;
+  /** Lo que dice el cierre bajo «qué sigue». Sin él, el de la ficha de ingreso (Términos y Día 1). */
+  textoQueSigue?: string;
+  /** El botón del cierre. Sin él, «Continuar». */
+  etiquetaContinuar?: string;
 }
