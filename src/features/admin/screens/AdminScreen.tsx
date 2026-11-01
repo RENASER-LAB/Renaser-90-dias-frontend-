@@ -15,6 +15,7 @@ import { AnimalesDeFaseAdminScreen } from './AnimalesDeFaseAdminScreen';
 import { BienvenidaAdminScreen } from './BienvenidaAdminScreen';
 import { useHabitosProgramaAdmin } from '../hooks/useHabitosProgramaAdmin';
 import { HabitosProgramaAdminScreen } from './HabitosProgramaAdminScreen';
+import { CategoriasDeHabitoAdminScreen } from './CategoriasDeHabitoAdminScreen';
 import { HabitoProgramaFormScreen } from './HabitoProgramaFormScreen';
 import { useAnimalesDeFaseAdmin } from '../hooks/useAnimalesDeFaseAdmin';
 import { FichaAprendizScreen } from './FichaAprendizScreen';
@@ -72,6 +73,7 @@ type Vista =
   | { nombre: 'animal-fase'; numero: number }
   | { nombre: 'habitos-programa' }
   | { nombre: 'habito-programa'; id: string | null }
+  | { nombre: 'categorias-habito' }
   | { nombre: 'publicaciones-ocultas' }
   | { nombre: 'mas' }
   | { nombre: 'caja' }
@@ -291,9 +293,12 @@ export function AdminScreen({ onSalir, abrirEn = 'inicio' }: { onSalir: () => vo
           estado={habitosDelPrograma}
           onAbrir={id => entrar({ nombre: 'habito-programa', id })}
           onNuevo={() => entrar({ nombre: 'habito-programa', id: null })}
+          onCategorias={() => entrar({ nombre: 'categorias-habito' })}
           onVolver={volver}
         />
       );
+    case 'categorias-habito':
+      return <CategoriasDeHabitoAdminScreen estado={habitosDelPrograma} onVolver={volver} />;
     case 'habito-programa':
       return <HabitoProgramaFormScreen id={vista.id} estado={habitosDelPrograma} onVolver={volver} />;
     case 'publicaciones-ocultas':

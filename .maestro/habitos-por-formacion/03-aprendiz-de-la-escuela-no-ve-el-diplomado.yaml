@@ -1,0 +1,22 @@
+# Un aprendiz de la Escuela sigue viendo lo de siempre y nada del Diplomado (spec 023, historia 1 y SC-002/SC-003). ESCRITO Y SIN CORRER.
+# cuenta: aprendiz  (aprendiz de la Escuela con su Día 1 elegido)
+# Precondición: existen en el Diplomado la categoría «Estudio E2E» y el hábito «Leer treinta minutos E2E» (flujo 01).
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- runFlow: ../comun/abrir-training.yaml
+- extendedWaitUntil:
+    visible: "(?i).*Despertar.*"
+    timeout: 60000
+- assertNotVisible: "(?i).*Leer treinta minutos E2E.*"
+- takeScreenshot: H03a-training-de-la-escuela
+- tapOn: "Tus prácticas"
+- extendedWaitUntil:
+    visible: "Cuerpo.*"
+    timeout: 30000
+- assertVisible: "Mente.*"
+- assertVisible: "Emociones.*"
+- assertVisible: "Espíritu.*"
+- assertNotVisible: "Estudio E2E.*"
+- takeScreenshot: H03b-las-cuatro-de-la-escuela
+- back

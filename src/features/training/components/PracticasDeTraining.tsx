@@ -1,5 +1,5 @@
 import { fuentes } from '../../../theme/fuentes';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View, type ScrollViewProps, type StyleProp, type ViewStyle } from 'react-native';
 
 import { ConfirmacionEnLinea } from '../../../components/ConfirmacionEnLinea';
@@ -12,7 +12,9 @@ import type { HabitItem } from '../../../screens/TrainingScreen';
 import { CabeceraAdmin } from '../../admin/components/CabeceraAdmin';
 import type { useRenombreLocal } from '../../habits/hooks/useRenombreDeHabito';
 import * as recordatorios from '../../habits/notificaciones/recordatoriosDeHabito';
-import { DIMENSIONES_CONFIG, type DimensionConfig } from '../data/dimensiones';
+import { useCategoriasDeHabito } from '../../habits/categorias/hooks/useCategoriasDeHabito';
+import { dimensionesDeTraining, type DimensionConfig } from '../data/dimensiones';
+import { dimensionesQueSeDibujan } from '../utils/dimensionesQueSeDibujan';
 import { useRepasoSemanal } from '../hooks/useRepasoSemanal';
 import { iconoDeLaDimension } from '../utils/iconoDeLaDimension';
 import { PRACTICAS_ABIERTAS, PRACTICAS_CERRADAS, alRetroceder, type EstadoDePracticas } from '../utils/navegacionDePracticas';
@@ -74,8 +76,16 @@ export function PracticasDeTraining({
 }) {
   const { c, t } = useTheme();
   const repaso = useRepasoSemanal(userId);
+  /* Spec 023: las dimensiones son las categorías de la formación de la persona (en el orden de Administración), y una sin hábitos
+     que le toquen no se dibuja. `categorias.dimensiones` cambia cuando llegan: esta lista se arma otra vez. */
+  const categorias = useCategoriasDeHabito();
+  const dimensiones = useMemo(
+    () => dimensionesQueSeDibujan(dimensionesDeTraining({ conMisHabitos: planHabits.some(h => h.dimension === 'MIS_HABITOS') }), planHabits),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [planHabits, categorias.dimensiones],
+  );
 
-  const dimension: DimensionConfig | null = DIMENSIONES_CONFIG.find(d => d.key === estado.dimension) ?? null;
+  const dimension: DimensionConfig | null = dimensiones.find(d => d.key === estado.dimension) ?? null;
   const volver = () => onEstado(alRetroceder(estado) ?? PRACTICAS_CERRADAS);
   const delaDimension = dimension ? planHabits.filter(h => h.dimension === dimension.key) : [];
 
@@ -123,7 +133,7 @@ export function PracticasDeTraining({
 
           <View style={{ gap: 12 }}>
             {!cargando && !error && !sinLista
-              ? DIMENSIONES_CONFIG.map(d => {
+              ? dimensiones.map(d => {
                   const deLaDimension = habits.filter(h => h.dimension === d.key);
                   // Mismo criterio de siempre (E-118): la prueba entregada en la forma que cada hábito acepta.
                   const cumplidos = deLaDimension.filter(h => h.done || h.hasEvidence).length;
@@ -147,7 +157,7 @@ export function PracticasDeTraining({
                             {cumplidos} de {deLaDimension.length} hoy
                           </Text>
                         </View>
-                        <Text style={[t.small, { color: c.textSoft }]}>{d.sub}</Text>
+                        {d.sub ? <Text style={[t.small, { color: c.textSoft }]}>{d.sub}</Text> : null}
                       </View>
                       <Icon name="chevron" size={TAMANO_ICONO.normal} color={c.chevron} />
                     </Presionable>

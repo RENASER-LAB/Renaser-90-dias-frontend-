@@ -46,6 +46,8 @@ describe('ICONO_DE_LA_DIMENSION: la fuente única', () => {
       EMOCIONES: 'heart',
       'ESPÍRITU': 'sparkles',
       'VIDA Y NEGOCIO': 'briefcase',
+      // Spec 023: «Mis hábitos» (los propios con una categoría ajena a la formación) no es una categoría del servidor.
+      MIS_HABITOS: 'listChecks',
     });
     expect(iconoDeLaDimension('ESPÍRITU')).toBe('sparkles');
   });
@@ -56,7 +58,8 @@ describe('ICONO_DE_LA_DIMENSION: la fuente única', () => {
   });
 
   it('son cinco dibujos distintos, ninguno el monigote ni el asterisco de antes', () => {
-    const iconos = Object.values(ICONO_DE_LA_DIMENSION);
+    // «Mis hábitos» (spec 023) no cuenta: no es una de las cinco de Training sino la de los hábitos propios sin categoría.
+    const iconos = Object.entries(ICONO_DE_LA_DIMENSION).filter(([clave]) => clave !== 'MIS_HABITOS').map(([, icono]) => icono);
     expect(new Set(iconos).size).toBe(5);
     expect(iconos).not.toContain('body');
     expect(iconos).not.toContain('spark');

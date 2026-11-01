@@ -63,7 +63,9 @@ const porDefecto: DependenciasDePuestaAlDia = {
   rearmar: ahoraMs => rearmarAlarmasProgramadas(ahoraMs),
   completarDiferidos: (userId, ahora) => completarCambiosDiferidos(userId, ahora),
   preferencias: () => habitsApi.obtenerPreferencias(),
-  armarQueFaltan: (userId, preferencias) => ajustarRecordatoriosAlServidor(userId, preferencias),
+  // Spec 023, FR-018: con la lista COMPLETA y leída bien (si falló, `armadas` queda en null y no se llega aquí), lo que el
+  // servidor ya no lista —los hábitos de la formación anterior— deja de sonar.
+  armarQueFaltan: (userId, preferencias) => ajustarRecordatoriosAlServidor(userId, preferencias, { retirarLosQueYaNoEstan: true }),
   agregarRutas: async (userId, ahoraMs) => agregarRutaALasAlarmasDeHabitos(await recordatoriosPorHabito(userId), ahoraMs),
   confirmar: () => confirmarAlarmasAlServidor(),
   agrupar: (userId, ahoraMs) => agruparAvisosQueCoinciden(userId, ahoraMs),

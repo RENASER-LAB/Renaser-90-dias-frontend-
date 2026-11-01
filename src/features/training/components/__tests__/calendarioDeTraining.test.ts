@@ -18,6 +18,11 @@ import TestRenderer, { act, type ReactTestInstance, type ReactTestRenderer } fro
 import type { HabitItem } from '../../../../screens/TrainingScreen';
 import type { DatosEntrenamiento } from '../../api/cargarEntrenamiento';
 
+jest.mock('../../../habits/categorias/hooks/useCategoriasDeHabito', () => {
+  /* Spec 023: sin sesión en la prueba, las categorías valen las de la Escuela (el respaldo) y ya están listas. */
+  const estado = { clave: null, listo: true, formacion: null, delServidor: false, categorias: [], dimensiones: [], recargar: () => undefined };
+  return { useCategoriasDeHabito: () => estado };
+});
 jest.mock('../../../../theme/ThemeContext', () => {
   const tokens = jest.requireActual<typeof import('../../../../theme/tokens')>('../../../../theme/tokens');
   return {

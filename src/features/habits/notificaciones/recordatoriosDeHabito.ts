@@ -1295,12 +1295,16 @@ export function avisosSegunElServidor(p: PreferenciaHabitoApi, delTelefono: read
  *   puesta al día lo compara con lo que corresponde (`hayQueConciliarElPuente`) y lo arma, lo deja o vuelve al esquema
  *   normal —cuando el día pasó, o ya sonaron todos los avisos de hoy—, aunque nada más haya cambiado. Converge: no se
  *   rehace en cada apertura mientras esté como debe.
+ * - **Spec 023, FR-018 (con `retirarLosQueYaNoEstan`): lo que el servidor ya no lista se retira.** Un hábito con alarma en este
+ *   teléfono que ya no aparece en la lista —era de la formación anterior, tras un traslado— deja de sonar: se cancela entero
+ *   (alarmas, puente, repeticiones y notas). Solo lo pide la puesta al día de la app, con la lista COMPLETA y leída bien; quien
+ *   ajusta UN hábito (`alCumplirElHabito`) pasa una lista de uno y no retira nada. Una lista vacía legítima retira todas.
  * - **No pide permiso**: corre al abrir la app. Sin permiso de avisos no arma nada (sí cancela).
  */
 export async function ajustarRecordatoriosAlServidor(
   userId: string,
   preferencias: ReadonlyArray<PreferenciaHabitoApi>,
-  opciones: { ahora?: Date; dimensionDe?: (habitoId: string) => string | null } = {},
+  opciones: { ahora?: Date; dimensionDe?: (habitoId: string) => string | null; retirarLosQueYaNoEstan?: boolean } = {},
 ): Promise<number> {
   const N = notificaciones();
   if (!N) return 0;
@@ -1330,9 +1334,42 @@ export async function ajustarRecordatoriosAlServidor(
     if (!permiso || p.reminderEnabled !== true || p.reminderMinutesBefore == null || !p.triggerTime) continue;
     if (await ajustarUno(userId, p, tieneAlarma, veniaPorDia, opciones)) tocados++;
   }
+  if (opciones.retirarLosQueYaNoEstan) tocados += await retirarLosQueElServidorYaNoLista(userId, preferencias, conAlarma);
   // Spec 009: la ventana de 7 días de las repeticiones se renueva en cada puesta al día, con lo que dice el servidor.
   await renovarLasRepeticiones(userId, preferencias, permiso, opciones);
   return tocados;
+}
+
+/**
+ * Spec 023, FR-018: quita las alarmas de los hábitos que ya no están en la lista del servidor (los de la formación anterior tras un
+ * traslado). Los ids son SOLO de hábitos: `recordatoriosPorHabito` lee las claves de los hábitos de esta persona y las repeticiones
+ * llevan el id de su hábito; los eventos, las acciones de los objetivos, el Código Renaser y el repaso de los domingos tienen otras
+ * claves y otros identificadores y no se tocan. Devuelve cuántos hábitos se retiraron.
+ */
+async function retirarLosQueElServidorYaNoLista(
+  userId: string,
+  preferencias: ReadonlyArray<PreferenciaHabitoApi>,
+  conAlarma: ReadonlyMap<string, string[]>,
+): Promise<number> {
+  const listados = new Set(preferencias.map(p => p.habitId));
+  const aRetirar = new Set([...conAlarma.keys()].filter(habitoId => !listados.has(habitoId)));
+  // Una repetición suelta (sin la clave de su alarma) también es de un hábito que ya no está.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { repeticionesProgramadas } = require('./repeticiones') as typeof import('./repeticiones');
+  const sueltas = new Set<string>();
+  for (const habitoId of (await repeticionesProgramadas()).values()) {
+    if (!listados.has(habitoId) && !aRetirar.has(habitoId)) sueltas.add(habitoId);
+  }
+  for (const habitoId of aRetirar) {
+    await cancelar(userId, habitoId);
+    await sinRomper(() => AsyncStorage.removeItem(CLAVE_ANTELACIONES + `${userId}.${habitoId}`), undefined);
+  }
+  if (sueltas.size > 0) {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { cancelarRepeticiones } = require('./repeticiones') as typeof import('./repeticiones');
+    for (const habitoId of sueltas) await cancelarRepeticiones(habitoId);
+  }
+  return aRetirar.size + sueltas.size;
 }
 
 /**

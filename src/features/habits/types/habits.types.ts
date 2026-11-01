@@ -73,12 +73,11 @@ export const CLAVE_SISTEMA_CLASE_DIARIA = 'DAILY_CLASS';
 export const CLAVE_SISTEMA_POST_DIARIO_COMUNIDAD = 'COMMUNITY_POST';
 
 /**
- * Las 4 categorías reales de `renaser.categorias_habito`, con el nombre que la API usa en el
- * cable. Están acá y no sueltas en la pantalla porque el backend las exige (`category` es
- * `@NotNull`) y porque son las mismas que `habitsMappers.CATEGORIA` traduce a etiqueta e icono:
- * si algún día aparece una quinta, este es el único lugar que hay que tocar.
+ * La categoría de un hábito, con el nombre que la API usa en el cable. Las cuatro de la Escuela viajan con su código en inglés
+ * (`BODY`, `MIND`, `SPIRIT`, `CONSCIENCE`) y las que cada formación crea (spec 023) con su clave (`DIPLOMADO_ESTUDIO`): un texto abierto,
+ * cuya lista y nombres salen del servidor (`features/habits/categorias`).
  */
-export type CategoriaHabitoApi = 'BODY' | 'MIND' | 'SPIRIT' | 'CONSCIENCE';
+export type CategoriaHabitoApi = string;
 
 /**
  * Cuerpo de `POST /api/v1/habits` (`CreatePersonalHabitRequest` del backend).
