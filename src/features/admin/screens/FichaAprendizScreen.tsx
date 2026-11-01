@@ -198,6 +198,7 @@ export function FichaAprendizScreen({
         aprendizId={aprendiz.id}
         nombre={nombre}
         diaActual={programa.detalle.programDay}
+        duracionDias={programa.detalle.programDuration}
         onVolver={() => setCambiandoDia(false)}
         onCambiado={diaNuevo => {
           setCambiandoDia(false);
