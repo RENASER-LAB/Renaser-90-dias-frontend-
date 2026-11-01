@@ -593,8 +593,14 @@ Muro, cursos, ranking— llega con las siguientes):
   sesión»; nada más. Administración, Alquimista y Soporte TI **ven las tres** (`veTodas`) y no tienen selector ni nombre en Hoy.
 * **Días y fases por duración.** `/home` suma `duracionDias` y `formacion`. Las cuatro fases se estiran: con 90 días son 1, 8, 35 y 65; con 365, **1, 29,
   138 y 260** (`formaciones/utils/fasesDeLaDuracion`, la misma cuenta que el servidor; `faseEnCurso(fase, día, duración)`). Los nombres y las claves de
-  fase no cambian (son contrato). «Los días que quedan» del Mapa usa la duración (`diasQueQuedan(día, duración)`). **No se tocó** «El Método»
-  (texto fijo de «4 fases en 90 días»), el plan de objetivos/acciones ni las pastillas de hábitos: siguen en 90 hasta sus specs.
+  fase no cambian (son contrato). «Los días que quedan» del Mapa usa la duración (`diasQueQuedan(día, duración)`). **No se tocó** el plan de
+  objetivos/acciones ni las pastillas de hábitos: siguen en 90 hasta sus specs.
+* **Cerrado el mismo día (pedido del coordinador):** (1) **«El Método»** (Yo → Ajustes) dice «4 fases en N días» y el rango de cada fase de SU
+  programa (`metodoFasesDe(duración)`, sobre `fasesEnOrden`); con 90 días es el de siempre. (2) **«Cambiar día del programa»** (Administración y el
+  aviso de emergencia del chat de soporte) acota con la duración de la persona: el último día ajustable es el penúltimo (89 en la Escuela, 364 en el
+  Diplomado de un año; `ultimoDiaAjustable`), «Hoy está en el día N de M» dice la suya, y la ficha le pasa `programDuration` del detalle; si no la
+  sabe (el aviso del chat solo trae el día de hoy), `useDuracionDelPrograma` la lee una vez del detalle y mientras tanto vale 90 (el servidor vuelve a
+  acotar). La pantalla de emergencia del aprendiz ya leía el tope que manda el servidor (`diaMaximo`).
 * **Administración → Formaciones** (`formaciones/screens/FormacionesAdminScreen` y `FormacionDetalleAdminScreen`, **solo Administración y Alquimista**):
   las tres con nombre, duraciones, cifras y «N por atender»; el detalle (Resumen, Personas, Grupos, Por atender) y **«Ver personas» / «Ver grupos»,
   que abren esas listas ya filtradas por la formación** (las cifras salen de las mismas consultas que las listas). «Editar» (`EditarFormacionSheet`):
