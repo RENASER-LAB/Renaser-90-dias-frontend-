@@ -296,16 +296,16 @@ describe('el pedido de «Planificar mi mes» (spec 028): organizar la semana de 
     expect(mockModalesAbiertos).toContain('asistente');
   });
 
-  it('sin los tres objetivos de 90 días ofrece el Mapa, no armar', () => {
+  it('sin los tres objetivos de 90 días ofrece escribirlos (spec 026: ya no hay Mapa), no armar', () => {
     mockSemanal = semanal('bloqueada');
-    const onIrAlMapa = jest.fn();
+    const onDefinirObjetivos = jest.fn();
     mockLlamadas = 0;
     act(() => {
-      raiz = TestRenderer.create(React.createElement(PlanDelEje, { ...props(0), onIrAlMapa }));
+      raiz = TestRenderer.create(React.createElement(PlanDelEje, { ...props(0), onDefinirObjetivos }));
     });
     mockLlamadas = 0;
-    act(() => raiz!.update(React.createElement(PlanDelEje, { ...props(1), onIrAlMapa })));
-    expect(onIrAlMapa).toHaveBeenCalledTimes(1);
+    act(() => raiz!.update(React.createElement(PlanDelEje, { ...props(1), onDefinirObjetivos })));
+    expect(onDefinirObjetivos).toHaveBeenCalledTimes(1);
     expect(mockModalesAbiertos).toEqual([]);
   });
 
