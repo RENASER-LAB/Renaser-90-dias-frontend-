@@ -3,6 +3,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ConfirmacionEnLinea } from '../../../components/ConfirmacionEnLinea';
+import { Icon, TAMANO_ICONO } from '../../../components/Icon';
 import { useSystemBackHandler } from '../../../hooks/useSystemBackHandler';
 import { useOcultarBarraAlDesplazar } from '../../../navigation/barraAlDesplazar/BarraInferior';
 import { useResponsive } from '../../../theme/responsive';
@@ -94,11 +95,18 @@ export function MiIngresoScreen({
             <PasosDelIngreso pasos={pasos} />
 
             {vista?.tipo === 'completo' ? (
-              <View style={{ gap: 6 }}>
-                <Text accessibilityRole="header" style={[t.screenTitle, { color: c.textStrong }]}>
-                  {vista.titulo}
-                </Text>
-                <Text style={[t.body, { color: c.textSoft, fontSize: 17, lineHeight: 24 }]}>{vista.detalle}</Text>
+              /* Una tarjeta de éxito con cuerpo (E2E de las formaciones, 01/11/2026, issue #90): antes era un título suelto y el resto de la pantalla,
+                 casi un 65 %, quedaba en blanco. Mismos textos. */
+              <View style={[estilos.pagoCompleto, { backgroundColor: c.successWash, borderColor: c.success }]}>
+                <View style={[estilos.medallonDeExito, { backgroundColor: c.cardBg, borderColor: c.success }]}>
+                  <Icon name="check" size={TAMANO_ICONO.grande} color={c.success} />
+                </View>
+                <View style={{ flex: 1, gap: 4 }}>
+                  <Text accessibilityRole="header" style={[t.cardTitle, estilos.tituloDelPagoCompleto, { color: c.textStrong }]}>
+                    {vista.titulo}
+                  </Text>
+                  <Text style={[t.body, { color: c.textSoft, fontSize: 17, lineHeight: 24 }]}>{vista.detalle}</Text>
+                </View>
               </View>
             ) : null}
 
@@ -139,4 +147,7 @@ export function MiIngresoScreen({
 
 const estilos = StyleSheet.create({
   confirmada: { borderWidth: 1, borderRadius: 14, padding: 14 },
+  pagoCompleto: { flexDirection: 'row', alignItems: 'center', gap: 14, borderWidth: 1, borderRadius: 16, padding: 17 },
+  medallonDeExito: { width: 52, height: 52, borderRadius: 26, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
+  tituloDelPagoCompleto: { fontSize: 22, lineHeight: 28 },
 });

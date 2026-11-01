@@ -194,6 +194,21 @@ describe('sin cronograma', () => {
   });
 });
 
+describe('sin cronograma: una tarjeta de éxito con cuerpo (issue #90)', () => {
+  it('el pago completo va en una tarjeta con el check, el título y la explicación (no un título suelto con la pantalla vacía)', () => {
+    const r = montar({ pasos: [{ clave: 'ACUERDO', hecho: true }, { clave: 'PAGOS', hecho: true }], pagos: { modo: 'SIN_CRONOGRAMA', moneda: null, cuotas: [], confirmacion: null } });
+    const texto = textos(r);
+    expect(texto).toContain('Tu pago fue cancelado');
+    expect(texto).toContain('No tienes cuotas por pagar.');
+    const iconos = r.root.findAll(n => n.props?.name === 'check');
+    expect(iconos.length).toBeGreaterThan(0);
+    const titulo = r.root.findAll(
+      n => (n.type as unknown) === 'Text' && n.props.accessibilityRole === 'header' && React.Children.toArray(n.props.children).join('') === 'Tu pago fue cancelado',
+    );
+    expect(titulo.length).toBeGreaterThan(0);
+  });
+});
+
 describe('el resto', () => {
   it('con la función apagada por Soporte TI, el aviso de mantenimiento reemplaza todo lo demás', () => {
     mockFuncion.prendida = false;
