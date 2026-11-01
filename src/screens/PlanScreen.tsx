@@ -127,6 +127,10 @@ const EJE_POR_DEFECTO: EjeObjetivo = 'CUERPO';
 /** Botones en tipo oración y a tamaño de lectura (`GoldButton` va en versales espaciadas por defecto). */
 const TEXTO_DE_BOTON = { fontSize: 15, letterSpacing: 0 } as const;
 
+/** Lo que dice Plan a quien todavía no tiene programa propio: su plan nace del programa. */
+export const TEXTO_DE_PLAN_SIN_PROGRAMA =
+  'Tu plan se arma con tu programa. Cuando elijas tu Día 1 podrás escribir tus objetivos y agendar tus acciones aquí.';
+
 export default function PlanScreen() {
   const { c, t } = useTheme();
   const { isTablet, horizontalPadding, contentMaxWidth } = useResponsive();
@@ -159,6 +163,10 @@ export default function PlanScreen() {
     duracionDias: resumen?.duracionDias,
     formacion: resumen?.formacion,
   });
+  /* Sin programa propio (el personal que todavía no hizo el suyo) no hay objetivos que leer: el servidor responde 404 «Participante no encontrado»
+     a todo `/rocks/*` y se veía ese texto, con el id, en dos tarjetas (E2E de las formaciones, 01/11/2026, issue #81). Quien tiene programa, aunque
+     no haya elegido su Día 1, ve Plan como siempre. */
+  const sinProgramaPropio = resumen?.inscrito === false;
 
   /**
    * La fase del aprendiz, **la que dice el backend**, no una calculada acá.
@@ -544,6 +552,12 @@ export default function PlanScreen() {
           {/* El programa propio, arriba de todo y sin hueco cuando no hay nada que decir (el hook ya sabe si hay fila). */}
           {programaPropio.visible ? <FilaDelProgramaPropio programa={programaPropio} /> : null}
 
+          {sinProgramaPropio ? (
+            <Text style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 23 }]} accessibilityRole="text">
+              {TEXTO_DE_PLAN_SIN_PROGRAMA}
+            </Text>
+          ) : (
+            <>
           {/* Spec 026: mientras haya objetivos del diagnóstico por confirmar, lo primero es revisarlos. Al confirmarlos desaparece. */}
           {pendientes.length > 0 ? <TarjetaRevisaTusObjetivos cantidad={pendientes.length} alRevisar={() => setRevisando(true)} /> : null}
 
@@ -594,6 +608,8 @@ export default function PlanScreen() {
             abrirOchentaVeinte={ochentaVeinteAlAbrir}
             alAbrirOchentaVeinte={() => setOchentaVeinteAlAbrir(null)}
           />
+            </>
+          )}
         </View>
       </ScrollView>
 
