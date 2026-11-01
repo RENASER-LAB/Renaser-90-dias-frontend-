@@ -2,6 +2,7 @@ import type { EleccionAlAceptar, OpcionDeRol } from '../api/adminApi';
 import type { AceptacionDeSolicitudApi, OpcionesDeAceptacionApi } from '../api/adminSchemas';
 import { etiquetaDeDuracion } from '../../formaciones/utils/etiquetaDeDuracion';
 import { nombreCortoDeFormacion } from '../../formaciones/utils/nombreDeFormacion';
+import { fechaCorta } from './fechas';
 import { etiquetaDeRol } from './rolesAsignables';
 
 /**
@@ -219,9 +220,26 @@ export function descripcionDeLaAceptacion(aceptacion: AceptacionDeSolicitudApi |
     const duracion = aceptacion.durationDays ? ` ${etiquetaDeDuracion(aceptacion.durationDays)}` : '';
     partes.push(`${unir(nombres)}${aceptacion.formations.length === 1 ? duracion : ''}`);
   }
-  if (aceptacion.role) partes.push(etiquetaDeRol(aceptacion.role));
+  if (aceptacion.customRoleName) {
+    partes.push(aceptacion.role ? `${aceptacion.customRoleName} (${etiquetaDeRol(aceptacion.role)})` : aceptacion.customRoleName);
+  } else if (aceptacion.role) {
+    partes.push(etiquetaDeRol(aceptacion.role));
+  }
   partes.push(aceptacion.withDiagnosis ? 'con diagnóstico' : 'sin diagnóstico');
   return partes.join(' · ');
+}
+
+/**
+ * Lo que dice una persona ya aceptada: «Aceptada por Ana el 31 de octubre» y, debajo, lo que se eligió. La usan la lista de «Aceptadas» y la ficha de la
+ * persona, para que digan exactamente lo mismo (spec 025, US4).
+ */
+export function textoDeLaAceptada(quien: string | null | undefined, cuando: string | null | undefined, aceptacion: AceptacionDeSolicitudApi | null | undefined): {
+  titulo: string;
+  detalle: string | null;
+} {
+  const fecha = cuando ? ` el ${fechaCorta(cuando)}` : '';
+  const por = quien ? ` por ${quien}` : '';
+  return { titulo: `Aceptada${por}${fecha}`, detalle: descripcionDeLaAceptacion(aceptacion) };
 }
 
 // ── La misma que la última (US5, P3) ─────────────────────────────────────────────────────────────────────────────────────

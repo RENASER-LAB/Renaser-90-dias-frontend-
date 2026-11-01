@@ -644,10 +644,18 @@ por una y varias a la vez; **viene marcado Escuela, Aprendiz y sin diagnóstico*
   con diagnóstico»; las de antes de las formaciones, «Escuela · sin diagnóstico»), con el filtro `FiltroDeFormacion` de la 022. Las rechazadas, el motivo.
 * **Contra un backend anterior** (sin `GET /account-requests/acceptance-options`, 404) la hoja pide solo el rol y **no manda formaciones**: el servidor viejo las ignoraría en silencio y la
   persona entraría a la Escuela sin que quien la acepta lo sepa. «Con diagnóstico» no se ofrece mientras el servidor diga `diagnosisAvailable: false` (no hay diagnóstico publicado, spec 026).
+* **La ficha de la persona dice cómo entró** (US4, escenario 1; `AceptacionDeLaPersona`, entre «Su formación» y «Día del programa» de `FichaAprendizScreen`): «Cómo entró», «Aceptada por Ana el 31 de
+  octubre» y debajo lo que se eligió («Diplomado 1 año · Aprendiz · con diagnóstico»). **Dice exactamente lo mismo que la lista de «Aceptadas»**: las dos usan `textoDeLaAceptada`
+  (`utils/aceptarSolicitud`) y el servidor manda la misma forma `acceptance` en `GET /account-requests` y en `GET /admin/trainees/{id}` (con `acceptedByName` y `acceptedAt`). Es la foto de ese día:
+  la formación y la duración de HOY están en las secciones de arriba y pueden haber cambiado. Una cuenta que no entró por una solicitud (la invitó Administración) o un backend anterior: la sección
+  no se dibuja.
+* **El rol personalizado queda en la foto** (V142): si se aceptó con «Mentor junior», la lista y la ficha dicen «Mentor junior (Mentor)» —el nombre que tenía ese día y, entre paréntesis, su rol base—
+  (`customRoleId`, `customRoleName`; tolerantes: un backend anterior no los manda y se dice solo el rol base). Renombrar o borrar el rol después no cambia lo que dice lo aceptado.
+* **Cambiar de formación en la hoja vuelve a pedir la duración** (o la aplica sola si la nueva ofrece una única): no se arrastra en silencio la que quedó de la formación anterior.
 * **Cambiar la duración de quien ya empezó** (025-2 A): en la ficha de la persona (`FormacionDeLaPersona`), «Cambiar la duración» (`CambiarDuracionSheet`) pide la nueva duración entre las que
   ofrece su formación y un motivo de 3 a 280 letras; conserva su día y mueve el último; el último ajuste de la ficha lo dice («su programa pasó de 3 meses a 1 año»). Quien todavía no empezó
   se corrige con «Pasar a otra formación» (022).
-* **Pruebas:** Jest `aceptarSolicitud` (reglas por rol, duración, frase, descripción), `aceptarVarias`, `aceptarSolicitudApi` (cuerpo, filtro, opciones, servidor anterior) y `cambioDeDuracion`.
+* **Pruebas:** Jest `aceptarSolicitud` (reglas por rol, duración, frase, descripción, rol personalizado, `textoDeLaAceptada`), `aceptarVarias`, `aceptarSolicitudApi` (cuerpo, filtro, opciones, servidor anterior), `cambioDeDuracion` y `aceptacionEnLaFicha` (la lista y la ficha dicen lo mismo).
   Maestro, escritos y sin correr: `.maestro/solicitud-con-formacion/`.
 * **No cambian:** Rechazar y borrar solicitudes, los demás tabs, «Equipo y roles», el resto de la ficha ni el onboarding de la persona (la ficha con o sin diagnóstico la pone la 026). Sin
   dependencias nuevas ni código nativo.

@@ -10,6 +10,7 @@ PENDIENTES sembradas en la base **local** (nunca producción). Cada archivo dice
 | `03-aceptar-mentor-en-dos-formaciones` | el personal marca varias formaciones; Administración no pide ninguna |
 | `04-aceptar-varias-a-la-vez` | selección múltiple con una misma elección |
 | `05-cambiar-la-duracion-de-quien-ya-empezo` | de 3 meses a 1 año con motivo, conserva su día |
+| `06-la-ficha-dice-como-entro` | la ficha de la persona dice lo mismo que la lista de «Aceptadas»: quién, cuándo, formación, duración, rol y diagnóstico |
 
 Criterio de aislamiento (SC-007), para el E2E: una persona aceptada en el Diplomado no aparece en ninguna lista, grupo ni chat de la Escuela, y entra a la recepción de **su** formación.
 `comun-abrir-solicitudes.yaml` solo lo incluyen los demás flujos de la carpeta.

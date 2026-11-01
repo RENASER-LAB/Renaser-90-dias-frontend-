@@ -22,7 +22,7 @@ import { CabeceraAdmin } from '../components/CabeceraAdmin';
 import { FiltroDeFormacion } from '../../formaciones/components/FiltroDeFormacion';
 import { aceptarUnaPorUna, textoDelResultado } from '../utils/aceptarVarias';
 import {
-  descripcionDeLaAceptacion,
+  textoDeLaAceptada,
   eleccionParaElPedido,
   frase,
   recordarLaUltima,
@@ -447,7 +447,7 @@ function textoDeLaDecision(solicitud: SolicitudApi): { titulo: string; detalle: 
   if (solicitud.status === 'REJECTED') {
     return { titulo: `Rechazada${quien}${cuando}`, detalle: solicitud.rejectionReason ?? null };
   }
-  return { titulo: `Aceptada${quien}${cuando}`, detalle: descripcionDeLaAceptacion(solicitud.acceptance) };
+  return textoDeLaAceptada(solicitud.reviewedByName, solicitud.reviewedAt, solicitud.acceptance);
 }
 
 const estilos = StyleSheet.create({
