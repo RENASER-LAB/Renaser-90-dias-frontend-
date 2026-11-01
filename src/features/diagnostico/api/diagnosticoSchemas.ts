@@ -239,7 +239,14 @@ const respuestaLegibleSchema = z
   .passthrough();
 
 const preguntaLeidaSchema = z
-  .object({ id: z.number(), texto: z.string(), tipo: z.string(), retirada: z.boolean().nullish(), respuesta: z.unknown().nullish() })
+  .object({
+    id: z.number(),
+    texto: z.string(),
+    tipo: z.string(),
+    retirada: z.boolean().nullish(),
+    respuesta: z.unknown().nullish(),
+    escala: z.unknown().nullish(),
+  })
   .passthrough();
 
 function leerPreguntaLeida(dato: unknown): PreguntaLeida | null {
@@ -251,6 +258,7 @@ function leerPreguntaLeida(dato: unknown): PreguntaLeida | null {
     texto: r.data.texto,
     tipo: r.data.tipo,
     retirada: r.data.retirada === true,
+    escalaMax: leerEscala(r.data.escala)?.max ?? null,
     respuesta: resp.success
       ? { texto: resp.data.texto ?? null, valores: resp.data.valores ?? [], filas: (resp.data.filas ?? []).map(f => ({ etiqueta: f.etiqueta, valor: f.valor })) }
       : null,

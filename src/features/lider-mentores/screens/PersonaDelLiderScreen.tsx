@@ -15,6 +15,9 @@ import { PALABRA_NO_SE_MIDE, palabraParaQuienAcompana, rolEnPalabras } from '../
 import { formatearPorcentaje } from '../../semaforo/utils/lecturaDelSemaforo';
 import { obtenerCierresDePersona } from '../../cierre/api/cierreApi';
 import { CierresDelDia } from '../../cierre/components/CierresDelDia';
+import { lecturaParaElLider } from '../../diagnostico/api/diagnosticoLecturaApi';
+import { SeccionDelDiagnosticoDeLaPersona } from '../../diagnostico/components/SeccionDelDiagnosticoDeLaPersona';
+import type { CargarLecturaDelDiagnostico } from '../../diagnostico/hooks/useLecturaDelDiagnostico';
 import type { CargarCierres } from '../../cierre/types/cierre.types';
 import { obtenerHuecosDePersona } from '../../huecos/api/huecosApi';
 import { TiempoLibreDeLaSemana } from '../../huecos/components/TiempoLibreDeLaSemana';
@@ -130,6 +133,11 @@ export function PersonaDelLiderScreen({
     () => (lunes?: string | null) => obtenerCierresDePersona(grupoDeRuta, personaId, lunes),
     [grupoDeRuta, personaId],
   );
+  /* Spec 026: su diagnóstico inicial, por la misma puerta (la del grupo o la que no pregunta por grupo). Una vez por persona. */
+  const cargarDiagnostico = useMemo<CargarLecturaDelDiagnostico>(
+    () => () => lecturaParaElLider(grupoDeRuta, personaId),
+    [grupoDeRuta, personaId],
+  );
 
   /* El día abierto se guarda junto con la semana a la que pertenece: al cambiar de semana vuelve solo al día
      más reciente con hábitos, sin un efecto que corra un render tarde. */
@@ -199,6 +207,7 @@ export function PersonaDelLiderScreen({
       <CodigoRenaserDelAlumno cargar={cargarRadar} />
       <TiempoLibreDeLaSemana cargar={cargarHuecos} />
       <CierresDelDia cargar={cargarCierres} />
+      <SeccionDelDiagnosticoDeLaPersona cargar={cargarDiagnostico} />
 
       <View style={estilos.acciones}>
         <BotonPrincipal

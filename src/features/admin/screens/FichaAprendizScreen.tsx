@@ -18,6 +18,9 @@ import { obtenerRadarDePersona } from '../../lider-mentores/api/cumplimientoDelL
 import { CodigoRenaserDelAlumno } from '../../mentor/components/CodigoRenaserDelAlumno';
 import { obtenerCierresDePersona } from '../../cierre/api/cierreApi';
 import { CierresDelDia } from '../../cierre/components/CierresDelDia';
+import { lecturaParaAdministracion } from '../../diagnostico/api/diagnosticoLecturaApi';
+import { SeccionDelDiagnosticoDeLaPersona } from '../../diagnostico/components/SeccionDelDiagnosticoDeLaPersona';
+import type { CargarLecturaDelDiagnostico } from '../../diagnostico/hooks/useLecturaDelDiagnostico';
 import type { CargarCierres } from '../../cierre/types/cierre.types';
 import { obtenerHuecosDePersona } from '../../huecos/api/huecosApi';
 import { TiempoLibreDeLaSemana } from '../../huecos/components/TiempoLibreDeLaSemana';
@@ -134,6 +137,8 @@ export function FichaAprendizScreen({
     () => (grupoDelRadar ? (lunes?: string | null) => obtenerCierresDePersona(grupoDelRadar, aprendiz.id, lunes) : null),
     [grupoDelRadar, aprendiz.id],
   );
+  /* Spec 026: su diagnóstico inicial, por la lectura de Administración (no pregunta por grupo). Estable por persona. */
+  const cargarDiagnostico = useMemo<CargarLecturaDelDiagnostico>(() => () => lecturaParaAdministracion(aprendiz.id), [aprendiz.id]);
   const nombre = aprendiz.fullName?.trim() || 'Aprendiz sin nombre';
   /* El día que trae el servidor al abrir la ficha gana sobre el de la fila que la abrió. */
   const datosDeCabecera = lineasDeCabecera(
@@ -464,6 +469,9 @@ export function FichaAprendizScreen({
 
         {/* Spec 017: lo que dijo al cerrar cada día, de lunes a domingo (solo lectura). */}
         <CierresDelDia cargar={cargarCierres} />
+
+        {/* Spec 026: lo que respondió en su diagnóstico inicial (solo lectura; no se dibuja si tiene la ficha estándar). */}
+        <SeccionDelDiagnosticoDeLaPersona cargar={cargarDiagnostico} />
 
         {/* D-243: solo ADMIN o ALQUIMISTA, nunca sobre sí mismo; sobre un ADMIN o ALQUIMISTA, solo un ADMIN. */}
         {ofrecerEliminar ? (

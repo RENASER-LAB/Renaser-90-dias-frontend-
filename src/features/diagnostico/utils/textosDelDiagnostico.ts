@@ -20,6 +20,7 @@ export const TARJETA_PENDIENTE_TITULO = 'Completa tu diagnóstico';
 export const TARJETA_PENDIENTE_LINEA = 'De él nacen tus objetivos de 90 días.';
 
 export const TODAVIA_NO_LO_COMPLETA = 'Todavía no lo ha completado.';
+export const TODAVIA_NO_LO_HAS_COMPLETADO = 'Todavía no has completado tu diagnóstico.';
 export const NO_SE_PUDO_CARGAR_LA_LECTURA = 'No se pudo cargar el diagnóstico.';
 export const NO_SE_PUDO_CARGAR_LA_LECTURA_SIN_RED = 'No se pudo cargar el diagnóstico. Revisa tu conexión.';
 export const PREGUNTA_RETIRADA = 'Pregunta retirada';

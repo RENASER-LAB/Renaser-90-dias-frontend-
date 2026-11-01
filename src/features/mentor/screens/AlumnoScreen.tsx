@@ -23,6 +23,9 @@ import { VerPublicacion } from '../../lider-mentores/components/VisorDePublicaci
 import { obtenerRadarDeAlumno } from '../api/mentorApi';
 import { obtenerCierresDeAlumno } from '../../cierre/api/cierreApi';
 import { CierresDelDia } from '../../cierre/components/CierresDelDia';
+import { lecturaParaElMentor } from '../../diagnostico/api/diagnosticoLecturaApi';
+import { SeccionDelDiagnosticoDeLaPersona } from '../../diagnostico/components/SeccionDelDiagnosticoDeLaPersona';
+import type { CargarLecturaDelDiagnostico } from '../../diagnostico/hooks/useLecturaDelDiagnostico';
 import type { CargarCierres } from '../../cierre/types/cierre.types';
 import { obtenerHuecosDeAlumno } from '../../huecos/api/huecosApi';
 import { TiempoLibreDeLaSemana } from '../../huecos/components/TiempoLibreDeLaSemana';
@@ -84,6 +87,11 @@ export function AlumnoScreen({
   /* Spec 017: lo que dijo al cerrar cada día, por la ruta del mentor. También estable por persona. */
   const cargarCierres = useMemo<CargarCierres | null>(
     () => (grupoId ? (lunes?: string | null) => obtenerCierresDeAlumno(grupoId, alumno.participanteId, lunes) : null),
+    [grupoId, alumno.participanteId],
+  );
+  /* Spec 026: su diagnóstico inicial, por la ruta del mentor (solo lectura). Estable por persona. */
+  const cargarDiagnostico = useMemo<CargarLecturaDelDiagnostico | null>(
+    () => (grupoId ? () => lecturaParaElMentor(grupoId, alumno.participanteId) : null),
     [grupoId, alumno.participanteId],
   );
 
@@ -366,6 +374,8 @@ export function AlumnoScreen({
         <TiempoLibreDeLaSemana cargar={cargarHuecos} />
         {/* Spec 017: lo que dijo al cerrar cada día, de lunes a domingo (solo lectura). */}
         <CierresDelDia cargar={cargarCierres} />
+        {/* Spec 026: lo que respondió en su diagnóstico inicial (solo lectura; no se dibuja si tiene la ficha estándar). */}
+        <SeccionDelDiagnosticoDeLaPersona cargar={cargarDiagnostico} />
 
       </ScrollView>
     </SafeAreaView>

@@ -135,6 +135,11 @@ export interface PreguntaLeida {
   tipo: TipoDePregunta | string;
   retirada: boolean;
   respuesta: RespuestaLegible | null;
+  /**
+   * El tope de la escala de una cuadrícula o escala, si el servidor lo dice (`escala.max` de la pregunta): con él la fila se lee
+   * «4 de 5». Sin él (el contrato de §4 no lo trae todavía) se lee solo «4», que es lo único que se sabe.
+   */
+  escalaMax?: number | null;
 }
 
 /** La lectura (solo lectura) del diagnóstico de una persona: §4 del contrato. La ven ella, su mentor, el líder y Administración. */
