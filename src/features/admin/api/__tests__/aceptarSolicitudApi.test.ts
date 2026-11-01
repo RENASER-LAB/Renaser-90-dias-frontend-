@@ -94,3 +94,40 @@ describe('las opciones de la hoja «Aceptar»', () => {
     expect(await leerOpcionesDeAceptacion()).toBeNull();
   });
 });
+
+describe('el pago al aceptar (spec 032)', () => {
+  it('manda `payment` solo si se decidió, con la moneda y las cuotas; sin él, el cuerpo es el de siempre', async () => {
+    mockApiFetch.mockResolvedValue(undefined);
+    await aprobarSolicitud('s1', 'TRAINEE', null, {
+      formaciones: ['ESCUELA'], duracionDias: 90, conDiagnostico: false,
+      pago: { mode: 'SCHEDULE', currency: 'USD', installments: [{ dueDate: '2026-11-15', amount: 1000 }] },
+    });
+    expect(mockApiFetch).toHaveBeenLastCalledWith('/api/v1/account-requests/s1/approve', {
+      method: 'POST',
+      body: {
+        role: 'TRAINEE', formations: ['ESCUELA'], durationDays: 90, withDiagnosis: false,
+        payment: { mode: 'SCHEDULE', currency: 'USD', installments: [{ dueDate: '2026-11-15', amount: 1000 }] },
+      },
+    });
+
+    await aprobarSolicitud('s1', 'TRAINEE', null, { formaciones: ['ESCUELA'], duracionDias: 90, conDiagnostico: false, pago: { mode: 'NONE' } });
+    expect((mockApiFetch.mock.calls.at(-1)?.[1] as { body: Record<string, unknown> }).body.payment).toEqual({ mode: 'NONE' });
+
+    await aprobarSolicitud('s1', 'MENTOR', null, { formaciones: ['ESCUELA'], duracionDias: null, conDiagnostico: false, pago: null });
+    expect((mockApiFetch.mock.calls.at(-1)?.[1] as { body: Record<string, unknown> }).body).not.toHaveProperty('payment');
+  });
+
+  it('lee si el servidor sabe anotar el pago; sin el campo (backend anterior) es «no»', async () => {
+    mockApiFetch.mockResolvedValueOnce({
+      formations: [{ code: 'ESCUELA', name: 'Escuela Renaser', durationsDays: [90], durationLabels: ['90 días'], defaultDurationDays: 90 }],
+      diagnosisAvailable: true,
+      paymentScheduleAvailable: true,
+    });
+    expect((await leerOpcionesDeAceptacion())?.paymentScheduleAvailable).toBe(true);
+    mockApiFetch.mockResolvedValueOnce({
+      formations: [{ code: 'ESCUELA', name: 'Escuela Renaser', durationsDays: [90], durationLabels: ['90 días'], defaultDurationDays: 90 }],
+      diagnosisAvailable: true,
+    });
+    expect((await leerOpcionesDeAceptacion())?.paymentScheduleAvailable).toBeFalsy();
+  });
+});

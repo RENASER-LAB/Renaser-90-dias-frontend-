@@ -33,7 +33,11 @@ const rol = (clave: string): OpcionDeRol => OPCIONES_BASE.find(o => o.clave === 
 
 describe('lo que viene marcado al aceptar (025-4 B)', () => {
   it('Escuela, Aprendiz y sin diagnóstico; la duración se aplica sola porque la Escuela ofrece una', () => {
-    expect(borradorInicial(OPCIONES)).toEqual({ formaciones: ['ESCUELA'], duracionDias: 90, rolClave: 'TRAINEE', conDiagnostico: false });
+    expect(borradorInicial(OPCIONES)).toEqual({
+      formaciones: ['ESCUELA'], duracionDias: 90, rolClave: 'TRAINEE', conDiagnostico: false,
+      // Spec 032: el aprendiz parte sin elegir cómo paga.
+      pago: { modo: null, moneda: null, filas: [] },
+    });
   });
 
   it('sin las opciones del servidor no hay formaciones que marcar', () => {
@@ -121,7 +125,7 @@ describe('cambiar el rol ajusta la formación (US2, escenario 4)', () => {
 
   it('sin opciones del servidor solo cambia el rol', () => {
     const b = alElegirRol(borradorInicial(null), rol('MENTOR'), null);
-    expect(b).toEqual({ formaciones: [], duracionDias: null, rolClave: 'MENTOR', conDiagnostico: false });
+    expect(b).toEqual({ formaciones: [], duracionDias: null, rolClave: 'MENTOR', conDiagnostico: false, pago: { modo: 'sin', moneda: null, filas: [] } });
     expect(loQueFalta(b, 'varias', null)).toBeNull();
   });
 });
@@ -129,7 +133,7 @@ describe('cambiar el rol ajusta la formación (US2, escenario 4)', () => {
 describe('el pedido', () => {
   it('manda las formaciones, la duración elegida y el diagnóstico', () => {
     const b = alElegirFicha(alElegirDuracion(alMarcarFormacion(borradorInicial(OPCIONES), 'una', 'DIPLOMADO', OPCIONES), 365), true);
-    expect(eleccionParaElPedido(b, OPCIONES)).toEqual({ formaciones: ['DIPLOMADO'], duracionDias: 365, conDiagnostico: true });
+    expect(eleccionParaElPedido(b, OPCIONES)).toEqual({ formaciones: ['DIPLOMADO'], duracionDias: 365, conDiagnostico: true, pago: null });
   });
 });
 

@@ -206,6 +206,8 @@ export const opcionesDeAceptacionSchema = z
       )
       .min(1),
     diagnosisAvailable: z.boolean().catch(false),
+    /** Spec 032: este servidor sabe anotar el pago al aceptar (la hoja ofrece el bloque «Pago»). Sin el campo (backend anterior) no se ofrece. */
+    paymentScheduleAvailable: z.boolean().nullish(),
   })
   .passthrough();
 

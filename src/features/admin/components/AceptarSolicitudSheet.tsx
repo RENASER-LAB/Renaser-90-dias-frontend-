@@ -7,12 +7,15 @@ import { Icon } from '../../../components/Icon';
 import { fuentes } from '../../../theme/fuentes';
 import { useTheme } from '../../../theme/ThemeContext';
 import { tacto } from '../../../utils/tacto';
+import { EditorDeCronograma } from '../../pagos/components/EditorDeCronograma';
 import type { OpcionDeRol } from '../api/adminApi';
 import type { OpcionesDeAceptacionApi } from '../api/adminSchemas';
 import {
   alElegirDuracion,
   alElegirFicha,
+  alElegirPago,
   alElegirRol,
+  esPersonalElRol,
   alMarcarFormacion,
   borradorInicial,
   duracionesParaElegir,
@@ -21,6 +24,7 @@ import {
   laUltimaEleccion,
   loQueFalta,
   modoDeFormacionDelRol,
+  valorDelPago,
   type BorradorDeAceptacion,
   type PersonaPorAceptar,
 } from '../utils/aceptarSolicitud';
@@ -28,7 +32,7 @@ import { etiquetaDeLaOpcion, queImplicaLaOpcion } from '../utils/rolesAsignables
 import { BloqueDeAceptacion } from './BloqueDeAceptacion';
 import { ChipDeOpcion } from './ChipDeOpcion';
 
-type Bloque = 'formacion' | 'rol' | 'ficha';
+type Bloque = 'formacion' | 'rol' | 'ficha' | 'pago';
 
 /**
  * «Aceptar» una solicitud (o varias) eligiendo, en orden, **formación → duración → rol → ficha**, con una frase de resumen que se confirma
@@ -218,7 +222,7 @@ export function AceptarSolicitudSheet({
                 etiqueta={etiquetaDeLaOpcion(opcion)}
                 activo={borrador.rolClave === opcion.clave}
                 deshabilitado={bloqueado}
-                onPress={() => setBorrador(b => alElegirRol(b, opcion, opciones))}
+                onPress={() => setBorrador(b => alElegirRol(b, opcion, opciones, roles.find(r => r.clave === b.rolClave)?.rolBase))}
               />
             ))}
           </View>
@@ -252,6 +256,36 @@ export function AceptarSolicitudSheet({
               deshabilitada={bloqueado || !opciones.diagnosisAvailable}
               onElegir={() => setBorrador(b => alElegirFicha(b, true))}
             />
+          </BloqueDeAceptacion>
+        ) : null}
+
+        {/* Spec 032 (decisión del dueño del 2026-11-01): cómo paga. El aprendiz tiene que elegirlo; el personal viene con «Sin cronograma», que no anota nada. */}
+        {opciones?.paymentScheduleAvailable ? (
+          <BloqueDeAceptacion
+            numero={4}
+            titulo="Pago"
+            valor={valorDelPago(borrador)}
+            abierto={abierto === 'pago'}
+            onAlternar={() => alternar('pago')}
+            deshabilitado={bloqueado}
+          >
+            <OpcionDeFicha
+              etiqueta="Sin cronograma (pagó completo)"
+              ayuda={rol && esPersonalElRol(rol.rolBase) ? 'No se anota nada.' : 'Verá «Tu pago fue cancelado» en Yo.'}
+              marcada={borrador.pago.modo === 'sin'}
+              deshabilitada={bloqueado}
+              onElegir={() => setBorrador(b => alElegirPago(b, { ...b.pago, modo: 'sin' }))}
+            />
+            <OpcionDeFicha
+              etiqueta="Con cronograma"
+              ayuda="Armas las cuotas con su fecha y su monto."
+              marcada={borrador.pago.modo === 'con'}
+              deshabilitada={bloqueado}
+              onElegir={() => setBorrador(b => alElegirPago(b, { ...b.pago, modo: 'con' }))}
+            />
+            {borrador.pago.modo === 'con' ? (
+              <EditorDeCronograma pago={borrador.pago} alCambiar={pago => setBorrador(b => alElegirPago(b, pago))} deshabilitado={bloqueado} />
+            ) : null}
           </BloqueDeAceptacion>
         ) : null}
       </View>

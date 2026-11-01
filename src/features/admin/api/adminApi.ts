@@ -1,3 +1,4 @@
+import type { PagoParaElPedido } from '../../pagos/utils/borradorDelCronograma';
 import { apiFetch } from '../../../services/http/apiClient';
 import { validarRespuesta } from '../../mentor/api/mentorSchemas';
 import { semanaAlumnoSchema, type SemanaAlumnoApi } from '../../mentor/api/mentorSchemas';
@@ -483,13 +484,20 @@ export async function aprobarSolicitud(
 }
 
 /** Lo que Administración elige al aceptar, además del rol (spec 025). Las formaciones van vacías para Administración y Alquimista. */
-export type EleccionAlAceptar = { formaciones: string[]; duracionDias: number | null; conDiagnostico: boolean };
+export type EleccionAlAceptar = {
+  formaciones: string[];
+  duracionDias: number | null;
+  conDiagnostico: boolean;
+  /** Spec 032: cómo paga (`NONE` o `SCHEDULE` con sus cuotas). `null` o ausente = no se decidió y no se manda nada (la persona queda «sin anotar»). */
+  pago?: PagoParaElPedido | null;
+};
 
 function cuerpoDeLaEleccion(eleccion: EleccionAlAceptar) {
   return {
     formations: eleccion.formaciones,
     ...(eleccion.duracionDias !== null ? { durationDays: eleccion.duracionDias } : {}),
     withDiagnosis: eleccion.conDiagnostico,
+    ...(eleccion.pago ? { payment: eleccion.pago } : {}),
   };
 }
 

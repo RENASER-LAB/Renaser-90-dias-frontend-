@@ -50,6 +50,7 @@ import { EliminarCuentaAdminScreen } from './EliminarCuentaAdminScreen';
 import { rotuloDeFase } from '../../home/hooks/useResumenHome';
 import { FichaDeIngresoDeLaPersona } from '../../diagnostico-admin/components/FichaDeIngresoDeLaPersona';
 import { FormacionDeLaPersona } from '../../formaciones/components/FormacionDeLaPersona';
+import { PagosDeLaPersona } from '../../pagos/components/PagosDeLaPersona';
 import { ConstanciaDeTerminos } from '../../onboarding/terminos/components/ConstanciaDeTerminos';
 import { AceptacionDeLaPersona } from '../components/AceptacionDeLaPersona';
 import { useOcultarBarraAlDesplazar } from '../../../navigation/barraAlDesplazar/BarraInferior';
@@ -305,6 +306,10 @@ export function FichaAprendizScreen({
         {/* Su ficha de ingreso (spec 026-9): «Estándar» o «Con diagnóstico», con «Asignar el diagnóstico» a quien ya estaba dentro y
             «Volver a la ficha estándar». Si el servidor no la ofrece (backend anterior), no se dibuja. */}
         <FichaDeIngresoDeLaPersona personaId={aprendiz.id} nombre={nombre} alCambiar={setAvisoFinal} />
+
+        {/* Sus pagos (spec 032): el cronograma, marcar cada cuota pagada o pendiente, ajustar las pendientes y asignarlo a quien ya estaba dentro.
+            Solo Administración y Alquimista (403 → no se dibuja). Si el servidor no lo ofrece (backend anterior), tampoco. */}
+        <PagosDeLaPersona personaId={aprendiz.id} nombre={nombre} alCambiar={setAvisoFinal} />
 
         {/* Día del programa (26/09, D-82). El botón aparece solo si el servidor entregó el detalle
             administrativo —mismo permiso que el PUT— y su programa ya empezó. */}
