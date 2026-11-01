@@ -1,0 +1,23 @@
+# AV03 — Tocar el aviso «Tu análisis de la semana está listo» abre Plan con la hoja «Tu 80/20» directo en «Semana», sin parpadear en «Hoy».
+# ESCRITO Y SIN CORRER. Precondición: el aviso ya está en la bandeja del teléfono (el barrido del servidor lo manda al dejar listo el
+# análisis; en el E2E se puede forzar con `am broadcast`/`adb shell cmd notification` o publicando el evento desde el backend local).
+# Texto fijo del aviso: título «Tu análisis de la semana está listo», cuerpo «Entra a Plan y míralo.»
+# Se corre con: .maestro/correr.sh .maestro/analisis-80-20/03-el-aviso-abre-la-hoja.yaml
+# cuenta: aprendiz
+appId: com.renaser.app
+---
+- launchApp:
+    appId: com.renaser.app
+    stopApp: false
+- openNotifications
+- extendedWaitUntil:
+    visible: "Tu análisis de la semana está listo"
+    timeout: 30000
+- assertVisible: "Entra a Plan y míralo."
+- tapOn: "Tu análisis de la semana está listo"
+- extendedWaitUntil:
+    visible: "Tu 80/20"
+    timeout: 30000
+- assertVisible: "Semana .*"
+- assertNotVisible: "Prioriza lo que más acerca tu meta."
+- takeScreenshot: AV03-aviso-abre-la-semana
