@@ -135,6 +135,11 @@ export interface PreguntaLeida {
   tipo: TipoDePregunta | string;
   retirada: boolean;
   respuesta: RespuestaLegible | null;
+  /**
+   * El tope de la escala de una cuadrícula o escala, si el servidor lo dice (`escala.max` de la pregunta): con él la fila se lee
+   * «4 de 5». Sin él (el contrato de §4 no lo trae todavía) se lee solo «4», que es lo único que se sabe.
+   */
+  escalaMax?: number | null;
 }
 
 /** La lectura (solo lectura) del diagnóstico de una persona: §4 del contrato. La ven ella, su mentor, el líder y Administración. */
@@ -163,4 +168,13 @@ export interface PropiedadesDelRecorrido {
   onSalir: () => void;
   /** Después del cierre, «Continuar». */
   onContinuar?: () => void;
+  /**
+   * Quién responde: con él el recorrido guarda lo que se escribe en el paso en curso (`renaser.diagnostico.<usuario>.<versión>`)
+   * para no perderlo si se cierra la app antes de «Siguiente». Sin él (o en la vista previa) no se guarda nada en el teléfono.
+   */
+  usuarioId?: string;
+  /** Lo que dice el cierre bajo «qué sigue». Sin él, el de la ficha de ingreso (Términos y Día 1). */
+  textoQueSigue?: string;
+  /** El botón del cierre. Sin él, «Continuar». */
+  etiquetaContinuar?: string;
 }

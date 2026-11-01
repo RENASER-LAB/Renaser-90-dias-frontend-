@@ -6,22 +6,31 @@ import { TerminosScreen } from './TerminosScreen';
 import { ActivarProgramaScreen } from './ActivarProgramaScreen';
 import { useAuth } from '../../auth/context/AuthContext';
 import { useTheme } from '../../../theme/ThemeContext';
-import { FichaInicialData } from '../types/onboarding.types';
+import { FichaDeIngreso, FichaInicialData } from '../types/onboarding.types';
+import { obtenerEstadoDeMiDiagnostico } from '../../diagnostico/api/diagnosticoApi';
+import { DiagnosticoDeLaPersonaScreen } from '../../diagnostico/screens/DiagnosticoDeLaPersonaScreen';
+import { MiDiagnosticoScreen } from '../../diagnostico/screens/MiDiagnosticoScreen';
 import { SignatureData } from '../../../components/SignatureCanvas';
 import * as onboardingApi from '../api/onboardingApi';
 
 /**
+ * Spec 026 (2026-10-31): quien entra «con diagnóstico» ve el diagnóstico EN LUGAR de la ficha estándar: Diagnóstico → Términos →
+ * Elegir tu Día 1. La ficha estándar —la de hoy— no cambia. `mi-diagnostico` es solo el «volver» de Términos para esa persona
+ * (lo que respondió, en solo lectura): no hay una ficha a la que volver a editar.
+ *
  * Decisión 2026-09-03: el Pacto ("VERDAD", Código I de Renaser — `PactoScreen`) SALE del
  * onboarding inicial hasta una futura actualización del cliente. El flujo pasa a ser
  * Ficha → Términos → Elegir tu Día 1 → Home. `PactoScreen` queda intacta y sin usar (no se borra,
  * vuelve a conectarse acá cuando se retome).
  */
-type OnboardingStep = 'ficha' | 'terminos' | 'activar-programa';
+type OnboardingStep = 'ficha' | 'diagnostico' | 'mi-diagnostico' | 'terminos' | 'activar-programa';
 
 export function OnboardingFlow() {
   const { c } = useTheme();
   const { user, completeOnboarding, logout } = useAuth();
   const [step, setStep] = useState<OnboardingStep>('ficha');
+  /* Qué ficha le toca (spec 026). Mientras no se sabe, la estándar: es el valor por defecto de siempre. */
+  const [ficha, setFicha] = useState<FichaDeIngreso>('ESTANDAR');
 
   /**
    * Bug encontrado 2026-09-03 (reportado en vivo): este componente arrancaba SIEMPRE en 'ficha',
@@ -42,8 +51,15 @@ export function OnboardingFlow() {
       try {
         const estado = await onboardingApi.obtenerEstado();
         if (!vigente) return;
+        setFicha(estado.ficha);
         if (estado.termsAcceptedAt) {
           setStep('activar-programa');
+        } else if (estado.ficha === 'CON_DIAGNOSTICO') {
+          /* Con diagnóstico: si ya lo terminó (cerró la app en Términos), sigue Términos; si no, lo retoma donde iba. Si no se
+             puede saber (sin red), se abre el diagnóstico: él mismo avisa si ya estaba terminado (409) y deja reintentar. */
+          const diagnostico = await obtenerEstadoDeMiDiagnostico().catch(() => null);
+          if (!vigente) return;
+          setStep(diagnostico?.estado === 'COMPLETADO' ? 'terminos' : 'diagnostico');
         }
       } catch (e) {
         // Sin red o backend caído: se sigue con 'ficha' (el valor por defecto) — es la opción
@@ -100,13 +116,17 @@ export function OnboardingFlow() {
           onBack={logout}
         />
       );
+    case 'diagnostico':
+      return <DiagnosticoDeLaPersonaScreen onTerminado={() => setStep('terminos')} onSalir={logout} />;
+    case 'mi-diagnostico':
+      return <MiDiagnosticoScreen onBack={() => setStep('terminos')} />;
     case 'terminos':
       return (
         <TerminosScreen
           savedSignature={terminosSignature}
           onSaveSignature={setTerminosSignature}
           onAccept={handleAcceptTerminos}
-          onBack={() => setStep('ficha')}
+          onBack={() => setStep(ficha === 'CON_DIAGNOSTICO' ? 'mi-diagnostico' : 'ficha')}
         />
       );
     case 'activar-programa':
