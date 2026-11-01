@@ -1,0 +1,43 @@
+# Spec 026 — Administración → Más opciones → «Fichas»: la lista (diagnóstico y ficha estándar) y el editor con la portada y sus preguntas.
+# ESCRITO Y SIN CORRER: necesita el backend con la spec 026 (V143–V147, con el borrador del dueño sembrado) y un emulador libre.
+# cuenta: admin  (ADMIN o ALCHEMIST)
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "YO"
+- scrollUntilVisible:
+    element: "Abrir Administración"
+    direction: DOWN
+- tapOn: "Abrir Administración"
+- extendedWaitUntil:
+    visible: "Más opciones"
+    timeout: 15000
+- tapOn: "Más opciones"
+- scrollUntilVisible:
+    element: "Fichas"
+    direction: DOWN
+- tapOn: "Fichas"
+- extendedWaitUntil:
+    visible: "Diagnóstico inicial"
+    timeout: 30000
+- assertVisible: "Ficha inicial estándar"
+- assertVisible: "La de siempre\\. No se edita aquí\\."
+- assertVisible: "Asignar a varias personas"
+- takeScreenshot: F10a-lista-de-fichas
+# El editor: el diagnóstico del dueño trae una portada y seis secciones.
+- tapOn: "Diagnóstico inicial"
+- extendedWaitUntil:
+    visible: "Vista previa"
+    timeout: 30000
+- assertVisible: "Importar preguntas"
+- assertVisible: "Quitar preguntas"
+- takeScreenshot: F10b-editor
+# El atrás sube un nivel por vez: editor → lista → Más opciones.
+- back
+- extendedWaitUntil:
+    visible: "Ficha inicial estándar"
+    timeout: 10000
+- back
+- extendedWaitUntil:
+    visible: "Más opciones"
+    timeout: 10000

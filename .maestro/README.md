@@ -76,3 +76,4 @@ a un teléfono de verdad: `killApp` (`adb shell am kill`, la muerte de proceso q
 mata la app si está en segundo plano, y lo está porque la cámara está al frente) y `setAirplaneMode` (se corta la red del
 emulador, no `adb reverse`). El 12 deja la pantalla partida de kilómetros a medias y el 13 el error con «REINTENTAR»: si un
 paso falla, mira `adb logcat -s ReactNativeJS` (las líneas `[evidencia] falló el paso …` dicen cuál fue).
+- `ficha-con-diagnostico/` (2026-10-31, spec 026): el diagnóstico de la persona (01–04), Administración → Fichas (10–13) y Plan/Hoy sin el Mapa (20–22). **Escritos y sin correr**; ver su `README.md`.
