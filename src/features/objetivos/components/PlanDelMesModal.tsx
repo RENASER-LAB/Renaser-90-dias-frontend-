@@ -1,6 +1,6 @@
 import { fuentes } from '../../../theme/fuentes';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
 
 import { Alert } from '../../../components/Alerta';
 import { ConfirmacionEnLinea } from '../../../components/ConfirmacionEnLinea';
@@ -19,9 +19,9 @@ import { ETIQUETA_EJE } from '../types/objetivos.types';
 import { iconoDelEje } from '../utils/iconoDelEje';
 import {
   ETIQUETA_DEL_ESTADO,
-  MESES,
   estadoDeLaSemana,
   mesAlAbrir,
+  mesesDeLaHoja,
   rangoDelMes,
   sePuedeOrganizar,
   semanasDeLaHoja,
@@ -63,6 +63,8 @@ interface Props {
   eje: EjeObjetivo;
   /** El día del programa (`GET /home`). 0 = todavía no arrancó. */
   diaPrograma: number;
+  /** Los días del programa de esta persona (90 o 365, spec 022): de ellos salen los meses (3 o 12) y las semanas de cada uno. Sin dato, 90. */
+  duracionDias?: number | null;
   maestras: RocaMaestraApi[];
   planMensual: PlanMensual;
   /** Tocaron la semana de ahora (o la que se arma hoy). Se llama cuando la hoja ya se fue, para que lo que abre no compita con ella. */
@@ -83,12 +85,13 @@ const DIBUJO_DEL_ESTADO: Readonly<Record<EstadoDeLaSemanaDelMes, { icono: IconNa
   pasada: { icono: 'flag', tono: 'suave' },
 };
 
-export function PlanDelMesModal({ visible, alCerrar, eje, diaPrograma, maestras, planMensual, onOrganizarSemana, hoy: hoyDePrueba }: Props) {
+export function PlanDelMesModal({ visible, alCerrar, eje, diaPrograma, duracionDias, maestras, planMensual, onOrganizarSemana, hoy: hoyDePrueba }: Props) {
   const { c, t } = useTheme();
   /* «Hoy» se fija al abrir: si el reloj cruza la medianoche con la hoja abierta, las semanas no se corren a mitad de una lectura. */
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const hoy = useMemo(() => hoyDePrueba ?? new Date(), [visible, hoyDePrueba]);
-  const mesDeAhora = mesAlAbrir(diaPrograma, hoy);
+  const mesDeAhora = mesAlAbrir(diaPrograma, hoy, duracionDias);
+  const meses = useMemo(() => mesesDeLaHoja(duracionDias), [duracionDias]);
   const [mes, setMes] = useState(mesDeAhora);
   const [editando, setEditando] = useState(false);
   const [confirmacion, setConfirmacion] = useState<{ clave: number; texto: string } | null>(null);
@@ -104,7 +107,7 @@ export function PlanDelMesModal({ visible, alCerrar, eje, diaPrograma, maestras,
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
-  const semanas = useMemo(() => semanasDeLaHoja(mes, diaPrograma, hoy), [mes, diaPrograma, hoy]);
+  const semanas = useMemo(() => semanasDeLaHoja(mes, diaPrograma, hoy, duracionDias), [mes, diaPrograma, hoy, duracionDias]);
   const { deLaSemana } = useObjetivosSemanalesDelMes({
     activo: visible,
     semanas: semanas.filter(s => s.seLee).map(s => s.numero),
@@ -115,7 +118,7 @@ export function PlanDelMesModal({ visible, alCerrar, eje, diaPrograma, maestras,
   const plan = planMensual.porEje.get(eje);
   const mesDelPlan: MesDelPlan | undefined = plan?.meses.find(m => m.numeroMes === mes);
   const objetivo = objetivoDelMesEnPalabras(mesDelPlan, plan);
-  const rango = rangoDelMes(mes, diaPrograma, hoy);
+  const rango = rangoDelMes(mes, diaPrograma, hoy, duracionDias);
 
   const guardar = async (cifra: number | null) => {
     const resultado = await planMensual.guardarMes(eje, mes, {
@@ -152,20 +155,19 @@ export function PlanDelMesModal({ visible, alCerrar, eje, diaPrograma, maestras,
         subtitulo={ETIQUETA_EJE[eje]}
         tamano="grande"
         bajoElTitulo={
-          <ControlSegmentado
-            opciones={MESES.map(m => ({ valor: String(m), etiqueta: `Mes ${m}` }))}
-            valor={String(mes)}
-            onCambiar={valor => {
-              setMes(Number(valor));
+          <SelectorDeMes
+            meses={meses}
+            mes={mes}
+            alCambiar={siguiente => {
+              setMes(siguiente);
               setConfirmacion(null);
             }}
-            accessibilityLabel="Mes del programa"
           />
         }
       >
         <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={estilos.cuerpo} showsVerticalScrollIndicator={false}>
           <View style={estilos.encabezado} accessibilityRole="header">
-            <Text style={[t.cardTitle, { color: c.textStrong }]}>{etiquetaDelMes(mes)}</Text>
+            <Text style={[t.cardTitle, { color: c.textStrong }]}>{etiquetaDelMes(mes, duracionDias)}</Text>
             <Text style={[t.small, estilos.chico, estilos.cifras, { color: c.textSoft }]}>
               {[rango, mes === mesDeAhora ? 'El mes en curso' : null].filter(Boolean).join(' · ')}
             </Text>
@@ -183,9 +185,9 @@ export function PlanDelMesModal({ visible, alCerrar, eje, diaPrograma, maestras,
               <FilaDeLaSemana
                 key={semana.numero}
                 semana={semana}
-                estado={estadoDeLaSemana(semana.numero, diaPrograma, hoy, semana.seLee ? deLaSemana(semana.numero) : undefined)}
+                estado={estadoDeLaSemana(semana.numero, diaPrograma, hoy, semana.seLee ? deLaSemana(semana.numero) : undefined, duracionDias)}
                 titulo={semana.seLee ? deLaSemana(semana.numero)?.titulo ?? null : null}
-                organizable={sePuedeOrganizar(semana.numero, diaPrograma, hoy)}
+                organizable={sePuedeOrganizar(semana.numero, diaPrograma, hoy, duracionDias)}
                 alOrganizar={organizar}
               />
             ))}
@@ -204,6 +206,70 @@ export function PlanDelMesModal({ visible, alCerrar, eje, diaPrograma, maestras,
         onGuardar={guardar}
       />
     </>
+  );
+}
+
+/** Hasta cuántos meses caben en el control de siempre (tres, o cuatro, en el ancho de un teléfono): con más, se desliza de lado. */
+const MESES_QUE_CABEN_EN_EL_CONTROL = 4;
+/** Lo que mide cada chip del selector que se desliza, con su separación: sirve para llevar a la vista el mes elegido. */
+const ANCHO_DE_UN_CHIP_DE_MES = 92;
+
+/**
+ * El mes del programa. Con 3 meses (90 días) es el control segmentado de siempre; con 12 (365 días) no cabrían doce segmentos en un teléfono, así
+ * que son chips que se deslizan de lado y el mes elegido se lleva a la vista. Cambia al instante (se toca seguido), sin animación propia.
+ */
+function SelectorDeMes({ meses, mes, alCambiar }: { meses: readonly number[]; mes: number; alCambiar: (mes: number) => void }) {
+  const { c, t } = useTheme();
+  const carril = useRef<ScrollView>(null);
+  const [ancho, setAncho] = useState(0);
+
+  useEffect(() => {
+    if (meses.length <= MESES_QUE_CABEN_EN_EL_CONTROL || ancho === 0) return;
+    const centro = (mes - 1) * ANCHO_DE_UN_CHIP_DE_MES - (ancho - ANCHO_DE_UN_CHIP_DE_MES) / 2;
+    carril.current?.scrollTo({ x: Math.max(centro, 0), animated: false });
+  }, [mes, meses.length, ancho]);
+
+  if (meses.length <= MESES_QUE_CABEN_EN_EL_CONTROL) {
+    return (
+      <ControlSegmentado
+        opciones={meses.map(m => ({ valor: String(m), etiqueta: `Mes ${m}` }))}
+        valor={String(mes)}
+        onCambiar={valor => alCambiar(Number(valor))}
+        accessibilityLabel="Mes del programa"
+      />
+    );
+  }
+  return (
+    <ScrollView
+      ref={carril}
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      style={estilos.carrilDeMeses}
+      contentContainerStyle={estilos.chipsDeMeses}
+      keyboardShouldPersistTaps="handled"
+      onLayout={(evento: LayoutChangeEvent) => setAncho(evento.nativeEvent.layout.width)}
+      accessibilityRole="radiogroup"
+      accessibilityLabel="Mes del programa"
+    >
+      {meses.map(m => {
+        const elegido = m === mes;
+        return (
+          <Presionable
+            key={m}
+            onPress={() => {
+              tacto.seleccion();
+              alCambiar(m);
+            }}
+            accessibilityRole="radio"
+            accessibilityState={{ selected: elegido }}
+            accessibilityLabel={`Mes ${m}`}
+            style={[estilos.chipDeMes, { backgroundColor: elegido ? c.goldWash : c.cardBg, borderColor: elegido ? c.gold : c.border }]}
+          >
+            <Text style={[t.body, estilos.textoDelChipDeMes, { color: elegido ? c.textStrong : c.textSoft }]}>{`Mes ${m}`}</Text>
+          </Presionable>
+        );
+      })}
+    </ScrollView>
   );
 }
 
@@ -345,4 +411,8 @@ const estilos = StyleSheet.create({
   estado: { fontFamily: fuentes.media, fontSize: 15, lineHeight: 21, letterSpacing: 0 },
   chico: { fontSize: 14, lineHeight: 20 },
   organizar: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  carrilDeMeses: { flexGrow: 0, marginHorizontal: -20 },
+  chipsDeMeses: { gap: 8, paddingHorizontal: 20, paddingVertical: 2 },
+  chipDeMes: { width: ANCHO_DE_UN_CHIP_DE_MES - 8, minHeight: 48, borderRadius: 24, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  textoDelChipDeMes: { fontFamily: fuentes.media, fontSize: 16, letterSpacing: 0 },
 });

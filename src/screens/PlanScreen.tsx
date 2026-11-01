@@ -558,7 +558,7 @@ export default function PlanScreen() {
             alCambiarElMes={() => setEditandoMes(true)}
           />
 
-          <BotonPlanificarMes mesEnCurso={resumen ? etiquetaDelMes(mesDe(diaPrograma)) : null} onPress={() => setPlanificandoMes(true)} />
+          <BotonPlanificarMes mesEnCurso={resumen ? etiquetaDelMes(mesDe(diaPrograma, undefined, resumen?.duracionDias), resumen?.duracionDias) : null} onPress={() => setPlanificandoMes(true)} />
 
           {confirmacion && (
             <ConfirmacionEnLinea key={confirmacion.clave} texto={confirmacion.texto} onTerminar={() => setConfirmacion(null)} />
@@ -702,6 +702,7 @@ export default function PlanScreen() {
         alCerrar={() => setPlanificandoMes(false)}
         eje={ejeAbierto}
         diaPrograma={diaPrograma}
+        duracionDias={resumen?.duracionDias}
         maestras={objetivos.rocas}
         planMensual={planMensual}
         onOrganizarSemana={() => setPedidoDeOrganizar(n => n + 1)}

@@ -1,11 +1,11 @@
 import type { EjeObjetivo, RocaMaestraApi, RocaSemanalApi } from '../types/objetivos.types';
 import {
-  MESES_DEL_PROGRAMA,
-  SEMANAS_DEL_PROGRAMA,
   mesDeLaSemana,
+  mesesDelProgramaDe,
   semanaAPlanificar,
   semanaDe,
   semanasDelMes,
+  semanasDelProgramaDe,
 } from './periodoDelPrograma';
 
 /**
@@ -18,6 +18,9 @@ import {
  * día 90, y el mes es un bloque de cuatro semanas (el 3 se lleva la 13). **No son meses del calendario**: «Mes 2 · Semanas 5 a 8»
  * cae en fechas distintas para dos personas que empezaron en días distintos (decisión del dueño 028-2).
  *
+ * Con la duración de cada persona (spec 022) los meses son los del servidor, `duración / 30`: 3 en 90 días y 12 en 365 (hasta la semana 53),
+ * con las semanas repartidas parejo entre ellos. Todo recibe la duración como último argumento opcional; sin ella, la de 90 días.
+ *
  * ## Las fechas
  *
  * El Día 1 es hoy menos los días que van del programa (`GET /home` ya trae el día con el ajuste aplicado, la misma cuenta que usa
@@ -28,8 +31,17 @@ import {
  * Con el programa sin arrancar (`diaPrograma < 1`) no hay Día 1 y por eso no hay fechas: las semanas se listan sin ellas.
  */
 
-/** El programa dura 90 días. */
+/** El programa de siempre dura 90 días. */
 export const DIAS_DEL_PROGRAMA = 90;
+
+/**
+ * Los días del programa de ESTA persona (90 o 365, spec 022). Todo lo de abajo recibe la duración como último argumento opcional: sin ella vale la de
+ * siempre, y un programa de 90 días queda exactamente como estaba (E2E de las formaciones, 01/11/2026, J2-6: «Planificar mi mes» ofrecía 3 meses
+ * a quien tiene 12).
+ */
+export function diasDelProgramaDe(duracionDias?: number | null): number {
+  return !duracionDias || !Number.isFinite(duracionDias) || duracionDias < 1 ? DIAS_DEL_PROGRAMA : Math.min(Math.trunc(duracionDias), 365);
+}
 
 const MESES_CORTOS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'] as const;
 
@@ -61,20 +73,21 @@ function lunesDe(fecha: Date): Date {
 /**
  * Del Día 1 (o primer día) a último día de la semana `numero` (1 a 13). `null` sin Día 1 o con un número fuera de 1 a 13.
  */
-export function fechasDeLaSemanaDelPrograma(numero: number, diaPrograma: number, hoy: Date): FechasDeUnPeriodo | null {
+export function fechasDeLaSemanaDelPrograma(numero: number, diaPrograma: number, hoy: Date, duracionDias?: number | null): FechasDeUnPeriodo | null {
   const diaUno = diaUnoDelPrograma(diaPrograma, hoy);
-  if (!diaUno || !Number.isInteger(numero) || numero < 1 || numero > SEMANAS_DEL_PROGRAMA) return null;
+  const ultimaSemana = semanasDelProgramaDe(duracionDias);
+  if (!diaUno || !Number.isInteger(numero) || numero < 1 || numero > ultimaSemana) return null;
   const lunesDeLaPrimera = lunesDe(diaUno);
   const desde = numero === 1 ? diaUno : sumarDias(lunesDeLaPrimera, 7 * (numero - 1));
-  const hasta = numero === SEMANAS_DEL_PROGRAMA ? sumarDias(diaUno, DIAS_DEL_PROGRAMA - 1) : sumarDias(lunesDeLaPrimera, 7 * numero - 1);
+  const hasta = numero === ultimaSemana ? sumarDias(diaUno, diasDelProgramaDe(duracionDias) - 1) : sumarDias(lunesDeLaPrimera, 7 * numero - 1);
   return { desde, hasta };
 }
 
 /** Del primer día de su primera semana al último de la última. `null` si no hay Día 1. */
-export function fechasDelMes(mes: number, diaPrograma: number, hoy: Date): FechasDeUnPeriodo | null {
-  const semanas = semanasDelMes(mes);
-  const primera = fechasDeLaSemanaDelPrograma(semanas[0], diaPrograma, hoy);
-  const ultima = fechasDeLaSemanaDelPrograma(semanas[semanas.length - 1], diaPrograma, hoy);
+export function fechasDelMes(mes: number, diaPrograma: number, hoy: Date, duracionDias?: number | null): FechasDeUnPeriodo | null {
+  const semanas = semanasDelMes(mes, duracionDias);
+  const primera = fechasDeLaSemanaDelPrograma(semanas[0], diaPrograma, hoy, duracionDias);
+  const ultima = fechasDeLaSemanaDelPrograma(semanas[semanas.length - 1], diaPrograma, hoy, duracionDias);
   return primera && ultima ? { desde: primera.desde, hasta: ultima.hasta } : null;
 }
 
@@ -134,9 +147,15 @@ export interface ObjetivoSemanalLeido {
  * @param roca el objetivo semanal de ese eje en esa semana: `undefined` = todavía no se leyó (o la lectura falló), `null` = se leyó y no
  *             hay. Solo cambia el estado de las semanas pasadas, la en curso (revisada o no) y la que se arma el domingo.
  */
-export function estadoDeLaSemana(numero: number, diaPrograma: number, hoy: Date, roca?: ObjetivoSemanalLeido | null): EstadoDeLaSemanaDelMes {
-  const actual = semanaDe(diaPrograma, hoy);
-  const seArma = semanaAPlanificar(diaPrograma, hoy);
+export function estadoDeLaSemana(
+  numero: number,
+  diaPrograma: number,
+  hoy: Date,
+  roca?: ObjetivoSemanalLeido | null,
+  duracionDias?: number | null,
+): EstadoDeLaSemanaDelMes {
+  const actual = semanaDe(diaPrograma, hoy, duracionDias);
+  const seArma = semanaAPlanificar(diaPrograma, hoy, duracionDias);
   if (numero === actual) return roca?.autoevaluacionFin != null ? 'revisada' : 'esta-semana';
   if (numero > actual) {
     if (numero === seArma) return roca ? 'armada' : 'se-arma-hoy';
@@ -151,8 +170,8 @@ export function estadoDeLaSemana(numero: number, diaPrograma: number, hoy: Date,
  * ¿Se puede abrir «Organizar mi semana» desde esta fila? Solo la de ahora y la que se arma hoy: las semanas que no llegaron no se arman
  * por adelantado (la ventana del domingo no cambia).
  */
-export function sePuedeOrganizar(numero: number, diaPrograma: number, hoy: Date): boolean {
-  return numero === semanaDe(diaPrograma, hoy) || numero === semanaAPlanificar(diaPrograma, hoy);
+export function sePuedeOrganizar(numero: number, diaPrograma: number, hoy: Date, duracionDias?: number | null): boolean {
+  return numero === semanaDe(diaPrograma, hoy, duracionDias) || numero === semanaAPlanificar(diaPrograma, hoy, duracionDias);
 }
 
 /* ------------------------------------------------------------------------------------------------
@@ -169,11 +188,11 @@ export interface SemanaDeLaHoja {
 }
 
 /** Las semanas del mes, en orden. */
-export function semanasDeLaHoja(mes: number, diaPrograma: number, hoy: Date): SemanaDeLaHoja[] {
-  const actual = semanaDe(diaPrograma, hoy);
-  const seArma = semanaAPlanificar(diaPrograma, hoy);
-  return semanasDelMes(mes).map(numero => {
-    const fechas = fechasDeLaSemanaDelPrograma(numero, diaPrograma, hoy);
+export function semanasDeLaHoja(mes: number, diaPrograma: number, hoy: Date, duracionDias?: number | null): SemanaDeLaHoja[] {
+  const actual = semanaDe(diaPrograma, hoy, duracionDias);
+  const seArma = semanaAPlanificar(diaPrograma, hoy, duracionDias);
+  return semanasDelMes(mes, duracionDias).map(numero => {
+    const fechas = fechasDeLaSemanaDelPrograma(numero, diaPrograma, hoy, duracionDias);
     return {
       numero,
       rango: fechas ? rangoDeFechas(fechas) : null,
@@ -184,17 +203,22 @@ export function semanasDeLaHoja(mes: number, diaPrograma: number, hoy: Date): Se
 }
 
 /** «3 a 30 nov», o `null` sin Día 1. */
-export function rangoDelMes(mes: number, diaPrograma: number, hoy: Date): string | null {
-  const fechas = fechasDelMes(mes, diaPrograma, hoy);
+export function rangoDelMes(mes: number, diaPrograma: number, hoy: Date, duracionDias?: number | null): string | null {
+  const fechas = fechasDelMes(mes, diaPrograma, hoy, duracionDias);
   return fechas ? rangoDeFechas(fechas) : null;
 }
 
-/** Los tres meses del programa, en orden. */
-export const MESES: readonly number[] = Array.from({ length: MESES_DEL_PROGRAMA }, (_, i) => i + 1);
+/** Los meses del programa de esta persona, en orden: 3 en uno de 90 días y 12 en el de 365 (los mismos que cuenta el servidor). */
+export function mesesDeLaHoja(duracionDias?: number | null): readonly number[] {
+  return Array.from({ length: mesesDelProgramaDe(duracionDias) }, (_, i) => i + 1);
+}
+
+/** Los tres meses del programa de 90 días, en orden. */
+export const MESES: readonly number[] = mesesDeLaHoja();
 
 /** El mes que se abre elegido: el de hoy. */
-export function mesAlAbrir(diaPrograma: number, hoy: Date): number {
-  return mesDeLaSemana(semanaDe(diaPrograma, hoy));
+export function mesAlAbrir(diaPrograma: number, hoy: Date, duracionDias?: number | null): number {
+  return mesDeLaSemana(semanaDe(diaPrograma, hoy, duracionDias), duracionDias);
 }
 
 /** El objetivo semanal de ese eje, entre los objetivos de una semana, o `null`. Las rocas no traen el eje: se resuelve con las maestras. */
