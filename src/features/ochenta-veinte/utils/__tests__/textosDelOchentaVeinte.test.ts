@@ -1,5 +1,7 @@
 import { describe, expect, it } from '@jest/globals';
 
+import type { LoQueFalta } from '../../types/ochentaVeinte.types';
+
 import {
   avisoDelEstado,
   fechaCorta,
@@ -14,6 +16,7 @@ import {
   nombreDelEje,
   paraLeer,
   rangoDelPeriodo,
+  textosDeLaVoz,
   tituloDeLosPasos,
   tituloDelPeriodo,
 } from '../textosDelOchentaVeinte';
@@ -115,5 +118,41 @@ describe('lo que dice cada estado', () => {
       ),
     ].join(' ');
     expect(todos).not.toMatch(/fallaste|incumpl|culpa|deprim|ansied|tenés|podés|hacé/i);
+  });
+});
+
+describe('E2E J2-8: el 80/20 de la ficha habla de la persona en tercera persona', () => {
+  const base = { tipo: 'SEMANA' as const, falta: [] as LoQueFalta[], minimoDeAcciones: 5 };
+
+  it('cada estado tiene su versión de la ficha, y la propia no cambia', () => {
+    expect(avisoDelEstado({ ...base, estado: 'EN_CURSO' }, 'ficha')).toBe('Estas son sus cifras al día. Su análisis llega cuando cierre la semana.');
+    expect(avisoDelEstado({ ...base, tipo: 'MES', estado: 'EN_CURSO' }, 'ficha')).toBe('Estas son sus cifras al día. Su análisis llega cuando cierre el mes.');
+    expect(avisoDelEstado({ ...base, estado: 'PENDIENTE' }, 'ficha')).toBe('Su análisis estará listo en cuanto podamos generarlo.');
+    expect(avisoDelEstado({ ...base, estado: 'SIN_ANALISIS' }, 'ficha')).toBe(
+      'No pudimos generar el análisis de su semana. Las cifras de arriba siguen siendo las suyas.',
+    );
+    expect(avisoDelEstado({ ...base, estado: 'EN_CURSO' }, 'propia')).toBe(avisoDelEstado({ ...base, estado: 'EN_CURSO' }));
+    expect(avisoDelEstado({ ...base, estado: 'LISTO' }, 'ficha')).toBeNull();
+  });
+
+  it('sin datos: lo que falta también va en tercera persona', () => {
+    const sinDatos = { ...base, estado: 'SIN_DATOS' as const };
+    expect(avisoDelEstado({ ...sinDatos, falta: ['ACCIONES'] as LoQueFalta[] }, 'ficha')).toBe(
+      'Todavía no hay suficiente para analizar su semana. Con al menos 5 acciones planificadas analizamos la semana.',
+    );
+    expect(avisoDelEstado({ ...sinDatos, falta: ['DIAS'] as LoQueFalta[], minimoDeAcciones: 0 }, 'ficha')).toBe(
+      'Todavía no hay suficiente para analizar su semana. Con las acciones repartidas en más días analizamos la semana.',
+    );
+    expect(avisoDelEstado({ ...sinDatos, tipo: 'MES', falta: [], minimoDeAcciones: 0 }, 'ficha')).toBe(
+      'Todavía no hay suficiente para analizar su mes. Cuando planifique más acciones, su análisis llegará solo.',
+    );
+  });
+
+  it('ninguna frase de la ficha usa «tu», «tus» ni «te»; las de la persona sí las usan', () => {
+    const t = textosDeLaVoz('ficha');
+    const todas = [t.periodoAnterior, t.periodoSiguiente, t.cargando, t.noCargo, t.sinAcciones, t.loQueSeFue, t.comoEstuvo, t.pie('2 de noviembre'), t.pie(null)];
+    for (const frase of todas) expect(frase).not.toMatch(/\b(tu|tus|te)\b/i);
+    expect(textosDeLaVoz('propia').periodoAnterior).toBe('Tu 80/20: periodo anterior');
+    expect(textosDeLaVoz('propia').pie(null)).toBe('Análisis de SER. No cambia tu plan: lo que sugiere lo decides tú.');
   });
 });

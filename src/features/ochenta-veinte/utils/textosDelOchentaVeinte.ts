@@ -18,12 +18,67 @@ const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', '
 
 export const TITULO_DE_LA_HOJA = 'Tu 80/20';
 export const TITULO_DE_LA_SECCION = 'Tu 80/20';
+/** La sección de la ficha la lee quien acompaña sobre OTRA persona: «Su 80/20», no «Tu 80/20» (E2E de las formaciones, J2-8). */
+export const TITULO_DE_LA_SECCION_DE_LA_FICHA = 'Su 80/20';
 
 export const PARTES_DEL_ANALISIS = {
   loQueMasMovio: 'Lo que más movió',
   loQueSeTeFue: 'Lo que se te fue',
   comoEstuviste: 'Cómo estuviste',
 } as const;
+
+/**
+ * Quién lee. El 80/20 de Plan lo lee la propia persona (tuteo: «Tu 80/20», «tus cifras»); el de la ficha lo lee su mentor, su guía, su líder o
+ * Administración sobre otra persona, y habla de ella en tercera persona, como el resto de la ficha. Todo lo que cambia entre las dos está en
+ * {@link textosDeLaVoz} y en {@link avisoDelEstado}; las cifras y el texto de SER son los mismos.
+ */
+export type VozDelOchentaVeinte = 'propia' | 'ficha';
+
+export interface TextosDeLaVoz {
+  periodoAnterior: string;
+  periodoSiguiente: string;
+  cargando: string;
+  noCargo: string;
+  noCargoSinRed: string;
+  sinAcciones: string;
+  loQueSeFue: string;
+  comoEstuvo: string;
+  /** `Análisis de SER · 26 de octubre. …` (o sin la fecha si no se lee). */
+  pie: (generado: string | null) => string;
+}
+
+export function textosDeLaVoz(voz: VozDelOchentaVeinte): TextosDeLaVoz {
+  if (voz === 'ficha') {
+    return {
+      periodoAnterior: 'Su 80/20: periodo anterior',
+      periodoSiguiente: 'Su 80/20: periodo siguiente',
+      cargando: 'Cargando su 80/20…',
+      noCargo: 'No pudimos cargar su 80/20.',
+      noCargoSinRed: 'No pudimos cargar su 80/20. Revisa tu conexión.',
+      sinAcciones: 'No hay acciones planificadas en este periodo.',
+      loQueSeFue: 'Lo que se le fue',
+      comoEstuvo: 'Cómo estuvo',
+      pie: generado =>
+        generado
+          ? `Análisis de SER · ${generado}. No cambia su plan: lo que sugiere lo decide la persona.`
+          : 'Análisis de SER. No cambia su plan: lo que sugiere lo decide la persona.',
+    };
+  }
+  return {
+    periodoAnterior: 'Tu 80/20: periodo anterior',
+    periodoSiguiente: 'Tu 80/20: periodo siguiente',
+    cargando: 'Cargando tu 80/20…',
+    noCargo: 'No pudimos cargar tu 80/20.',
+    noCargoSinRed: 'No pudimos cargar tu 80/20. Revisa tu conexión.',
+    sinAcciones: TEXTO_SIN_ACCIONES,
+    loQueSeFue: PARTES_DEL_ANALISIS.loQueSeTeFue,
+    comoEstuvo: PARTES_DEL_ANALISIS.comoEstuviste,
+    pie: generado =>
+      generado
+        ? `Análisis de SER · ${generado}. No cambia tu plan: lo que sugiere lo decides tú.`
+        : 'Análisis de SER. No cambia tu plan: lo que sugiere lo decides tú.',
+  };
+}
 
 /** `Para la próxima semana` / `Para el próximo mes`. */
 export function tituloDeLosPasos(tipo: TipoDePeriodo): string {
@@ -112,30 +167,41 @@ export const TEXTO_SIN_ACCIONES = 'Todavía no planificaste acciones en este per
 export const TEXTO_PARA_AGENDAR = 'Agendar mis acciones';
 
 /** Lo que cada estado dice debajo de las cifras. `null` = el análisis se muestra (LISTO) y no hace falta una línea aparte. */
-export function avisoDelEstado(vista: Pick<VistaDelPeriodo, 'estado' | 'tipo' | 'falta' | 'minimoDeAcciones'>): string | null {
-  const de = vista.tipo === 'MES' ? 'tu mes' : 'tu semana';
+export function avisoDelEstado(
+  vista: Pick<VistaDelPeriodo, 'estado' | 'tipo' | 'falta' | 'minimoDeAcciones'>,
+  voz: VozDelOchentaVeinte = 'propia',
+): string | null {
+  const propia = voz === 'propia';
+  const periodoDe = vista.tipo === 'MES' ? 'mes' : 'semana';
+  const de = `${propia ? 'tu' : 'su'} ${periodoDe}`;
   switch (vista.estado) {
     case 'EN_CURSO':
-      return vista.tipo === 'MES'
-        ? 'Estas son tus cifras al día. Tu análisis llega cuando cierre el mes.'
-        : 'Estas son tus cifras al día. Tu análisis llega cuando cierre la semana.';
+      return propia
+        ? `Estas son tus cifras al día. Tu análisis llega cuando cierre ${vista.tipo === 'MES' ? 'el mes' : 'la semana'}.`
+        : `Estas son sus cifras al día. Su análisis llega cuando cierre ${vista.tipo === 'MES' ? 'el mes' : 'la semana'}.`;
     case 'PENDIENTE':
-      return 'Tu análisis estará listo en cuanto podamos generarlo.';
+      return propia ? 'Tu análisis estará listo en cuanto podamos generarlo.' : 'Su análisis estará listo en cuanto podamos generarlo.';
     case 'SIN_DATOS':
-      return `Todavía no hay suficiente para analizar ${de}. ${loQueFalta(vista)}`;
+      return `Todavía no hay suficiente para analizar ${de}. ${loQueFalta(vista, voz)}`;
     case 'SIN_ANALISIS':
-      return `No pudimos generar el análisis de ${de}. Tus cifras de arriba siguen siendo las tuyas.`;
+      return propia
+        ? `No pudimos generar el análisis de ${de}. Tus cifras de arriba siguen siendo las tuyas.`
+        : `No pudimos generar el análisis de ${de}. Las cifras de arriba siguen siendo las suyas.`;
     default:
       return null;
   }
 }
 
-function loQueFalta(vista: Pick<VistaDelPeriodo, 'tipo' | 'falta' | 'minimoDeAcciones'>): string {
+function loQueFalta(vista: Pick<VistaDelPeriodo, 'tipo' | 'falta' | 'minimoDeAcciones'>, voz: VozDelOchentaVeinte): string {
   const sinAcciones = vista.falta.includes('ACCIONES');
   const sinDias = vista.falta.includes('DIAS');
   const periodo = vista.tipo === 'MES' ? 'el mes' : 'la semana';
   if (sinAcciones && vista.minimoDeAcciones > 0) {
     return `Con al menos ${vista.minimoDeAcciones} acciones planificadas${sinDias ? ', repartidas en varios días,' : ''} analizamos ${periodo}.`;
+  }
+  if (voz === 'ficha') {
+    if (sinDias) return `Con las acciones repartidas en más días analizamos ${periodo}.`;
+    return 'Cuando planifique más acciones, su análisis llegará solo.';
   }
   if (sinDias) return `Reparte tus acciones en más días y analizamos ${periodo}.`;
   return 'Cuando planifiques más acciones, tu análisis llegará solo.';

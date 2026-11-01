@@ -9,7 +9,7 @@ import { useFuncionalidad } from '../../plataforma/estado/useFuncionalidad';
 import { CLAVES } from '../../plataforma/utils/clavesDeLaApp';
 import { useOchentaVeinte } from '../hooks/useOchentaVeinte';
 import type { CargarOchentaVeinte, TipoDePeriodo } from '../types/ochentaVeinte.types';
-import { TITULO_DE_LA_SECCION } from '../utils/textosDelOchentaVeinte';
+import { TITULO_DE_LA_SECCION_DE_LA_FICHA } from '../utils/textosDelOchentaVeinte';
 import { PeriodoDelOchentaVeinte } from './PeriodoDelOchentaVeinte';
 
 const OPCIONES: readonly { valor: TipoDePeriodo; etiqueta: string }[] = [
@@ -18,7 +18,7 @@ const OPCIONES: readonly { valor: TipoDePeriodo; etiqueta: string }[] = [
 ];
 
 /**
- * «Tu 80/20» en la ficha de una persona (spec 031, 031-2 A): sus cifras del 80/20 y el análisis de SER de cada semana y cada mes. **Solo
+ * «Su 80/20» en la ficha de una persona (spec 031, 031-2 A; en tercera persona desde el E2E del 01/11/2026, J2-8): sus cifras del 80/20 y el análisis de SER de cada semana y cada mes. **Solo
  * lectura y solo para su acompañamiento** (el mentor o la guía del grupo, el líder, Administración y Alquimista); la propia persona
  * lo lee en Plan.
  *
@@ -39,12 +39,12 @@ export function OchentaVeinteDeLaFicha({ cargar }: { cargar: CargarOchentaVeinte
 
   return (
     <Aparicion retardo={350} style={{ marginTop: 20 }}>
-      <TituloDeSeccion>{TITULO_DE_LA_SECCION}</TituloDeSeccion>
+      <TituloDeSeccion>{TITULO_DE_LA_SECCION_DE_LA_FICHA}</TituloDeSeccion>
       <Card style={estilos.tarjeta}>
         <View style={estilos.control}>
           <ControlSegmentado opciones={OPCIONES} valor={tipo} onCambiar={setTipo} sinAnimacion />
         </View>
-        <PeriodoDelOchentaVeinte cargar={cargar} tipo={tipo} />
+        <PeriodoDelOchentaVeinte cargar={cargar} tipo={tipo} voz="ficha" />
       </Card>
     </Aparicion>
   );

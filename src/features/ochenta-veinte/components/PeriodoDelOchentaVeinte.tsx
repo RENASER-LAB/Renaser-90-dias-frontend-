@@ -12,7 +12,6 @@ import type { CargarOchentaVeinte, TipoDePeriodo, VistaDelPeriodo } from '../typ
 import {
   PARTES_DEL_ANALISIS,
   TEXTO_PARA_AGENDAR,
-  TEXTO_SIN_ACCIONES,
   avisoDelEstado,
   fechaCorta,
   hayCifras,
@@ -25,8 +24,10 @@ import {
   lineaDelVeintePorCiento,
   paraLeer,
   rangoDelPeriodo,
+  textosDeLaVoz,
   tituloDeLosPasos,
   tituloDelPeriodo,
+  type VozDelOchentaVeinte,
 } from '../utils/textosDelOchentaVeinte';
 
 /** Lo que dice el lector de pantalla de cada flecha. Distintas a las de las otras secciones de la ficha. */
@@ -47,12 +48,15 @@ export function PeriodoDelOchentaVeinte({
   tipo,
   activo = true,
   alAgendar,
+  voz = 'propia',
 }: {
   cargar: CargarOchentaVeinte | null;
   tipo: TipoDePeriodo;
   activo?: boolean;
   /** Solo la hoja de la propia persona: «Agendar mis acciones» cuando no hay acciones que contar. */
   alAgendar?: () => void;
+  /** Quién lo lee: la propia persona en Plan (por defecto, «tu 80/20») o quien la acompaña en su ficha («su 80/20»). */
+  voz?: VozDelOchentaVeinte;
 }) {
   const lectura = useOchentaVeinte(cargar, tipo, activo);
   const { datos, cargando, fallo } = lectura;
@@ -60,44 +64,52 @@ export function PeriodoDelOchentaVeinte({
   if (!cargar || lectura.oculta) return null;
   return (
     <View style={estilos.columna}>
-      {datos ? <Encabezado vista={datos} lectura={lectura} /> : null}
-      {cargando ? <Cargando /> : fallo ? <Fallo fallo={fallo} alReintentar={lectura.reintentar} /> : datos ? <Cuerpo vista={datos} alAgendar={alAgendar} /> : null}
+      {datos ? <Encabezado vista={datos} lectura={lectura} voz={voz} /> : null}
+      {cargando ? (
+        <Cargando voz={voz} />
+      ) : fallo ? (
+        <Fallo fallo={fallo} alReintentar={lectura.reintentar} voz={voz} />
+      ) : datos ? (
+        <Cuerpo vista={datos} alAgendar={alAgendar} voz={voz} />
+      ) : null}
     </View>
   );
 }
 
-function Cargando() {
+function Cargando({ voz }: { voz: VozDelOchentaVeinte }) {
   const { c, t } = useTheme();
   /* Alto reservado: al llegar el periodo la hoja no da un salto desde una línea. */
   return (
     <View style={estilos.cargando}>
-      <Text style={[t.body, { color: c.textSoft, fontSize: 16 }]}>Cargando tu 80/20…</Text>
+      <Text style={[t.body, { color: c.textSoft, fontSize: 16 }]}>{textosDeLaVoz(voz).cargando}</Text>
     </View>
   );
 }
 
-function Encabezado({ vista, lectura }: { vista: VistaDelPeriodo; lectura: ReturnType<typeof useOchentaVeinte> }) {
+function Encabezado({ vista, lectura, voz }: { vista: VistaDelPeriodo; lectura: ReturnType<typeof useOchentaVeinte>; voz: VozDelOchentaVeinte }) {
   const { c, t } = useTheme();
+  const textos = textosDeLaVoz(voz);
   const titulo = tituloDelPeriodo(vista.tipo, vista.numero);
   const rango = rangoDelPeriodo(vista.inicio, vista.fin);
   return (
     <View style={estilos.encabezado}>
-      <Flecha icono="arrowLeft" etiqueta={ETIQUETA_PERIODO_ANTERIOR} habilitada={lectura.puedeAnterior} onPress={lectura.anterior} />
+      <Flecha icono="arrowLeft" etiqueta={textos.periodoAnterior} habilitada={lectura.puedeAnterior} onPress={lectura.anterior} />
       <View style={estilos.centro} accessible accessibilityLiveRegion="polite" accessibilityLabel={rango ? `${titulo}. ${rango}` : titulo}>
         <Text style={[t.cardTitle, { color: c.textStrong, textAlign: 'center', fontSize: 17 }]}>{titulo}</Text>
         {rango ? <Text style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 22, textAlign: 'center' }]}>{rango}</Text> : null}
       </View>
-      <Flecha icono="arrow" etiqueta={ETIQUETA_PERIODO_SIGUIENTE} habilitada={lectura.puedeSiguiente} onPress={lectura.siguiente} />
+      <Flecha icono="arrow" etiqueta={textos.periodoSiguiente} habilitada={lectura.puedeSiguiente} onPress={lectura.siguiente} />
     </View>
   );
 }
 
-function Fallo({ fallo, alReintentar }: { fallo: FalloDelOchentaVeinte; alReintentar: () => void }) {
+function Fallo({ fallo, alReintentar, voz }: { fallo: FalloDelOchentaVeinte; alReintentar: () => void; voz: VozDelOchentaVeinte }) {
   const { c, t } = useTheme();
+  const textos = textosDeLaVoz(voz);
   return (
     <View style={estilos.fallo}>
       <Text style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 23 }]}>
-        {fallo === 'sin_red' ? 'No pudimos cargar tu 80/20. Revisa tu conexión.' : 'No pudimos cargar tu 80/20.'}
+        {fallo === 'sin_red' ? textos.noCargoSinRed : textos.noCargo}
       </Text>
       <Pressable
         onPress={alReintentar}
@@ -111,34 +123,34 @@ function Fallo({ fallo, alReintentar }: { fallo: FalloDelOchentaVeinte; alReinte
   );
 }
 
-function Cuerpo({ vista, alAgendar }: { vista: VistaDelPeriodo; alAgendar?: () => void }) {
+function Cuerpo({ vista, alAgendar, voz }: { vista: VistaDelPeriodo; alAgendar?: () => void; voz: VozDelOchentaVeinte }) {
   const { c, t } = useTheme();
   const iaAnalisis = useFuncionalidad(CLAVES.iaAnalisis);
   /* El análisis de la IA lo apaga Soporte TI aparte de SER; las cifras no dependen de eso. */
   const analisisDisponible = iaAnalisis.disponible;
   const enMantenimiento = analisisDisponible && !iaAnalisis.prendida && vista.estado !== 'EN_CURSO';
   const conTexto = vista.estado === 'LISTO' && vista.analisis !== null && !enMantenimiento && analisisDisponible;
-  const aviso = enMantenimiento || !analisisDisponible ? null : avisoDelEstado(vista);
+  const aviso = enMantenimiento || !analisisDisponible ? null : avisoDelEstado(vista, voz);
 
   return (
     <View style={estilos.cuerpo}>
-      {hayCifras(vista.cifras) ? <Cifras vista={vista} conListas={!conTexto} /> : <SinAcciones alAgendar={alAgendar} />}
+      {hayCifras(vista.cifras) ? <Cifras vista={vista} conListas={!conTexto} voz={voz} /> : <SinAcciones alAgendar={alAgendar} voz={voz} />}
       {enMantenimiento ? <AvisoDeMantenimiento aviso={iaAnalisis.aviso} /> : null}
       {aviso && hayCifras(vista.cifras) ? (
         <Text style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 23 }]} accessibilityLiveRegion="polite">
           {aviso}
         </Text>
       ) : null}
-      {conTexto && vista.analisis ? <Analisis vista={vista} /> : null}
+      {conTexto && vista.analisis ? <Analisis vista={vista} voz={voz} /> : null}
     </View>
   );
 }
 
-function SinAcciones({ alAgendar }: { alAgendar?: () => void }) {
+function SinAcciones({ alAgendar, voz }: { alAgendar?: () => void; voz: VozDelOchentaVeinte }) {
   const { c, t } = useTheme();
   return (
     <View style={estilos.bloque}>
-      <Text style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 23 }]}>{TEXTO_SIN_ACCIONES}</Text>
+      <Text style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 23 }]}>{textosDeLaVoz(voz).sinAcciones}</Text>
       {alAgendar ? (
         <Pressable
           onPress={alAgendar}
@@ -154,8 +166,9 @@ function SinAcciones({ alAgendar }: { alAgendar?: () => void }) {
 }
 
 /** Las cifras del periodo: lo cumplido, las dos reglas del 20 %, los ejes y —sin texto de la IA— los nombres de lo que movió y de lo que se fue. */
-function Cifras({ vista, conListas }: { vista: VistaDelPeriodo; conListas: boolean }) {
+function Cifras({ vista, conListas, voz }: { vista: VistaDelPeriodo; conListas: boolean; voz: VozDelOchentaVeinte }) {
   const { c, t } = useTheme();
+  const propia = voz === 'propia';
   const cifras = vista.cifras;
   const avance = lineaDeAvance(cifras);
   const verdes = lineaDeLasVerdes(cifras);
@@ -206,9 +219,15 @@ function Cifras({ vista, conListas }: { vista: VistaDelPeriodo; conListas: boole
       ) : null}
       {conListas && cifras.lasQueSeFueron.length > 0 ? (
         <Lista
-          titulo={PARTES_DEL_ANALISIS.loQueSeTeFue}
+          titulo={textosDeLaVoz(voz).loQueSeFue}
           lineas={cifras.lasQueSeFueron.map(lineaDeUnaAccion)}
-          nota={cifras.cumplioLoQueMenosMovia ? 'Mientras tanto cumpliste cosas de menos impacto: pasa, y se puede retomar.' : undefined}
+          nota={
+            cifras.cumplioLoQueMenosMovia
+              ? propia
+                ? 'Mientras tanto cumpliste cosas de menos impacto: pasa, y se puede retomar.'
+                : 'Mientras tanto cumplió cosas de menos impacto: pasa, y se puede retomar.'
+              : undefined
+          }
         />
       ) : null}
       {codigo ? <Text style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 23 }]}>{codigo}</Text> : null}
@@ -232,16 +251,17 @@ function Lista({ titulo, lineas, nota }: { titulo: string; lineas: string[]; not
 }
 
 /** Las cuatro partes del análisis, siempre en este orden, y de dónde viene. */
-function Analisis({ vista }: { vista: VistaDelPeriodo }) {
+function Analisis({ vista, voz }: { vista: VistaDelPeriodo; voz: VozDelOchentaVeinte }) {
   const { c, t } = useTheme();
   const analisis = vista.analisis;
   if (!analisis) return null;
   const generado = fechaCorta(vista.generadoEn);
+  const textos = textosDeLaVoz(voz);
   return (
     <View style={[estilos.analisis, { borderTopColor: c.divider }]}>
       <Parte titulo={PARTES_DEL_ANALISIS.loQueMasMovio} texto={analisis.loQueMasMovio} />
-      <Parte titulo={PARTES_DEL_ANALISIS.loQueSeTeFue} texto={analisis.loQueSeTeFue} />
-      <Parte titulo={PARTES_DEL_ANALISIS.comoEstuviste} texto={analisis.comoEstuviste} />
+      <Parte titulo={textos.loQueSeFue} texto={analisis.loQueSeTeFue} />
+      <Parte titulo={textos.comoEstuvo} texto={analisis.comoEstuviste} />
       <View style={estilos.parte}>
         <Text accessibilityRole="header" style={[t.cardTitle, { color: c.textStrong, fontSize: 17 }]}>
           {tituloDeLosPasos(vista.tipo)}
@@ -253,7 +273,7 @@ function Analisis({ vista }: { vista: VistaDelPeriodo }) {
         ))}
       </View>
       <Text style={[t.small, { color: c.textSoft, fontSize: 14 }]}>
-        {generado ? `Análisis de SER · ${generado}. No cambia tu plan: lo que sugiere lo decides tú.` : 'Análisis de SER. No cambia tu plan: lo que sugiere lo decides tú.'}
+        {textos.pie(generado)}
       </Text>
     </View>
   );

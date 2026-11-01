@@ -1,4 +1,4 @@
-# AV04 — La ficha del aprendiz muestra «Tu 80/20» al mentor, debajo de «Cierres del día», con «Código Renaser en las fichas» ENCENDIDO
+# AV04 — La ficha del aprendiz muestra «Su 80/20» al mentor, debajo de «Cierres del día», con «Código Renaser en las fichas» ENCENDIDO
 # (spec 034); con el interruptor apagado la sección no se dibuja (el análisis resume lo que la persona respondió en el Código Renaser).
 # ESCRITO Y SIN CORRER. Precondición: el interruptor `radar.fichas` ENCENDIDO (flujo 01 de `codigo-renaser-en-fichas`) y el aprendiz con
 # alguna acción esta semana. Cuenta: el MENTOR del grupo (ranura E2E_ADMIN_*). E2E_PERSONA = parte del nombre del aprendiz.
@@ -18,7 +18,7 @@ appId: com.renaser.app
     timeout: 30000
 - tapOn: ".*${PERSONA}.*Abrir su detalle.*"
 - scrollUntilVisible:
-    element: "Tu 80/20"
+    element: "Su 80/20"
     direction: DOWN
     timeout: 60000
 - assertVisible: "Semana"

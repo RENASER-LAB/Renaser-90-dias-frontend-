@@ -232,15 +232,31 @@ describe('los fallos', () => {
 });
 
 describe('la sección de la ficha', () => {
-  it('muestra «Tu 80/20» con Semana y Mes, y empieza por la semana en curso', async () => {
+  it('muestra «Su 80/20» con Semana y Mes, y empieza por la semana en curso', async () => {
     const cargar = cargarCon(LISTO);
     const r = await ficha(cargar);
     const t = textos(r);
-    expect(t).toContain('Tu 80/20');
+    expect(t).toContain('Su 80/20');
+    expect(t).not.toContain('Tu 80/20');
     expect(t).toContain('Semana');
     expect(t).toContain('Mes');
     expect(t).toContain('Semana 10');
     expect(cargar).toHaveBeenCalledWith('SEMANA', null);
+  });
+
+  it('E2E J2-8: lo lee su mentor sobre otra persona, así que todo va en tercera persona (las flechas, el aviso, el análisis y su pie)', async () => {
+    const r = await ficha(cargarCon(LISTO));
+    const t = textos(r);
+    expect(nodoDe(r, 'Su 80/20: periodo anterior')).toBeTruthy();
+    expect(nodoDe(r, 'Su 80/20: periodo siguiente')).toBeTruthy();
+    expect(t).toContain('Lo que se le fue');
+    expect(t).toContain('Cómo estuvo');
+    expect(t).toContain('Análisis de SER · 2 de noviembre. No cambia su plan: lo que sugiere lo decide la persona.');
+    expect(t).not.toContain('Lo que se te fue');
+    expect(t).not.toContain('No cambia tu plan');
+    const enCurso = textos(await ficha(cargarCon(vista({ estado: 'EN_CURSO', cerrado: false, analisis: null, generadoEn: null }))));
+    expect(enCurso).toContain('Estas son sus cifras al día. Su análisis llega cuando cierre la semana.');
+    expect(enCurso).not.toContain('tus cifras');
   });
 
   it('cambiar a Mes pide el mes y no el de otra persona', async () => {
