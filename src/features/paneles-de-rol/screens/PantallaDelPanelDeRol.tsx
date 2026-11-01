@@ -2,6 +2,7 @@ import React from 'react';
 
 import { CLAVES } from '../../plataforma/utils/clavesDeLaApp';
 import { AprendicesDelLiderScreen } from '../../lider-mentores/screens/AprendicesDelLiderScreen';
+import { HabitosDeTodosScreen } from '../../lider-mentores/screens/HabitosDeTodosScreen';
 import { CumplimientoDelLiderScreen } from '../../lider-mentores/screens/CumplimientoDelLiderScreen';
 import { LiderMentoresScreen } from '../../lider-mentores/screens/LiderMentoresScreen';
 import { AlumnoScreen } from '../../mentor/screens/AlumnoScreen';
@@ -49,6 +50,7 @@ export function PantallaDelPanelDeRol({ paneles }: { paneles: PanelesDeRol }) {
           verConsultas={esDisponible(CLAVES.tickets)}
           verMentores={esDisponible(CLAVES.lider)}
           verTodos={paneles.aprendicesDisponibles === true}
+          verHabitos={paneles.habitosDisponibles === true}
           onVolver={volver}
           onAbrirGrupo={(grupo, inicio) =>
             ir({ tipo: 'cumplimiento', grupo: { grupoId: grupo.grupoId, nombre: grupo.grupoNombre?.trim() || 'Grupo sin nombre', inicio } })
@@ -56,6 +58,7 @@ export function PantallaDelPanelDeRol({ paneles }: { paneles: PanelesDeRol }) {
           onAbrirConsultas={() => ir({ tipo: 'consultas' })}
           onAbrirMentores={() => ir({ tipo: 'mentores' })}
           onAbrirTodos={() => ir({ tipo: 'todos' })}
+          onAbrirHabitos={() => ir({ tipo: 'habitosDeTodos' })}
         />
       );
 
@@ -67,6 +70,9 @@ export function PantallaDelPanelDeRol({ paneles }: { paneles: PanelesDeRol }) {
 
     case 'todos':
       return <AprendicesDelLiderScreen onSalir={volver} />;
+
+    case 'habitosDeTodos':
+      return <HabitosDeTodosScreen grupos={semaforoGrupos.datos?.grupos ?? []} onSalir={volver} />;
 
     case 'cumplimiento':
       return <CumplimientoDelLiderScreen lectura={semaforoGrupos} grupoInicial={vista.grupo ?? undefined} onSalir={volver} />;

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import React from 'react';
-import TestRenderer, { act } from 'react-test-renderer';
+import TestRenderer, { act, type ReactTestRenderer } from 'react-test-renderer';
 
 import type { FiltrosDeLosHabitos, HabitosDeTodos, PersonaEnUnHabito, PersonasDeUnHabito } from '../../types/habitosDeTodos.types';
 
@@ -70,7 +70,7 @@ describe('useHabitosDeTodos', () => {
       lecturas.push(useHabitosDeTodos(f));
       return null;
     }
-    let raiz!: TestRenderer.ReactTestRenderer;
+    let raiz!: ReactTestRenderer;
     return {
       lecturas,
       async iniciar() {
@@ -196,8 +196,12 @@ describe('usePersonasDeUnHabito', () => {
     };
   }
 
-  beforeEach(() => jest.useFakeTimers());
-  afterEach(() => jest.useRealTimers());
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+  afterEach(() => {
+    jest.useRealTimers();
+  });
 
   it('pide la primera página al montarse, con el día y los filtros del hábito', async () => {
     mockPersonas.mockResolvedValue(pagina(0, [persona('1'), persona('2')], false));

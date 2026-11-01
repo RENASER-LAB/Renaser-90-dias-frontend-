@@ -22,6 +22,7 @@ import {
   sumarDimensiones,
   sumarPersonas,
   textoSinHabitos,
+  tituloDelDia,
 } from '../habitosDeTodos';
 
 /**
@@ -58,6 +59,14 @@ describe('fechas', () => {
 
   it('para el lector de pantalla, el día completo', () => {
     expect(diaCompletoEnPalabras('2026-10-27')).toBe('martes 27 de octubre');
+  });
+});
+
+describe('la cabecera del día', () => {
+  it('hoy y ayer se dicen, los demás llevan solo el día completo', () => {
+    expect(tituloDelDia('2026-10-30', '2026-10-30', true)).toBe('Hoy, viernes 30 de octubre');
+    expect(tituloDelDia('2026-10-29', '2026-10-30', false)).toBe('Ayer, jueves 29 de octubre');
+    expect(tituloDelDia('2026-10-27', '2026-10-30', false)).toBe('Martes 27 de octubre');
   });
 });
 

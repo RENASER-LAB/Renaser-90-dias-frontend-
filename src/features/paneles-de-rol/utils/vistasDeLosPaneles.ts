@@ -7,7 +7,7 @@ import type { AlumnoConEstado } from '../../mentor/types/mentor.types';
  * Pura, para probar el recorrido sin montar nada.
  *
  *   Yo ← Mi grupo ← ficha del aprendiz
- *   Yo ← Mis mentores ← consultas | mentores y reporte del mes | todos los aprendices | resultado por grupo (← su grupo ← persona)
+ *   Yo ← Mis mentores ← consultas | mentores y reporte del mes | todos los aprendices | hábitos de todos (← un hábito ← persona) | resultado por grupo (← su grupo ← persona)
  */
 export type VistaDelPanel =
   | { tipo: 'ninguna' }
@@ -17,6 +17,8 @@ export type VistaDelPanel =
   | { tipo: 'consultas' }
   | { tipo: 'mentores' }
   | { tipo: 'todos' }
+  /** «Hábitos de todos» (spec 029): un día, hábito por hábito, con sus personas y su ficha. Los niveles de adentro los lleva la pantalla. */
+  | { tipo: 'habitosDeTodos' }
   /** El resumen por grupos del líder; con `grupo`, directo en la lista de ese grupo (la fila que se tocó). */
   | { tipo: 'cumplimiento'; grupo: GrupoAbierto | null };
 
@@ -30,6 +32,7 @@ export function vistaDeRegreso(vista: VistaDelPanel): VistaDelPanel {
     case 'consultas':
     case 'mentores':
     case 'todos':
+    case 'habitosDeTodos':
     case 'cumplimiento':
       return { tipo: 'misMentores' };
     case 'miGrupo':

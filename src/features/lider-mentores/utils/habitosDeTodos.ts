@@ -64,6 +64,15 @@ export function diaCompletoEnPalabras(fecha: string): string {
   return `${nombres[diaDeLaSemana(fecha)]} ${d} de ${meses[m - 1]}`;
 }
 
+/** El día en la cabecera de la lista de un hábito: «Hoy, jueves 30 de octubre», «Ayer, miércoles 29 de octubre» o «Martes 27 de octubre». */
+export function tituloDelDia(fecha: string, masReciente: string | null, esHoy: boolean): string {
+  const completo = diaCompletoEnPalabras(fecha);
+  const mayuscula = completo.charAt(0).toUpperCase() + completo.slice(1);
+  if (esHoy || fecha === masReciente) return `Hoy, ${completo}`;
+  if (masReciente && fecha === sumarDias(masReciente, -1)) return `Ayer, ${completo}`;
+  return mayuscula;
+}
+
 export interface Navegacion {
   /** El día de antes; `null` = ya se llegó al límite (7 días atrás) o todavía no se sabe. */
   anterior: string | null;
