@@ -217,7 +217,11 @@ export function descripcionDeLaAceptacion(aceptacion: AceptacionDeSolicitudApi |
     partes.push('Ve las tres formaciones');
   } else {
     const nombres = aceptacion.formations.map(nombreCortoDeFormacion);
-    const duracion = aceptacion.durationDays ? ` ${etiquetaDeDuracion(aceptacion.durationDays)}` : '';
+    /* La duración solo se dice cuando la persona pudo elegirla (el Diplomado) o no es la de siempre: la Escuela y la Certificación duran 90 días, y
+       «Escuela 3 meses» contradecía lo que dicen Hoy, Plan y Yo (E2E de las formaciones, 01/11/2026). */
+    const dura = aceptacion.durationDays;
+    const sePreguntoLaDuracion = aceptacion.formations[0] === 'DIPLOMADO' || (dura !== null && dura !== undefined && dura !== 90);
+    const duracion = dura && sePreguntoLaDuracion ? ` ${etiquetaDeDuracion(dura)}` : '';
     partes.push(`${unir(nombres)}${aceptacion.formations.length === 1 ? duracion : ''}`);
   }
   if (aceptacion.customRoleName) {

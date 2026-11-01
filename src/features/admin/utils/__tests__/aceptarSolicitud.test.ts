@@ -171,6 +171,22 @@ describe('lo que dice una solicitud ya decidida (US4)', () => {
     );
   });
 
+  it('E2E 01/11: la Escuela y la Certificación duran 90 días y no lo dicen («Escuela 3 meses» contradecía a Hoy y a Plan); el Diplomado sí', () => {
+    expect(descripcionDeLaAceptacion({ formations: ['ESCUELA'], durationDays: 90, role: 'TRAINEE', withDiagnosis: false })).toBe('Escuela · Aprendiz · sin diagnóstico');
+    expect(descripcionDeLaAceptacion({ formations: ['CERTIFICACION'], durationDays: 90, role: 'TRAINEE', withDiagnosis: false })).toBe(
+      'Certificación · Aprendiz · sin diagnóstico',
+    );
+    expect(descripcionDeLaAceptacion({ formations: ['DIPLOMADO'], durationDays: 90, role: 'TRAINEE', withDiagnosis: false })).toBe(
+      'Diplomado 3 meses · Aprendiz · sin diagnóstico',
+    );
+  });
+
+  it('si la Escuela ofreciera otra duración, esa sí se dice', () => {
+    expect(descripcionDeLaAceptacion({ formations: ['ESCUELA'], durationDays: 365, role: 'TRAINEE', withDiagnosis: false })).toBe(
+      'Escuela 1 año · Aprendiz · sin diagnóstico',
+    );
+  });
+
   it('el personal con varias formaciones no lleva duración', () => {
     expect(descripcionDeLaAceptacion({ formations: ['ESCUELA', 'DIPLOMADO'], durationDays: null, role: 'MENTOR', withDiagnosis: false })).toBe(
       'Escuela y Diplomado · Mentor · sin diagnóstico',
