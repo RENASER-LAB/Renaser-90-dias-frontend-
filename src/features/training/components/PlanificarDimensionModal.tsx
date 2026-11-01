@@ -47,7 +47,8 @@ import {
 // De `momentosDelDia` ya solo se usa el parseo de horas: los bloques del día salieron de la
 // pantalla el 2026-09-08 y con ellos las etiquetas, los cortes y el "momento esperado".
 import { aMinutos } from '../../habits/utils/momentosDelDia';
-import type { CategoriaHabitoApi, PreferenciaHabitoApi } from '../../habits/types/habits.types';
+import type { PreferenciaHabitoApi } from '../../habits/types/habits.types';
+import { categoriaDeDimension } from '../utils/dimensionDelHabito';
 import type { HabitItem } from '../../../screens/TrainingScreen';
 import {
   antelacionesAMostrar,
@@ -229,17 +230,6 @@ type SeccionDeLista = 'sinHora' | 'conHora';
  *  "mañana", que el aprendiz podía mover; sin bloques es un default y nada más. */
 const INICIO_DE_JORNADA_MIN = 6 * 60;
 
-/**
- * La dimensión de Training → la categoría que el backend entiende. Las cuatro que existen de
- * verdad en `renaser.categorias_habito`; VIDA Y NEGOCIO no es una categoría de hábito (son rocas,
- * de otro módulo), así que ahí no se puede crear y el botón no aparece.
- */
-const CATEGORIA_POR_DIMENSION: Readonly<Record<string, CategoriaHabitoApi>> = {
-  CUERPO: 'BODY',
-  MENTE: 'MIND',
-  EMOCIONES: 'CONSCIENCE',
-  'ESPÍRITU': 'SPIRIT',
-};
 
 function aDosDigitos(n: number): string {
   return String(n).padStart(2, '0');
@@ -1221,7 +1211,8 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
       return siguiente;
     });
 
-  const categoriaDeLaDimension = CATEGORIA_POR_DIMENSION[dimension];
+  /* Spec 023: la categoría del servidor de esta dimensión (BODY, DIPLOMADO_ESTUDIO…); en «Vida y negocio» y «Mis hábitos» no hay: ahí no se crea. */
+  const categoriaDeLaDimension = categoriaDeDimension(dimension) ?? undefined;
 
   /**
    * Da de alta un hábito PROPIO del aprendiz, en el backend.
