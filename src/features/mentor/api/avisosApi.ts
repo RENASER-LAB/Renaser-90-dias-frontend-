@@ -123,6 +123,14 @@ export interface DestinoDeMiRadar {
 }
 
 /**
+ * Mi ingreso: `/mi-ingreso` (spec 032, 2026-11-01), la ruta del recordatorio de pago de cada cuota pendiente. Abre Yo → «Mi ingreso». Lo programa
+ * el teléfono (`alarmasDePagos`), no el servidor. Sin identificadores: es siempre el suyo.
+ */
+export interface DestinoDeMiIngreso {
+  tipo: 'miIngreso';
+}
+
+/**
  * La caja de un aprendiz, para Administración: `/admin/caja/{aprendizId}` (D-219), la ruta de los
  * avisos al Admin («X está lista para su Caja», la caja enviada hace 5 días sin confirmar). Abre
  * Administración → Caja Renaser en esa caja. Quien no administra no abre nada: el servidor autoriza.
@@ -175,6 +183,7 @@ export type DestinoDeAviso =
   | DestinoDelObjetivo
   | DestinoDeMiCaja
   | DestinoDeMiRadar
+  | DestinoDeMiIngreso
   | DestinoDeCajaAdmin
   | DestinoDelChat
   | DestinoDelOchentaVeinte;
@@ -206,6 +215,8 @@ const RUTA_DEL_OBJETIVO = /^\/objetivos\/(\d{4}-\d{2}-\d{2})\/?(?:\?(.*))?$/;
 const RUTA_DE_MI_CAJA = /^\/caja\/?$/;
 /** Spec 012: Mi Radar. Con la barra final tolerada. */
 const RUTA_DE_MI_RADAR = /^\/mi-radar\/?$/;
+/** Spec 032: Mi ingreso (el aviso de pago). Con la barra final tolerada. */
+const RUTA_DE_MI_INGRESO = /^\/mi-ingreso\/?$/;
 const RUTA_DE_LA_CAJA_ADMIN = /^\/admin\/caja\/([^/?]+)\/?$/;
 /** D-221: el chat de un aviso de mensaje. Con la barra final tolerada; desde la spec 024 puede traer `?formacion=…`. */
 const RUTA_DEL_CHAT = /^\/chat\/([^/?]+)\/?(?:\?(.*))?$/;
@@ -239,6 +250,7 @@ export function destinoDeRuta(ruta: unknown): DestinoDeAviso | null {
   if (RUTA_DEL_SEMAFORO_POR_GRUPOS.test(ruta)) return { tipo: 'semaforoGrupos' };
   if (RUTA_DE_MI_CAJA.test(ruta)) return { tipo: 'caja' };
   if (RUTA_DE_MI_RADAR.test(ruta)) return { tipo: 'miRadar' };
+  if (RUTA_DE_MI_INGRESO.test(ruta)) return { tipo: 'miIngreso' };
   const delOchentaVeinte = RUTA_DEL_OCHENTA_VEINTE.exec(ruta);
   if (delOchentaVeinte) {
     return { tipo: 'ochentaVeinte', periodo: parametro(delOchentaVeinte[1], 'periodo') === 'MES' ? 'MES' : 'SEMANA' };

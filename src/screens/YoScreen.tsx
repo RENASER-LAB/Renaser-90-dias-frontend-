@@ -77,6 +77,9 @@ import { useEstadoDeMiDiagnostico } from '../features/diagnostico/hooks/useEstad
 import { MiDiagnosticoScreen } from '../features/diagnostico/screens/MiDiagnosticoScreen';
 import { CompletarDiagnosticoScreen } from '../features/diagnostico/screens/CompletarDiagnosticoScreen';
 import { filaDeMiDiagnostico } from '../features/yo/utils/filaDeMiDiagnostico';
+import { useMiIngreso } from '../features/pagos/hooks/useMiIngreso';
+import { MiIngresoScreen } from '../features/pagos/screens/MiIngresoScreen';
+import { detalleDeLaFila } from '../features/pagos/utils/vistaDeMiIngreso';
 import { elegirFotoDePerfil } from '../features/auth/utils/elegirFotoDePerfil';
 import * as authApi from '../features/auth/api/authApi';
 import { ESPACIO_PARA_LANZADOR } from '../features/renasia/components/RenasiaLauncher';
@@ -435,6 +438,11 @@ export default function YoScreen() {
       recargarMiDiagnostico.current();
     }, []),
   );
+  /* Mi ingreso (spec 032, maqueta del dueño del 2026-11-01): los pasos de la entrada y el cronograma de pagos. La fila aparece SOLO si el servidor dice
+     que hay un pago anotado (`GET /me/ingreso`): quien no tiene nada anotado ve Yo como siempre. A pantalla completa, como la Caja. El aviso de pago
+     del teléfono (`/mi-ingreso`) llega con `abrirMiIngreso`. Al leerlo, el hook también pone al día las alarmas de pago de este teléfono. */
+  const miIngreso = useMiIngreso(user?.id ?? null);
+  const [enMiIngreso, setEnMiIngreso] = useState(false);
   /* Mi Radar (spec 012, pedido del dueño del 2026-10-29): el Código Renaser desde el día 8, que la persona enciende y
      configura. La fila va justo debajo de «Tuve una emergencia», SOLO desde el día 8 y si el servidor lo ofrece (con un
      backend anterior no hay fila). A pantalla completa, como la emergencia. El aviso `/mi-radar` llega con
@@ -525,6 +533,16 @@ export default function YoScreen() {
     setEnSemaforo(true);
     (navegacionDeYo as unknown as { setParams: (p: Record<string, unknown>) => void }).setParams({ abrirSemaforo: undefined });
   }, [rutaDeYo.params, navegacionDeYo]);
+  useEffect(() => {
+    const params = rutaDeYo.params as { abrirMiIngreso?: boolean } | undefined;
+    if (!params?.abrirMiIngreso) return;
+    setEnMiIngreso(true);
+    (navegacionDeYo as unknown as { setParams: (p: Record<string, unknown>) => void }).setParams({ abrirMiIngreso: undefined });
+  }, [rutaDeYo.params, navegacionDeYo]);
+  useEffect(() => {
+    // Un aviso viejo, o un servidor que ya no tiene nada anotado, no deja la pantalla esperando abierta. Mientras se lee, espera.
+    if (enMiIngreso && !miIngreso.cargando && !miIngreso.visible) setEnMiIngreso(false);
+  }, [enMiIngreso, miIngreso.cargando, miIngreso.visible]);
   useEffect(() => {
     const params = rutaDeYo.params as { abrirMiRadar?: boolean } | undefined;
     if (!params?.abrirMiRadar) return;
@@ -729,6 +747,19 @@ export default function YoScreen() {
           miDiagnostico.recargar();
           void recargarResumen();
         }}
+      />
+    );
+  }
+
+  /* Mi ingreso, a pantalla completa: su flecha y el atrás del sistema vuelven a Yo. */
+  if (enMiIngreso && miIngreso.visible && miIngreso.ingreso && user?.id) {
+    return (
+      <MiIngresoScreen
+        userId={user.id}
+        ingreso={miIngreso.ingreso}
+        onVolver={() => setEnMiIngreso(false)}
+        onConfirmar={miIngreso.confirmar}
+        onReintentar={() => void miIngreso.recargar()}
       />
     );
   }
@@ -1045,6 +1076,18 @@ export default function YoScreen() {
                 detalle={filaDelDiagnostico.detalle}
                 etiqueta={`${filaDelDiagnostico.titulo}. ${filaDelDiagnostico.detalle}`}
                 onPress={() => setEnDiagnostico(filaDelDiagnostico.pantalla)}
+              />
+            ) : null}
+            {/* MI INGRESO (spec 032): solo si el servidor dice que hay un pago anotado. No repite «Mi onboarding» de Ajustes: esa es la de los
+                documentos (ficha, Términos, Pacto); esta es la de los pagos, con los pasos como orientación. */}
+            {miIngreso.visible && miIngreso.ingreso && esDisponible(CLAVES.pagos) ? (
+              <FilaDeAjuste
+                key="mi-ingreso"
+                icono="wallet"
+                titulo="Mi ingreso"
+                detalle={detalleDeLaFila(miIngreso.ingreso)}
+                etiqueta={`Mi ingreso. ${detalleDeLaFila(miIngreso.ingreso)}`}
+                onPress={() => setEnMiIngreso(true)}
               />
             ) : null}
           </GrupoDeAjustes>
@@ -1981,7 +2024,7 @@ export default function YoScreen() {
           ]}
           showsVerticalScrollIndicator={false}
         >
-          {user?.id ? <SeccionAlarmas userId={user.id} /> : null}
+          {user?.id ? <SeccionAlarmas userId={user.id} pagos={miIngreso.ingreso?.pagos ?? null} /> : null}
         </ScrollView>
       )}
 
