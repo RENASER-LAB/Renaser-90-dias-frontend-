@@ -132,7 +132,7 @@ export function PagosDeLaPersona({
                   <View accessible accessibilityLabel={visible.etiqueta} style={estilos.cuotaFila}>
                     <Icon name="calendar" size={20} color={c.textSoft} />
                     <Text style={[t.body, { color: c.textStrong, fontSize: 17, fontFamily: fuentes.negrita, minWidth: 70 }]}>{visible.fecha}</Text>
-                    <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={[t.body, { color: c.textStrong, fontSize: 17, flex: 1 }]}>
+                    <Text style={[t.body, { color: c.textStrong, fontSize: 17, flex: 1 }]}>
                       {visible.monto}
                     </Text>
                     <View style={[estilos.pildora, { backgroundColor: cuota.pagada ? c.successWash : c.goldWash }]}>

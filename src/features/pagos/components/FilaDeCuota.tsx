@@ -22,7 +22,7 @@ export function FilaDeCuota({ cuota }: { cuota: CuotaVisible }) {
       <Icon name="calendar" size={20} color={c.textSoft} />
       <View style={estilos.datos}>
         <Text style={[t.body, estilos.fecha, { color: c.textStrong }]}>{cuota.fecha}</Text>
-        <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={[t.body, estilos.monto, { color: c.textStrong }]}>
+        <Text style={[t.body, estilos.monto, { color: c.textStrong }]}>
           {cuota.monto}
         </Text>
       </View>
@@ -38,6 +38,7 @@ const estilos = StyleSheet.create({
   fila: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 64, paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1, borderRadius: 14 },
   datos: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 16, minWidth: 0 },
   fecha: { fontSize: 17, fontFamily: fuentes.negrita, minWidth: 64 },
+  /* Sin `adjustsFontSizeToFit` ni `numberOfLines`: en Android el texto conservaba el ancho anterior cuando la fila crecía y se recortaba («US$ 1 00»; #89). */
   monto: { fontSize: 17, flexShrink: 1 },
   estado: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 36, paddingHorizontal: 12, borderRadius: 18 },
 });
