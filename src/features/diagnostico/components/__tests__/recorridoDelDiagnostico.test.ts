@@ -562,7 +562,7 @@ describe('bajar hasta la pregunta que falta', () => {
   it('le pide al scroll del marco que baje hasta la pregunta con el error', async () => {
     const r = await montar();
     await pulsar(r, 'EMPEZAR');
-    const scrollTo = (r.root.findAll(n => (n.type as unknown) === ScrollView)[0].instance as { scrollTo: jest.Mock }).scrollTo;
+    const scrollTo = ((r.root.findAll(n => (n.type as unknown) === ScrollView)[0] as unknown as { instance: { scrollTo: jest.Mock } }).instance).scrollTo;
 
     // Cada pregunta avisa dónde quedó (la altura que mide en el paso); la edad está a media altura.
     const conLayout = r.root.findAll(
@@ -588,7 +588,7 @@ describe('bajar hasta la pregunta que falta', () => {
     await pulsar(r, 'TERMINAR');
     // Está en el paso de la edad, marcada; la altura llega con el dibujado del paso y ahí se baja.
     expect(textos(r)).toContain('Responde esta pregunta para continuar.');
-    const scrollTo = (r.root.findAll(n => (n.type as unknown) === ScrollView)[0].instance as { scrollTo: jest.Mock }).scrollTo;
+    const scrollTo = ((r.root.findAll(n => (n.type as unknown) === ScrollView)[0] as unknown as { instance: { scrollTo: jest.Mock } }).instance).scrollTo;
     scrollTo.mockClear();
     const conLayout = r.root.findAll(
       n => typeof n.props.onLayout === 'function' && n.findAll(m => m.props.accessibilityLabel === '¿Qué edad tienes?').length > 0,
