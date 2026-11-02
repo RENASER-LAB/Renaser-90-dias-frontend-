@@ -69,9 +69,9 @@ interface ValorRadar {
     guardar: (pedido: PedidoDeMiRadarApi) => Promise<MiRadarApi>;
     /** Lee de nuevo sin vaciar lo que se ve. */
     recargar: () => void;
-    /** Antes del día 8: pide que el servidor diga si hay Mi Radar o por qué no (el personal que todavía no eligió su Día 1). */
+    /** Antes del día 8: pide que el servidor diga si hay Mi Radar o por qué no (el personal que todavía no empezó su programa). */
     solicitar: () => void;
-    /** Olvida un motivo o un fallo (queda «pendiente») y lee: para «Reintentar» y para después de elegir el Día 1. */
+    /** Olvida un motivo o un fallo (queda «pendiente») y lee: para «Reintentar» y para después de empezar el programa. */
     reiniciar: () => void;
   };
 }
@@ -163,7 +163,7 @@ export function RadarProvider({ children }: { children: React.ReactNode }) {
   const radar = useRadarDelDia(puedePedirse ? diaPrograma : null, user?.id ?? null);
 
   /* Mi Radar (spec 012): se lee solo desde el día 8. Los días 1 a 7 este hook no pide nada, salvo que Yo lo pida para el personal
-     que todavía no eligió su Día 1 (spec 019: el 403 dice por qué). */
+     que todavía no empezó su programa (spec 019: el 403 dice por qué). */
   const miRadar = useConfigDeMiRadar(diaPrograma, user?.id ?? null);
   const configMiRadar = configDeMiRadar(miRadar.lectura);
   /* La clave de lo que importa a los avisos (encendido, horas y días con horas propias): leer de nuevo lo mismo (al abrir

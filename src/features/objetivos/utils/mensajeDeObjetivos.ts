@@ -1,12 +1,12 @@
 import { mensajeDeError } from '../../../services/http/apiClient';
 
 /** Lo que se dice cuando el servidor no deja operar objetivos porque la persona todavía no tiene su programa andando. */
-export const MENSAJE_DE_OBJETIVOS_SIN_PROGRAMA = 'Tu plan se arma con tu programa. Cuando elijas tu Día 1 podrás escribir aquí tus objetivos.';
+export const MENSAJE_DE_OBJETIVOS_SIN_PROGRAMA = 'Tu plan se arma con tu programa. Cuando empiece tu programa podrás escribir aquí tus objetivos.';
 
 /**
  * ¿El servidor rechazó el pedido porque la persona no tiene un programa andando? Son los dos rechazos de `/rocks/*` a quien no puede operar
  * rocas todavía (backend `AccesoARocas`): 404 «Participante no encontrado: <id>» (sin fila de programa) y 403 «Solo un aprendiz opera sus propias
- * rocas» (el personal con la fila, antes de elegir su Día 1). El segundo no es un permiso que falte: se resuelve eligiendo el Día 1.
+ * rocas» (el personal con la fila, antes de empezar su programa). El segundo no es un permiso que falte: se resuelve empezando el programa.
  */
 export function esFaltaDeProgramaAndando(error: unknown): boolean {
   // Se mira la forma del error (estado y mensaje) y no `instanceof ApiError`: así no depende de cómo se importe la clase.

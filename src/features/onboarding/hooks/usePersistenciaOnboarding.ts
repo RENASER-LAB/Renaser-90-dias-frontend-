@@ -24,7 +24,7 @@ import { AvanzarEstadoInput, HitoOnboarding, RespuestaPorClaveInput } from '../t
  * que la pantalla avise en vez de dar por guardado algo que no lo está.
  */
 /** El desenlace de dejar la constancia de los Términos: quedó, o no — y si no, si fue porque el texto cambió mientras leía. */
-export type ResultadoDeAceptarTerminos = { ok: true } | { ok: false; cambiaron: boolean };
+export type ResultadoDeAceptarTerminos = { ok: true } | { ok: false; cambiaron: boolean; mensaje?: string };
 
 export function usePersistenciaOnboarding() {
   // Respuestas que fallaron y todavía no se confirmaron guardadas.
@@ -132,12 +132,13 @@ export function usePersistenciaOnboarding() {
    * Spec 027: deja la constancia de que aceptó los Términos y de QUÉ versión. A diferencia de {@link aceptarHito}, esto SÍ puede fallar y quien llama debe
    * enterarse (FR-013): aceptar unos términos sin que quede constancia es peor que no avanzar. Un 409 es «los términos cambiaron mientras leías» (FR-012).
    */
-  const aceptarTerminos = useCallback(async (versionId: string | null): Promise<ResultadoDeAceptarTerminos> => {
+  const aceptarTerminos = useCallback(async (versionId: string | null, acuerdo?: onboardingApi.AcuerdoQueSeVio): Promise<ResultadoDeAceptarTerminos> => {
     try {
-      await onboardingApi.aceptarHito('TERMINOS', versionId);
+      await onboardingApi.aceptarHito('TERMINOS', versionId, acuerdo);
       return { ok: true };
     } catch (error) {
-      if (error instanceof ApiError && error.esConflicto) return { ok: false, cambiaron: true };
+      /* Spec 039: el 409 trae qué cambió —los términos, la fecha de inicio (pasó la medianoche) o el cronograma—, y se dice con las palabras del servidor. */
+      if (error instanceof ApiError && error.esConflicto) return { ok: false, cambiaron: true, mensaje: error.message };
       return { ok: false, cambiaron: false };
     }
   }, []);

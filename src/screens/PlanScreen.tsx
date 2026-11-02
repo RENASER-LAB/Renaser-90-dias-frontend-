@@ -151,7 +151,7 @@ export default function PlanScreen() {
   /* El plazo con el que se nombra el objetivo de ESTA persona («90 días», «3 meses», «1 año»); el resto de Plan lo lee del contexto. */
   const plazo = plazoDelObjetivo(resumen?.duracionDias, resumen?.formacion);
   const diaPrograma = resumen?.diaPrograma ?? 0;
-  /* La misma fila compacta de Hoy (2026-11-01): quien no tiene programa («Haz tu programa de 90 días»), no eligió su Día 1 o ya lo eligió y
+  /* La misma fila compacta de Hoy (2026-11-01): quien no tiene programa («Haz tu programa de 90 días»), no empezó su programa o ya lo eligió y
      espera («Tu programa empieza el martes 3 de noviembre») lo ve arriba de Plan. Un solo hook y una sola función pura para las dos
      pantallas (`useFilaDelProgramaPropio`). Para quien ya está en su programa no existe y Plan es el de siempre. */
   const programaPropio = useFilaDelProgramaPropio({
@@ -226,8 +226,8 @@ export default function PlanScreen() {
    */
   const { user } = useAuth();
   /* Sin programa propio andando no hay objetivos que operar. El servidor responde a todo `/rocks/*`: 404 «Participante no encontrado: <id>» a quien
-     no tiene fila (issues #81 y #82) y 403 «Solo un aprendiz opera sus propias rocas» al PERSONAL que tiene la fila pero todavía no eligió su Día 1
-     (#83, `AccesoARocas`); se veía ese texto en rojo en dos tarjetas. Plan muestra entonces su estado vacío con el botón «Elegir mi Día 1». El
+     no tiene fila (issues #81 y #82) y 403 «Solo un aprendiz opera sus propias rocas» al PERSONAL que tiene la fila pero todavía no empezó su programa
+     (#83, `AccesoARocas`); se veía ese texto en rojo en dos tarjetas. Plan muestra entonces su estado vacío con el botón «Empezar mañana». El
      aprendiz con la fila y sin Día 1 sí opera sus rocas (el servidor lo deja): ve Plan como siempre. */
   const sinProgramaPropio = resumen?.inscrito === false || (programaPropio.vista?.tipo === 'elegir' && programaPropio.delPersonal);
   /* La memoria de las lecturas del cierre (hoy y días anteriores) se separa por cuenta Y formación: el cierre de una no es el de la otra (spec 022). */
@@ -548,7 +548,7 @@ export default function PlanScreen() {
       >
         <View style={styles.pantalla}>
           {/* El programa propio, arriba de todo y sin hueco cuando no hay nada que decir (el hook ya sabe si hay fila). Sin programa propio el
-              estado vacío ya trae su botón «Elegir mi Día 1»: la fila solo queda si hubo un fallo al comprobar y hay que reintentar. */}
+              estado vacío ya trae su botón «Empezar mañana»: la fila solo queda si hubo un fallo al comprobar y hay que reintentar. */}
           {programaPropio.visible && (!sinProgramaPropio || programaPropio.error !== null) ? <FilaDelProgramaPropio programa={programaPropio} /> : null}
 
           {sinProgramaPropio ? (

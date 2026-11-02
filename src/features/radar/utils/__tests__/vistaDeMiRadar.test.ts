@@ -28,7 +28,7 @@ describe('vistaDeMiRadar', () => {
     for (const dia of [null, 0, 3, 40]) {
       expect(vistaDeMiRadar({ estado: 'sin-programa' }, dia, AHORA)).toEqual({ tipo: 'sin-programa' });
     }
-    expect(MENSAJE_SIN_PROGRAMA).toBe('Mi Radar empieza en tu día 8. Primero elige tu Día 1.');
+    expect(MENSAJE_SIN_PROGRAMA).toBe('Mi Radar empieza en tu día 8. Primero empieza tu programa.');
   });
 
   it('suspendida y sin permiso: una línea con el motivo, cada una con el suyo', () => {

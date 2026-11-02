@@ -196,7 +196,7 @@ export function disponibilidadDelCambio(
   hoy: string,
 ): DisponibilidadDelCambio {
   if (detalle.inscrito === false || !detalle.startDate) {
-    return { puede: false, motivo: 'Todavía no eligió su Día 1: no hay día del programa que cambiar.' };
+    return { puede: false, motivo: 'Todavía no empezó su programa: no hay día del programa que cambiar.' };
   }
   if (detalle.startDate.slice(0, 10) > hoy) {
     return {

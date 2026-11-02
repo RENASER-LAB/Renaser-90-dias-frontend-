@@ -25,7 +25,7 @@ export function semanaSiguiente(lunes: string): string {
 
 /**
  * ¿Se puede ir a la semana anterior? Solo si se sabe cuál fue la primera de su programa y esta es posterior. Sin ese
- * dato (todavía no eligió su Día 1) no hay nada antes que ver, y la app no inventa un tope.
+ * dato (todavía no empezó su programa) no hay nada antes que ver, y la app no inventa un tope.
  */
 export function puedeIrALaAnterior(lunes: string | null, primeraSemana: string | null): boolean {
   return lunes !== null && primeraSemana !== null && lunes > primeraSemana;

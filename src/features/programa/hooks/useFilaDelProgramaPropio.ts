@@ -11,7 +11,7 @@ import { useDiaUnoPorElegir } from './useDiaUnoPorElegir';
 
 /**
  * Todo lo que necesita la fila compacta del programa propio, en un solo hook para Hoy y para Plan (2026-11-01): quién puede tener un
- * programa opcional, si ya eligió su Día 1, y qué dice la fila (`vistaDeLaFilaDelPrograma`, pura).
+ * programa opcional, si ya activó su programa, y qué dice la fila (`vistaDeLaFilaDelPrograma`, pura).
  *
  * Es lo que `EntradaAlProgramaPropio` hacía dentro de Hoy, sacado a un hook para que Hoy sepa —antes de dibujar— si hay fila: un
  * bloque vacío igual deja sus dos separaciones de 28 y eso era el hueco grande entre la frase y el fénix.

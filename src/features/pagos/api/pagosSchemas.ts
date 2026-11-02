@@ -89,8 +89,8 @@ function monto(valor: string | number): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-/** Una cuota que no se entiende (sin monto, sin id) se pierde ELLA, no la lista. */
-function leerCuota(cruda: unknown): CuotaDePago | null {
+/** Una cuota que no se entiende (sin monto, sin id) se pierde ELLA, no la lista. También la lee el cronograma que se firma con los términos (spec 039). */
+export function leerCuota(cruda: unknown): CuotaDePago | null {
   const leida = cuotaCrudaSchema.safeParse(cruda);
   if (!leida.success) return null;
   const importe = monto(leida.data.amount);

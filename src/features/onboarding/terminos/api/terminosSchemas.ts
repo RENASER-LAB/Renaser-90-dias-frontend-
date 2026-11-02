@@ -23,6 +23,34 @@ export const versionDeTerminosSchema = z
   })
   .passthrough();
 
+/**
+ * El cronograma de pagos que se firma junto con los términos (spec 039): moneda, cuotas con la forma de «Mi ingreso» (`dueDate`, `amount`, `status`; cada una se lee
+ * con `leerCuota`, y una que no se entiende se pierde ELLA) y la huella que la app devuelve al firmar. Sin huella no hay nada que firmar: el cronograma se pierde.
+ */
+export const cronogramaDelAcuerdoSchema = z
+  .object({ currency: z.string().nullish(), installments: z.array(z.unknown()).catch([]), fingerprint: z.string().min(1) })
+  .passthrough();
+
+/**
+ * «Mi aceptación» del Acuerdo de transformación (spec 039), llena por el servidor: el nombre completo, el programa y las fechas (nulas si no hay un programa que
+ * prometer). `schedule` solo viene en el primer ingreso de quien tiene un cronograma por firmar.
+ */
+export const acuerdoSchema = z
+  .object({
+    participantName: z.string().nullish(),
+    program: z.string().nullish(),
+    startDate: z.string().nullish(),
+    endDate: z.string().nullish(),
+    started: z.boolean().catch(false),
+    schedule: cronogramaDelAcuerdoSchema.nullish().catch(null),
+  })
+  .passthrough();
+
+/** Lo que se le mostró en «Mi aceptación» cuando aceptó (spec 039); ausente en lo aceptado antes. */
+export const acuerdoAceptadoSchema = z
+  .object({ program: z.string().nullish(), startDate: z.string().nullish(), endDate: z.string().nullish(), scheduleSigned: z.boolean().catch(false) })
+  .passthrough();
+
 export const terminosDeMiFormacionSchema = z
   .object({
     formation: z.object({ code: z.string(), name: z.string() }).passthrough(),
@@ -31,12 +59,18 @@ export const terminosDeMiFormacionSchema = z
     blocks: z.boolean().catch(false),
     lastAcceptedNumber: z.number().nullish(),
     changeNote: z.string().nullish(),
+    agreement: acuerdoSchema.nullish().catch(null),
   })
   .passthrough();
 
 /** `signatureUrl`: la firma que dibujó al aceptar (enlace de lectura de 15 minutos); ausente si no quedó firma o es un backend anterior. */
 export const terminosAceptadosSchema = z
-  .object({ version: versionDeTerminosSchema, acceptedAt: z.string(), signatureUrl: z.string().nullish().catch(null) })
+  .object({
+    version: versionDeTerminosSchema,
+    acceptedAt: z.string(),
+    signatureUrl: z.string().nullish().catch(null),
+    agreement: acuerdoAceptadoSchema.nullish().catch(null),
+  })
   .passthrough();
 
 export const resumenDeTerminosSchema = z
@@ -71,9 +105,20 @@ export const quienesAceptaronSchema = z
   .passthrough();
 
 export const constanciaSchema = z
-  .object({ formation: z.string(), number: z.number(), acceptedAt: z.string(), signatureUrl: z.string().nullish() })
+  .object({
+    formation: z.string(),
+    number: z.number(),
+    acceptedAt: z.string(),
+    signatureUrl: z.string().nullish(),
+    program: z.string().nullish(),
+    startDate: z.string().nullish(),
+    endDate: z.string().nullish(),
+    scheduleSigned: z.boolean().catch(false),
+  })
   .passthrough();
 
+export type AcuerdoApi = z.infer<typeof acuerdoSchema>;
+export type AcuerdoAceptadoApi = z.infer<typeof acuerdoAceptadoSchema>;
 export type VersionDeTerminosApi = z.infer<typeof versionDeTerminosSchema>;
 export type TerminosDeMiFormacionApi = z.infer<typeof terminosDeMiFormacionSchema>;
 export type TerminosAceptadosApi = z.infer<typeof terminosAceptadosSchema>;

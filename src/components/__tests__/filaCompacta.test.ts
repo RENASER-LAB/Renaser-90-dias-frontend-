@@ -39,8 +39,8 @@ afterEach(() => {
 describe('FilaCompacta', () => {
   it('con onPress es un botón de 72 como mínimo, con título, línea y chevron', () => {
     const alPulsar = jest.fn();
-    montar({ titulo: 'Haz tu programa de 90 días', linea: 'Elige tu Día 1', onPress: alPulsar });
-    expect(textos()).toEqual(['Haz tu programa de 90 días', 'Elige tu Día 1']);
+    montar({ titulo: 'Haz tu programa de 90 días', linea: 'Empieza mañana', onPress: alPulsar });
+    expect(textos()).toEqual(['Haz tu programa de 90 días', 'Empieza mañana']);
     expect(iconos()).toEqual(['calendarRange', 'chevron']);
     expect(StyleSheet.flatten(botones()[0].props.style).minHeight).toBe(72);
     act(() => botones()[0].props.onPress());

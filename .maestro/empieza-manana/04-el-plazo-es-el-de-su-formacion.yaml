@@ -1,0 +1,31 @@
+# 04 — La línea del plazo es el de la formación de la persona: «Son tus 90 días.» (Escuela y Certificación), «Son tus 3 meses.» (Diplomado de 3 meses)
+# y «Es tu año.» (Diplomado de 1 año). Se corre de a uno con PLAZO (spec 036). ESCRITO Y SIN CORRER.
+# Precondición: backend con la spec 036; un aprendiz SIN su programa activado y con Términos aceptados en la formación que corresponda
+# (`PLAZO` = 90-dias | 3-meses | 1-anio). Solo mira, pero llegar a la pantalla ya ACTIVA el programa (ajuste del 2026-11-02): para repetirlo con la misma cuenta hay
+# que dejar su `programa_activado_en` en NULL. Tampoco toca «Entendido».
+# cuenta: aprendiz
+appId: com.renaser.app
+---
+- extendedWaitUntil:
+    visible: "Tu programa empieza mañana"
+    timeout: 60000
+# La línea del plazo aparece con la fecha, cuando el servidor respondió a la activación.
+- extendedWaitUntil:
+    visible: "(Son tus|Es tu) .*"
+    timeout: 30000
+- runFlow:
+    when:
+      true: ${PLAZO == '90-dias'}
+    commands:
+      - assertVisible: "Son tus 90 días\\."
+- runFlow:
+    when:
+      true: ${PLAZO == '3-meses'}
+    commands:
+      - assertVisible: "Son tus 3 meses\\."
+- runFlow:
+    when:
+      true: ${PLAZO == '1-anio'}
+    commands:
+      - assertVisible: "Es tu año\\."
+- takeScreenshot: M04-${PLAZO}

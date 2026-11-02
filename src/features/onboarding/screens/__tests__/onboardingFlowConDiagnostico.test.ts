@@ -5,7 +5,7 @@ import TestRenderer, { act, type ReactTestRenderer } from 'react-test-renderer';
 
 /**
  * Qué ficha ve cada persona al entrar (spec 026): la estándar de siempre, o el diagnóstico EN LUGAR de ella. Después, en los dos
- * casos, siguen Términos y «Elige tu Día 1». Las pantallas de cada paso se reemplazan por una etiqueta: aquí solo se prueba
+ * casos, siguen Términos y «Tu programa empieza mañana». Las pantallas de cada paso se reemplazan por una etiqueta: aquí solo se prueba
  * cuál se elige y cómo se pasa de una a otra.
  */
 
@@ -37,7 +37,7 @@ function mockPantalla(nombre: string) {
 }
 jest.mock('../FichaInicialScreen', () => ({ FichaInicialScreen: mockPantalla('FICHA ESTANDAR') }));
 jest.mock('../TerminosScreen', () => ({ TerminosScreen: mockPantalla('TERMINOS') }));
-jest.mock('../ActivarProgramaScreen', () => ({ ActivarProgramaScreen: mockPantalla('ELEGIR DIA 1') }));
+jest.mock('../ActivarProgramaScreen', () => ({ ActivarProgramaScreen: mockPantalla('EMPIEZA MAÑANA') }));
 jest.mock('../../../diagnostico/screens/DiagnosticoDeLaPersonaScreen', () => ({ DiagnosticoDeLaPersonaScreen: mockPantalla('DIAGNOSTICO') }));
 jest.mock('../../../diagnostico/screens/MiDiagnosticoScreen', () => ({ MiDiagnosticoScreen: mockPantalla('LECTURA DEL DIAGNOSTICO') }));
 
@@ -84,9 +84,30 @@ describe('la ficha estándar no cambia', () => {
     expect(pantallaActual(await montar())).toBe('FICHA ESTANDAR');
   });
 
-  it('con Términos ya aceptados salta a «Elige tu Día 1», como antes', async () => {
+  it('con Términos ya aceptados salta a «Tu programa empieza mañana», como antes, y esa pantalla activa el programa sola', async () => {
     mockObtenerEstado.mockResolvedValue(estado({ termsAcceptedAt: '2026-10-30T10:00:00Z' }));
-    expect(pantallaActual(await montar())).toBe('ELEGIR DIA 1');
+    expect(pantallaActual(await montar())).toBe('EMPIEZA MAÑANA');
+    expect(capturas['EMPIEZA MAÑANA'].activarAlMontar).toBe(true);
+  });
+
+  it('al firmar los Términos llega a «Tu programa empieza mañana» con la activación automática; «Entendido» (onActivated) entra a la app', async () => {
+    const r = await montar();
+    await act(async () => {
+      (capturas['FICHA ESTANDAR'].onComplete as (d: unknown) => void)({ identidad: { nombre: 'Ana' } });
+      await vaciar();
+    });
+    await act(async () => {
+      (capturas['TERMINOS'].onAccept as () => void)();
+      await vaciar();
+    });
+    expect(pantallaActual(r)).toBe('EMPIEZA MAÑANA');
+    expect(capturas['EMPIEZA MAÑANA'].activarAlMontar).toBe(true);
+    expect(mockCompletar).not.toHaveBeenCalled();
+    await act(async () => {
+      (capturas['EMPIEZA MAÑANA'].onActivated as () => void)();
+      await vaciar();
+    });
+    expect(mockCompletar).toHaveBeenCalledTimes(1);
   });
 
   it('sin red se queda en la ficha, como antes', async () => {
@@ -130,7 +151,7 @@ describe('con diagnóstico', () => {
     expect(mockLogout).toHaveBeenCalledTimes(1);
   });
 
-  it('al terminar sigue Términos y luego «Elige tu Día 1»; entonces entra a la app SIN ficha estándar', async () => {
+  it('al terminar sigue Términos y luego «Tu programa empieza mañana»; entonces entra a la app SIN ficha estándar', async () => {
     const r = await montar();
     await act(async () => {
       (capturas['DIAGNOSTICO'].onTerminado as () => void)();
@@ -141,9 +162,9 @@ describe('con diagnóstico', () => {
       (capturas['TERMINOS'].onAccept as () => void)();
       await vaciar();
     });
-    expect(pantallaActual(r)).toBe('ELEGIR DIA 1');
+    expect(pantallaActual(r)).toBe('EMPIEZA MAÑANA');
     await act(async () => {
-      (capturas['ELEGIR DIA 1'].onActivated as () => void)();
+      (capturas['EMPIEZA MAÑANA'].onActivated as () => void)();
       await vaciar();
     });
     // No hay ficha estándar que entregar: el diagnóstico ya está en el servidor.
@@ -156,9 +177,9 @@ describe('con diagnóstico', () => {
     expect(pantallaActual(await montar())).toBe('TERMINOS');
   });
 
-  it('con Términos ya aceptados salta a «Elige tu Día 1» sin tocar el diagnóstico', async () => {
+  it('con Términos ya aceptados salta a «Tu programa empieza mañana» sin tocar el diagnóstico', async () => {
     mockObtenerEstado.mockResolvedValue(estado({ ficha: 'CON_DIAGNOSTICO', termsAcceptedAt: '2026-10-30T10:00:00Z' }));
-    expect(pantallaActual(await montar())).toBe('ELEGIR DIA 1');
+    expect(pantallaActual(await montar())).toBe('EMPIEZA MAÑANA');
     expect(mockEstadoDiagnostico).not.toHaveBeenCalled();
   });
 

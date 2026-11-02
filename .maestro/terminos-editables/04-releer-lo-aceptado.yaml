@@ -1,6 +1,6 @@
 # Yo → Ajustes → Mi onboarding → «Términos y condiciones»: la persona relee, en solo lectura, la versión que aceptó, con su día y su firma (spec 027, historia 6, P3). ESCRITO Y SIN CORRER.
 # cuenta: aprendiz  (de la Escuela, con los términos ya aceptados)
-# Precondición: la cuenta aceptó la versión 1. Si Administración publicó una versión 2 SIN pedir aceptar de nuevo, la vista sigue mostrando la 1.
+# Precondición: la cuenta aceptó la versión 1 (o la 2, el Acuerdo de transformación de la spec 039, que además dice el programa y las fechas que firmó). Si Administración publicó una versión nueva SIN pedir aceptar de nuevo, la vista sigue mostrando la que aceptó.
 appId: com.renaser.app
 ---
 - runFlow: ../comun/despejar-capas.yaml
@@ -14,7 +14,7 @@ appId: com.renaser.app
     element: "Términos y condiciones.*"
 - takeScreenshot: T04a-fila-de-terminos
 - tapOn: "Términos y condiciones.*"
-- assertVisible: "Versión 1"
+- assertVisible: "Versión [0-9]+"
 - assertVisible: "Aceptada el .*"
 - assertVisible: "Términos y condiciones"
 - takeScreenshot: T04b-lo-que-acepte

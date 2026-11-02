@@ -30,7 +30,7 @@ export const NOMBRE_ASISTENTE = NOMBRE_ACOMPANANTE;
  * modelo (el panel del asistente) sigue siendo lo opcional.
  */
 
-/** Saludo, apenas el aprendiz eligió su Día 1. `nombre` puede venir vacío. */
+/** Saludo, apenas el aprendiz activó su programa. `nombre` puede venir vacío. */
 export function saludoDeBienvenida(nombre?: string | null): { titulo: string; parrafos: string[] } {
   const primerNombre = (nombre || '').trim().split(/\s+/)[0];
   return {

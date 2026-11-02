@@ -9,7 +9,7 @@ import { fuentes } from '../../theme/fuentes';
 /**
  * El botón dorado, en tipo oración y sin espaciado en TODA la app (decisión del dueño, 2026-11-02).
  *
- * Convivían dos estilos de `GoldButton`: el nuevo («Empezar ahora ›», «Elegir mi Día 1», «Guardar hora»: 16 px, sin espaciado) y el
+ * Convivían dos estilos de `GoldButton`: el nuevo («Empezar ahora ›», «Empezar mañana», «Guardar hora»: 16 px, sin espaciado) y el
  * viejo, el que traía el componente por defecto —versales de 11 px con `letterSpacing` 2,2 (o 1,6 en el contorno)—. El dueño eligió
  * unificar todos al estilo nuevo. El estilo vive en UN lugar, `GoldButton`; el texto lo escribe quien lo usa, en tipo oración
  * (eso lo vigila `botonesDoradosSinMayusculas`).

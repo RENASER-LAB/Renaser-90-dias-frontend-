@@ -452,7 +452,7 @@ export default function YoScreen() {
   const configMiRadar = configDeMiRadar(lecturaDeMiRadar.lectura);
   const diaDelPrograma = resumen?.diaPrograma;
   const enMarchaMiRadar = miRadarEnMarcha(lecturaDeMiRadar.lectura, diaDelPrograma);
-  /* El personal que todavía no eligió su Día 1 (spec 019): Mi Radar es para todos los que hacen los 90 días, así que ve la fila igual y,
+  /* El personal que todavía no empezó su programa (spec 019): Mi Radar es para todos los que hacen los 90 días, así que ve la fila igual y,
      al tocarla, la pantalla le dice por qué todavía no y le deja elegirlo. La fila SOLO aparece cuando el servidor lo confirmó (403
      `PROGRAMA_NO_ACTIVADO`): con un backend anterior —sin ese motivo— no hay fila (FR-010). Quien tiene programa o es aprendiz no cambia. */
   const veMiRadar = veLaFilaDeMiRadar(lecturaDeMiRadar.lectura, diaDelPrograma);
@@ -857,7 +857,7 @@ export default function YoScreen() {
           </View>
 
           {/* El programa propio (D-260): la entrada que queda después de «Ahora no» en Hoy (antes la
-              invitación desaparecía para siempre) y «Elegir mi Día 1» para quien tiene la fila sin
+              invitación desaparecía para siempre) y «Empezar mañana» para quien tiene la fila sin
               elegir. Solo la ve el personal: para el aprendiz no hay nada que mostrar acá. */}
           <EntradaAlProgramaPropio
             lugar="yo"

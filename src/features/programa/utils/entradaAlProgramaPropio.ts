@@ -1,11 +1,11 @@
 /**
  * Qué entrada al programa propio se ofrece (D-260). Pura, para probarla sin montar pantallas.
  *
- * - `ELEGIR_DIA_UNO`: la persona TIENE fila en el programa pero nunca eligió su Día 1 (el servidor
+ * - `ELEGIR_DIA_UNO`: la persona TIENE fila en el programa pero nunca empezó su programa (el servidor
  *   responde `activated: false`). Pasa con el personal que fue aprendiz o al que le crearon la fila
  *   por otro camino: el onboarding, único lugar con el selector, no es para él. Vale para cualquier
  *   rol; un aprendiz llega al selector por el onboarding y nunca ve este estado en Hoy ni en Yo.
- * - `ESPERANDO_INICIO` (2026-11-01, issue #72): ya eligió su Día 1 y la fecha todavía no llega. No hay nada que hacer, solo saber
+ * - `ESPERANDO_INICIO` (2026-11-01, issue #72): ya activó su programa y la fecha todavía no llega. No hay nada que hacer, solo saber
  *   cuándo empieza. Lo usa la fila compacta de Hoy y de Plan; la tarjeta de Yo no lo pide.
  * - `EMPEZAR`: no tiene fila y el servidor dice que puede empezar (`canStartProgram`, solo
  *   personal). Es la invitación de siempre.
@@ -23,7 +23,7 @@ export function entradaAlProgramaPropio({
 }: {
   diaUnoPorElegir: boolean;
   puedeEmpezar: boolean;
-  /** Ya eligió su Día 1 y todavía no llega. Opcional: la tarjeta de Yo no lo pregunta. */
+  /** Ya activó su programa y todavía no llega. Opcional: la tarjeta de Yo no lo pregunta. */
   esperandoInicio?: boolean;
 }): EntradaAlProgramaPropio {
   if (diaUnoPorElegir) return 'ELEGIR_DIA_UNO';

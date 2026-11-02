@@ -84,7 +84,7 @@ function acotar(valor: number, minimo: number, maximo: number): number {
 /**
  * Semana del programa (1 a 13) en la que cae HOY, para quien va por `diaPrograma`.
  *
- * El día 0 —todavía no arrancó, o no eligió su Día 1— es la semana 1, como en el servidor: ya está
+ * El día 0 —todavía no arrancó, o no empezó su programa— es la semana 1, como en el servidor: ya está
  * mirando su primera semana, y "semana 0" no significaría nada. Pasado el lunes de la 13 se queda en
  * 13: nunca hay 14.
  */

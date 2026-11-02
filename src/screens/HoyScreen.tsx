@@ -85,7 +85,7 @@ export default function HoyScreen() {
   const programaEnOtraFormacion = useProgramaEnOtraFormacion();
   const { user } = useAuth();
   /* El programa propio (D-260) como una fila compacta (2026-11-01, pedido del dueño), justo debajo de la frase del día: «Haz tu programa de
-     90 días» a quien no tiene fila, «Todavía no elegiste tu Día 1» a quien la tiene sin Día 1. Quién puede tener un programa propio lo
+     90 días» a quien no tiene fila, «Todavía no empezaste tu programa» a quien la tiene sin Día 1. Quién puede tener un programa propio lo
      dice el servidor, no el rol del teléfono (ARF-16); los paneles de rol («Mi grupo», «Mis mentores») no están en Hoy sino en Yo. El hook
      vive aquí y no dentro de la fila para saber, antes de dibujar, si hay algo: un bloque vacío deja igual sus dos separaciones de 28. */
   const programaPropio = useFilaDelProgramaPropio({
@@ -216,7 +216,7 @@ export default function HoyScreen() {
    * > inventado es peor que no mostrarlo. Reportado por el dueño el día que se registró.
    */
   const diaConocido = resumen?.diaPrograma ?? null;
-  /* Sin día de programa (el personal sin programa, quien no eligió su Día 1 o está en el día 0) no hay hábitos de hoy que contar: la tarjeta
+  /* Sin día de programa (el personal sin programa, quien no empezó su programa o está en el día 0) no hay hábitos de hoy que contar: la tarjeta
      decía «0/0» y «Lidera tu energía diaria.», un dato inventado (E2E de las formaciones, 01/11/2026, issue #86). «Mientras no se sabe, no se
      dibuja»: tampoco mientras `/home` carga, para que no aparezca y desaparezca; si `/home` falló y nunca llegó, queda como antes. El hueco no
      queda porque el contenedor separa con `gap`, no con márgenes de cada hijo. */
