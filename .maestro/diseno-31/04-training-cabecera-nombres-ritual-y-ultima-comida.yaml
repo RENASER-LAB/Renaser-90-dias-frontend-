@@ -17,7 +17,8 @@ appId: com.renaser.app
     direction: DOWN
     centerElement: true
     timeout: 30000
-- assertNotVisible: "[0-9:]+, AGUA TIBIA CON LIMÓN.*"
+# Maestro compara sin distinguir mayúsculas: `(?-i)` apaga ese modo para que el título del servidor «AGUA TIBIA…» no coincida con «Agua tibia…».
+- assertNotVisible: "(?-i)[0-9:]+, AGUA TIBIA CON LIMÓN.*"
 - takeScreenshot: T04b-nombre-en-tipo-oracion
 # El ritual: solo texto, sin cámara.
 - scrollUntilVisible:

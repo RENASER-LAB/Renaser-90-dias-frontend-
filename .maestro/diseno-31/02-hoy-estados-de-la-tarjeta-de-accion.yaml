@@ -11,8 +11,9 @@ appId: com.renaser.app
 ---
 - runFlow: ../comun/ya-adentro.yaml
 - tapOn: "HOY"
+# Hoy del 31/10 (versión final): ya no hay cabecera «Día N de 90»; se espera a que cargue la sección del fénix.
 - extendedWaitUntil:
-    visible: "Día .* de 90"
+    visible: "Tu acompañante"
     timeout: 30000
 - runFlow:
     when:

@@ -9,9 +9,12 @@ appId: com.renaser.app
 ---
 - runFlow: ../comun/ya-adentro.yaml
 - tapOn: "HOY"
+# Hoy del 31/10 (versión final): sin la cabecera de fase, día y puntos («Día N de 90»); queda «HOY», la frase, la tarjeta de acción y el fénix.
 - extendedWaitUntil:
-    visible: "Día .* de 90"
+    visible: "Tu acompañante"
     timeout: 30000
+- assertNotVisible: "Día [0-9]+ de 90"
+- assertNotVisible: "Fase [0-9] de 4"
 # Lo que se quitó.
 - assertNotVisible: "Coherencia"
 - assertNotVisible: "Racha"

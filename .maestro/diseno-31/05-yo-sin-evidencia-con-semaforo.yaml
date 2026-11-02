@@ -15,9 +15,11 @@ appId: com.renaser.app
 - assertVisible: "Tu semáforo · últimos 7 días"
 - takeScreenshot: Y05a-yo-con-semaforo
 - tapOn: "Tu semáforo · últimos 7 días"
-- extendedWaitUntil:
-    visible: ".*(Cómo se calcula|Semanas cerradas).*"
-    timeout: 20000
+# El detalle es largo: «Cómo se calcula» y «Semanas cerradas» van al final, se baja hasta ellos.
+- scrollUntilVisible:
+    element: ".*(Cómo se calcula|Semanas cerradas).*"
+    direction: DOWN
+    timeout: 30000
 - takeScreenshot: Y05b-detalle-del-semaforo
 - back
 - extendedWaitUntil:
