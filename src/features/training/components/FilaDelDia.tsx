@@ -240,7 +240,7 @@ export function FilaDelDia({
 
   // La línea de los pasos (el enlace, la barra o «Todavía no vemos pasos hoy») va debajo de la fila, a la altura del nombre: fuera del
   // área táctil de la fila, para que su enlace sea un botón propio y no quede dentro de otro.
-  const conLinea = pasos && pasos.vista.modo !== 'captura' ? (
+  const conLinea = pasos && esHoy && pasos.vista.modo !== 'captura' ? (
     <View>
       {cuerpo}
       <View style={{ paddingLeft: anchoDeLaHora + 10 }}>
