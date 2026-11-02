@@ -1518,6 +1518,57 @@ el correo, junto a «Escribirle». El dueño respondió: «cambia la cabecera a 
 * **Hace falta un APK nuevo** (solo JavaScript).
 
 
+## Cambio por pedido del dueño — 2026-11-02 — «Kilómetros diarios»: los pasos del teléfono llenan los km (spec 037, D-310)
+
+Textual: «cómo hacemos que el celular cuente los pasos, tipo Pokémon GO. Procede.» Maqueta aprobada (opción A, 14 pantallas). Pokémon GO no cuenta
+los pasos él mismo: lee lo que el sistema registra; aquí igual, **sin servicio propio, sin notificación fija y con la app cerrada**. Spec, plan y
+contrato en el backend: `specs/037-pasos-y-km/` (D-310, V161). **Cambio del dueño el mismo día («todos tienen Android 14»): solo Health Connect.** Lo que
+cambia y nada más:
+* **Solo Health Connect, Android 14 o más.** El sistema cuenta los pasos del teléfono en cuanto una app tiene `READ_STEPS`, y los relojes (Samsung,
+  Fitbit, Garmin, Xiaomi/Zepp) escriben en el mismo lugar. **No hay módulo propio, ni Recording API, ni `play-services-fitness`.** Android menor a 14,
+  un teléfono sin Health Connect, Huawei sin Google y el iPhone (web) **se quedan con la captura de siempre, por decisión del dueño**, y no se ofrece
+  instalar nada (`soporteDeSalud`: API 34 y `SDK_AVAILABLE`; en la web `saludConectada.web.ts` dice siempre «no disponible»).
+* **La fila de «Kilómetros diarios»** (`features/pasos/`; solo esa fila y solo HOY): sin conectar, bajo el nombre «Cuenta tus pasos solo ›» (48 de alto);
+  conectado, una barra y «3,2 de 5 km» con la fuente, un círculo apagado, y **sin «Subir»**; con la meta alcanzada, «5,4 km · ¡Meta lista!» y el botón
+  **«Registrar»**, que relee, comprueba la meta y cierra el hábito; sin pasos hoy, «Todavía no vemos pasos hoy» con «Actualizar» y «Subir captura»; sin
+  permiso, «Perdimos tus pasos»; ya cumplido, «5,4 km». La hoja de lo cumplido suma «5,4 km · Health Connect · Galaxy Watch» (o «· Captura»). Todo lo
+  decide `vistaDeKilometros` (pura, con una prueba por estado). La lista de hoy lo comparte con la fila por contexto (`PasosDeLaLista`): ni `ListaDeHoy` ni
+  los días anteriores cambian, y sin `medicion.meta` en la agenda (un backend anterior) la fila es exactamente la de siempre.
+* **Dos hojas** (`HojaDesdeAbajo`, sin animación propia): `HojaConectarPasos` («Cuenta tus km solo»: «Tu teléfono o tu reloj cuentan los pasos. · Renaser solo lee pasos y
+  distancia. · Tu mentor y el ranking ven tu total de km.», «Conectar» / «Ahora no», y la política de privacidad; después «Ya contamos tus pasos»; y en un teléfono
+  sin soporte, «Sube tu captura» con «Subir captura») y `HojaDeKilometros` (el número grande, los pasos «aprox.» si salen de la zancada, la meta, la fuente y la
+  última lectura, «Registrar 5,4 km», «Actualizar» y «Desconectar»; con dos fuentes, «La usamos» / «No se suma» y «Cambiar prioridad»). «Conectar» es el consentimiento
+  que pide Google Play: dice que el mentor y el ranking ven el total.
+* **Cuándo lee** (`usePasosDelDia`): al abrir Training, al volver a primer plano, con «Actualizar» y justo antes de registrar; entre lecturas automáticas, 30 s.
+  Nunca en segundo plano, ni en un día anterior, ni con el hábito cumplido, ni sin conectar o sin permiso. Lee solo `Steps` y `Distance`, solo el día del registro.
+* **Una sola fuente por día, sin doble conteo** (`saludConectada`, `fuentesDeSalud`): se leen los registros del día con su método y su origen; un origen con algo escrito a mano
+  (`recordingMethod` 3) o de método desconocido (0) **no cuenta** (`METODOS_QUE_NO_CUENTAN`; si en un teléfono real los relojes llegaran con 0, es una línea). El número es el
+  AGREGADO de Health Connect pedido solo a los orígenes limpios: Health Connect elimina duplicados con la prioridad que la persona fijó. Km = la distancia agregada o, si no hay,
+  los pasos × 0,75 m («aprox.»). La etiqueta de la fuente sale del paquete (los nombres están escritos de memoria y se confirman en un teléfono real) o del modelo del dispositivo.
+* **Registrar** (`registrarKilometrosAutomaticos`, `POST /habit-tracks/{id}/auto-measurement`): mismas reglas del 17-oct que `/complete`: se compara el id del registro con
+  el de hoy antes de enviar; si el día cambió no se manda nada, se recarga y se avisa «Tu día cambió»; un 409 de día cerrado tampoco se reasigna ni se celebra. Al confirmar sale
+  `habitoCumplido` (alarmas, celebración, puntos del servidor) y la línea «Registramos tus 5,4 km.». Doble toque = un pedido. El servidor valida la meta, los topes y el día, y es idempotente.
+* **Quién más lo ve:** el mentor, la guía, el líder y Administración ven en cada día «5,9 km · Medido por el reloj», los pasos y la distancia, «Galaxy Watch · leído a las 17:10» y
+  **«Por revisar»** si el servidor dejó dudosa la lectura (`LineaDeLaMedicion`, en `AlumnoScreen` y `DiaDeLaPersona`; la captura dice «Captura de la persona»). El **ranking de
+  Kilómetros** no cambia sus cifras: marca **«· auto»** junto al total de quien tiene días leídos por el teléfono y dice «Km de tus pasos o de tu captura.» bajo el selector.
+* **Administración → Hábitos del programa → Kilómetros diarios:** «Meta diaria de km» (`MetaDeKilometrosDelHabito`, `GET/PUT /admin/habits/{id}/measurement-goal`, de 0,5 a 50, por
+  defecto 5; «Volver a la del programa»). Rige desde ya para los registros automáticos; la captura sigue aceptando cualquier km mayor que cero. La sección solo existe si el servidor responde.
+* **Supuestos del equipo, a confirmar con el dueño:** (1) la meta de 5 km; (2) solo el cierre automático exige la meta; (3) el ranking mezcla km de GPS y de pasos (±10–20 %) y los marca «auto»;
+  (4) lo dudoso (más de 30 km, o una zancada fuera de 0,3 a 1,6 m) entra marcado «por revisar» y cuenta; (5) los pasos son de todo el día, no solo caminatas.
+* **Privacidad y Play:** la política (`/privacidad/`) suma una sección de pasos y distancia, para qué se usan, quién los ve y cómo se desconecta. **Antes de publicar** hay que declarar
+  «Activity and fitness» (Steps y Distance) en el formulario «Health apps» de Play Console y actualizar Data safety. La pantalla de permisos de Health Connect abre NUESTRA actividad
+  (`plugins/withHealthConnect.js` escribe `PoliticaDePrivacidadDeSaludActivity.kt`, el filtro `ACTION_SHOW_PERMISSIONS_RATIONALE` y el alias `ViewPermissionUsageActivity`): el plugin de la
+  librería (`app.plugin.js`) **no** se pone en `plugins` porque apunta a `MainActivity`, y tocar el enlace solo abría la app.
+* **Dependencias nuevas, revisadas antes de instalar** (`specs/037-pasos-y-km/research.md` del backend): `react-native-health-connect@4.1.3` **fijada sin `^`** (MIT, publicada por GitHub Actions con
+  proveniencia, sin scripts de instalación, sin dependencias, sin red) y `expo-build-properties@~57.0.22` (Expo). **`minSdk` pasa de 24 a 26** (lo exige `androidx.health.connect:connect-client:1.1.0`):
+  Android 7.x queda fuera. **No se agregó `expo-dev-client`:** cambiaría cómo arrancan `expo start` y `expo run:android` y los flujos de Maestro.
+* **Hace falta un build nativo** (código nativo nuevo: no llega por aire, no sirve Expo Go ni el APK publicado): `eas build --platform android --profile debug-pasos` (el APK de depuración de siempre,
+  que carga el JS desde Metro). Probar en un emulador Android 14+ con Health Connect Toolbox sembrando pasos (`.maestro/pasos-y-km/README.md`). Y **el backend con V161 antes** (contra uno anterior
+  no hay `medicion.meta` y la fila es la de siempre).
+* **Fuera de alcance, para después:** cerrar el hábito sin tocar al abrir la app (B), en segundo plano (C, pide `READ_HEALTH_DATA_IN_BACKGROUND`), iPhone (HealthKit), una fila «Mis pasos» en Yo.
+* **Pruebas:** Jest `fuentesDeSalud`, `lecturaDelDia`, `vistaDeKilometros`, `textosDePasos`, `medicionDeLaFicha`, `pasosApi`, `conexionDeLosPasos`, `usePasosDelDia`, `pasosEnPantalla`,
+  `filaDeKilometrosConPasos`, `pasosEnLaApp` y `healthConnectEnLaApp` (configuración del build). Maestro, escritos y sin correr: `.maestro/pasos-y-km/`.
+
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
 Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel especializado en React Native, Expo y TypeScript. Al crear, refactorizar o modificar cualquier pantalla o componente, debes cumplir OBLIGATORIAMENTE con los siguientes estándares:
