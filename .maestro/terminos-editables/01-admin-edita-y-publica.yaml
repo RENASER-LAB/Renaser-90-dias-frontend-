@@ -43,15 +43,23 @@ appId: com.renaser.app
 - extendedWaitUntil:
     visible: "Cláusula 1"
     timeout: 20000
-# Sin cambios no se publica.
-- assertVisible: "No hay cambios respecto de la versión vigente."
-- tapOn: "Agregar una cláusula"
+# Sin cambios no se publica. El aviso queda al final del editor (23 cláusulas): se baja hasta él.
 - scrollUntilVisible:
-    element: "Cláusula 24"
+    element: "No hay cambios respecto de la versión vigente."
     direction: DOWN
+    timeout: 60000
+- tapOn: "Agregar una cláusula"
+# Cada corrida publica una cláusula más (la base ya va por la 24): el número de la nueva se lee del aviso «La cláusula N está vacía.».
+- assertVisible: "La cláusula [0-9]+ está vacía."
+- copyTextFrom:
+    text: "La cláusula [0-9]+ está vacía."
+- evalScript: ${output.n = maestro.copiedText.replace(/[^0-9]/g, '')}
+# Ya abajo del todo: la cláusula nueva queda arriba del botón; se sube hasta verla entera.
+- scrollUntilVisible:
+    element: "Cláusula ${output.n}"
+    direction: UP
     timeout: 20000
-- assertVisible: "La cláusula 24 está vacía."
-- tapOn: "Texto de la cláusula 24"
+- tapOn: "Texto de la cláusula ${output.n}"
 # Textos cortos y sin tildes: `inputText` con el dev client tarda ~7 a 10 s por letra y pasa de 120 s con más de ~10 (Maestro #3667), y Maestro no escribe bien
 # los caracteres que no son ASCII. La cláusula se escribe en dos comandos.
 - inputText: "Prueba "
