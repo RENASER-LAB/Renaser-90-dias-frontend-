@@ -467,3 +467,30 @@ describe('lo guardado por semana sale marcado (issue #95)', () => {
     expect(mockSemana).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('menos texto: ya no hay párrafos de ayuda', () => {
+  it('«Siempre» no lleva «Toca un día para darle su propia hora…» ni «Solo sáb, todas las semanas…»', async () => {
+    raiz = await montar();
+    await abrir(raiz);
+    expect(textos(raiz)).not.toContain('Toca un día');
+    expect(textos(raiz)).not.toContain('Hoy y lo pasado van con candado');
+    await act(async () => { filaDeDias().onAlternarDia('VIE'); });
+    expect(textos(raiz)).toContain('Solo vie');
+    expect(textos(raiz)).not.toContain('todas las semanas');
+    expect(textos(raiz)).not.toContain('Hoy no cambia');
+  });
+
+  it('«Por semana» no lleva «Solo esta semana: los días que faltan…» ni «Cambiado solo esta semana: sáb»', async () => {
+    mockSemana.mockImplementation(async (_h, lunes) => semanaDe(lunes, { SATURDAY: { customDate: true, customTime: true, triggerTime: '10:00:00' } }));
+    raiz = await montar();
+    await abrir(raiz);
+    await alcance(raiz, 'semana');
+    const todo = textos(raiz);
+    expect(todo).toContain('Semana del 2 al 8 nov');
+    expect(todo).not.toContain('Tu plan de siempre no cambia');
+    expect(todo).not.toContain('los días que faltan');
+    expect(todo).not.toContain('Cambiado solo esta semana:');
+    expect(todo).not.toContain('Toda esta semana');
+    expect(todo).not.toContain('Cargando esta semana');
+  });
+});

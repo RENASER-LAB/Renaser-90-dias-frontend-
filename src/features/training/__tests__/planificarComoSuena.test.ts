@@ -401,12 +401,27 @@ describe('sin días marcados: «Cómo suena» del hábito entero', () => {
     expect(mockAlerta).toHaveBeenCalled();
   });
 
-  it('un hábito sin ningún aviso: la sección se atenúa, no se puede tocar y dice por qué', async () => {
+  it('un hábito sin ningún aviso: la sección NO se dibuja (nada que decidir, nada que explicar)', async () => {
     const r = await montar();
     await abrirElHabito(r);
+    expect(r.root.findAll(n => n.props.testID === 'como-suena')).toHaveLength(1);
     await elegirSinAviso(r);
-    expect(textos(r)).toContain('Este hábito no tiene aviso');
-    for (const clave of ['sonido', 'vibracion', 'voz', 'repetir'] as const) expect(estaDeshabilitada(r, clave)).toBe(true);
+    expect(r.root.findAll(n => n.props.testID === 'como-suena')).toHaveLength(0);
+    expect(textos(r)).not.toContain('Cómo suena');
+    expect(textos(r)).not.toContain('Este hábito no tiene aviso');
+    expect(textos(r)).not.toContain('Elige un aviso en Recordatorio');
+  });
+
+  it('lo que se tocó en «Cómo suena» y después quedó escondido (sin aviso) no se guarda', async () => {
+    const r = await montar();
+    await abrirElHabito(r);
+    await tocarFila(r, 'repetir');
+    await elegirSinAviso(r);
+    expect(r.root.findAll(n => n.props.testID === 'como-suena')).toHaveLength(0);
+    expect(guardar(r).props.label).toBe('Guardar 07:00 · todos los días');
+    await pulsarGuardar(r);
+    expect(mockCambiarHorario).toHaveBeenCalledTimes(1);
+    expect(mockFijarAlarmaGeneral).not.toHaveBeenCalled();
   });
 });
 
@@ -481,13 +496,14 @@ describe('con días marcados: «Cómo suena» de esos días', () => {
     expect(mockFijarAlarmaDia).not.toHaveBeenCalled();
   });
 
-  it('un día sin aviso: la sección se atenúa con «Este día no tiene aviso»', async () => {
+  it('un día sin aviso: la sección no se dibuja', async () => {
     mockSemana.mockResolvedValue(semana({ SATURDAY: { customReminder: true, reminderEnabled: false, reminderMinutesList: [] } }));
     const r = await montar();
     await abrirElHabito(r);
     await marcar('SÁB');
-    expect(textos(r)).toContain('Este día no tiene aviso');
-    expect(estaDeshabilitada(r, 'sonido')).toBe(true);
+    expect(r.root.findAll(n => n.props.testID === 'como-suena')).toHaveLength(0);
+    expect(textos(r)).not.toContain('Este día no tiene aviso');
+    expect(textos(r)).not.toContain('Cómo suena de sáb');
   });
 
   it('el chip de un día con combinación propia lleva el reloj de alarma; los demás, nada', async () => {

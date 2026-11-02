@@ -890,7 +890,7 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
     })
     : null;
   /** «Cómo suena» está a la vista: se ofrece y vale lo que se toque en ella. */
-  const hayComoSuena = comoSuenaDisponible;
+  const hayComoSuena = comoSuenaDisponible && motivoDeAtenuarComoSuena === null;
   /** Se tocó algo que cambia lo que ya estaba (tocar y dejarlo como estaba no cuenta). */
   const cambioLaAlarma = hayComoSuena && hayCambios(combinacionesEnEdicion, alarmaTocada);
   const reglaDeComoSuena = hayComoSuena ? reglaIncumplidaDeLaSeleccion(combinacionesEnEdicion, alarmaTocada) : null;
@@ -2053,16 +2053,6 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
                     )}
                   </View>
                   {filaDeDias}
-                  {/* La ayuda, corta (2026-10-05; eran dos frases a 10,5 px). */}
-                  <Text style={[t.small, styles.ayuda, { color: c.textSoft }]}>
-                    {diasEnEdicion.length === 0
-                      ? (recordatorios.HAY_RECORDATORIOS && avisoPorDiaDisponible
-                        ? (alarmaPorDiaDisponible
-                          ? 'Toca un día para darle su propia hora, aviso y alarma. Hoy y lo pasado van con candado.'
-                          : 'Toca un día para darle su propia hora y aviso. Hoy y lo pasado van con candado.')
-                        : 'Toca un día para darle su propia hora. Hoy y lo pasado van con candado.')
-                      : `Solo ${diasEnFrase(diasEnEdicion)}, todas las semanas. Hoy no cambia.`}
-                  </Text>
                 </>
               )}
               {enSemana && semanaLista && marcablesDeLaSemana.length === 0 && (
@@ -2291,7 +2281,7 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
                     mostrados={mostradosDeComoSuena}
                     mensajes={mensajesEnLinea({ mostrados: mostradosDeComoSuena, regla: reglaDeComoSuena, tonoDeYo })}
                     vozPorElTono={tonoDeYo === 'voz'}
-                    atenuada={motivoDeAtenuarComoSuena}
+                    atenuada={null}
                     alTocar={tocarComoSuena}
                   />
                 ) : null}
