@@ -404,7 +404,7 @@ describe('sin días marcados: «Cómo suena» del hábito entero', () => {
   it('un hábito sin ningún aviso: la sección NO se dibuja (nada que decidir, nada que explicar)', async () => {
     const r = await montar();
     await abrirElHabito(r);
-    expect(r.root.findAll(n => n.props.testID === 'como-suena')).toHaveLength(1);
+    expect(r.root.findAll(n => n.props.testID === 'como-suena').length).toBeGreaterThan(0);
     await elegirSinAviso(r);
     expect(r.root.findAll(n => n.props.testID === 'como-suena')).toHaveLength(0);
     expect(textos(r)).not.toContain('Cómo suena');

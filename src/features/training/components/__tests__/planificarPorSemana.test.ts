@@ -32,9 +32,10 @@ jest.mock('../../../../theme/ThemeContext', () => {
 jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) }));
 jest.mock('../../../auth/context/AuthContext', () => ({ useAuth: () => ({ user: { id: 'u-1' } }) }));
 jest.mock('../../../../components/Alerta', () => ({ Alert: { alert: (titulo: string, mensaje?: string) => mockAlerta(titulo, mensaje) } }));
-jest.mock('../../../../utils/tacto', () => ({
-  tacto: { seleccion: () => mockTacto(), logro: () => undefined, error: () => undefined, mantener: () => undefined },
-}));
+jest.mock('../../../../utils/tacto', () => {
+  const real = jest.requireActual<typeof import('../../../../utils/tacto')>('../../../../utils/tacto');
+  return { tacto: { ...real.tacto, seleccion: () => mockTacto() } };
+});
 jest.mock('../../../habits/components/RuedaHoraPicker', () => ({
   RuedaHoraPicker: (props: { horaInicial: number; minutoInicial: number; onCambiar: (h: number, m: number) => void }) => {
     mockRueda(props);
