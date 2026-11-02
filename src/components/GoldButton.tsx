@@ -28,7 +28,7 @@ export function GoldButton({
   textStyle,
   variant = 'primary',
 }: GoldButtonProps) {
-  const { c, t } = useTheme();
+  const { c } = useTheme();
 
   const isDisabled = disabled || loading;
 
@@ -55,7 +55,7 @@ export function GoldButton({
         ) : (
           <>
             {icon && iconPosition === 'left' && <Icon name={icon} size={16} color={c.goldInk} />}
-            <Text style={[t.micro, styles.outlineText, { color: c.text }, textStyle]}>
+            <Text style={[styles.outlineText, { color: c.text }, textStyle]}>
               {label}
             </Text>
             {icon && iconPosition === 'right' && <Icon name={icon} size={16} color={c.goldInk} />}
@@ -88,7 +88,7 @@ export function GoldButton({
         ) : (
           <>
             {icon && iconPosition === 'left' && <Icon name={icon} size={16} color={c.textSoft} />}
-            <Text style={[t.micro, styles.outlineText, { color: c.textSoft }, textStyle]}>
+            <Text style={[styles.outlineText, { color: c.textSoft }, textStyle]}>
               {label}
             </Text>
             {icon && iconPosition === 'right' && <Icon name={icon} size={16} color={c.textSoft} />}
@@ -125,7 +125,7 @@ export function GoldButton({
         ) : (
           <>
             {icon && iconPosition === 'left' && <Icon name={icon} size={16} color={c.onGold} />}
-            <Text style={[t.micro, styles.primaryText, { color: c.onGold }, textStyle]}>
+            <Text style={[styles.primaryText, { color: c.onGold }, textStyle]}>
               {label}
             </Text>
             {icon && iconPosition === 'right' && <Icon name={icon} size={16} color={c.onGold} />}
@@ -155,12 +155,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 10,
   },
+  /* El texto de TODO botón dorado: tipo oración, 16 px y sin espaciar (decisión del dueño, 2026-11-02:
+     «unificar al estilo nuevo»). Era `t.micro` en versales: 11 px y `letterSpacing` 2,2 / 1,6, que en tipo
+     oración se leía «G u a r d a r». Nada aquí pasa el texto a mayúsculas: el botón dice lo que dice su
+     `label`. `flexShrink: 1` deja que un texto largo baje de renglón en vez de salirse del botón en 360 dp. */
   primaryText: {
     /* `fontFamily` explicito en vez de `fontWeight`: sobre una familia personalizada Android
        sintetiza la negrita y deforma la fuente en lugar de usar el corte real. */
     fontFamily: fuentes.negrita,
-    letterSpacing: 2.2,
-    fontSize: 11,
+    fontSize: 16,
+    letterSpacing: 0,
+    flexShrink: 1,
+    textAlign: 'center',
   },
   outlineBtn: {
     borderWidth: 1,
@@ -175,7 +181,9 @@ const styles = StyleSheet.create({
   },
   outlineText: {
     fontFamily: fuentes.media,
-    letterSpacing: 1.6,
-    fontSize: 11,
+    fontSize: 16,
+    letterSpacing: 0,
+    flexShrink: 1,
+    textAlign: 'center',
   },
 });
