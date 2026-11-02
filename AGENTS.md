@@ -1518,6 +1518,35 @@ el correo, junto a «Escribirle». El dueño respondió: «cambia la cabecera a 
 * **Hace falta un APK nuevo** (solo JavaScript).
 
 
+## Cambio por pedido del dueño — 2026-11-02 — SER al día con la lógica nueva y para las tres formaciones (spec 038)
+
+Textual: «Lo de cumplir hábito, su lógica, y SER también puede hacerlo: ¿sabe de estos cambios? Ahora no pide foto, pero SER debe ayudar con lo que tenemos. Cada
+cambio debe ser de acuerdo a lo de ahora: no ayudará a Plan como antes, ya que no podrá, o saldrá error»; y «SER estará para las 3» (Escuela, Diplomado y
+Certificación). La mayor parte es del **backend** (prompt, herramientas, V160; `specs/038-ser-al-dia/` y D-311 del backend). En la app cambia solo esto, sin
+diseño nuevo ni dependencias:
+* **Un ritual que pide SER se escribe, no se fotografía.** La tarjeta del chat y la hoja del orbe de Hoy (`TarjetaFotoDeHabito`, `AccionDelAcompanante`) leen el pedido
+  con `conPregunta` en un hábito como «ritual: se escribe» (`seRegistraEscribiendoElPedido`, `renasia/utils/pedidosDeFoto`; una acción del día nunca lo es). Su botón dice
+  **«Escribir cómo me siento»** (con lápiz en la hoja del orbe) y abre la MISMA hoja de Training, `RegistroDeRitualConTexto` (evidencia TEXTO y cierre con la respuesta,
+  que emite `habitoCumplido`), montada dentro del panel de SER y en Hoy (`useRitualPorTexto`). Así también las tarjetas que ya estaban en un chat, de cuando se pedía la
+  cámara, pasan a escribir. Registrada, la tarjeta dice «Listo, quedó registrado tu ritual.». Los demás hábitos con foto siguen con «Tomar foto».
+* **Rótulos de esas tarjetas en tipo oración y en segunda persona** («Evidencia de tu hábito», «Evidencia de tu acción», «Registro de tu ritual», «Tomar foto», «Tu día ya
+  cerró…»; antes «EVIDENCIA DE TU HÁBITO», «TOMAR FOTO» y «Su día ya cerró…»).
+* **Cumplir un hábito con SER hace lo mismo que cumplirlo en Training (issue #33).** `POST /renasia/propuestas/{id}/confirmar` devuelve, si la propuesta cumplió un hábito
+  (Despertar, Dormir, Última comida, un opcional…), `habitoCumplido {registroId, habitoId, fecha, puntos}`, y `confirmarPropuestaRenasia` emite `habitoCumplido` con ese dato
+  **antes** de avisar a Training y a Hoy que recarguen: se apagan las alarmas de ese hábito que le quedaban a ese día (`atenderAlCumplirUnHabito` → `alCumplirElHabito`),
+  sale la celebración con sus puntos y se refresca el semáforo y el fénix. El campo es opcional y tolerante: un backend anterior, una propuesta que no cumple un hábito o un
+  dato mal formado no emiten nada. **Límites aceptados:** la Pastilla, la Audioterapia y la Clase por SER siguen sin avisar (cierran por su propio camino), y una respuesta
+  repetida (doble toque) trae solo el texto.
+* **«Última comida del día» lleva el círculo en todos los entornos** porque el backend (V160) la deja con evidencia opcional; la app no cambió (ya decidía por el dato).
+* **Política de privacidad (`public/privacidad/index.html`)**: declara que el diagnóstico inicial completo (ingresos, emociones, situación personal) llega al proveedor de IA
+  para responderte, que la memoria del acompañante no guarda dinero personal y que SER no lee los pagos; ya no promete el Mapa ni fija «90 días». Prueba: `paginaPoliticaDePrivacidad`.
+* **Pruebas:** Jest `ritualPorSer`, `propuestaCumpleUnHabito`, `tarjetaDelRitualPorSer`, `useRitualPorTexto`, `ritualPorSerEnLasPantallas` y la de la política de privacidad.
+  Maestro, escrito y sin correr: `.maestro/ser-al-dia/`.
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire) y **el backend con la spec 038 antes** (V160 y `habitoCumplido`). Sin él, los rituales
+  por SER siguen abriendo el registro por texto, pero cumplir con SER no apaga alarmas.
+* **Para cuando se integren 036 y 037:** el día 0 («tu programa empieza mañana») y los km con pasos conectados (SER no pide foto y manda al «Registrar» de la fila) se
+  programan al integrarlas; ver `specs/038-ser-al-dia/` del backend.
+
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
 Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel especializado en React Native, Expo y TypeScript. Al crear, refactorizar o modificar cualquier pantalla o componente, debes cumplir OBLIGATORIAMENTE con los siguientes estándares:
