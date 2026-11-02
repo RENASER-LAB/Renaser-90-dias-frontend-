@@ -29,8 +29,13 @@ export function pideReleerAlCerrarElChat(anterior: string | null, actual: string
  */
 export function conLaFotoDeLaLista(abierta: ChatConversation, lista: readonly ChatConversation[]): ChatConversation {
   const enLaLista = lista.find(conversacion => conversacion.id === abierta.id);
-  if (!enLaLista || (enLaLista.fotoPath ?? null) === (abierta.fotoPath ?? null)) return abierta;
-  return { ...abierta, fotoPath: enLaLista.fotoPath ?? null };
+  if (
+    !enLaLista ||
+    ((enLaLista.fotoPath ?? null) === (abierta.fotoPath ?? null) && (enLaLista.fotoPropia ?? null) === (abierta.fotoPropia ?? null))
+  ) {
+    return abierta;
+  }
+  return { ...abierta, fotoPath: enLaLista.fotoPath ?? null, fotoPropia: enLaLista.fotoPropia ?? null };
 }
 
 /**
@@ -54,4 +59,14 @@ export function fusionarConLoQueHabia(
     if (!previa || previa.messages.length === 0 || nueva.messages.length > 0) return nueva;
     return refinarTituloConMensajes({ ...nueva, messages: previa.messages }, previa.messages);
   });
+}
+
+/**
+ * ¿La foto del grupo es la PROPIA (la que eligió su mentor o Administración, D-212)? De eso depende ofrecer «Volver a la foto de Renaser».
+ * Desde la spec 035 `fotoPath` también llega cuando el grupo usa la imagen de su formación, así que ya no alcanza con que exista: el servidor dice
+ * `ownPhoto`. Con un backend anterior (sin ese campo) `fotoPath` solo existe cuando la foto es propia.
+ */
+export function grupoTieneFotoPropia(grupo: Pick<ChatConversation, 'fotoPath' | 'fotoPropia'>): boolean {
+  if (typeof grupo.fotoPropia === 'boolean') return grupo.fotoPropia && !!grupo.fotoPath?.trim();
+  return !!grupo.fotoPath?.trim();
 }

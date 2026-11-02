@@ -1,0 +1,39 @@
+# Administración → Formaciones → Diplomado → «Imagen de la formación» (spec 035). ESCRITO Y SIN CORRER.
+# cuenta: admin  (Administración o Alquimista)
+# Precondición: backend con V159 y almacenamiento de marcador (local): la imagen no se puede subir; la sección dice cómo se ve hoy.
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "YO"
+- scrollUntilVisible:
+    element: "Administración"
+    direction: DOWN
+    timeout: 40000
+- tapOn: "Administración"
+- scrollUntilVisible:
+    element: "Formaciones"
+    direction: DOWN
+    timeout: 40000
+- tapOn: "Formaciones"
+- tapOn: "Diplomado Renaser.*"
+- scrollUntilVisible:
+    element: "Imagen de la formación"
+    direction: DOWN
+    timeout: 40000
+# Las dos vistas del chat y de quién es la imagen que se ve.
+- assertVisible: "Comunidad"
+- assertVisible: "Grupos"
+- assertVisible: "Usa la imagen de siempre.*"
+- assertVisible: "Cambiar la imagen"
+- takeScreenshot: I02a-imagen-del-diplomado
+# Sin almacenamiento de verdad el botón está apagado y se dice por qué.
+- assertVisible: ".*no tiene dónde guardar imágenes.*"
+- takeScreenshot: I02b-sin-almacenamiento
+# La Escuela tiene su propia sección, con la misma forma.
+- back
+- tapOn: "Escuela Renaser.*"
+- scrollUntilVisible:
+    element: "Imagen de la formación"
+    direction: DOWN
+    timeout: 40000
+- assertVisible: "Usa la imagen de siempre."

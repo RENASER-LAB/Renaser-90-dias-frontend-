@@ -14,7 +14,12 @@ const RUTA_DE_RICARDO = '/api/v1/chat/conversations/g-1/miembros/u-ricardo/foto'
 describe('fotoDeLaConversacion', () => {
   it('la comunidad vuelve al fénix (D-206: la plantilla era solo para el grupo y el soporte)', () => {
     expect(fotoDeLaConversacion('global')).toBe('fenix');
-    expect(fotoDeLaConversacion('global', RUTA_DEL_SOPORTE)).toBe('fenix');
+    expect(fotoDeLaConversacion('global', null)).toBe('fenix');
+    expect(fotoDeLaConversacion('global', '  ')).toBe('fenix');
+  });
+
+  it('spec 035: la comunidad cuya formación tiene imagen lleva la del servidor (con el fénix debajo)', () => {
+    expect(fotoDeLaConversacion('global', '/api/v1/chat/conversations/c-1/foto?v=1790000000000')).toBe('foto-del-servidor');
   });
 
   it('el grupo lleva la tarjeta sin nombre, salvo que tenga foto propia (D-212)', () => {

@@ -18,7 +18,12 @@ export type FotoDeConversacion = 'persona' | 'foto-del-servidor' | 'tarjeta-sin-
  * - **Grupo:** su foto propia si tiene (D-212: la eligen el administrador o su mentor, y el servidor
  *   manda la ruta con `?v=`); si no, la tarjeta sin nombre (8971acf).
  * - **Comunidad (`global`):** el fénix, como antes de 8971acf (D-206: «solo afecta esos 2 primeros»,
- *   el grupo y el soporte).
+ *   el grupo y el soporte)… salvo que su formación tenga imagen propia (spec 035): el servidor manda su
+ *   ruta en `fotoPath` y esa es la foto, con el fénix debajo mientras carga o si falla.
+ *
+ * > **Spec 035.** `fotoPath` ahora también llega en la comunidad y en un grupo sin foto propia, cuando su
+ * > formación tiene imagen: es la misma ruta y se pide igual. Sin imagen de formación no llega y todo
+ * > queda como antes (con un backend anterior, también).
  *
  * > **Corregido 2026-09-27 (D-212).** El grupo era siempre la tarjeta sin nombre, y el valor para la
  * > foto que sirve el backend se llamaba `tarjeta-con-nombre` (solo existía la del soporte).
@@ -28,7 +33,7 @@ export function fotoDeLaConversacion(tipo: TipoDeInfo, fotoPath?: string | null)
     case 'direct':
       return 'persona';
     case 'global':
-      return 'fenix';
+      return fotoPath?.trim() ? 'foto-del-servidor' : 'fenix';
     default:
       return fotoPath?.trim() ? 'foto-del-servidor' : 'tarjeta-sin-nombre';
   }

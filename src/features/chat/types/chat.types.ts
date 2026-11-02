@@ -74,6 +74,8 @@ export interface WireConversacion {
    * pide CON la sesión (`X-Auth-Token`). `null` o ausente en lo demás, y en un backend anterior.
    */
   photoPath?: string | null;
+  /** Spec 035: solo en un GRUPO, si la foto de `photoPath` es la propia del grupo (`true`) o la de su formación (`false`). Ausente con un backend anterior. */
+  ownPhoto?: boolean | null;
   /** Solo en un SOPORTE (D-244 del backend, 2026-10-02): el aprendiz de ese chat. */
   supportTraineeId?: string | null;
   /** Spec 024: el código de la formación de la conversación. Ausente con un backend anterior. */

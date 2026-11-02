@@ -7,6 +7,8 @@ import { BotonSecundario, TituloDeSeccion } from '../../../components/Legible';
 import { useSystemBackHandler } from '../../../hooks/useSystemBackHandler';
 import { useResponsive } from '../../../theme/responsive';
 import { useTheme } from '../../../theme/ThemeContext';
+import { ControlDeFormacion } from '../../formaciones/components/ControlDeFormacion';
+import { FORMACION_POR_DEFECTO, type CodigoDeFormacion } from '../../formaciones/types/formaciones.types';
 import { ESPACIO_PARA_LANZADOR } from '../../renasia/components/RenasiaLauncher';
 import { CabeceraAdmin } from '../components/CabeceraAdmin';
 import { MensajeDeBienvenida } from '../components/MensajeDeBienvenida';
@@ -15,8 +17,10 @@ import { useBienvenidaAdmin } from '../hooks/useBienvenidaAdmin';
 import {
   AVISO_APAGADA,
   NOMBRE_DE_EJEMPLO,
+  SERVIDOR_SIN_BIENVENIDA_POR_FORMACION,
   SIN_PERMISO,
   acotarNombreDeEjemplo,
+  bienvenidaEsDe,
 } from '../utils/bienvenida';
 import { entornoDeLaPlataforma } from '../utils/tarjetaDeMuestra';
 import { useOcultarBarraAlDesplazar } from '../../../navigation/barraAlDesplazar/BarraInferior';
@@ -24,6 +28,10 @@ import { useOcultarBarraAlDesplazar } from '../../../navigation/barraAlDesplazar
 /**
  * La bienvenida de quien entra al programa, editable por Administración y Alquimista (pedido del
  * dueño del 27/09; backend D-210): la portada de la tarjeta y los tres mensajes.
+ *
+ * **Una bienvenida por formación** (spec 035, D-308): arriba, el control «Escuela · Diplomado · Certificación» elige de cuál. Todo lo de abajo
+ * —la tarjeta, los mensajes, sus estados y «volver al original»— es de la elegida. Con un servidor que todavía no maneja formaciones
+ * solo se puede editar la Escuela (`bienvenidaEsDe`): lo de otra formación no se ve ni se edita con la respuesta de la Escuela.
  *
  * Arriba, un nombre de ejemplo que usan las dos vistas previas (la tarjeta la dibuja el servidor con
  * ese nombre; los mensajes se muestran con los marcadores reemplazados). Después la tarjeta y los
@@ -36,7 +44,9 @@ export function BienvenidaAdminScreen({ onVolver }: { onVolver: () => void }) {
   const barraAlDesplazar = useOcultarBarraAlDesplazar();
   const { c, t } = useTheme();
   const { horizontalPadding, contentMaxWidth } = useResponsive();
-  const { bienvenida, cargando, fallo, recargar, actualizar } = useBienvenidaAdmin();
+  const [formacion, setFormacion] = useState<CodigoDeFormacion>(FORMACION_POR_DEFECTO);
+  const { bienvenida, cargando, fallo, recargar, actualizar } = useBienvenidaAdmin(formacion);
+  const delServidor = bienvenida ? bienvenidaEsDe(bienvenida, formacion) : true;
   const [nombre, setNombre] = useState(NOMBRE_DE_EJEMPLO);
   // Uno por pantalla: la vista previa de la tarjeta lo usa para convertir la imagen y liberarla.
   const entorno = useMemo(() => entornoDeLaPlataforma(), []);
@@ -50,7 +60,7 @@ export function BienvenidaAdminScreen({ onVolver }: { onVolver: () => void }) {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
-      <CabeceraAdmin titulo="Bienvenida" subtitulo="La tarjeta y los mensajes de quien entra" onVolver={onVolver} />
+      <CabeceraAdmin titulo="Bienvenida" subtitulo="La tarjeta y los mensajes de cada formación" onVolver={onVolver} />
       <ScrollView
         {...barraAlDesplazar}
         style={{ flex: 1 }}
@@ -65,6 +75,8 @@ export function BienvenidaAdminScreen({ onVolver }: { onVolver: () => void }) {
           gap: 22,
         }}
       >
+        <ControlDeFormacion valor={formacion} onCambiar={setFormacion} accessibilityLabel="Formación de la bienvenida" />
+
         {cargando && !bienvenida ? <Text style={cuerpo}>Cargando la bienvenida…</Text> : null}
 
         {!cargando && fallo && !bienvenida ? (
@@ -80,7 +92,15 @@ export function BienvenidaAdminScreen({ onVolver }: { onVolver: () => void }) {
           </View>
         ) : null}
 
-        {bienvenida ? (
+        {bienvenida && !delServidor ? (
+          <View style={[estilos.aviso, { borderColor: c.borderStrong, backgroundColor: c.goldWash }]}>
+            <Text style={[t.body, { color: c.textStrong, fontSize: 16, lineHeight: 23 }]}>
+              {SERVIDOR_SIN_BIENVENIDA_POR_FORMACION}
+            </Text>
+          </View>
+        ) : null}
+
+        {bienvenida && delServidor ? (
           <>
             {!bienvenida.activa ? (
               <View style={[estilos.aviso, { borderColor: c.borderStrong, backgroundColor: c.goldWash }]}>
@@ -107,7 +127,14 @@ export function BienvenidaAdminScreen({ onVolver }: { onVolver: () => void }) {
               <Text style={cuerpo}>Se usa para ver cómo quedan la tarjeta y los mensajes con un nombre.</Text>
             </View>
 
-            <PortadaDeBienvenida portada={bienvenida.portada} nombre={nombre} entorno={entorno} onCambio={actualizar} />
+            <PortadaDeBienvenida
+              key={`portada-${formacion}`}
+              portada={bienvenida.portada}
+              nombre={nombre}
+              entorno={entorno}
+              onCambio={actualizar}
+              formacion={formacion}
+            />
 
             <View style={{ gap: 12 }}>
               <TituloDeSeccion detalle="Los que recibe cada persona al entrar. Donde dice {nombre} va su nombre.">
@@ -115,7 +142,8 @@ export function BienvenidaAdminScreen({ onVolver }: { onVolver: () => void }) {
               </TituloDeSeccion>
               {bienvenida.textos.map(texto => (
                 <MensajeDeBienvenida
-                  key={texto.clave}
+                  key={`${formacion}-${texto.clave}`}
+                  formacion={formacion}
                   texto={texto}
                   largoMaximo={bienvenida.largoMaximo}
                   nombre={nombre}

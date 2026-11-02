@@ -38,6 +38,8 @@ export const textoDeBienvenidaSchema = z
 export const portadaDeBienvenidaSchema = z
   .object({
     cambiada: z.boolean(),
+    /** Spec 035: `true` si la formación no tiene portada propia y usa la vigente de la Escuela. Ausente con un backend anterior. */
+    heredada: z.boolean().nullish(),
     /** `false` si el servidor no guarda imágenes (almacenamiento de marcador, en local). */
     sePuedeCambiar: z.boolean(),
     ultimoCambio: ultimoCambioSchema.nullish(),
@@ -46,7 +48,11 @@ export const portadaDeBienvenidaSchema = z
 
 export const bienvenidaSchema = z
   .object({
-    /** Si las bienvenidas automáticas están prendidas (`BIENVENIDA_ACTIVA`). */
+    /**
+     * Spec 035: el código de la formación de esta bienvenida. Ausente con un backend anterior, que solo conoce la bienvenida de la Escuela:
+     * la pantalla no deja editar otra formación con una respuesta que no dice de cuál es (`bienvenidaEsDe`).
+     */
+    formation: z.string().nullish(),    /** Si las bienvenidas automáticas están prendidas (`BIENVENIDA_ACTIVA`). */
     activa: z.boolean(),
     largoMaximo: z.number(),
     textos: z.array(textoDeBienvenidaSchema),

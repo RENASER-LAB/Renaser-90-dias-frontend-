@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { getTokenSesion, notificarSesionVencida } from '../../../services/http/apiClient';
+import { FORMACION_POR_DEFECTO, type CodigoDeFormacion } from '../../formaciones/types/formaciones.types';
 import { rutaDeLaTarjetaDeMuestra } from '../api/bienvenidaApi';
 import { nombreParaLaMuestra } from '../utils/bienvenida';
 import { traerTarjetaDeMuestra, type EntornoDeLaTarjeta } from '../utils/tarjetaDeMuestra';
@@ -13,12 +14,18 @@ const DEMORA_AL_ESCRIBIR_MS = 600;
  *
  * - La primera se pide enseguida; al escribir el nombre, un momento después de la última letra, para
  *   no dibujar una tarjeta por letra.
+ * - Es la tarjeta de UNA formación (spec 035): al cambiar de formación se pide la suya.
  * - `version` se incrementa cuando cambia la portada (usar una nueva o volver a la original): la ruta
  *   es la misma y el servidor la manda con `no-store`, así que hay que volver a pedirla.
  * - Mientras llega la nueva queda la anterior, sin parpadeo. El object URL de web se libera cuando se
  *   reemplaza y al salir de la pantalla.
  */
-export function useTarjetaDeMuestra(nombre: string, version: number, entorno: EntornoDeLaTarjeta) {
+export function useTarjetaDeMuestra(
+  nombre: string,
+  version: number,
+  entorno: EntornoDeLaTarjeta,
+  formacion: CodigoDeFormacion = FORMACION_POR_DEFECTO,
+) {
   const [uri, setUri] = useState<string | null>(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -33,7 +40,7 @@ export function useTarjetaDeMuestra(nombre: string, version: number, entorno: En
     const demora = cambioElNombre ? DEMORA_AL_ESCRIBIR_MS : 0;
     nombrePedido.current = nombre;
     const temporizador = setTimeout(() => {
-      void traerTarjetaDeMuestra(rutaDeLaTarjetaDeMuestra(nombreParaLaMuestra(nombre)), getTokenSesion(), entorno).then(
+      void traerTarjetaDeMuestra(rutaDeLaTarjetaDeMuestra(nombreParaLaMuestra(nombre), null, formacion), getTokenSesion(), entorno).then(
         resultado => {
           if (!vigente) {
             if (resultado.ok) entorno.liberar(resultado.uri);
@@ -54,7 +61,7 @@ export function useTarjetaDeMuestra(nombre: string, version: number, entorno: En
       vigente = false;
       clearTimeout(temporizador);
     };
-  }, [nombre, version, entorno]);
+  }, [nombre, version, entorno, formacion]);
 
   // Al reemplazarse (y al salir), se libera la anterior: en web es un object URL que ocupa memoria.
   useEffect(() => {

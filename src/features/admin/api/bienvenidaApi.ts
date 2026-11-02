@@ -1,4 +1,5 @@
 import { apiFetch } from '../../../services/http/apiClient';
+import { FORMACION_POR_DEFECTO, type CodigoDeFormacion } from '../../formaciones/types/formaciones.types';
 import { validarRespuesta } from '../../mentor/api/mentorSchemas';
 import {
   bienvenidaSchema,
@@ -16,24 +17,47 @@ import {
  */
 const BASE = '/api/v1/admin/bienvenida';
 
-export async function leerBienvenida(): Promise<BienvenidaApi> {
-  return validarRespuesta<BienvenidaApi>(bienvenidaSchema, await apiFetch<unknown>(BASE), `GET ${BASE}`);
+/**
+ * La bienvenida es de CADA formación (spec 035, D-308): `?formation=` elige cuál. Sin él el servidor entiende la Escuela, así que para la
+ * Escuela no se manda nada: el pedido es el de siempre, el mismo que entiende un backend anterior. Un código que el servidor no conoce es un 400.
+ */
+export function conFormacion(ruta: string, formacion: CodigoDeFormacion = FORMACION_POR_DEFECTO): string {
+  if (formacion === FORMACION_POR_DEFECTO) return ruta;
+  return `${ruta}${ruta.includes('?') ? '&' : '?'}formation=${encodeURIComponent(formacion)}`;
+}
+
+export async function leerBienvenida(formacion: CodigoDeFormacion = FORMACION_POR_DEFECTO): Promise<BienvenidaApi> {
+  return validarRespuesta<BienvenidaApi>(
+    bienvenidaSchema,
+    await apiFetch<unknown>(conFormacion(BASE, formacion)),
+    `GET ${BASE}`,
+  );
 }
 
 /** Guarda un texto nuevo para esa pieza. El servidor lo revisa igual que la app (marcadores, largo). */
-export async function guardarTextoDeBienvenida(clave: string, texto: string): Promise<BienvenidaApi> {
+export async function guardarTextoDeBienvenida(
+  clave: string,
+  texto: string,
+  formacion: CodigoDeFormacion = FORMACION_POR_DEFECTO,
+): Promise<BienvenidaApi> {
   return validarRespuesta<BienvenidaApi>(
     bienvenidaSchema,
-    await apiFetch<unknown>(`${BASE}/textos/${encodeURIComponent(clave)}`, { method: 'PUT', body: { texto } }),
+    await apiFetch<unknown>(conFormacion(`${BASE}/textos/${encodeURIComponent(clave)}`, formacion), {
+      method: 'PUT',
+      body: { texto },
+    }),
     `PUT ${BASE}/textos/{clave}`,
   );
 }
 
-/** Vuelve al texto original (el del archivo del repo). Queda anotado quién lo hizo y cuándo. */
-export async function volverAlTextoOriginal(clave: string): Promise<BienvenidaApi> {
+/** Vuelve al texto original de esa formación (el del archivo del repo). Queda anotado quién lo hizo y cuándo. */
+export async function volverAlTextoOriginal(
+  clave: string,
+  formacion: CodigoDeFormacion = FORMACION_POR_DEFECTO,
+): Promise<BienvenidaApi> {
   return validarRespuesta<BienvenidaApi>(
     bienvenidaSchema,
-    await apiFetch<unknown>(`${BASE}/textos/${encodeURIComponent(clave)}`, { method: 'DELETE' }),
+    await apiFetch<unknown>(conFormacion(`${BASE}/textos/${encodeURIComponent(clave)}`, formacion), { method: 'DELETE' }),
     `DELETE ${BASE}/textos/{clave}`,
   );
 }
@@ -51,19 +75,22 @@ export async function solicitarSubidaDePortada(tipoContenido: string): Promise<S
 }
 
 /** Paso 3: deja vigente la portada ya subida y revisada. Lleva la RUTA del paso 1, no una URL. */
-export async function confirmarPortadaDeBienvenida(ruta: string): Promise<BienvenidaApi> {
+export async function confirmarPortadaDeBienvenida(
+  ruta: string,
+  formacion: CodigoDeFormacion = FORMACION_POR_DEFECTO,
+): Promise<BienvenidaApi> {
   return validarRespuesta<BienvenidaApi>(
     bienvenidaSchema,
-    await apiFetch<unknown>(`${BASE}/portada/confirm`, { method: 'POST', body: { ruta } }),
+    await apiFetch<unknown>(conFormacion(`${BASE}/portada/confirm`, formacion), { method: 'POST', body: { ruta } }),
     `POST ${BASE}/portada/confirm`,
   );
 }
 
-/** Vuelve a la portada original (la tarjeta de Operaciones). */
-export async function volverALaPortadaOriginal(): Promise<BienvenidaApi> {
+/** Vuelve a la portada original (la tarjeta de Operaciones); en el Diplomado y la Certificación, a la que tenga la Escuela. */
+export async function volverALaPortadaOriginal(formacion: CodigoDeFormacion = FORMACION_POR_DEFECTO): Promise<BienvenidaApi> {
   return validarRespuesta<BienvenidaApi>(
     bienvenidaSchema,
-    await apiFetch<unknown>(`${BASE}/portada`, { method: 'DELETE' }),
+    await apiFetch<unknown>(conFormacion(`${BASE}/portada`, formacion), { method: 'DELETE' }),
     `DELETE ${BASE}/portada`,
   );
 }
@@ -73,8 +100,12 @@ export async function volverALaPortadaOriginal(): Promise<BienvenidaApi> {
  * vigente; con `portada`, la candidata recién subida. Es una imagen, así que no pasa por `apiFetch`:
  * la trae `utils/tarjetaDeMuestra.ts`.
  */
-export function rutaDeLaTarjetaDeMuestra(nombre: string, portada?: string | null): string {
+export function rutaDeLaTarjetaDeMuestra(
+  nombre: string,
+  portada?: string | null,
+  formacion: CodigoDeFormacion = FORMACION_POR_DEFECTO,
+): string {
   const partes = [`nombre=${encodeURIComponent(nombre)}`];
   if (portada) partes.push(`portada=${encodeURIComponent(portada)}`);
-  return `${BASE}/tarjeta?${partes.join('&')}`;
+  return conFormacion(`${BASE}/tarjeta?${partes.join('&')}`, formacion);
 }

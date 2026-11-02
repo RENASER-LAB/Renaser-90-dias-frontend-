@@ -1,0 +1,52 @@
+# Administración → Más opciones → Bienvenida: una por formación (spec 035). ESCRITO Y SIN CORRER.
+# cuenta: admin  (Administración o Alquimista)
+# Precondición: backend con V159; el mensaje formal del Diplomado es el original del repo («…bienvenida oficial al Diplomado Renaser…»).
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "YO"
+- scrollUntilVisible:
+    element: "Administración"
+    direction: DOWN
+    timeout: 40000
+- tapOn: "Administración"
+- scrollUntilVisible:
+    element: "Más opciones"
+    direction: DOWN
+    timeout: 40000
+- tapOn: "Más opciones"
+- scrollUntilVisible:
+    element: "Bienvenida"
+    direction: DOWN
+    timeout: 40000
+- tapOn: "Bienvenida"
+# Arranca en la Escuela, como siempre: los textos de hoy con «Formación Renaser».
+- extendedWaitUntil:
+    visible: "Escuela"
+    timeout: 30000
+- assertVisible: "Diplomado"
+- assertVisible: "Certificación"
+- assertVisible: ".*Formación Renaser.*"
+- assertVisible: "Es la portada original"
+- takeScreenshot: I01a-escuela
+# El Diplomado: sus propios mensajes y la portada de la Escuela (todavía no subió la suya).
+- tapOn: "Diplomado"
+- extendedWaitUntil:
+    visible: "Usa la portada de la Escuela."
+    timeout: 30000
+- assertVisible: ".*Diplomado Renaser.*"
+- assertNotVisible: ".*Formación Renaser.*"
+- takeScreenshot: I01b-diplomado
+# La Certificación: los suyos, sin nada del Diplomado.
+- tapOn: "Certificación"
+- extendedWaitUntil:
+    visible: ".*Certificación Renaser.*"
+    timeout: 30000
+- assertNotVisible: ".*Diplomado Renaser.*"
+- takeScreenshot: I01c-certificacion
+# Volver a la Escuela: sigue igual que al entrar.
+- tapOn: "Escuela"
+- extendedWaitUntil:
+    visible: ".*Formación Renaser.*"
+    timeout: 30000
+- assertVisible: "Es la portada original"
