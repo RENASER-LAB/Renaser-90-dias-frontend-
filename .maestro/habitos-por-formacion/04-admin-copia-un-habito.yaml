@@ -27,9 +27,11 @@ appId: com.renaser.app
     visible: "Escuela"
     timeout: 30000
 - tapOn: "Escuela"
-- extendedWaitUntil:
-    visible: "(?i).*Descanso profundo.*"
-    timeout: 30000
+# Son 20 hábitos activos: «Descanso profundo» queda abajo de lo que se ve al abrir la lista, se baja hasta él.
+- scrollUntilVisible:
+    element: "(?i).*Descanso profundo.*"
+    direction: DOWN
+    timeout: 60000
 - tapOn: "(?i).*Descanso profundo.*"
 - scrollUntilVisible:
     element: "Copiar a otra formación"
@@ -40,6 +42,11 @@ appId: com.renaser.app
     text: "Certificación"
     index: 0
 - takeScreenshot: H04a-copiar-a-la-certificacion
+# Debajo de «Categoría en Certificación» queda el botón: se baja hasta él.
+- scrollUntilVisible:
+    element: "Copiar a Certificación"
+    direction: DOWN
+    timeout: 30000
 - tapOn: "Copiar a Certificación"
 - extendedWaitUntil:
     visible: ".*Copiado.*|.*copiado.*|.*Certificación.*"
@@ -53,6 +60,7 @@ appId: com.renaser.app
     timeout: 30000
 - takeScreenshot: H04b-la-certificacion-tiene-la-copia
 - tapOn: "Escuela"
-- extendedWaitUntil:
-    visible: "(?i).*Descanso profundo.*"
-    timeout: 30000
+- scrollUntilVisible:
+    element: "(?i).*Descanso profundo.*"
+    direction: DOWN
+    timeout: 60000
