@@ -7,6 +7,7 @@
 # El caso del #51 en el PUT a S3 (el almacenamiento local) se prueba a mano con: `adb reverse --remove tcp:9002` antes de
 # aceptar la foto y `adb reverse tcp:9002 tcp:9002` antes de tocar «REINTENTAR»; el paso que falla queda en `adb logcat`
 # (ReactNativeJS, «[evidencia] falló el paso …»).
+# antes: .maestro/comun/estado-de-hoy.sh PENDIENTE GYM
 # cuenta: aprendiz
 appId: com.renaser.app
 ---

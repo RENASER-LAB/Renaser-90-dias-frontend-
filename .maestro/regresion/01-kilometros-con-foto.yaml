@@ -3,6 +3,7 @@
 # lista y queda en «N hechos hoy».
 # Precondición: el aprendiz tiene el hábito en su día de hoy y sin registrar; fotos en local (fotos-local + adb reverse).
 # Lo de días anteriores no importa: el flujo mide cuánto sube el total.
+# antes: .maestro/comun/estado-de-hoy.sh PENDIENTE DAILY_KM
 # cuenta: aprendiz
 appId: com.renaser.app
 ---
