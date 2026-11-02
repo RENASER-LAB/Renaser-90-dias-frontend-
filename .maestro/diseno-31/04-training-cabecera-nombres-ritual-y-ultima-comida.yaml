@@ -40,7 +40,14 @@ appId: com.renaser.app
     timeout: 10000
 - takeScreenshot: T04c-ritual-con-texto
 - back
-# «Última comida del día»: círculo, no «Subir».
+# «Última comida del día»: círculo, no «Subir». Su hora (18:00) viene antes de «Se te pasó la hora», donde se hizo el ritual: según dónde haya quedado la
+# lista se sube o se baja hasta ella (la primera búsqueda es opcional).
+- scrollUntilVisible:
+    element: "Marcar Última comida del día"
+    direction: UP
+    centerElement: true
+    timeout: 30000
+    optional: true
 - scrollUntilVisible:
     element: "Marcar Última comida del día"
     direction: DOWN
