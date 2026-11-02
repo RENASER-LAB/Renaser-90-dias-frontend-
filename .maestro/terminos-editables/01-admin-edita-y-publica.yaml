@@ -44,11 +44,14 @@ appId: com.renaser.app
     timeout: 20000
 - assertVisible: "La cláusula 24 está vacía."
 - tapOn: "Texto de la cláusula 24"
-- inputText: "Cláusula de prueba del E2E."
+# Textos cortos y sin tildes: `inputText` con el dev client tarda ~7 a 10 s por letra y pasa de 120 s con más de ~10 (Maestro #3667), y Maestro no escribe bien
+# los caracteres que no son ASCII. La cláusula se escribe en dos comandos.
+- inputText: "Prueba "
+- inputText: "E2E"
 - takeScreenshot: T01b-editando
 - tapOn: "Vista previa"
 - extendedWaitUntil:
-    visible: "Cláusula de prueba del E2E."
+    visible: "Prueba E2E"
     timeout: 15000
 - takeScreenshot: T01c-vista-previa
 - tapOn: "Cerrar"
@@ -61,7 +64,7 @@ appId: com.renaser.app
     visible: "Lo verán las personas que entren desde ahora"
     timeout: 15000
 - tapOn: "Nota del cambio"
-- inputText: "Una cláusula de prueba"
+- inputText: "Nota E2E"
 - takeScreenshot: T01d-publicar
 - tapOn:
     text: "Publicar"
