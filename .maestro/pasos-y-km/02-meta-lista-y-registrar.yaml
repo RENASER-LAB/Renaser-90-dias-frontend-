@@ -1,0 +1,39 @@
+# P02 — Con la meta alcanzada, un toque registra los km (spec 037, maqueta 2.2 a 2.4). Precondición: P01 hecho, pasos sembrados
+# con MÁS de 5 km (README) y el hábito de hoy sin cumplir. El flujo cierra el hábito: para repetirlo hay que sembrar otro día.
+# cuenta: aprendiz
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- runFlow: ../comun/abrir-training.yaml
+- extendedWaitUntil:
+    visible: ".* km · ¡Meta lista!"
+    timeout: 25000
+- assertVisible: "Registrar"
+- takeScreenshot: P02a-meta-lista
+
+# 1. La hoja de los km: el número grande, la fuente y «Registrar N km».
+- tapOn: "Kilómetros diarios"
+- extendedWaitUntil:
+    visible: "Registrar .* km"
+    timeout: 10000
+- assertVisible: "Fuente"
+- assertVisible: "Última lectura"
+- assertVisible: "Meta: 5 km"
+- takeScreenshot: P02b-hoja-de-los-km
+- tapOn: "Cerrar"
+
+# 2. «Registrar» de la fila: cierra el hábito, avisa en línea y la fila queda cumplida.
+- tapOn: "Registrar Kilómetros diarios"
+- extendedWaitUntil:
+    visible: "Registramos tus .* km\\."
+    timeout: 25000
+- takeScreenshot: P02c-registrado
+- assertNotVisible: "Registrar Kilómetros diarios"
+
+# 3. Lo cumplido dice cuántos km y de dónde salieron.
+- tapOn: ".* hechos? hoy"
+- tapOn: "(?i)kilómetros diarios.*"
+- extendedWaitUntil:
+    visible: ".* km · Health Connect.*"
+    timeout: 10000
+- takeScreenshot: P02d-hoja-de-lo-cumplido

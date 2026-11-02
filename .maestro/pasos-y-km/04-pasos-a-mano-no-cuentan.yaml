@@ -1,0 +1,18 @@
+# P04 — Los pasos escritos a mano en Health Connect no cuentan (spec 037, FR-005). Precondición: P01 hecho y en Health Connect
+# SOLO pasos con método «manual» (README, punto 3) para hoy: ninguno automático.
+# cuenta: aprendiz
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- runFlow: ../comun/abrir-training.yaml
+- extendedWaitUntil:
+    visible: "Todavía no vemos pasos hoy"
+    timeout: 25000
+- assertVisible: "Actualizar"
+- assertNotVisible: ".* km · ¡Meta lista!"
+- takeScreenshot: P04a-sin-pasos
+- tapOn: "Kilómetros diarios"
+- extendedWaitUntil:
+    visible: "Los pasos escritos a mano no cuentan\\."
+    timeout: 10000
+- takeScreenshot: P04b-manuales-no-cuentan

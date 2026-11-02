@@ -1,0 +1,23 @@
+# P07 — Android menor a 14 (o sin Health Connect, o la web): «Sube tu captura», sin «Conectar» y sin instalar nada
+# (spec 037, maqueta 3.4; decisión del dueño del 2026-11-02). Precondición: un emulador Android 13 con el build nativo.
+# cuenta: aprendiz
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- runFlow: ../comun/abrir-training.yaml
+- extendedWaitUntil:
+    visible: "Cuenta tus pasos solo"
+    timeout: 20000
+- assertVisible: "Subir"
+- tapOn: "Cuenta tus pasos solo"
+- extendedWaitUntil:
+    visible: "Sube tu captura"
+    timeout: 10000
+- assertVisible: "Los pasos automáticos son solo para Android 14 o más\\."
+- assertNotVisible: "Conectar"
+- assertNotVisible: "Instalar.*"
+- takeScreenshot: P07a-sin-soporte
+- tapOn: "Subir captura"
+- extendedWaitUntil:
+    visible: "(?i)tomar foto|cámara|elegir de la galería"
+    timeout: 15000

@@ -1,0 +1,23 @@
+# P03 — Quitar el permiso en Health Connect: «Perdimos tus pasos» y la captura de respaldo (spec 037, maqueta 3.1).
+# Precondición: P01 hecho. El flujo quita el permiso desde Ajustes del sistema > Apps > Renaser > Permisos > Pasos/Distancia
+# (en el emulador: `adb shell pm revoke com.renaser.app android.permission.health.READ_STEPS`), así que se corre con esa línea antes.
+# cuenta: aprendiz
+appId: com.renaser.app
+---
+- launchApp:
+    appId: com.renaser.app
+    stopApp: true
+- runFlow: ../comun/ya-adentro.yaml
+- runFlow: ../comun/abrir-training.yaml
+- extendedWaitUntil:
+    visible: "Perdimos tus pasos"
+    timeout: 25000
+- assertVisible: "Subir captura de Kilómetros diarios"
+- takeScreenshot: P03a-sin-permiso
+- tapOn: "Kilómetros diarios"
+- extendedWaitUntil:
+    visible: "Quitaste el permiso en Health Connect\\."
+    timeout: 10000
+- assertVisible: "Abrir Health Connect"
+- assertVisible: "Subir captura"
+- takeScreenshot: P03b-hoja-sin-permiso
