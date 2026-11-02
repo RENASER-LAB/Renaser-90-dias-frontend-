@@ -1606,6 +1606,43 @@ usuario no podrá elegir, lo hará al día siguiente. No es un gran cambio, pero
   > cuerpo del POST ya era opcional). Maestro `empieza-manana/01` y `04` y `e2e/dia-uno` ajustados; Jest `diaUnoRecuperacion`, `activacionAlFirmar`, `textoDelDiaUno` y
   > `onboardingFlowConDiagnostico`.
 
+## Cambio por pedido del dueño — 2026-11-02 — Acuerdo de transformación: los términos nuevos, «Mi aceptación» y el cronograma que se firma al entrar (spec 039)
+
+Textual: «Este será el nuevo términos y condiciones. Y cuando aceptes la solicitud con cronograma o sin cronograma: con cronograma, sale abajo para firmar también que estás de acuerdo; y sin cronograma, el de siempre
+de firmar. No te guíes explícitamente como mencionan, solamente agregar esa parte cuando el usuario, administrador o alquimista agregue a alguien dentro de la app.» Spec y contrato en el backend
+(`specs/039-acuerdo-de-transformacion/`, D-312). Lo que cambia y nada más (ni diseño de las demás pantallas, ni tabs):
+* **El texto**: las 23 cláusulas del dueño, tal cual y numeradas, en las TRES formaciones (lo publica el servidor con la migración V162; las edita Administración desde la app, como siempre). Las de dos párrafos (18, 21, 22 y
+  23) llevan una línea en blanco entre ellos. La Escuela dice «Formación RENASER»; el Diplomado, «Diplomado RENASER»; la Certificación, «Certificación RENASER»; «NASER» (la app) se deja. El texto que la app lleva por
+  dentro para un servidor que no ofrece los términos (`terminosData.ts`, `TERMINOS_DE_LA_APP`) pasó al nuevo. El subtítulo dice «Lee atentamente las 23 cláusulas y sella tu aceptación.» (con punto).
+* **«MI ACEPTACIÓN»** (`terminos/components/MiAceptacion`), al final de los términos y antes de firmar, solo lectura y quieto: las dos frases fijas —«He decidido formar parte de RENASER, consciente de mi compromiso con este
+  proceso de transformación.» y «Declaro que he leído, comprendido y aceptado los términos y condiciones del programa al que ingreso.»— y cinco datos que llena el SISTEMA (ninguna IA): **Participante** (el nombre completo del
+  perfil), **Programa** («Formación RENASER · 90 días», «Diplomado RENASER · 3 meses» / «· 1 año», «Certificación RENASER · 90 días»), **Fecha de inicio**, **Fecha de finalización** y **Fecha de aceptación** (la del día
+  de hoy; la hora que queda guardada es la del servidor). La app no calcula nada: llega en `GET /onboarding/terms` → `agreement`. El inicio es el de «Tu programa empieza mañana» (spec 036) —o el real, si ya
+  empezó— y el fin es su último día (inicio + duración − 1), nunca «90 días» escrito a mano. Sin programa que prometer (el personal que no activó el suyo) no hay fechas y el programa dice solo su nombre; sin `agreement`
+  (un servidor anterior) no se dibuja el bloque. Lo escribe `terminos/utils/miAceptacion` (puro).
+* **Con cronograma** (solo al entrar a la app, el onboarding, y solo si el servidor manda `agreement.schedule`: primer ingreso, cronograma de la spec 032 sin confirmar): debajo de «Mi aceptación» sale **«Mi cronograma de pagos»**
+  (`MiCronogramaDePagos`): la moneda, una fila por cuota con el mismo dibujo de «Mi ingreso» (`FilaDeCuota`: fecha, monto y «Pendiente») y la casilla con la frase de la cláusula 19, «Acepto el cronograma de pagos registrado en NASER
+  y me comprometo a cumplirlo.». Sin esa casilla «Continuar» no avanza y dice «Cronograma por aceptar» (la casilla se marca en rojo con «Marca esta casilla para continuar.»). Al firmar, el pedido lleva `scheduleFingerprint` y el
+  servidor confirma el cronograma con la MISMA confirmación de la spec 032 (el nombre completo del perfil, la hora y la huella): «Mi ingreso» ya sale «Confirmaste tu cronograma el …» y no lo vuelve a pedir. **Sin
+  cronograma, o con «pagó completo», la firma es la de siempre, sin esa sección.**
+* **Orden del onboarding**: Ficha → (diagnóstico, si lo tiene) → Términos con «Mi aceptación» y, si corresponde, el cronograma → firma → «Tu programa empieza mañana» (se activa sola). Las fechas de «Mi aceptación» y las de «empieza
+  mañana» son las mismas (las dos salen de la misma cuenta del servidor).
+* **Volver a aceptar** (quien ya estaba dentro: «Actualizamos nuestros términos», `TerminosActualizadosScreen`): el texto nuevo y «Mi aceptación» con su programa y sus fechas REALES (ya empezó), **sin** la sección del cronograma,
+  aunque tenga uno. A quien recibe un cronograma después, o lo tiene cambiado, se le pide en «Mi ingreso» como hoy (spec 032), sin volver a firmar los términos. Esta pantalla no manda ninguna huella.
+* **El pedido** (`POST /onboarding/milestones`, hito `TERMINOS`) suma `agreementStartDate` (el inicio que vio) y `scheduleFingerprint` (la huella del cronograma que aceptó, si lo firmó). Si ya no coinciden con los de ahora el
+  servidor responde **409** y no registra nada: «Pasó la medianoche y tus fechas cambiaron: léelas de nuevo.» o «Tu cronograma cambió mientras leías: revísalo de nuevo.»; la app relee, lo dice con las palabras del servidor
+  (título «Algo cambió mientras leías») y vuelve a pedir lo marcado. «Continuar» espera a que lleguen los términos (`loading` hasta `cargada`) para no firmar sin lo que el servidor ofrece.
+* **Qué guarda el servidor** junto a la constancia de la spec 027: el programa, el inicio y el fin que se mostraron y, si firmó el cronograma, su huella. Yo → Mi onboarding → «Términos y condiciones» y la constancia de la ficha de
+  Administración lo dicen («Formación RENASER · 90 días», «Del 3 de noviembre de 2026 al 31 de enero de 2027», «Firmaste tu cronograma de pagos con los términos.»); lo aceptado antes no dice nada de eso.
+* **No cambian**: la firma (dibujo o nombre) y su casilla, las validaciones de siempre («Aceptación requerida», «Firma requerida»), «Mi ingreso», el editor de términos de Administración (muestra y edita las 23 cláusulas, también
+  las de dos párrafos), la barra de pestañas ni las demás pantallas. Sin dependencias ni código nativo.
+* **Supuestos para el dueño**: el texto nuevo reemplaza a los vigentes en las tres formaciones; «(Formación, Diplomado o Certificación RENASER)» es el programa de la persona; quien ya estaba dentro vuelve a aceptar con su firma al abrir
+  la app; el Diplomado y la Certificación, que no tenían términos publicados, quedan con estos; el nombre con el que se confirma el cronograma es el nombre completo del perfil. Límite aceptado: si la medianoche cae entre firmar y que
+  se active el programa (segundos), la fecha de «Tu programa empieza mañana» puede ser un día después de la firmada.
+* **Pruebas**: Jest `miAceptacion` (lectura y líneas), `acuerdoDeTransformacion` (las pantallas sin cronograma, con cronograma y volver a aceptar, el 409), `loMostradoAlAceptar` (releer y la constancia), `borradorDeTerminos` y
+  `cableadoDeTerminos` (el texto de respaldo y el cableado). Maestro, escritos y sin correr: `.maestro/acuerdo-de-transformacion/` (01 a 04).
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire) y el backend con la spec 039 (V162) antes; sin él la app usa el texto que lleva y no dibuja «Mi aceptación» ni el cronograma.
+
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
 Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel especializado en React Native, Expo y TypeScript. Al crear, refactorizar o modificar cualquier pantalla o componente, debes cumplir OBLIGATORIAMENTE con los siguientes estándares:
