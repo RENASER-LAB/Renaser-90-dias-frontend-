@@ -87,13 +87,6 @@ function estaEnMayusculas(texto: string): boolean {
   return texto === texto.toLocaleUpperCase('es') && texto !== texto.toLocaleLowerCase('es');
 }
 
-/**
- * Archivos cuyo botón dorado todavía dice «✓ GUARDAR HORA» en esta rama: el selector de hora lo reescribe la rama
- * `hora-picker-compacto` (#97), que lo deja en «Guardar hora». Se retira de acá cuando esa rama se fusione; no se toca en esta
- * para no pisar su reescritura completa del archivo.
- */
-const PENDIENTES_EN_OTRA_RAMA = new Set(['src/features/habits/components/HoraPickerModal.tsx']);
-
 describe('ningún botón dorado escribe su texto en MAYÚSCULAS', () => {
   const botones = botonesDelCodigo();
 
@@ -103,9 +96,11 @@ describe('ningún botón dorado escribe su texto en MAYÚSCULAS', () => {
   });
 
   it('ningún texto literal del `label` está en mayúsculas (salvo siglas)', () => {
-    const culpables = botones
-      .filter(b => !PENDIENTES_EN_OTRA_RAMA.has(b.archivo))
-      .flatMap(b => literalesDe(b.label).filter(estaEnMayusculas).map(texto => `${b.archivo}: «${texto}»`));
+    const culpables = botones.flatMap(b =>
+      literalesDe(b.label)
+        .filter(estaEnMayusculas)
+        .map(texto => `${b.archivo}: «${texto}»`),
+    );
     expect(culpables).toEqual([]);
   });
 
