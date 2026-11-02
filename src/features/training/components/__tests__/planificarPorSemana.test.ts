@@ -394,3 +394,76 @@ describe('guardar vale SOLO para la semana que se ve', () => {
     expect(mockSemana).toHaveBeenCalledWith('h-jugo', '2026-11-02');
   });
 });
+
+describe('lo guardado por semana sale marcado (issue #95)', () => {
+  it('con un cambio propio en la semana en curso, el hábito abre en «Por semana», con sus días marcados y sus valores', async () => {
+    mockPreferencias.mockResolvedValue([preferencia({ dateOverrides: [fechaPropia('2026-11-07')] })]);
+    mockSemana.mockImplementation(async (_h, lunes) => semanaDe(lunes, { SATURDAY: { customDate: true, customTime: true, triggerTime: '10:00:00' } }));
+    raiz = await montar();
+    await abrir(raiz);
+
+    expect(control(raiz)[0].props.valor).toBe('semana');
+    expect(mockSemana).toHaveBeenCalledTimes(1);
+    expect(mockSemana).toHaveBeenCalledWith('h-jugo', '2026-11-02');
+    expect(selector(raiz).props.rotulo).toBe('Semana del 2 al 8 nov');
+    expect(filaDeDias().marcaDelDia!('SÁB')).toEqual({ largo: 'Cambiado solo esta semana' });
+    expect(filaDeDias().marcaDelDia!('DOM')).toBeNull();
+    expect(filaDeDias().enEdicion).toEqual(['JUE', 'VIE', 'SÁB', 'DOM']);
+  });
+
+  it('con el cambio en una semana que viene, abre en ESA semana (no se pierde de vista)', async () => {
+    mockPreferencias.mockResolvedValue([preferencia({ dateOverrides: [fechaPropia('2026-11-21')] })]);
+    raiz = await montar();
+    await abrir(raiz);
+    expect(control(raiz)[0].props.valor).toBe('semana');
+    expect(mockSemana).toHaveBeenCalledWith('h-jugo', '2026-11-16');
+    expect(selector(raiz).props.rotulo).toBe('Semana del 16 al 22 nov');
+    expect(selector(raiz).props.puedeAnterior).toBe(true);
+  });
+
+  it('sin cambios propios abre en «Siempre» y no pide la semana', async () => {
+    raiz = await montar();
+    await abrir(raiz);
+    expect(control(raiz)[0].props.valor).toBe('siempre');
+    expect(mockSemana).not.toHaveBeenCalled();
+  });
+
+  it('un cambio de hoy o de un día que ya pasó no cuenta: abre en «Siempre»', async () => {
+    mockPreferencias.mockResolvedValue([preferencia({ dateOverrides: [fechaPropia('2026-11-04')] })]);
+    raiz = await montar();
+    await abrir(raiz);
+    expect(control(raiz)[0].props.valor).toBe('siempre');
+  });
+
+  it('si no se puede leer la semana al abrir, queda en «Siempre» sin diálogo', async () => {
+    mockPreferencias.mockResolvedValue([preferencia({ dateOverrides: [fechaPropia('2026-11-07')] })]);
+    mockSemana.mockRejectedValue(new ApiError(500, 'se cayó'));
+    raiz = await montar();
+    await abrir(raiz);
+    expect(control(raiz)[0].props.valor).toBe('siempre');
+    expect(mockAlerta).not.toHaveBeenCalled();
+    expect(raiz.root.findAll(n => n.type === SelectorDeSemana)).toHaveLength(0);
+  });
+
+  it('un servidor anterior (sin dateOverrides) no ofrece nada y abre como siempre', async () => {
+    mockPreferencias.mockResolvedValue([{ ...preferencia(), dateOverrides: undefined }]);
+    raiz = await montar();
+    await abrir(raiz);
+    expect(control(raiz)).toHaveLength(0);
+    expect(mockSemana).not.toHaveBeenCalled();
+  });
+
+  it('al abrir otro hábito después, se parte limpio: lo leído del anterior no se mezcla', async () => {
+    mockPreferencias.mockResolvedValue([preferencia({ dateOverrides: [fechaPropia('2026-11-07')] })]);
+    raiz = await montar();
+    await abrir(raiz);
+    expect(control(raiz)[0].props.valor).toBe('semana');
+    const hoja = raiz.root.findAll(n => n.type === HojaDesdeAbajo)[0];
+    await act(async () => { hoja.props.alVolver(); });
+    mockPreferencias.mockResolvedValue([preferencia()]);
+    mockSemana.mockClear();
+    await abrir(raiz);
+    // El mismo hábito vuelve a abrir en «Por semana» y vuelve a leer la semana (la memoria es de cada apertura).
+    expect(mockSemana).toHaveBeenCalledTimes(1);
+  });
+});

@@ -122,6 +122,7 @@ import {
   fechasDeLaSemana as fechasDeUnaSemana,
   hoyDesdeLaPrimeraSemana,
   lunesDeLasSemanas,
+  primeraSemanaConCambiosPropios,
   rangoCortoDeLaSemana,
   rotuloDeLaSemana,
   ultimoDiaDelPrograma,
@@ -611,6 +612,15 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
     // Se pide DESPUÉS de abrir, no antes: el toque tiene que responder ya. Mientras llega, las
     // pastillas muestran el día sin hora, que es lo honesto.
     void cargarSemana(h.habitoId, delServidor);
+    // Lo que ya se guardó por semana sale marcado (2026-11-02): si una semana por venir tiene cambios propios de este hábito, el editor abre
+    // en «Por semana», en esa semana, con sus días marcados. Sin cambios propios abre en «Siempre», como siempre.
+    const conCambios = primeraSemanaConCambiosPropios(previa?.dateOverrides, semanasDelEditor, hoyDelEditor);
+    if (conCambios !== null) {
+      setAlcance('semana');
+      setSemanaVista(conCambios);
+      semanaPedidaRef.current = conCambios;
+      void cargarLaSemanaDelHabito(h, conCambios, { marcar: true, alFallar: 'volver-a-siempre', avisar: false, avisoDeSiempre: delServidor });
+    }
     // El tono de Yo → Alarmas, para no ofrecer lo que no suena. Si no se puede leer, el de siempre.
     void Promise.resolve()
       .then(() => recordatorios.sonidoDe(claveUsuario, h.habitoId))
