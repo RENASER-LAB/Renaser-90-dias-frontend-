@@ -1,12 +1,24 @@
 import { tituloEnTipoOracion } from '../utils/tituloEnTipoOracion';
 import { fuentes } from '../../../theme/fuentes';
-import React, { useEffect, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useState } from 'react';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { useTheme } from '../../../theme/ThemeContext';
 import { GoldButton } from '../../../components/GoldButton';
-import { Icon } from '../../../components/Icon';
-import { VeloModal } from '../../../components/VeloModal';
+import { Presionable } from '../../../components/Presionable';
+import { MicroLabel } from '../../../components/ui';
+import { HojaDesdeAbajo } from '../../../components/hojaDesdeAbajo/HojaDesdeAbajo';
+import { useAltoMaximoDelCuerpo } from '../../../components/hojaDesdeAbajo/altoDelCuerpo';
+import { tacto } from '../../../utils/tacto';
+import {
+  HORAS,
+  MINUTOS,
+  aDosDigitos,
+  armarHora,
+  enRenglones,
+  momentoDelDia,
+  partirHora,
+} from '../utils/horaDelSelector';
 
 /**
  * Selector de hora táctil, pensado para un público de 40+ años (palabras del dueño del
@@ -23,14 +35,27 @@ import { VeloModal } from '../../../components/VeloModal';
  * Los minutos se ofrecen en pasos de 5 (12 opciones) en vez de los 60 posibles: con un dedo
  * grande y una lista de 60 botones, elegir el minuto exacto es más difícil, no más preciso en la
  * práctica — los horarios reales del catálogo ya son casi todos en punto o en :30.
+ *
+ * ## Corrección — 2026-11-02 — sin huecos y con las 24 horas a la vista (issue #97)
+ *
+ * Era una tarjeta centrada en un `Modal` con dos `ScrollView horizontal` (una fila de horas y otra
+ * de minutos). Un `ScrollView` trae `flexGrow: 1`, y en React Native una caja con alto automático
+ * que lleva hijos con `flexGrow` los estira hasta lo que el contenedor tenga disponible: los dos
+ * carriles se llevaban TODO el alto de la pantalla y dejaban ~500 px en blanco entre «Hora» y
+ * «Minutos» y hasta el botón. Además la fila de horas mostraba solo de 00 a 05: para llegar a las
+ * 11 había que arrastrarla de lado. (Los otros carriles horizontales de la app, el de meses de
+ * `PlanDelMesModal` y el de íconos de Planificar, ya llevan `flexGrow: 0` por lo mismo.)
+ *
+ * Ahora es una `HojaDesdeAbajo` del alto de su contenido, como el selector de fecha de nacimiento:
+ * la hora elegida en grande, las 24 horas en una grilla de 4 renglones de 6, los minutos en 2
+ * renglones de 6 y el botón fijo abajo. Todo a la vista y sin desplazar de lado; solo la cuenta de
+ * «cabe o no cabe» (pantalla baja, letra grande del sistema) la cubre UN `ScrollView` vertical con
+ * `flexGrow: 0` y tope de alto, para que el botón nunca quede fuera. Lo que se devuelve no cambió:
+ * `HH:mm`, horas de 00 a 23 y minutos de 5 en 5. Las props tampoco.
  */
 
-const HORAS = Array.from({ length: 24 }, (_, i) => i);
-const MINUTOS = Array.from({ length: 12 }, (_, i) => i * 5);
-
-function aDosDigitos(n: number): string {
-  return String(n).padStart(2, '0');
-}
+/** Lo que ocupan la cabecera de la hoja (agarradera, título y subtítulo) y su pie (botón e inferior seguro). */
+const RESERVA_CABECERA_Y_PIE = 200;
 
 interface HoraPickerModalProps {
   visible: boolean;
@@ -48,160 +73,180 @@ export function HoraPickerModal({
   onConfirmar,
   onCerrar,
 }: HoraPickerModalProps) {
-  const { c, t } = useTheme();
-  const [hora, setHora] = useState(6);
-  const [minuto, setMinuto] = useState(0);
+  const { c } = useTheme();
+  const altoMaximo = useAltoMaximoDelCuerpo(RESERVA_CABECERA_Y_PIE);
+  const [borrador, setBorrador] = useState(() => partirHora(horaInicial));
+  const [abiertoCon, setAbiertoCon] = useState<string | null>(null);
 
-  // Arranca desde la hora que ya tenía el hábito cada vez que se abre, no desde un valor fijo.
-  useEffect(() => {
-    if (!visible) return;
-    const [h, m] = horaInicial.split(':').map(Number);
-    setHora(Number.isFinite(h) ? h : 6);
-    // Se ajusta al múltiplo de 5 más cercano: los pasos del selector son de a 5 minutos.
-    setMinuto(Number.isFinite(m) ? Math.round(m / 5) * 5 % 60 : 0);
-  }, [visible, horaInicial]);
-
-  const momentoDelDia = hora < 12 ? 'de la mañana' : hora < 18 ? 'de la tarde' : 'de la noche';
+  // Arranca desde la hora que ya tenía quien lo abre cada vez que se abre, no desde un valor fijo. Se ajusta
+  // DURANTE el dibujo (y no en un efecto) para que la grilla nazca ya con la hora marcada, sin un cuadro con la anterior.
+  const claveDeApertura = visible ? horaInicial : null;
+  if (claveDeApertura !== abiertoCon) {
+    setAbiertoCon(claveDeApertura);
+    if (visible) setBorrador(partirHora(horaInicial));
+  }
+  const { hora, minuto } = borrador;
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onCerrar}>
-      <VeloModal onCerrar={onCerrar} style={styles.overlay} etiqueta="Cerrar el selector de hora">
-        <View style={[styles.card, { borderColor: c.gold, backgroundColor: c.cardBg }]}>
-          <View style={[styles.header, { borderBottomColor: c.divider }]}>
-            <View style={{ flex: 1 }}>
-              <Text style={[t.micro, { color: c.goldInk, fontFamily: fuentes.negrita }]}>ELEGIR HORA</Text>
-              <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13 }]} numberOfLines={1}>
-                {tituloEnTipoOracion(tituloHabito)}
-              </Text>
-            </View>
-            <Pressable onPress={onCerrar} hitSlop={10}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                <Icon name="close" size={12} color={c.goldInk} />
-                <Text style={[t.micro, { color: c.goldInk, fontFamily: fuentes.negrita }]}>Cerrar</Text>
-              </View>
-            </Pressable>
-          </View>
+    <HojaDesdeAbajo
+      visible={visible}
+      alCerrar={onCerrar}
+      titulo="Elegir hora"
+      subtitulo={tituloEnTipoOracion(tituloHabito)}
+      etiquetaCerrar="Cerrar el selector de hora"
+      pie={
+        <GoldButton
+          label="GUARDAR HORA"
+          icon="check"
+          iconPosition="left"
+          onPress={() => onConfirmar(armarHora(hora, minuto))}
+        />
+      }
+    >
+      {/* `flexGrow: 0`: el `ScrollView` crece por defecto y llenaría la pantalla (el hueco de antes). Aquí mide lo que
+          lleva y solo desplaza —UN solo scroll, vertical— si no entra. */}
+      <ScrollView
+        style={{ flexGrow: 0, maxHeight: altoMaximo }}
+        contentContainerStyle={estilos.cuerpo}
+        showsVerticalScrollIndicator={false}
+      >
+        <View
+          style={estilos.horaGrande}
+          accessible
+          accessibilityRole="text"
+          accessibilityLabel={`Hora elegida: ${armarHora(hora, minuto)}, ${momentoDelDia(hora)}`}
+        >
+          <Text style={[estilos.horaGrandeTexto, { color: c.textStrong }]}>{armarHora(hora, minuto)}</Text>
+          <Text style={[estilos.momento, { color: c.textSoft }]}>{momentoDelDia(hora)}</Text>
+        </View>
 
-          <View style={styles.horaGrande}>
-            <Text style={{ fontFamily: fuentes.regular, fontSize: 44, color: c.textStrong }}>
-              {aDosDigitos(hora)}:{aDosDigitos(minuto)}
-            </Text>
-            <Text style={[t.micro, { color: c.textSoft, marginTop: 2 }]}>{momentoDelDia}</Text>
-          </View>
-
-          <Text style={[t.micro, { color: c.goldInk, fontFamily: fuentes.negrita, marginTop: 6 }]}>HORA</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.pillRow}
-          >
-            {HORAS.map(h => {
-              const seleccionada = h === hora;
-              return (
-                <Pressable
-                  key={h}
-                  onPress={() => setHora(h)}
-                  style={[
-                    styles.pill,
-                    {
-                      borderColor: seleccionada ? c.gold : c.border,
-                      backgroundColor: seleccionada ? c.gold : c.cardBgAlt,
-                    },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      t.cardTitle,
-                      { fontSize: 14, color: seleccionada ? c.onGold : c.textStrong },
-                    ]}
-                  >
-                    {aDosDigitos(h)}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-
-          <Text style={[t.micro, { color: c.goldInk, fontFamily: fuentes.negrita, marginTop: 12 }]}>MINUTOS</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.pillRow}
-          >
-            {MINUTOS.map(m => {
-              const seleccionado = m === minuto;
-              return (
-                <Pressable
-                  key={m}
-                  onPress={() => setMinuto(m)}
-                  style={[
-                    styles.pill,
-                    {
-                      borderColor: seleccionado ? c.gold : c.border,
-                      backgroundColor: seleccionado ? c.gold : c.cardBgAlt,
-                    },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      t.cardTitle,
-                      { fontSize: 14, color: seleccionado ? c.onGold : c.textStrong },
-                    ]}
-                  >
-                    {aDosDigitos(m)}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-
-          <GoldButton
-            label="✓ GUARDAR HORA"
-            onPress={() => onConfirmar(`${aDosDigitos(hora)}:${aDosDigitos(minuto)}`)}
-            style={{ width: '100%', marginTop: 16 }}
+        <View style={estilos.seccion}>
+          <MicroLabel>Hora</MicroLabel>
+          <GrillaDeNumeros
+            valores={HORAS}
+            elegido={hora}
+            unidad="horas"
+            onElegir={h => setBorrador(b => ({ ...b, hora: h }))}
           />
         </View>
-      </VeloModal>
-    </Modal>
+
+        <View style={estilos.seccion}>
+          <MicroLabel>Minutos</MicroLabel>
+          <GrillaDeNumeros
+            valores={MINUTOS}
+            elegido={minuto}
+            unidad="minutos"
+            onElegir={m => setBorrador(b => ({ ...b, minuto: m }))}
+          />
+        </View>
+      </ScrollView>
+    </HojaDesdeAbajo>
   );
 }
 
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.85)',
-    justifyContent: 'center',
-    padding: 20,
-  },
-  card: {
-    borderWidth: 1.5,
-    borderRadius: 22,
-    padding: 16,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderBottomWidth: 1,
+/**
+ * Una grilla de botones de dos cifras en renglones de seis: una pila de filas, cada botón con `flex: 1`. Nada se
+ * desplaza ni se envuelve (`flexWrap`): el ancho se reparte parejo y el alto es el de los botones.
+ *
+ * Elegir no se anima (se toca decenas de veces): el cambio de fondo es en el acto, el botón se hunde al apretar
+ * (`Presionable`) y vibra el «tic» de selección una vez por cambio.
+ */
+function GrillaDeNumeros({
+  valores,
+  elegido,
+  unidad,
+  onElegir,
+}: {
+  valores: readonly number[];
+  elegido: number;
+  /** Para el lector de pantalla: «09 horas», «30 minutos». */
+  unidad: string;
+  onElegir: (valor: number) => void;
+}) {
+  const { c } = useTheme();
+  return (
+    <View accessibilityRole="radiogroup" style={estilos.grilla}>
+      {enRenglones(valores).map(renglon => (
+        <View key={renglon[0]} style={estilos.renglon}>
+          {renglon.map(valor => {
+            const seleccionado = valor === elegido;
+            return (
+              <Presionable
+                key={valor}
+                contenedorStyle={estilos.celda}
+                onPress={() => {
+                  if (!seleccionado) tacto.seleccion();
+                  onElegir(valor);
+                }}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: seleccionado }}
+                accessibilityLabel={`${aDosDigitos(valor)} ${unidad}`}
+                style={[
+                  estilos.boton,
+                  {
+                    borderColor: seleccionado ? c.gold : c.border,
+                    backgroundColor: seleccionado ? c.gold : c.cardBgAlt,
+                  },
+                ]}
+              >
+                <Text style={[estilos.numero, { color: seleccionado ? c.onGold : c.textStrong }]}>
+                  {aDosDigitos(valor)}
+                </Text>
+              </Presionable>
+            );
+          })}
+        </View>
+      ))}
+    </View>
+  );
+}
+
+const estilos = StyleSheet.create({
+  cuerpo: {
+    paddingHorizontal: 20,
+    paddingTop: 4,
     paddingBottom: 8,
-    gap: 10,
+    gap: 16,
   },
   horaGrande: {
     alignItems: 'center',
-    paddingVertical: 14,
+    gap: 2,
   },
-  pillRow: {
-    flexDirection: 'row',
+  horaGrandeTexto: {
+    fontFamily: fuentes.regular,
+    fontSize: 44,
+    lineHeight: 52,
+    fontVariant: ['tabular-nums'],
+  },
+  momento: {
+    fontFamily: fuentes.regular,
+    fontSize: 15,
+    lineHeight: 20,
+  },
+  seccion: {
     gap: 8,
-    paddingVertical: 8,
   },
-  pill: {
-    minWidth: 48,
+  grilla: {
+    gap: 6,
+  },
+  renglon: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  celda: {
+    flex: 1,
+  },
+  boton: {
     height: 48,
     borderRadius: 12,
     borderWidth: 1.2,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 6,
+  },
+  numero: {
+    fontFamily: fuentes.media,
+    fontSize: 17,
+    lineHeight: 22,
+    fontVariant: ['tabular-nums'],
   },
 });

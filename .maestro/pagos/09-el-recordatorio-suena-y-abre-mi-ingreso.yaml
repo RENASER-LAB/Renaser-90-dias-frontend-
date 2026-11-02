@@ -24,11 +24,13 @@ appId: com.renaser.app
 - assertVisible: "El mismo día"
 - tapOn: "Cambiar la hora.*"
 - extendedWaitUntil:
-    visible: "ELEGIR HORA"
+    visible: "Elegir hora"
     timeout: 10000
-- tapOn: "${HORA}"
-- tapOn: "${MINUTO}"
-- tapOn: "✓ GUARDAR HORA"
+# Las 24 horas y los 12 minutos están a la vista (issue #97): se tocan por su etiqueta («14 horas», «35 minutos»), porque la cifra sola
+# («10», «15»…) está en la grilla de las horas y en la de los minutos.
+- tapOn: "${HORA} horas"
+- tapOn: "${MINUTO} minutos"
+- tapOn: "GUARDAR HORA"
 - assertVisible: ".*· ${HORA}:${MINUTO}"
 - takeScreenshot: P09a-la-hora-de-la-prueba
 # Se manda la app a segundo plano y se espera la alarma en la bandeja.

@@ -1517,6 +1517,40 @@ el correo, junto a «Escribirle». El dueño respondió: «cambia la cabecera a 
   información. El dueño respondió: «sí, déjalas así».
 * **Hace falta un APK nuevo** (solo JavaScript).
 
+## Corrección — 2026-11-02 — el selector de hora sin huecos y con las 24 horas a la vista (issue #97)
+
+Del E2E del 2/11 («Yo → Ajustes → Alarmas → Recordatorios de pago → Cambiar la hora»). El selector `HoraPickerModal` ocupaba toda la pantalla y dejaba
+~500 px en blanco entre «HORA» y «MINUTOS» y hasta el botón; además la fila de horas solo mostraba de 00 a 05 (para elegir las 11 había que arrastrarla de
+lado). **También estaba en `master`**: el archivo es idéntico y lo usan Despertar de Yo → Alarmas, los recordatorios de las acciones y el formulario de
+eventos (el de pagos es de la rama de formaciones). Lo que cambia y nada más:
+* **Causa:** los dos `ScrollView horizontal` (una fila de horas y otra de minutos) llevan `flexGrow: 1` por defecto, y en React Native una caja de alto
+  automático con hijos con `flexGrow` los estira hasta lo que tenga disponible el contenedor: dentro de la tarjeta centrada de un `Modal`, los dos carriles
+  se llevaban el alto de la pantalla. (Es la misma razón por la que los otros carriles horizontales de la app, el de meses de `PlanDelMesModal` y el de
+  íconos de Planificar, llevan `flexGrow: 0`.) **No se reprodujo en el emulador** (estaba ocupado por el E2E): la causa se deduce de la regla de React
+  Native y de esos precedentes, y se confirma en pantalla al correr el flujo de Maestro.
+* **El selector ahora es una `HojaDesdeAbajo` del alto de su contenido** (la forma del selector de fecha de nacimiento y de las demás hojas de la app), no una
+  tarjeta centrada con `VeloModal`. De arriba abajo: la agarradera, «Elegir hora» y debajo, en una línea, el nombre de lo que se está programando; la hora
+  elegida en grande («09:00», «de la mañana»); «Hora» con **las 24 horas en una grilla de 4 renglones de 6**; «Minutos» con **los 12 minutos en 2 renglones de
+  6**; y, fijo abajo, «✓ GUARDAR HORA». Todo seguido y con el aire normal (16 entre bloques, 8 bajo cada rótulo, 6 entre botones). **Ningún carril se arrastra de
+  lado.** Cada botón mide 48 de alto y reparte el ancho parejo (≈ 48 dp en un teléfono de 320 dp de ancho, ≈ 57 en uno de 411). Se cierra con la ✕, tocando
+  fuera, arrastrando la hoja o con el atrás de Android (lo de siempre de `HojaDesdeAbajo`).
+* **Por qué una grilla y no la rueda de Planificar** (`RuedaHoraPicker`): esa rueda tiene otras reglas —minutos de 1 en 1 y un tope de arranque a las 23:40
+  (D-122, solo de los hábitos)—, así que usarla aquí cambiaría lo que el selector puede devolver a eventos, pagos y acciones; y para llegar a una hora hay que
+  desplazar la rueda, mientras la grilla muestra las 24 a la vez. La grilla es lo que ya era este selector (botones grandes para un público de 40+), sin el defecto.
+* **Un solo scroll, por si no entra:** el cuerpo va en un `ScrollView` vertical con `flexGrow: 0` y tope de alto (`useAltoMaximoDelCuerpo`), para que el botón
+  quede siempre a la vista en una pantalla baja o con la letra del sistema grande. En un teléfono normal no desplaza nada.
+* **Elegir no se anima** (se toca decenas de veces): el cambio de color es en el acto, el botón se hunde al apretar (`Presionable`, 0,97) y vibra el «tic» de
+  selección una vez por cambio (`tacto.seleccion()`; no vibra si se toca lo ya elegido). Cada botón se anuncia al lector de pantalla como «11 horas» o «35 minutos»,
+  con estado elegido.
+* **No cambia lo que devuelve ni sus props** (`visible`, `tituloHabito`, `horaInicial`, `onConfirmar`, `onCerrar`): `HH:mm`, horas de 00 a 23 y minutos de 5 en
+  5; parte de la hora que se le pasa (el minuto llevado al múltiplo de 5 más cercano) cada vez que se abre. Las cuatro pantallas que lo usan no se tocaron.
+* **Textos:** el título «ELEGIR HORA» pasó a «Elegir hora» (tipo oración, como las demás hojas), los rótulos «HORA» y «MINUTOS» a «Hora» y «Minutos», y se fue el
+  «Cerrar» de texto: la ✕ de la hoja tiene el mismo nombre accesible («Cerrar el selector de hora»). El botón sigue diciendo «GUARDAR HORA».
+* **Pruebas:** Jest `horaDelSelector` (la lógica pura: las 24 horas en 4 renglones de 6, los 12 minutos en 2, `HH:mm`, de qué hora parte) y `horaPickerModal`
+  (ningún `ScrollView` horizontal ni que crezca, los 24 + 12 botones, se llega a 00:00, 11:35 y 23:55, lo devuelto, un «tic» por cambio y que al reabrir parte de la
+  hora nueva). Maestro `.maestro/pagos/09-…` actualizado (toca «14 horas» y «35 minutos» por su etiqueta); **sigue escrito y sin correr**.
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
+
 
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
