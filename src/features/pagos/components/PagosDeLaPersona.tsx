@@ -5,7 +5,6 @@ import { Icon } from '../../../components/Icon';
 import { BotonPeligro, BotonPrincipal, BotonSecundario } from '../../../components/Legible';
 import { Presionable } from '../../../components/Presionable';
 import { mensajeDeError } from '../../../services/http/apiClient';
-import { fuentes } from '../../../theme/fuentes';
 import { useTheme } from '../../../theme/ThemeContext';
 import { tacto } from '../../../utils/tacto';
 import { avisar, confirmar } from '../../admin/utils/dialogo';
@@ -17,6 +16,7 @@ import { usePagosDeLaPersona } from '../hooks/usePagosDeLaPersona';
 import { borradorDeUnCronograma, pagoInicial, type PagoParaElPedido } from '../utils/borradorDelCronograma';
 import { diaDeUnInstante, hoyDelTelefono } from '../utils/fechasDePago';
 import { cuotaVisible, textoDeLaConfirmacion } from '../utils/vistaDeMiIngreso';
+import { DatosDeLaCuota } from './DatosDeLaCuota';
 import { HojaDeUnaCuota } from './HojaDeUnaCuota';
 import { HojaDelCronograma } from './HojaDelCronograma';
 
@@ -31,6 +31,7 @@ type Hoja = { tipo: 'cronograma' } | { tipo: 'cuota'; cuota: CuotaDePago | null 
  * - Con cuotas pagadas tampoco se ofrece reemplazar el cronograma entero ni pasar a «sin cronograma» (409 en el servidor).
  * - Marcar es de un toque, sin confirmación (se deshace con otro toque); lo que borra —una cuota, el cronograma— sí pregunta.
  * - Cada escritura devuelve el pago entero y la sección queda al día sin releer. Un doble toque manda un solo pedido (`ocupado`).
+ * - Cada cuota va en renglones fijos (#96): fecha y estado en el primero, el monto solo en el segundo (`DatosDeLaCuota`), la nota de quién la marcó y los botones debajo.
  * - Sin animaciones: es una ficha de trabajo; los toques se hunden con `Presionable` y el resultado se dice en una línea.
  */
 export function PagosDeLaPersona({
@@ -129,15 +130,7 @@ export function PagosDeLaPersona({
               const visible = cuotaVisible(cuota, pagos.moneda, hoy);
               return (
                 <View key={cuota.id} style={[estilos.cuota, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}>
-                  <View accessible accessibilityLabel={visible.etiqueta} style={estilos.cuotaFila}>
-                    <Icon name="calendar" size={20} color={c.textSoft} />
-                    <Text style={[t.body, estilos.cuotaFecha, { color: c.textStrong }]}>{visible.fecha}</Text>
-                    <Text style={[t.body, estilos.cuotaMonto, { color: c.textStrong }]}>{visible.monto}</Text>
-                    <View style={[estilos.pildora, { backgroundColor: cuota.pagada ? c.successWash : c.goldWash }]}>
-                      <Icon name={cuota.pagada ? 'check' : 'clock'} size={16} color={cuota.pagada ? c.success : c.goldInk} />
-                      <Text style={[t.body, { color: cuota.pagada ? c.success : c.goldInk, fontSize: 16, fontFamily: fuentes.media }]}>{visible.estado}</Text>
-                    </View>
-                  </View>
+                  <DatosDeLaCuota cuota={visible} />
                   {cuota.marcadaPor || cuota.marcadaEn ? (
                     <Text style={[t.small, { color: c.textSoft, fontSize: 16, lineHeight: 22 }]}>{quienYCuando(cuota)}</Text>
                   ) : null}
@@ -250,11 +243,6 @@ function quienYCuando(cuota: CuotaDePago): string {
 const estilos = StyleSheet.create({
   tarjeta: { borderRadius: 14, borderWidth: 1, padding: 14, gap: 12, width: '100%' },
   cuota: { borderWidth: 1, borderRadius: 14, padding: 12, gap: 10 },
-  /* Si la fila no cabe (360 dp, monto de cuatro cifras), baja el estado a un segundo renglón; el monto no se encoge ni se parte dentro del número (#91). */
-  cuotaFila: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: 10, rowGap: 8 },
-  cuotaFecha: { fontSize: 17, fontFamily: fuentes.negrita, minWidth: 58, flexShrink: 0 },
-  cuotaMonto: { fontSize: 17, flexGrow: 1, flexShrink: 0 },
-  pildora: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 36, paddingHorizontal: 10, borderRadius: 18, flexShrink: 0, marginLeft: 'auto' },
   acciones: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
   icono: { width: 52, height: 52, borderWidth: 1.5, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
 });
