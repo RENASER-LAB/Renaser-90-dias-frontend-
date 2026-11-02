@@ -23,7 +23,9 @@ describe('el monto de una cuota nunca se recorta ni se parte', () => {
     for (const original of [FICHA, MI_INGRESO]) {
       const fuente = sinComentarios(original);
       expect(fuente).toContain('<DatosDeLaCuota ');
-      expect(fuente).not.toMatch(/\.monto\b/);
+      // Dibujar el monto (`{cuota.monto}`) es de `DatosDeLaCuota`; leerlo para abrir la hoja de edición (`monto: hoja.cuota.monto`) no cuenta.
+      expect(fuente).not.toMatch(/\{\s*[\w.?]+\.monto\s*\}/);
+      expect(fuente).not.toMatch(/estilos\.monto\b/);
     }
   });
 

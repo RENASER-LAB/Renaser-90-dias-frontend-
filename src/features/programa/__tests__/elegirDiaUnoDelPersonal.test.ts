@@ -304,6 +304,7 @@ describe('Training y el onboarding (código fuente)', () => {
   });
 
   it('el onboarding del aprendiz no cambia: la pantalla va sin «volver»', () => {
-    expect(ONBOARDING).toContain('<ActivarProgramaScreen onActivated={handleProgramaActivado} />');
+    // Spec 036: en el onboarding el programa se activa solo al llegar (`activarAlMontar`); la pantalla sigue sin `alVolver`.
+    expect(ONBOARDING).toContain('<ActivarProgramaScreen activarAlMontar onActivated={handleProgramaActivado} />');
   });
 });

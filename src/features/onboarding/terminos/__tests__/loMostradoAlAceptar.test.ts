@@ -83,7 +83,8 @@ describe('releer lo que acepté', () => {
     });
     const dichos = textos(raiz!);
     expect(dichos.some(t => t.startsWith('Aceptada el'))).toBe(true);
-    expect(dichos.join(' ')).not.toContain('Formación RENASER');
+    // (La introducción del texto de los términos sí dice «Formación RENASER»; lo que no sale es la línea del programa del acuerdo.)
+    expect(dichos.join(' ')).not.toContain('Formación RENASER · 90 días');
     expect(dichos.join(' ')).not.toContain('Del ');
   });
 });

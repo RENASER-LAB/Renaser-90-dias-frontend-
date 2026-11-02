@@ -138,6 +138,9 @@ describe('el chat de SER (cabecera y vacío)', () => {
     expect(iconos(hoja)).not.toContain('spark');
     expect(hoja).toMatch(/<FenixDeSerQuieto size=\{TAMANO_FENIX_EN_LINEA\}/);
     for (const texto of ['CANCELAR', 'CONFIRMAR', 'TOMAR FOTO']) expect(hoja).not.toContain(texto);
-    for (const texto of ['"Cancelar"', '"Confirmar"', '"Tomar foto"']) expect(hoja).toContain(texto);
+    for (const texto of ['"Cancelar"', '"Confirmar"']) expect(hoja).toContain(texto);
+    // Spec 038: el botón del pedido de foto dice «Tomar foto», salvo en un ritual, que se escribe (`ETIQUETA_DEL_BOTON_DEL_RITUAL`).
+    expect(hoja).toMatch(/["']Tomar foto["']/);
+    expect(hoja).toContain('ETIQUETA_DEL_BOTON_DEL_RITUAL');
   });
 });

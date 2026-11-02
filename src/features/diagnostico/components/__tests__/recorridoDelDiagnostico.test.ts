@@ -398,7 +398,7 @@ describe('terminar y el cierre', () => {
     await pulsar(r, 'Terminar');
     expect(textos(r)).toContain('Los escribirás en Plan.');
     expect(textos(r)).toContain('Revisa Plan.');
-    expect(hayBoton(r, 'IR A PLAN')).toBe(true);
+    expect(hayBoton(r, 'Ir a Plan')).toBe(true);
   });
 
   it('si no se pudo terminar, lo dice y deja reintentar sin perder nada', async () => {
