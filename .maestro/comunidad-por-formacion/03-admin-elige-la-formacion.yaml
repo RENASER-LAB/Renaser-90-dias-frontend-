@@ -1,6 +1,6 @@
 # Comunidad vista por Administración: el selector y los rótulos (spec 024). ESCRITO Y SIN CORRER.
 # cuenta: admin  (Administración o Alquimista)
-# Precondición: hay publicaciones «Solo para la Escuela» y «Solo para el Diplomado».
+# Precondición: hay publicaciones «Solo para la Escuela» y «Solo para el Diplomado» (en la base local de pruebas se sembraron el 02/11/2026 con el texto exacto).
 appId: com.renaser.app
 ---
 - runFlow: ../comun/ya-adentro.yaml
