@@ -110,6 +110,8 @@ describe('las fichas del acompañamiento', () => {
     const base = {
       grupoId: 'g1', alumnoId: 'a1', nombre: 'Ana', inicioDeSemana: '2026-10-31', finDeSemana: '2026-11-06', diaDePrograma: 34, zona: 'America/Lima',
       resumen: { obligaciones: 1, cumplidas: 1, conEntrega: 0, pendientes: 0, sinCumplir: 0 },
+      cobertura: 'COMPLETA',
+      actualizadoEn: '2026-11-04T22:00:00Z',
       dias: [
         {
           fecha: '2026-11-04', diaDePrograma: 34,
