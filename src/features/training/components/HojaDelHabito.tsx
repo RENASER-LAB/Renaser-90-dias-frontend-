@@ -121,6 +121,7 @@ export function HojaDelHabito({
                 {lineaDelCumplido(item.cumplido)}
               </Text>
             </View>
+            {item.cumplido.detalle ? <Text style={[t.body, { color: c.text }]}>{item.cumplido.detalle}</Text> : null}
             {item.cumplido.escrito ? <Text style={[t.body, { color: c.text }]}>«{item.cumplido.escrito}»</Text> : null}
           </View>
         ) : null}

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Platform, type StyleProp, type ViewStyle } from 'react-native';
 import { Alert } from '../components/Alerta';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -18,6 +18,9 @@ import {
 } from '../features/training/utils/tarjetaDelHabito';
 import { useTraining } from '../features/training/hooks/useTraining';
 import { TrainingPorHora } from '../features/training/components/TrainingPorHora';
+import { usePasosDelDia } from '../features/pasos/hooks/usePasosDelDia';
+import { CLAVE_SISTEMA_KILOMETROS } from '../features/pasos/utils/vistaDeKilometros';
+import { textoDelAvisoDeRegistro } from '../features/pasos/utils/textosDePasos';
 import { PracticasDeTraining } from '../features/training/components/PracticasDeTraining';
 import { nombreDeLaDimension } from '../features/training/data/dimensiones';
 import { AvisoDeProgramaEnOtraFormacion } from '../features/habits/components/AvisoDeProgramaEnOtraFormacion';
@@ -911,6 +914,25 @@ export default function TrainingScreen() {
       registroConFoto.cerrar();
     }
   }, [hoyIso, registroConFoto]);
+  /**
+   * Los pasos del teléfono para «Kilómetros diarios» (spec 037, D-310). Solo en HOY y con Training a la vista: en un día anterior
+   * no se lee ni se registra nada. Al registrar, el servidor ya cerró el hábito: se refleja el cierre (como los demás) y se
+   * avisa en línea con los km. Si el día cambió con la pantalla abierta, se recarga.
+   */
+  const habitoDeKilometros = useMemo(() => {
+    const h = habits.find(x => x.systemKey === CLAVE_SISTEMA_KILOMETROS && x.tieneTrackHoy);
+    return h ? { id: h.id, fechaEjecucion: h.fechaEjecucion, done: h.done, medicion: h.medicion ?? null } : null;
+  }, [habits]);
+  const pasos = usePasosDelDia({
+    cuentaId: user?.id ?? null,
+    habito: habitoDeKilometros,
+    activo: trainingActivo && !viendoUnDiaAnterior && (diaElegido === null || diaElegido === hoyIso),
+    alRegistrado: (registroId, resultado) => {
+      reflejarCierreConfirmado(registroId);
+      confirmar(textoDelAvisoDeRegistro(resultado.km), registroId);
+    },
+    alCambiarElDia: () => void recargarEntrenamiento(),
+  });
   const estadoDeLaLista: 'cargando' | 'error' | 'listo' = cargandoBackend ? 'cargando' : errorBackend !== null ? 'error' : 'listo';
   /** «Tus prácticas» no ofrece nada que planificar antes de que el programa arranque. */
   const practicasDeshabilitadas = programaSinArrancar || programaSinConfirmar || sinProgramaPropio || programaEnOtraFormacion !== null;
@@ -1071,6 +1093,7 @@ export default function TrainingScreen() {
                 onRegistrar={openEvidenceModal}
                 onMarcar={habit => toggleHabitState(habit.id)}
                 onAbrirEvento={eventoId => irAPestana('Comunidad', { abrirEventoId: eventoId })}
+                pasos={pasos}
               />
               </>
             ) : null}

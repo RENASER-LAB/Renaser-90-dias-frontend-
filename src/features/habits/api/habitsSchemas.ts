@@ -273,7 +273,15 @@ const trackDelDiaSchema = z
      * DIARIOS). `nullish()`: los demás tracks lo traen null y un backend anterior no lo manda.
      */
     medicion: z
-      .object({ unidad: z.string(), valorDelDia: z.number().nullable(), total: z.number() })
+      .object({
+        unidad: z.string(),
+        valorDelDia: z.number().nullable(),
+        total: z.number(),
+        // Spec 037 (D-310): aditivos y tolerantes; un backend anterior no los manda.
+        meta: z.number().nullish(),
+        origenDelDia: z.string().nullish(),
+        fuenteDelDia: z.string().nullish(),
+      })
       .passthrough()
       .nullish(),
     /**

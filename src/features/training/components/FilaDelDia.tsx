@@ -15,6 +15,10 @@ import type { ItemDelDia } from '../utils/itemsDelDia';
 import { controlDeLaFila, subtituloDeLaFila, type ModoDeLaFila } from '../utils/filaDelDia';
 import type { MarcaDelPrimero } from '../utils/listaDelDia';
 import { accionDeLaTarjeta, AVISO_DE_HORA_PASADA } from '../utils/tarjetaDelHabito';
+import { LineaDeKilometros } from '../../pasos/components/LineaDeKilometros';
+import { usePasosDeLaFila } from '../../pasos/components/PasosDeLaLista';
+import { TEXTOS_DE_PASOS } from '../../pasos/utils/textosDePasos';
+import { abreLaHojaDeKilometros } from '../../pasos/utils/vistaDeKilometros';
 
 /**
  * Lo que se mueve al acomodarse la lista (spec 014): lo hecho se va con un fundido corto y lo que queda sube a su lugar
@@ -79,6 +83,11 @@ export function FilaDelDia({
   const registroId = item.habit?.id ?? item.clave;
   const hecha = item.hecho;
   const accion = item.habit ? accionDeLaTarjeta({ done: item.hecho, hasEvidence: item.habit.hasEvidence, systemKey: item.habit.systemKey }) : null;
+  /* Spec 037 (D-310): «Kilómetros diarios» con los pasos conectados. Solo esa fila (y solo en hoy) cambia: sin pasos que ofrecer,
+     `pasos` es null y la fila es exactamente la de siempre. */
+  const pasos = usePasosDeLaFila(item);
+  const conPasos = esHoy && (modo === 'hoy' || modo === 'atrasado') && !!pasos && abreLaHojaDeKilometros(pasos.vista);
+  const avance = conPasos && pasos?.vista.modo === 'avance' ? pasos.vista : null;
   // La etiqueta que oye el lector: la hora, qué es y qué pasa al tocarla.
   const etiqueta = [
     item.hora ?? 'Sin hora',
@@ -157,7 +166,11 @@ export function FilaDelDia({
           style={estilos.areaDelTexto}
         >
           {contenido}
-          {control !== 'check' && control !== 'subir' ? derecha : null}
+          {control !== 'check' && control !== 'subir' && !conPasos ? derecha : null}
+          {avance && !avance.metaLista ? (
+            // Aún no llega a la meta: el círculo vacío y apagado, sin botón (maqueta 2.1).
+            <View style={[estilos.circuloApagado, { borderColor: c.border }]} accessibilityLabel="Todavía no llegas a tu meta" />
+          ) : null}
         </Presionable>
       ) : (
         <View style={[estilos.areaDelTexto, { flex: 1 }]}>{contenido}</View>
@@ -173,6 +186,35 @@ export function FilaDelDia({
         >
           <Icon name={accion.icono} size={TAMANO_ICONO.chico} color={c.goldInk} />
           <Text style={[t.small, { color: c.goldInk, fontFamily: fuentes.media }]}>{accion.etiqueta}</Text>
+        </Presionable>
+      ) : null}
+      {conPasos && !avance && accion ? (
+        // Sin pasos hoy o sin permiso la captura sigue ahí: «Subir» es un botón aparte, porque tocar el nombre abre la hoja de los pasos.
+        <Presionable
+          onPress={() => onSubir?.(item)}
+          hitSlop={6}
+          accessibilityRole="button"
+          accessibilityLabel={`Subir captura de ${item.titulo}`}
+          style={[estilos.pildora, { backgroundColor: c.goldWash }]}
+        >
+          <Icon name={accion.icono} size={TAMANO_ICONO.chico} color={c.goldInk} />
+          <Text style={[t.small, { color: c.goldInk, fontFamily: fuentes.media }]}>{accion.etiqueta}</Text>
+        </Presionable>
+      ) : null}
+      {avance?.metaLista ? (
+        // La meta está lista: un toque registra los km (el servidor vuelve a comprobar la meta y el día).
+        <Presionable
+          onPress={() => {
+            tacto.seleccion();
+            pasos?.onRegistrar();
+          }}
+          disabled={pasos?.registrando}
+          hitSlop={6}
+          accessibilityRole="button"
+          accessibilityLabel={`${TEXTOS_DE_PASOS.registrar} ${item.titulo}`}
+          style={[estilos.registrar, { backgroundColor: c.gold }]}
+        >
+          <Text style={[t.small, { color: c.onGold, fontFamily: fuentes.negrita, fontSize: 15 }]}>{TEXTOS_DE_PASOS.registrar}</Text>
         </Presionable>
       ) : null}
       {control === 'check' ? (
@@ -196,10 +238,23 @@ export function FilaDelDia({
     </View>
   );
 
-  if (!animada) return cuerpo;
+  // La línea de los pasos (el enlace, la barra o «Todavía no vemos pasos hoy») va debajo de la fila, a la altura del nombre: fuera del
+  // área táctil de la fila, para que su enlace sea un botón propio y no quede dentro de otro.
+  const conLinea = pasos && pasos.vista.modo !== 'captura' ? (
+    <View>
+      {cuerpo}
+      <View style={{ paddingLeft: anchoDeLaHora + 10 }}>
+        <LineaDeKilometros vista={pasos.vista} onConectar={pasos.onConectar} onActualizar={pasos.onActualizar} />
+      </View>
+    </View>
+  ) : (
+    cuerpo
+  );
+
+  if (!animada) return conLinea;
   return (
     <Animated.View layout={ACOMODO_DE_LAS_FILAS} exiting={SALIDA_DE_LA_FILA}>
-      {cuerpo}
+      {conLinea}
     </Animated.View>
   );
 }
@@ -224,6 +279,8 @@ const estilos = StyleSheet.create({
   texto: { flex: 1, minWidth: 0, gap: 2, justifyContent: 'center' },
   hecho: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   pildora: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 38, paddingHorizontal: 14, borderRadius: 19 },
+  registrar: { minHeight: 48, minWidth: 48, paddingHorizontal: 16, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
+  circuloApagado: { width: 32, height: 32, borderRadius: 16, borderWidth: 2, marginRight: 1 },
   // 34 de dibujo y 10 de `hitSlop`: el área de toque pasa los 48 sin agrandar el círculo.
   check: { width: 34, height: 34, borderRadius: 17, borderWidth: 1.75, alignItems: 'center', justifyContent: 'center' },
 });
