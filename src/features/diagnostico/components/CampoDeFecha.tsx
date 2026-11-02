@@ -100,7 +100,7 @@ export function CampoDeFecha({ etiqueta, valor, alCambiar, hayError = false, com
         titulo="Elige la fecha"
         subtitulo={fechaEnPalabras(borrador)}
         etiquetaCerrar="Cerrar sin cambiar la fecha"
-        pie={<GoldButton label="LISTO" onPress={confirmar} />}
+        pie={<GoldButton label="Listo" onPress={confirmar} />}
       >
         <View style={estilos.ruedas}>
           <View style={[estilos.franja, { backgroundColor: c.goldWash }]} />

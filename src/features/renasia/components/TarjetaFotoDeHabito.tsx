@@ -41,7 +41,7 @@ export function TarjetaFotoDeHabito({ pedido, onTomarFoto }: Props) {
         </View>
       ) : (
         <GoldButton
-          label="TOMAR FOTO"
+          label="Tomar foto"
           onPress={onTomarFoto}
           disabled={estado !== 'pendiente'}
           loading={estado === 'abriendo'}

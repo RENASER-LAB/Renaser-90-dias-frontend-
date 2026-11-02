@@ -55,7 +55,7 @@ appId: com.renaser.app
 - tapOn: "¿Cuántos km recorriste hoy?"
 - inputText: "3,5"
 - hideKeyboard
-- tapOn: "REGISTRAR"
+- tapOn: "Registrar"
 - runFlow: ../comun/cerrar-aviso-dev.yaml
 - runFlow: ../comun/ya-adentro.yaml
 - runFlow: ../comun/abrir-training.yaml

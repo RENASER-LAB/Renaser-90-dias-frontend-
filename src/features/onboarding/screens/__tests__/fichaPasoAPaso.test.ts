@@ -95,7 +95,7 @@ function titulo(r: ReactTestRenderer): string {
 }
 
 async function siguiente(r: ReactTestRenderer) {
-  const [boton] = r.root.findAll(n => n.props.label === 'SIGUIENTE' || n.props.label === 'CONTINUAR A TÉRMINOS');
+  const [boton] = r.root.findAll(n => n.props.label === 'Siguiente' || n.props.label === 'Continuar a términos');
   await act(async () => {
     await boton.props.onPress();
   });

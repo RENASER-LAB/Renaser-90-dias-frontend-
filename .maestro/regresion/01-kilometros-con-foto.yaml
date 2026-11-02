@@ -47,7 +47,7 @@ appId: com.renaser.app
     condition: ${Math.abs(parseFloat(maestro.copiedText.replace(/[^0-9,]/g, '').replace(',', '.')) - (output.totalAntes + 3.5)) < 0.01}
     label: "El total sube 3,5 km"
 - takeScreenshot: 01a-kilometros-escritos
-- tapOn: "REGISTRAR"
+- tapOn: "Registrar"
 - runFlow: ../comun/cerrar-aviso-dev.yaml
 - extendedWaitUntil:
     notVisible: "(?i)[0-9:]+, KILÓMETROS DIARIOS(, Te toca ahora|, Lo que sigue)?"

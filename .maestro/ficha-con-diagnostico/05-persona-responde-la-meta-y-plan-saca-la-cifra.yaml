@@ -15,28 +15,28 @@ appId: com.renaser.app
 - extendedWaitUntil:
     visible: "Tiempo estimado: 15 minutos"
     timeout: 30000
-- tapOn: "EMPEZAR"
+- tapOn: "Empezar"
 - repeat:
     while:
-      visible: "SIGUIENTE"
+      visible: "Siguiente"
     times: 45
     commands:
       - runFlow:
           file: ../comun/diagnostico-responder-el-paso.yaml
           env:
             META: "si"
-      - tapOn: "SIGUIENTE"
+      - tapOn: "Siguiente"
       - waitForAnimationToEnd:
           timeout: 3000
 - runFlow:
     file: ../comun/diagnostico-responder-el-paso.yaml
     env:
       META: "si"
-- tapOn: "TERMINAR"
+- tapOn: "Terminar"
 - extendedWaitUntil:
     visible: "Tus objetivos ya están preparados"
     timeout: 60000
-- tapOn: "CONTINUAR"
+- tapOn: "Continuar"
 # Plan: los objetivos llegan por confirmar y, los que tienen meta, con su línea de inicio, avance y meta.
 - runFlow: ../comun/ya-adentro.yaml
 - tapOn: "PLAN"

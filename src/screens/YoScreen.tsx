@@ -1732,7 +1732,7 @@ export default function YoScreen() {
                 <Text style={[t.body, { color: c.danger }]}>
                   {errorEvidencias}
                 </Text>
-                <GoldButton label="REINTENTAR" variant="outline" onPress={recargarEvidencias} />
+                <GoldButton label="Reintentar" variant="outline" onPress={recargarEvidencias} />
               </View>
             )}
             {!cargandoEvidencias && !errorEvidencias && evidencias.length === 0 && (

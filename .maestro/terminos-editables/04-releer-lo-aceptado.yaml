@@ -19,7 +19,7 @@ appId: com.renaser.app
 - assertVisible: "Términos y condiciones"
 - takeScreenshot: T04b-lo-que-acepte
 # Solo lectura: no hay casilla, firma ni botón de aceptar.
-- assertNotVisible: "ACEPTAR"
+- assertNotVisible: "Aceptar"
 - assertNotVisible: "Acepto"
 # El atrás sube un nivel: términos → Mi onboarding.
 - back

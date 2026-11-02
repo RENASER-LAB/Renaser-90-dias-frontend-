@@ -129,7 +129,7 @@ export function TerminosScreen({
            firma, al tocarlo se dice cuál («Aceptación requerida» / «Firma requerida») y el recuadro
            de la firma se marca. Antes quedaba apagado hasta tener las dos, sin decir qué faltaba, y
            esas dos alertas nunca llegaban a salir (ONB-02, e2e web del 2026-09-27). */
-        <GoldButton label="CONTINUAR" onPress={handleContinue} loading={guardando} icon="arrow" />
+        <GoldButton label="Continuar" onPress={handleContinue} loading={guardando} icon="arrow" />
       }
     >
       {/* Encabezado: mismos textos; alineado a la izquierda y sin el medallón, como el resto del

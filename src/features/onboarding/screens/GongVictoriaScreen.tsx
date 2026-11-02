@@ -90,7 +90,7 @@ export function GongVictoriaScreen({ onEnterApp }: GongVictoriaScreenProps) {
           </View>
 
           <GoldButton
-            label="ENTRAR A MI DÍA 01 (HOY)"
+            label="Entrar a mi Día 1 (hoy)"
             onPress={onEnterApp}
             icon="arrow"
             style={{ marginTop: 8 }}

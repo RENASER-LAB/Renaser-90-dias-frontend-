@@ -8,7 +8,7 @@ appId: com.renaser.app
 - extendedWaitUntil:
     visible: "Tiempo estimado: 15 minutos"
     timeout: 60000
-- tapOn: "EMPEZAR"
+- tapOn: "Empezar"
 - extendedWaitUntil:
     visible: "¿Cuántos años tienes\\?"
     timeout: 20000
@@ -32,7 +32,7 @@ appId: com.renaser.app
 - assertVisible: "34"
 - takeScreenshot: D02a-retomo-lo-escrito
 # Ahora sí: guarda el paso y deja que Android mate la app en el paso 2.
-- tapOn: "SIGUIENTE"
+- tapOn: "Siguiente"
 - extendedWaitUntil:
     visible: "¿A qué te dedicas actualmente\\?"
     timeout: 30000

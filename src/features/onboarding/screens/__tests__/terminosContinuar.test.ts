@@ -66,7 +66,7 @@ function montar(): ReactTestRenderer {
   return r;
 }
 
-const continuar = (r: ReactTestRenderer) => r.root.findAll(n => n.props.label === 'CONTINUAR')[0];
+const continuar = (r: ReactTestRenderer) => r.root.findAll(n => n.props.label === 'Continuar')[0];
 
 /** Como en la pantalla: un botón apagado (o guardando) no responde al toque. */
 async function tocarContinuar(r: ReactTestRenderer) {

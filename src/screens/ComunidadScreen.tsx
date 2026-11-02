@@ -4855,7 +4855,9 @@ function ComunidadPorFormacion({
               </View>
 
               <GoldButton
-                label="💬 ENVIAR MENSAJE DIRECTO 1 A 1"
+                label="Enviar mensaje directo"
+                icon="messageCircle"
+                iconPosition="left"
                 onPress={() => handleStartDirectChat(selectedMemberProfile)}
                 style={{ width: '100%', marginTop: 10 }}
               />

@@ -8,7 +8,7 @@ import TestRenderer, { act, type ReactTestInstance, type ReactTestRenderer } fro
  * (2026-10-05): la fecha de nacimiento, el código de país del WhatsApp y la ubicación.
  *
  * Lo que se prueba es lo que la persona hace con ellos y lo que se guarda — las mismas claves y los
- * mismos formatos de siempre —, más lo nuevo: «LISTO», las ruedas accesibles, la fecha que existe,
+ * mismos formatos de siempre —, más lo nuevo: «Listo», las ruedas accesibles, la fecha que existe,
  * la lista con lo elegido marcado, la búsqueda sin tildes y la atribución de Google.
  *
  * Contra el código de antes estas pruebas fallan: no había hoja (ni «Cerrar sin cambiar la
@@ -111,7 +111,7 @@ afterEach(() => {
 });
 
 describe('Fecha de nacimiento en una hoja con ruedas', () => {
-  it('se abre en una hoja con tres ruedas accesibles y «LISTO» guarda "DD/MM/AAAA"', async () => {
+  it('se abre en una hoja con tres ruedas accesibles y «Listo» guarda "DD/MM/AAAA"', async () => {
     const onChange = jest.fn<(valor: string) => void>();
     const r = montar(React.createElement(DatePickerField, { label: 'FECHA DE NACIMIENTO', value: '', onChange }));
     expect(hojaAbierta(r)).toBe(false);
@@ -127,7 +127,7 @@ describe('Fecha de nacimiento en una hoja con ruedas', () => {
     girar(r, 'Día', 'increment');
     expect(textos(r)).toContain('16 de junio de 1993');
 
-    const [listo] = r.root.findAll(n => n.props.label === 'LISTO' && typeof n.props.onPress === 'function');
+    const [listo] = r.root.findAll(n => n.props.label === 'Listo' && typeof n.props.onPress === 'function');
     await act(async () => {
       listo.props.onPress();
     });
@@ -143,14 +143,14 @@ describe('Fecha de nacimiento en una hoja con ruedas', () => {
     girar(r, 'Mes', 'increment');
     expect(rueda(r, 'Día').props.accessibilityValue).toEqual({ text: '29' });
 
-    const [listo] = r.root.findAll(n => n.props.label === 'LISTO' && typeof n.props.onPress === 'function');
+    const [listo] = r.root.findAll(n => n.props.label === 'Listo' && typeof n.props.onPress === 'function');
     await act(async () => {
       listo.props.onPress();
     });
     expect(onChange).toHaveBeenCalledWith('29/02/1996');
   });
 
-  it('cerrar sin «LISTO» (la ✕ o el atrás de Android) no cambia la fecha', async () => {
+  it('cerrar sin «Listo» (la ✕ o el atrás de Android) no cambia la fecha', async () => {
     const onChange = jest.fn<(valor: string) => void>();
     const r = montar(React.createElement(DatePickerField, { label: 'FECHA DE NACIMIENTO', value: '15/06/1995', onChange }));
 

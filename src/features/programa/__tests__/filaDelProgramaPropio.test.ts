@@ -157,7 +157,7 @@ describe('personal sin programa (sin fila, el servidor dice que puede empezar)',
     mockConsultarActivacion.mockResolvedValue({ activated: true, validStartDates: [], startDate: '2026-11-04' });
     const dia = r.root.findAll(n => typeof n.props?.onPress === 'function' && n.findAll(m => m.type === Text && decir(m) === 'Miércoles 4 de noviembre').length > 0);
     await pulsar(dia[dia.length - 1]);
-    const confirmar = r.root.findAll(n => typeof n.props?.onPress === 'function' && n.findAll(m => m.type === Text && decir(m) === 'CONFIRMAR MI DÍA 1').length > 0);
+    const confirmar = r.root.findAll(n => typeof n.props?.onPress === 'function' && n.findAll(m => m.type === Text && decir(m) === 'Confirmar mi Día 1').length > 0);
     await pulsar(confirmar[confirmar.length - 1]);
     expect(mockActivarPrograma).toHaveBeenCalledWith({ startDate: '2026-11-04' });
   });

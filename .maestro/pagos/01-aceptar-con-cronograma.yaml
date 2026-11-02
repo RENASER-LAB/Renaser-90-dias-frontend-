@@ -47,7 +47,7 @@ appId: com.renaser.app
 - extendedWaitUntil:
     visible: "Elige la fecha"
     timeout: 10000
-- tapOn: "LISTO"
+- tapOn: "Listo"
 - scrollUntilVisible:
     element: "Armar las cuotas"
     direction: DOWN

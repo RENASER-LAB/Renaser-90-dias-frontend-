@@ -28,7 +28,7 @@ appId: com.renaser.app
     visible: "Elige tu Día 1"
     timeout: 20000
 - takeScreenshot: 16c-selector-del-dia-1
-- tapOn: "CONFIRMAR MI DÍA 1"
+- tapOn: "Confirmar mi Día 1"
 # Al volver, vuelve a leer: ya no es «sin programa» y dice cuándo empieza.
 - extendedWaitUntil:
     visible: "Mi Radar empieza en tu día 8.*"

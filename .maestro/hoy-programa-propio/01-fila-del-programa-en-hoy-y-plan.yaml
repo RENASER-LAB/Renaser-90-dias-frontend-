@@ -32,7 +32,7 @@ appId: com.renaser.app
       # Toda la fila abre el selector del Día 1 (el mismo de siempre) y volver no elige nada.
       - tapOn: ".*Haz tu programa de 90 días.*"
       - extendedWaitUntil:
-          visible: "CONFIRMAR MI DÍA 1"
+          visible: "Confirmar mi Día 1"
           timeout: 20000
       - tapOn:
           text: "Volver sin elegir"

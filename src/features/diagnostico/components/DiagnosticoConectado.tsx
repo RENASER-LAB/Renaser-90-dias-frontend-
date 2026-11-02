@@ -139,7 +139,7 @@ export function DiagnosticoConectado({
       {carga.tipo === 'no_disponible' ? SIN_DIAGNOSTICO_DISPONIBLE : NO_SE_PUDO_CARGAR_EL_DIAGNOSTICO}
     </Text>
   );
-  const reintentar = <GoldButton label="REINTENTAR" onPress={() => setIntento(n => n + 1)} />;
+  const reintentar = <GoldButton label="Reintentar" onPress={() => setIntento(n => n + 1)} />;
 
   if (tituloDeLaCabecera) {
     return (

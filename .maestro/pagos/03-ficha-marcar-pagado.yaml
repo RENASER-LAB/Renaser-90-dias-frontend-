@@ -51,7 +51,7 @@ appId: com.renaser.app
     visible: "Agregar una cuota"
     timeout: 10000
 - tapOn: "Fecha de la cuota"
-- tapOn: "LISTO"
+- tapOn: "Listo"
 - tapOn: "Monto.*"
 - inputText: "500"
 - hideKeyboard

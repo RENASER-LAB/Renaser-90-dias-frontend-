@@ -7,7 +7,7 @@ appId: com.renaser.app
 - extendedWaitUntil:
     visible: "Tiempo estimado: 15 minutos"
     timeout: 60000
-- tapOn: "EMPEZAR"
+- tapOn: "Empezar"
 # Hasta llegar a la pregunta del negocio, con «No.» (por defecto) y sin pasar de ella.
 - repeat:
     while:
@@ -15,11 +15,11 @@ appId: com.renaser.app
     times: 40
     commands:
       - runFlow: ../comun/diagnostico-responder-el-paso.yaml
-      - tapOn: "SIGUIENTE"
+      - tapOn: "Siguiente"
       - waitForAnimationToEnd:
           timeout: 3000
 - tapOn: "Sí\\."
-- tapOn: "SIGUIENTE"
+- tapOn: "Siguiente"
 - extendedWaitUntil:
     visible: "¿A qué se dedica tu negocio\\?"
     timeout: 20000
@@ -30,7 +30,7 @@ appId: com.renaser.app
     visible: "¿Actualmente tienes un negocio.*"
     timeout: 20000
 - tapOn: "No\\."
-- tapOn: "SIGUIENTE"
+- tapOn: "Siguiente"
 - extendedWaitUntil:
     visible: "Cuando sabes que necesitas hacer algo importante.*"
     timeout: 20000
@@ -44,10 +44,10 @@ appId: com.renaser.app
 - assertVisible: "Elige como máximo 2\\."
 - takeScreenshot: D03c-maximo-de-casillas
 # Una obligatoria sin responder marca ESA pregunta y no deja avanzar (la 15 es un párrafo obligatorio).
-- tapOn: "SIGUIENTE"
+- tapOn: "Siguiente"
 - extendedWaitUntil:
     visible: "Piensa en una situación real de los últimos 30 días.*"
     timeout: 20000
-- tapOn: "SIGUIENTE"
+- tapOn: "Siguiente"
 - assertVisible: "Escribe tu respuesta para continuar\\."
 - takeScreenshot: D03d-falta-un-parrafo

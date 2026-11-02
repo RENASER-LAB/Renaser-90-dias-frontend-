@@ -142,7 +142,7 @@ export function ActivarProgramaScreen({ onActivated, alVolver }: ActivarPrograma
       accesibilidadVolver={alVolver ? 'Volver sin elegir' : undefined}
       pie={
         <GoldButton
-          label="CONFIRMAR MI DÍA 1"
+          label="Confirmar mi Día 1"
           onPress={handleConfirmar}
           disabled={!seleccionada || cargando}
           loading={confirmando}

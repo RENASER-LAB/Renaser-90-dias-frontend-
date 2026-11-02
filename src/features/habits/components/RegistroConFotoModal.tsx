@@ -195,7 +195,7 @@ export function RegistroConFotoModal({
 
             <GoldButton
               label={
-                enviando ? 'REGISTRANDO…' : error ? 'REINTENTAR' : conPregunta && !medicion ? 'TERMINAR' : 'REGISTRAR'
+                enviando ? 'Registrando…' : error ? 'Reintentar' : conPregunta && !medicion ? 'Terminar' : 'Registrar'
               }
               onPress={onTerminar}
               loading={enviando}
@@ -216,8 +216,8 @@ export function RegistroConFotoModal({
               {enviando ? (
                 <ActivityIndicator size="small" color={c.textSoft} />
               ) : (
-                <Text style={[t.micro, { color: c.textSoft, fontFamily: fuentes.negrita, fontSize: 11.5 }]}>
-                  CANCELAR
+                <Text style={{ color: c.textSoft, fontFamily: fuentes.media, fontSize: 16, letterSpacing: 0 }}>
+                  Cancelar
                 </Text>
               )}
             </Pressable>

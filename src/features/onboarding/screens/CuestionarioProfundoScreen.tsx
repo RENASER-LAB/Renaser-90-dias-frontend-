@@ -498,7 +498,7 @@ export function CuestionarioProfundoScreen({ onComplete, onBack }: CuestionarioP
         <View style={styles.actionsRow}>
           {indiceBloque > 0 && (
             <GoldButton
-              label="ANTERIOR"
+              label="Anterior"
               variant="secondary"
               onPress={irAlBloqueAnterior}
               icon="arrowLeft"
@@ -509,10 +509,10 @@ export function CuestionarioProfundoScreen({ onComplete, onBack }: CuestionarioP
           <GoldButton
             label={
               guardando
-                ? 'GUARDANDO…'
+                ? 'Guardando…'
                 : esUltimo
-                ? 'CONTINUAR AL SIGUIENTE MÓDULO'
-                : 'CONTINUAR'
+                ? 'Continuar al siguiente módulo'
+                : 'Continuar'
             }
             variant="primary"
             onPress={continuar}

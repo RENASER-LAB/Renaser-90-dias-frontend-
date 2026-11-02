@@ -105,15 +105,15 @@ describe('antes del recorrido', () => {
     const r = await montar('ingreso');
     expect(mockAbrir).toHaveBeenCalledTimes(1);
     expect(textos(r)).toContain('Tiempo estimado: 15 minutos');
-    expect(hayBoton(r, 'EMPEZAR')).toBe(true);
+    expect(hayBoton(r, 'Empezar')).toBe(true);
   });
 
   it('404: «Todavía no tienes un diagnóstico disponible.» con «Reintentar», que vuelve a pedir', async () => {
     mockAbrir.mockRejectedValueOnce(new ApiError(404, 'No existe'));
     const r = await montar('ingreso');
     expect(textos(r)).toContain('Todavía no tienes un diagnóstico disponible.');
-    expect(hayBoton(r, 'REINTENTAR')).toBe(true);
-    await pulsar(r, 'REINTENTAR');
+    expect(hayBoton(r, 'Reintentar')).toBe(true);
+    await pulsar(r, 'Reintentar');
     expect(mockAbrir).toHaveBeenCalledTimes(2);
     expect(textos(r)).toContain('Tiempo estimado: 15 minutos');
   });
@@ -129,7 +129,7 @@ describe('antes del recorrido', () => {
     mockAbrir.mockRejectedValueOnce(new ApiError(0, 'sin red'));
     const r = await montar('ingreso');
     expect(textos(r)).toContain('No pudimos cargar tu diagnóstico. Revisa tu conexión.');
-    await pulsar(r, 'REINTENTAR');
+    await pulsar(r, 'Reintentar');
     expect(textos(r)).toContain('Tiempo estimado: 15 minutos');
     // Una respuesta que no es un diagnóstico también se trata como un fallo, no como una pantalla vacía.
     mockAbrir.mockResolvedValueOnce(null);
@@ -159,14 +159,14 @@ describe('antes del recorrido', () => {
 describe('guardar y terminar', () => {
   it('cada paso guarda las respuestas y mueve el cursor de reanudación (flow diagnostico, step = el paso al que llega)', async () => {
     const r = await montar('ingreso');
-    await pulsar(r, 'EMPEZAR');
+    await pulsar(r, 'Empezar');
     mockGuardar.mockClear();
     // El nombre y la ciudad vienen precargados; falta la edad: se completa el paso y se avanza.
     await act(async () => {
       r.root.findAll(n => n.props.accessibilityLabel === '¿Qué edad tienes?' && typeof n.props.onChangeText === 'function')[0].props.onChangeText('34');
       await vaciar();
     });
-    await pulsar(r, 'SIGUIENTE');
+    await pulsar(r, 'Siguiente');
     expect(mockGuardar).toHaveBeenCalledTimes(1);
     const enviadas = mockGuardar.mock.calls[0][0] as Array<{ preguntaId: number }>;
     expect(enviadas.map(x => x.preguntaId)).toEqual([1, 2, 3]);
@@ -181,7 +181,7 @@ describe('guardar y terminar', () => {
     const dejarDeEscuchar = escucharDiagnosticoTerminado(avisos);
     const r = await montar('ingreso');
     expect(pasoQueSeVe(r)).toContain(`Paso ${total} de ${total}`);
-    await pulsar(r, 'TERMINAR');
+    await pulsar(r, 'Terminar');
     expect(mockGuardar).toHaveBeenCalledTimes(1);
     expect(mockAvanzar).toHaveBeenCalledWith({ flow: 'diagnostico', step: total - 1 });
     expect(mockTerminar).toHaveBeenCalledTimes(1);
@@ -191,14 +191,14 @@ describe('guardar y terminar', () => {
     expect(textos(r)).toContain('Duplicar mis ventas.');
     expect(textos(r)).toContain('Términos'); // en el ingreso sigue Términos y el Día 1
     expect(onTerminado).not.toHaveBeenCalled();
-    await pulsar(r, 'CONTINUAR');
+    await pulsar(r, 'Continuar');
     expect(onTerminado).toHaveBeenCalledTimes(1);
   });
 
   it('para quien ya está dentro, el cierre manda a Plan en vez de a Términos', async () => {
     mockAbrir.mockResolvedValue(enElUltimoPaso().datos);
     const r = await montar('dentro');
-    await pulsar(r, 'TERMINAR');
+    await pulsar(r, 'Terminar');
     expect(textos(r)).toContain('En Plan puedes revisar tus objetivos y confirmarlos.');
     expect(textos(r)).not.toContain('Términos');
   });
@@ -207,12 +207,12 @@ describe('guardar y terminar', () => {
     mockAvanzar.mockRejectedValue(new ApiError(400, 'flujo desconocido'));
     const aviso = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
     const r = await montar('ingreso');
-    await pulsar(r, 'EMPEZAR');
+    await pulsar(r, 'Empezar');
     await act(async () => {
       r.root.findAll(n => n.props.accessibilityLabel === '¿Qué edad tienes?' && typeof n.props.onChangeText === 'function')[0].props.onChangeText('34');
       await vaciar();
     });
-    await pulsar(r, 'SIGUIENTE');
+    await pulsar(r, 'Siguiente');
     expect(textos(r)).not.toContain('No se pudo guardar');
     expect(pasoQueSeVe(r)).toContain('Paso 2 de');
     expect(aviso).toHaveBeenCalled();
@@ -222,12 +222,12 @@ describe('guardar y terminar', () => {
   it('si no se pueden guardar las respuestas, NO se avanza ni se mueve el cursor, y se puede reintentar', async () => {
     mockGuardar.mockRejectedValueOnce(new ApiError(0, 'sin red'));
     const r = await montar('ingreso');
-    await pulsar(r, 'EMPEZAR');
+    await pulsar(r, 'Empezar');
     await act(async () => {
       r.root.findAll(n => n.props.accessibilityLabel === '¿Qué edad tienes?' && typeof n.props.onChangeText === 'function')[0].props.onChangeText('34');
       await vaciar();
     });
-    await pulsar(r, 'SIGUIENTE');
+    await pulsar(r, 'Siguiente');
     expect(textos(r)).toContain('No se pudo guardar. Revisa tu conexión.');
     expect(mockAvanzar).not.toHaveBeenCalled();
     expect(pasoQueSeVe(r)).toContain('Paso 1 de');
@@ -239,12 +239,12 @@ describe('guardar y terminar', () => {
   it('si al guardar el servidor dice que ya lo había terminado (409), avisa que terminó', async () => {
     mockGuardar.mockRejectedValueOnce(new ApiError(409, 'Ya terminó'));
     const r = await montar('ingreso');
-    await pulsar(r, 'EMPEZAR');
+    await pulsar(r, 'Empezar');
     await act(async () => {
       r.root.findAll(n => n.props.accessibilityLabel === '¿Qué edad tienes?' && typeof n.props.onChangeText === 'function')[0].props.onChangeText('34');
       await vaciar();
     });
-    await pulsar(r, 'SIGUIENTE');
+    await pulsar(r, 'Siguiente');
     expect(onTerminado).toHaveBeenCalledTimes(1);
   });
 
@@ -252,9 +252,9 @@ describe('guardar y terminar', () => {
     mockAbrir.mockResolvedValue(enElUltimoPaso().datos);
     mockTerminar.mockRejectedValueOnce(new ApiError(0, 'sin red'));
     const r = await montar('ingreso');
-    await pulsar(r, 'TERMINAR');
+    await pulsar(r, 'Terminar');
     expect(textos(r)).toContain('No se pudo terminar. Revisa tu conexión.');
-    expect(botonDe(r, 'TERMINAR')).toBeDefined();
+    expect(botonDe(r, 'Terminar')).toBeDefined();
     await tocar(r, 'Reintentar');
     expect(mockTerminar).toHaveBeenCalledTimes(2);
     expect(textos(r)).toContain('Tus objetivos ya están preparados');
