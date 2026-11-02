@@ -1,0 +1,53 @@
+# Dependabot: actualizaciones de versiones (las de seguridad se activan aparte, en Settings → Code security).
+#
+# Una sola PR semanal con lo que no es del SDK de Expo, y otra por cada salto mayor, para que un cambio
+# de API no viaje escondido dentro de un grupo de parches.
+version: 2
+
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: America/Lima
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: Dependencias
+    groups:
+      menores-y-parches:
+        update-types: [minor, patch]
+    # Lo que Expo fija por SDK no se actualiza suelto. Cada SDK pide una versión EXACTA de estos paquetes
+    # (`npx expo install --check` falla si se desalinean) y se mueve todo junto, a mano, al subir de SDK.
+    # Si Dependabot sube uno solo, la app deja de compilar o, peor, compila con un módulo
+    # nativo que no coincide con el que trae el SDK. Un aviso de seguridad sobre alguno de estos paquetes se
+    # atiende a mano, no por acá: el job «Dependencias vulnerables» del workflow Seguridad lo hace visible.
+    ignore:
+      - dependency-name: expo
+      - dependency-name: 'expo-*'
+      - dependency-name: '@expo/*'
+      - dependency-name: jest-expo
+      - dependency-name: react
+      - dependency-name: react-dom
+      - dependency-name: '@types/react'
+      - dependency-name: react-native
+      - dependency-name: 'react-native-*'
+      - dependency-name: '@react-native/*'
+      - dependency-name: '@react-native-async-storage/*'
+      - dependency-name: '@shopify/react-native-skia'
+      - dependency-name: rive-react-native
+      - dependency-name: '@speechmatics/expo-two-way-audio'
+      # TypeScript va con `~`: Expo valida la versión menor que su plantilla trae.
+      - dependency-name: typescript
+
+  # Las acciones de los workflows (`actions/checkout`, `github/codeql-action`…).
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: America/Lima
+    commit-message:
+      prefix: CI
