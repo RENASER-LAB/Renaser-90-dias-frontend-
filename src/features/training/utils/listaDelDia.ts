@@ -12,16 +12,12 @@
  * - **Sin hora** va antes de lo atrasado.
  * - **Los eventos que ya terminaron salen**; un evento nunca queda «atrasado» (no se registra).
  * - **Un hábito pausado no aparece hoy.**
- * - **«Cierra tu día» (spec 017) es de otra naturaleza** (`tipo: 'cierre'`) y va aparte, en `cierre`: está SIEMPRE, todos los
- *   días y a cualquier hora, y la lista de hoy la dibuja de última, después de todo lo del día (incluido Dormir). No depende
- *   de Despertar, de Dormir ni de ninguna hora (pedido del dueño, 2026-10-30: quien trabaja de noche no tiene una hora
- *   «normal» de dormir). Cerrada o no, nunca se atrasa, no hace atrasar a nadie, no pasa a «hechos» ni cuenta como hecho, y no
- *   es el «primero» («Te toca ahora» es de un hábito o una acción).
+ * - **«Cierra tu día» ya no está en esta lista** (spec 033, 2026-10-31): se movió a Plan.
  *
  * Trabaja con minutos desde la medianoche del día de la persona; quien llama decide de dónde sale «ahora».
  */
 
-export type TipoDeItem = 'habito' | 'accion' | 'evento' | 'cierre';
+export type TipoDeItem = 'habito' | 'accion' | 'evento';
 
 /** Lo mínimo que la lista necesita saber de cada ítem; `ItemDelDia` lo extiende con lo que se dibuja. */
 export interface ItemBase {
@@ -61,11 +57,6 @@ export interface ListaDelDia<T extends ItemBase> {
   cerrados: T[];
   /** Lo hecho, por hora. Plegado al final. */
   hechos: T[];
-  /**
-   * «Cierra tu día» (spec 017), cerrado o no: **la última fila de hoy**, siempre, sin hora y sin depender de ningún hábito.
-   * `null` si la lista no trae el ítem (todavía no se sabe, o el servidor no lo tiene).
-   */
-  cierre: T | null;
 }
 
 /** `HH:mm` (o `HH:mm:ss`) → minutos desde medianoche; `null` si no se entiende. */
@@ -114,9 +105,8 @@ export function armarListaDelDia<T extends ItemBase>(
 ): ListaDelDia<T> {
   const visibles = items.filter(x => !x.pausado);
   // La hora del «siguiente» sale de TODO lo del día con hora (también lo hecho y los eventos): es lo que viene
-  // en la agenda, no solo lo pendiente. El cierre no es agenda: no tiene hora y, si la trajera, no atrasaría a nadie.
+  // en la agenda, no solo lo pendiente.
   const horas = visibles
-    .filter(x => x.tipo !== 'cierre')
     .map(x => minutosDeLaHora(x.hora))
     .filter((m): m is number => m != null);
   const siguienteHora = (min: number): number | null => {
@@ -129,14 +119,8 @@ export function armarListaDelDia<T extends ItemBase>(
   const atrasados: T[] = [];
   const cerrados: T[] = [];
   const hechos: T[] = [];
-  let cierre: T | null = null;
 
   for (const item of visibles) {
-    // El cierre va aparte y al final: ni «hechos», ni «atrasados», ni se despide, ni depende de la hora.
-    if (item.tipo === 'cierre') {
-      cierre = item;
-      continue;
-    }
     if (eventoTerminado(item, ahoraMin)) continue;
     const seDespide = retenidos.has(item.clave);
     if (item.hecho && !seDespide) {
@@ -168,7 +152,6 @@ export function armarListaDelDia<T extends ItemBase>(
     atrasados: porHora(atrasados),
     cerrados: porHora(cerrados),
     hechos: porHora(hechos),
-    cierre,
   };
 }
 
@@ -179,11 +162,11 @@ export const TEXTO_DE_LA_MARCA: Record<MarcaDelPrimero, string> = {
 };
 
 /**
- * Hábitos y acciones del día (los eventos no se «hacen» y «Cierra tu día» no cuenta): cuántos hay y cuántos van,
+ * Hábitos y acciones del día (los eventos no se «hacen»): cuántos hay y cuántos van,
  * contando los que se despiden.
  */
 export function contarElDia(items: ItemBase[]): { hechos: number; total: number } {
-  const propios = items.filter(x => !x.pausado && x.tipo !== 'evento' && x.tipo !== 'cierre');
+  const propios = items.filter(x => !x.pausado && x.tipo !== 'evento');
   return { hechos: propios.filter(x => x.hecho).length, total: propios.length };
 }
 

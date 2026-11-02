@@ -1,0 +1,32 @@
+# CP02 — Los cierres de los días anteriores se ven en la MISMA tarjeta de Plan, solo para mirar (spec 033, decisión 033-1 A):
+# «Tus cierres de la semana» con los siete días; tocar uno que ya pasó dice «Cerrado a las HH:MM» o «Sin cerrar» y NUNCA
+# ofrece cerrarlo (un día que terminó no se cierra tarde). Hoy y los que vienen no se pueden tocar.
+# ESCRITO Y SIN CORRER. Precondición: la cuenta está al menos en el día 3 del programa y hoy no es lunes (así hay un día
+# anterior en la semana). Con un cierre guardado ayer el flujo ve «Cerrado»; sin él, «Sin cerrar». Los dos valen.
+# Se corre con: .maestro/correr.sh .maestro/cierre-en-plan/02-dias-anteriores-solo-lectura.yaml
+# cuenta: aprendiz
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "PLAN"
+- extendedWaitUntil:
+    visible: "Acciones que mueven la meta"
+    timeout: 30000
+- scrollUntilVisible:
+    element: "Tus cierres de la semana"
+    direction: DOWN
+    timeout: 60000
+- assertVisible: "Toca un día que ya pasó para ver cómo quedó. Un día que terminó no se puede cerrar."
+- takeScreenshot: CP02a-la-semana
+# Hoy no se puede tocar: dice «, hoy, no se puede ver».
+- assertVisible: ".*, hoy, no se puede ver"
+# Un día anterior (su nombre no lleva «no se puede ver»): se lee al tocarlo.
+- tapOn:
+    text: "(Lunes|Martes|Miércoles|Jueves|Viernes|Sábado) [0-9]+"
+    index: 0
+- extendedWaitUntil:
+    visible: ".* · (Cerrado.*|Sin cerrar)"
+    timeout: 30000
+- takeScreenshot: CP02b-un-dia-anterior
+# Solo se mira: nunca hay un botón para cerrar ese día.
+- assertNotVisible: "Guardar mi cierre"
