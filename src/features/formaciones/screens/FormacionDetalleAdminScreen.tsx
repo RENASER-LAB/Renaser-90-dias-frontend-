@@ -11,6 +11,7 @@ import { useTheme } from '../../../theme/ThemeContext';
 import { CabeceraAdmin } from '../../admin/components/CabeceraAdmin';
 import { ESPACIO_PARA_LANZADOR } from '../../renasia/components/RenasiaLauncher';
 import { EditarFormacionSheet } from '../components/EditarFormacionSheet';
+import { ImagenDeLaFormacion } from '../components/ImagenDeLaFormacion';
 import { SeccionComunidadDeLaFormacion } from '../components/SeccionComunidadDeLaFormacion';
 import { useDetalleDeFormacion } from '../hooks/useFormacionesAdmin';
 import { estadoDeLaFormacion, lineaDeDuraciones, totalPorAtender } from '../utils/resumenDeFormacion';
@@ -137,6 +138,9 @@ export function FormacionDetalleAdminScreen({
 
             {/* Spec 024: los cuatro tipos de comunidad de esta formación (prender / apagar). Contra un backend anterior no se dibuja. */}
             <SeccionComunidadDeLaFormacion codigo={codigo} />
+
+            {/* Spec 035: la imagen de esta formación en el chat. Contra un backend anterior no se dibuja. */}
+            <ImagenDeLaFormacion codigo={codigo} />
 
             <EditarFormacionSheet
               visible={editando}
