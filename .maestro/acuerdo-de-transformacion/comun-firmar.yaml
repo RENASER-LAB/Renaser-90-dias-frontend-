@@ -1,0 +1,19 @@
+# Marca la casilla de los términos, firma con el dedo y toca «Continuar» (o «Aceptar», si es la pantalla de volver a aceptar). Lo usan los demás flujos de esta carpeta.
+# ESCRITO Y SIN CORRER: la posición del recuadro de la firma se estimó (sale justo encima de la casilla de los términos); si el trazo no cae dentro, se ajustan los porcentajes.
+# Variable: BOTON  («Continuar» en el onboarding, «Aceptar» en «Actualizamos nuestros términos»).
+appId: com.renaser.app
+---
+- scrollUntilVisible:
+    element: "He leído y acepto los Términos y Condiciones"
+    direction: DOWN
+    timeout: 30000
+- tapOn: "He leído y acepto los Términos y Condiciones"
+# Dos trazos largos dentro del recuadro (queda unos 25 % de la pantalla encima de la casilla).
+- swipe:
+    start: 25%, 62%
+    end: 75%, 68%
+- swipe:
+    start: 30%, 70%
+    end: 70%, 60%
+- takeScreenshot: A00-firmado-antes-de-continuar
+- tapOn: "${BOTON}"

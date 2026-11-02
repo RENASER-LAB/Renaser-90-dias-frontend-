@@ -1,0 +1,19 @@
+# 04 — El Diplomado dice su propio programa y su propio fin: «Diplomado RENASER · 3 meses» (90 días) o «· 1 año» (365 días), no un «90 días» escrito a mano (spec 039, D-312).
+# ESCRITO Y SIN CORRER.
+# cuenta: aprendiz
+# Precondición (base local): backend con la spec 039; aprendiz del Diplomado (de 3 meses o de 1 año) con la ficha terminada, los Términos SIN aceptar y su programa SIN activar.
+appId: com.renaser.app
+---
+- extendedWaitUntil:
+    visible: "Lee atentamente las 23 cláusulas y sella tu aceptación\\."
+    timeout: 60000
+- assertVisible: "Al inscribirme en Diplomado RENASER.*"
+- scrollUntilVisible:
+    element: "(?i)mi aceptación"
+    direction: DOWN
+    timeout: 40000
+- assertVisible: "Diplomado RENASER · (3 meses|1 año)"
+- assertNotVisible: "Formación RENASER.*"
+- assertNotVisible: "Diplomado RENASER · 90 días"
+- assertVisible: "Fecha de finalización"
+- takeScreenshot: A04a-mi-aceptacion-del-diplomado
