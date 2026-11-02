@@ -104,7 +104,6 @@ import {
   OPCIONES_DE_ALCANCE,
   alternarDiaDeLaSemana,
   apagadoPorElPlanDeSiempre,
-  ayudaDeLaSemana,
   cambiosDeLaSemana,
   cambiosParaApagar,
   cambiosParaVolverAlPlanDeSiempre,
