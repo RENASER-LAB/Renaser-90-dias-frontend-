@@ -19,7 +19,7 @@ export type ClaveDeTabla = 'general' | 'coherencia' | 'kilometros' | 'gimnasio';
 export const TABLAS_DE_RANKING: ReadonlyArray<{ clave: ClaveDeTabla; titulo: string; explica: string }> = [
   { clave: 'general', titulo: 'General', explica: 'Hábitos, acciones y lecciones, todo junto' },
   { clave: 'coherencia', titulo: 'Coherencia', explica: 'Acciones diarias cumplidas de tu semana' },
-  { clave: 'kilometros', titulo: 'Kilómetros', explica: 'Km recorridos desde tu Día 1' },
+  { clave: 'kilometros', titulo: 'Kilómetros', explica: 'Km de tus pasos o de tu captura.' },
   { clave: 'gimnasio', titulo: 'Gimnasio', explica: 'Días de gimnasio desde tu Día 1' },
 ];
 
@@ -43,10 +43,19 @@ export function entradasDeLaTabla(datos: RankingAgregadoDto | null, clave: Clave
  * "12,5 km" en la de kilómetros; "80 pts" en las demás. La unidad en minúscula, como «km»
  * (2026-10-05): decía "80 Pts" y la pantalla le agregaba un ⚡ delante; ahora va la cifra sola.
  */
-export function textoDelPuntaje(clave: ClaveDeTabla, puntaje: number): string {
-  if (clave === 'kilometros') return `${formatoKm(puntaje)} km`;
+export function textoDelPuntaje(clave: ClaveDeTabla, puntaje: number, automatico = false): string {
+  // Spec 037 (D-310): «auto» junto a los km de quien tiene días leídos por el teléfono. No cambia la cifra.
+  if (clave === 'kilometros') return `${formatoKm(puntaje)} km${automatico ? ' · auto' : ''}`;
   if (clave === 'gimnasio') return textoDeDias(puntaje);
   return `${puntaje} pts`;
+}
+
+/** ¿Esta fila tiene km leídos por el teléfono? Por el id de la persona, nunca por el nombre. */
+export function conKmAutomaticos(
+  entrada: Pick<EntradaRankingDto, 'participanteId'>,
+  automaticos: ReadonlySet<string> | undefined,
+): boolean {
+  return !!automaticos && automaticos.has(entrada.participanteId);
 }
 
 /** «1 día», «12 días». */

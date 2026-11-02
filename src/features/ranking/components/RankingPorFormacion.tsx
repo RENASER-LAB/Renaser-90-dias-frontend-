@@ -7,11 +7,17 @@ import { useTheme } from '../../../theme/ThemeContext';
 import { EntradaEscalonada, PodioRanking, type PuestoPodio } from '../../community/components/PodioRanking';
 import type { EntradaRankingDto } from '../api/rankingApi';
 import type { GrupoDeRanking } from '../utils/agruparPorFormacion';
-import { esMiEntrada, nombreEnElRanking, textoDelPuntaje, type ClaveDeTabla } from '../utils/tablasDeRanking';
+import { conKmAutomaticos, esMiEntrada, nombreEnElRanking, textoDelPuntaje, type ClaveDeTabla } from '../utils/tablasDeRanking';
 
-function puesto(entrada: EntradaRankingDto | undefined, tabla: ClaveDeTabla, quien: { id?: string | null }, nombre: string): PuestoPodio | null {
+function puesto(
+  entrada: EntradaRankingDto | undefined,
+  tabla: ClaveDeTabla,
+  quien: { id?: string | null },
+  nombre: string,
+  automaticos?: ReadonlySet<string>,
+): PuestoPodio | null {
   if (!entrada) return null;
-  return { name: nombreEnElRanking(entrada, quien, nombre), score: textoDelPuntaje(tabla, entrada.puntaje) };
+  return { name: nombreEnElRanking(entrada, quien, nombre), score: textoDelPuntaje(tabla, entrada.puntaje, conKmAutomaticos(entrada, automaticos)) };
 }
 
 /**
@@ -29,6 +35,7 @@ export function RankingPorFormacion({
   nombreDeQuienMira,
   activo,
   nombreDeLaFormacion,
+  automaticos,
 }: {
   grupos: readonly GrupoDeRanking[];
   tabla: ClaveDeTabla;
@@ -38,6 +45,8 @@ export function RankingPorFormacion({
   activo: boolean;
   /** El nombre configurado de la formación (el encabezado de cada sección). */
   nombreDeLaFormacion: (codigo: string) => string;
+  /** Spec 037: ids de quienes tienen km leídos por el teléfono; el total lleva «· auto». */
+  automaticos?: ReadonlySet<string>;
 }) {
   const { c, t } = useTheme();
   return (
@@ -49,9 +58,9 @@ export function RankingPorFormacion({
           </Text>
           <PodioRanking
             key={`${tabla}-${grupo.formacion}`}
-            top1={puesto(grupo.entradas[0], tabla, quien, nombreDeQuienMira)}
-            top2={puesto(grupo.entradas[1], tabla, quien, nombreDeQuienMira)}
-            top3={puesto(grupo.entradas[2], tabla, quien, nombreDeQuienMira)}
+            top1={puesto(grupo.entradas[0], tabla, quien, nombreDeQuienMira, automaticos)}
+            top2={puesto(grupo.entradas[1], tabla, quien, nombreDeQuienMira, automaticos)}
+            top3={puesto(grupo.entradas[2], tabla, quien, nombreDeQuienMira, automaticos)}
             activo={activo}
           />
           <View style={[estilos.lista, { borderColor: c.border, backgroundColor: c.cardBg }]}>
@@ -79,7 +88,7 @@ export function RankingPorFormacion({
                     {nombreEnElRanking(entrada, quien, nombreDeQuienMira)}
                   </Text>
                   <Text style={[t.small, estilos.cifras, { color: c.goldInk, fontFamily: fuentes.negrita }]}>
-                    {textoDelPuntaje(tabla, entrada.puntaje)}
+                    {textoDelPuntaje(tabla, entrada.puntaje, conKmAutomaticos(entrada, automaticos))}
                   </Text>
                 </EntradaEscalonada>
               );

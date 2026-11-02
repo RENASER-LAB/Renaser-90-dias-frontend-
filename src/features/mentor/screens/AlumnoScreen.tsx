@@ -19,6 +19,7 @@ import { TarjetaSemaforoDeAprendiz } from '../../semaforo/components/TarjetaSema
 import { ChipDeCaja } from '../../caja/components/ChipDeCaja';
 import { abrirConversacionDirecta } from '../../chat/api/chatApi';
 import { EvidenciaDeObligacion } from '../../lider-mentores/components/EvidenciaDeObligacion';
+import { LineaDeLaMedicionCruda } from '../../pasos/components/LineaDeLaMedicion';
 import { VerPublicacion } from '../../lider-mentores/components/VisorDePublicacion';
 import { obtenerRadarDeAlumno } from '../api/mentorApi';
 import { obtenerCierresDeAlumno } from '../../cierre/api/cierreApi';
@@ -343,6 +344,8 @@ export function AlumnoScreen({
                                   {etiquetaDeEntrega(o.entrega, o.revision, o.publicacionId ?? null)}
                                 </Text>
                               ) : null}
+                              {/* Spec 037 (D-310): los km del día, quién los midió y si quedaron por revisar. */}
+                              <LineaDeLaMedicionCruda crudo={o.medicion} />
                               {/* La misma hoja que usa el líder: foto, audio, video y TEXTO se ven dentro de la app, sin
                                   salir al navegador. El enlace se pide al abrirla (vence a los diez minutos) y el tipo se
                                   averigua al abrir. El servidor deja leerla al mentor o la guía asignados a este aprendiz. */}

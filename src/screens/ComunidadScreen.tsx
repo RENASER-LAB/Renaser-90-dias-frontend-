@@ -167,6 +167,7 @@ import {
   invitacionSinPosiciones,
   textoDeMiPuntaje,
   textoDelPuntaje,
+  conKmAutomaticos,
   type ClaveDeTabla,
 } from '../features/ranking/utils/tablasDeRanking';
 import { ApiError, mensajeDeError } from '../services/http/apiClient';
@@ -1641,6 +1642,11 @@ function ComunidadPorFormacion({
   const tipoRanking: ClaveDeTabla = tablasDelRanking.some(tabla => tabla.clave === tipoRankingElegido) ? tipoRankingElegido : 'general';
 
   const apiRankingEntries = useMemo(() => entradasDeLaTabla(rankingData, tipoRanking), [rankingData, tipoRanking]);
+  /* Spec 037 (D-310): quiénes tienen km leídos por el teléfono; en la tabla de km su total lleva «· auto». */
+  const kmAutomaticos = useMemo(
+    () => (tipoRanking === 'kilometros' ? new Set(rankingData?.kilometrosAutomaticos ?? []) : undefined),
+    [rankingData, tipoRanking],
+  );
 
   /**
    * Qué mide cada tabla, en una línea. Sin esto, dos listas de números no se distinguen.
@@ -1663,7 +1669,7 @@ function ComunidadPorFormacion({
       rank: item.posicion,
       // Solo por id (#43): un nombre corto o común («Ana», «Luis») marcaba como «TÚ» a otra persona.
       name: nombreEnElRanking(item, { id: user?.id }, nombreUsuario),
-      scoreText: textoDelPuntaje(tipoRanking, item.puntaje),
+      scoreText: textoDelPuntaje(tipoRanking, item.puntaje, conKmAutomaticos(item, kmAutomaticos)),
       medal:
         item.posicion === 1
           ? ('gold' as const)
@@ -1674,7 +1680,7 @@ function ComunidadPorFormacion({
           : undefined,
       isCurrentUser: esMiEntrada(item, { id: user?.id }),
     }));
-  }, [apiRankingEntries, tipoRanking, user?.id, nombreUsuario]);
+  }, [apiRankingEntries, tipoRanking, user?.id, nombreUsuario, kmAutomaticos]);
 
   /* Spec 024: quien ve todas las formaciones y lee «Todas» recibe cada fila con su formación y su posición DENTRO de ella: la
      tabla se pinta por formación (un encabezado, un podio y una lista cada una). Para las demás cuentas, y con una sola formación
@@ -1690,33 +1696,33 @@ function ComunidadPorFormacion({
       const p = apiRankingEntries[0];
       return {
         name: nombreEnElRanking(p, { id: user?.id }, nombreUsuario),
-        score: textoDelPuntaje(tipoRanking, p.puntaje),
+        score: textoDelPuntaje(tipoRanking, p.puntaje, conKmAutomaticos(p, kmAutomaticos)),
       };
     }
     return null;
-  }, [apiRankingEntries, tipoRanking, user?.id, nombreUsuario]);
+  }, [apiRankingEntries, tipoRanking, user?.id, nombreUsuario, kmAutomaticos]);
 
   const podioTop2 = useMemo(() => {
     if (apiRankingEntries.length >= 2) {
       const p = apiRankingEntries[1];
       return {
         name: nombreEnElRanking(p, { id: user?.id }, nombreUsuario),
-        score: textoDelPuntaje(tipoRanking, p.puntaje),
+        score: textoDelPuntaje(tipoRanking, p.puntaje, conKmAutomaticos(p, kmAutomaticos)),
       };
     }
     return null;
-  }, [apiRankingEntries, tipoRanking, user?.id, nombreUsuario]);
+  }, [apiRankingEntries, tipoRanking, user?.id, nombreUsuario, kmAutomaticos]);
 
   const podioTop3 = useMemo(() => {
     if (apiRankingEntries.length >= 3) {
       const p = apiRankingEntries[2];
       return {
         name: nombreEnElRanking(p, { id: user?.id }, nombreUsuario),
-        score: textoDelPuntaje(tipoRanking, p.puntaje),
+        score: textoDelPuntaje(tipoRanking, p.puntaje, conKmAutomaticos(p, kmAutomaticos)),
       };
     }
     return null;
-  }, [apiRankingEntries, tipoRanking, user?.id, nombreUsuario]);
+  }, [apiRankingEntries, tipoRanking, user?.id, nombreUsuario, kmAutomaticos]);
 
   // Posición del usuario autenticado actual desde la API
   const userRankEntry = useMemo(() => {
@@ -3355,6 +3361,7 @@ function ComunidadPorFormacion({
                   nombreDeQuienMira={nombreUsuario}
                   activo={seccionActiva === 'ranking'}
                   nombreDeLaFormacion={formacionDeLaComunidad.nombreDe}
+                  automaticos={kmAutomaticos}
                 />
               ) : rankingCargando && !podioTop1 ? (
                 <View style={[styles.myRankCard, { borderColor: c.border, backgroundColor: c.cardBg }]}>
