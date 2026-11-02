@@ -18,4 +18,6 @@ appId: com.renaser.app
     element: "Abrir Administración"
     direction: DOWN
     timeout: 30000
-- assertVisible: "TRAINING"
+# La barra de pestañas se esconde al desplazar (D-246): no se mira TRAINING. Basta con haber vuelto a Yo (la fila de
+# Administración está a la vista) y con que la pantalla de Administración ya no esté.
+- assertNotVisible: "Operación del programa"
