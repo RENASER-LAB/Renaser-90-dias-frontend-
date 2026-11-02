@@ -1,0 +1,37 @@
+# 01 — Un ritual que pide SER se registra ESCRIBIENDO, sin cámara (spec 038; decisión del dueño del 31/10).
+# Precondición: aprendiz con el programa activado y un ritual (RITUAL_MORNING / MIDDAY / NIGHT) PENDIENTE hoy. El backend con la spec 038 (V160) y la IA prendida.
+# cuenta: aprendiz
+# ESCRITO Y SIN CORRER (la IA real no se llamó al escribirlo; el emulador estaba ocupado con la regresión de integración).
+#
+# Lo que prueba:
+#   1. «Marca mi ritual de la mañana» deja una tarjeta con «Escribir cómo me siento», NO «Tomar foto».
+#   2. Tocarla abre la hoja «¿Cómo te sientes después de realizar el ritual?» (la de Training), sin pedir permiso de cámara.
+#   3. Enviar cierra el registro: la tarjeta dice «Listo, quedó registrado tu ritual.» y en Training el ritual figura hecho.
+appId: com.renaser.app
+---
+- runFlow: ../comun/despejar-capas.yaml
+- tapOn: "Hablar con SER, tu acompañante.*"
+- extendedWaitUntil:
+    visible: "Cerrar SER"
+    timeout: 15000
+- tapOn: "Escríbele a SER…"
+- inputText: "Marca mi ritual de la mañana"
+- tapOn: "Enviar pregunta"
+- extendedWaitUntil:
+    visible: "Escribir cómo me siento"
+    timeout: 60000
+- assertNotVisible: "Tomar foto"
+- takeScreenshot: 01a-tarjeta-de-escribir
+- tapOn: "Escribir cómo me siento"
+- extendedWaitUntil:
+    visible: "¿Cómo te sientes después de realizar el ritual\\?"
+    timeout: 10000
+- takeScreenshot: 01b-hoja-del-ritual
+- tapOn: "Cuéntalo con tus palabras"
+- inputText: "En calma y con energía"
+- hideKeyboard
+- tapOn: "Enviar"
+- extendedWaitUntil:
+    visible: "Listo, quedó registrado tu ritual\\."
+    timeout: 20000
+- takeScreenshot: 01c-ritual-registrado
