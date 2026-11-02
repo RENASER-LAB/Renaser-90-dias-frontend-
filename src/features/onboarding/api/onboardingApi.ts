@@ -124,10 +124,22 @@ export async function avanzarEstado(input: AvanzarEstadoInput): Promise<EstadoOn
   return validarRespuesta<EstadoOnboardingApi>(estadoOnboardingSchema, r, 'PUT /api/v1/onboarding/state');
 }
 
+/**
+ * Lo que la persona vio y aceptó en «Mi aceptación» (spec 039): el inicio de su programa (`AAAA-MM-DD`) y la huella del cronograma de pagos que firmó junto con los
+ * términos. Si ya no coinciden con los de ahora, el servidor responde 409 y no registra nada.
+ */
+export type AcuerdoQueSeVio = { inicioVisto?: string | null; huellaDelCronograma?: string | null };
+
 /** POST /api/v1/onboarding/milestones — marca un hito de aceptación/firma (TERMINOS, PACTO, PACTO_FIRMADO, ROCAS_SYNC). */
-export async function aceptarHito(milestone: HitoOnboarding, termsVersionId?: string | null): Promise<EstadoOnboardingApi> {
-  /* Spec 027: con el hito de Términos va además la versión que la persona leyó, para dejar constancia de ella. Un servidor anterior ignora el campo. */
-  const body = termsVersionId ? { milestone, termsVersionId } : { milestone };
+export async function aceptarHito(milestone: HitoOnboarding, termsVersionId?: string | null, acuerdo?: AcuerdoQueSeVio): Promise<EstadoOnboardingApi> {
+  /* Spec 027: con el hito de Términos va además la versión que la persona leyó, para dejar constancia de ella. Un servidor anterior ignora el campo.
+     Spec 039: y lo que vio en «Mi aceptación» —el inicio de su programa— y la huella del cronograma que firmó, si firmó uno. */
+  const body = {
+    milestone,
+    ...(termsVersionId ? { termsVersionId } : {}),
+    ...(acuerdo?.inicioVisto ? { agreementStartDate: acuerdo.inicioVisto } : {}),
+    ...(acuerdo?.huellaDelCronograma ? { scheduleFingerprint: acuerdo.huellaDelCronograma } : {}),
+  };
   const r = await apiFetch<unknown>('/api/v1/onboarding/milestones', { method: 'POST', body });
   return validarRespuesta<EstadoOnboardingApi>(estadoOnboardingSchema, r, 'POST /api/v1/onboarding/milestones');
 }
