@@ -54,6 +54,9 @@ import {
  * `HH:mm`, horas de 00 a 23 y minutos de 5 en 5. Las props tampoco.
  */
 
+/** «Guardar hora» en tipo oración y sin espaciar (el estilo por defecto de `GoldButton` es versal y espaciado), como «Elegir mi Día 1». */
+const TEXTO_DEL_BOTON = { fontSize: 16, letterSpacing: 0 } as const;
+
 /** Lo que ocupan la cabecera de la hoja (agarradera, título y subtítulo) y su pie (botón e inferior seguro). */
 const RESERVA_CABECERA_Y_PIE = 200;
 
@@ -96,10 +99,11 @@ export function HoraPickerModal({
       etiquetaCerrar="Cerrar el selector de hora"
       pie={
         <GoldButton
-          label="GUARDAR HORA"
+          label="Guardar hora"
           icon="check"
           iconPosition="left"
           onPress={() => onConfirmar(armarHora(hora, minuto))}
+          textStyle={TEXTO_DEL_BOTON}
         />
       }
     >

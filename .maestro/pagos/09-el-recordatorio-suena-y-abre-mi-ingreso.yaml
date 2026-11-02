@@ -30,7 +30,7 @@ appId: com.renaser.app
 # («10», «15»…) está en la grilla de las horas y en la de los minutos.
 - tapOn: "${HORA} horas"
 - tapOn: "${MINUTO} minutos"
-- tapOn: "GUARDAR HORA"
+- tapOn: "Guardar hora"
 - assertVisible: ".*· ${HORA}:${MINUTO}"
 - takeScreenshot: P09a-la-hora-de-la-prueba
 # Se manda la app a segundo plano y se espera la alarma en la bandeja.

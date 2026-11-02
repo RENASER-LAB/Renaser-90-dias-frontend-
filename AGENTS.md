@@ -1531,7 +1531,7 @@ eventos (el de pagos es de la rama de formaciones). Lo que cambia y nada más:
 * **El selector ahora es una `HojaDesdeAbajo` del alto de su contenido** (la forma del selector de fecha de nacimiento y de las demás hojas de la app), no una
   tarjeta centrada con `VeloModal`. De arriba abajo: la agarradera, «Elegir hora» y debajo, en una línea, el nombre de lo que se está programando; la hora
   elegida en grande («09:00», «de la mañana»); «Hora» con **las 24 horas en una grilla de 4 renglones de 6**; «Minutos» con **los 12 minutos en 2 renglones de
-  6**; y, fijo abajo, «✓ GUARDAR HORA». Todo seguido y con el aire normal (16 entre bloques, 8 bajo cada rótulo, 6 entre botones). **Ningún carril se arrastra de
+  6**; y, fijo abajo, «✓ Guardar hora». Todo seguido y con el aire normal (16 entre bloques, 8 bajo cada rótulo, 6 entre botones). **Ningún carril se arrastra de
   lado.** Cada botón mide 48 de alto y reparte el ancho parejo (≈ 48 dp en un teléfono de 320 dp de ancho, ≈ 57 en uno de 411). Se cierra con la ✕, tocando
   fuera, arrastrando la hoja o con el atrás de Android (lo de siempre de `HojaDesdeAbajo`).
 * **Por qué una grilla y no la rueda de Planificar** (`RuedaHoraPicker`): esa rueda tiene otras reglas —minutos de 1 en 1 y un tope de arranque a las 23:40
@@ -1545,7 +1545,7 @@ eventos (el de pagos es de la rama de formaciones). Lo que cambia y nada más:
 * **No cambia lo que devuelve ni sus props** (`visible`, `tituloHabito`, `horaInicial`, `onConfirmar`, `onCerrar`): `HH:mm`, horas de 00 a 23 y minutos de 5 en
   5; parte de la hora que se le pasa (el minuto llevado al múltiplo de 5 más cercano) cada vez que se abre. Las cuatro pantallas que lo usan no se tocaron.
 * **Textos:** el título «ELEGIR HORA» pasó a «Elegir hora» (tipo oración, como las demás hojas), los rótulos «HORA» y «MINUTOS» a «Hora» y «Minutos», y se fue el
-  «Cerrar» de texto: la ✕ de la hoja tiene el mismo nombre accesible («Cerrar el selector de hora»). El botón sigue diciendo «GUARDAR HORA».
+  «Cerrar» de texto: la ✕ de la hoja tiene el mismo nombre accesible («Cerrar el selector de hora»). El botón dice «Guardar hora» (tipo oración, 16 px, sin espaciar; era «GUARDAR HORA» en versales, el estilo por defecto de `GoldButton`).
 * **Pruebas:** Jest `horaDelSelector` (la lógica pura: las 24 horas en 4 renglones de 6, los 12 minutos en 2, `HH:mm`, de qué hora parte) y `horaPickerModal`
   (ningún `ScrollView` horizontal ni que crezca, los 24 + 12 botones, se llega a 00:00, 11:35 y 23:55, lo devuelto, un «tic» por cambio y que al reabrir parte de la
   hora nueva). Maestro `.maestro/pagos/09-…` actualizado (toca «14 horas» y «35 minutos» por su etiqueta); **sigue escrito y sin correr**.

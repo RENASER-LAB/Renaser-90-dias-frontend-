@@ -85,8 +85,8 @@ const textos = (r: ReactTestRenderer): string[] =>
     .map(n => React.Children.toArray(n.props.children).filter(h => typeof h === 'string').join(''));
 
 async function guardar(r: ReactTestRenderer) {
-  const [guardarHora] = r.root.findAll(n => n.props.label === 'GUARDAR HORA' && typeof n.props.onPress === 'function');
-  if (!guardarHora) throw new Error('No hay botón «GUARDAR HORA»');
+  const [guardarHora] = r.root.findAll(n => n.props.label === 'Guardar hora' && typeof n.props.onPress === 'function');
+  if (!guardarHora) throw new Error('No hay botón «Guardar hora»');
   await act(async () => {
     guardarHora.props.onPress();
   });
@@ -161,6 +161,14 @@ describe('las 24 horas y los 12 minutos, a la vista', () => {
     expect(marcado(r, '10 horas')).toBe(false);
     expect(textos(r)).toContain('09:00');
     expect(textos(r)).toContain('de la mañana');
+  });
+
+  it('el botón de abajo dice «Guardar hora» en tipo oración y sin espaciar (no en versales)', () => {
+    const { r } = montar();
+    const [guardarHora] = r.root.findAll(n => n.props.label === 'Guardar hora' && typeof n.props.onPress === 'function');
+    expect(guardarHora).toBeDefined();
+    expect(guardarHora.props.textStyle).toEqual({ fontSize: 16, letterSpacing: 0 });
+    expect(r.root.findAll(n => n.props.label === 'GUARDAR HORA')).toHaveLength(0);
   });
 
   it('el título del hábito se ve en tipo oración bajo «Elegir hora»', () => {
