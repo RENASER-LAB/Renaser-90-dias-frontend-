@@ -17,11 +17,11 @@ export const MAX_CLAUSULA = 2000;
 export const MAX_CLAUSULAS = 100;
 export const MAX_NOTA = 500;
 
-/** Los términos que lleva la app por dentro: el texto de siempre, para un servidor que todavía no los ofrece. */
+/** Los términos que lleva la app por dentro: el texto del Acuerdo de transformación (spec 039), para un servidor que todavía no los ofrece. */
 export const TERMINOS_DE_LA_APP: BorradorDeTerminos = {
   titulo: 'Términos y condiciones',
   introduccion:
-    'Al inscribirme en el programa Renaser, declaro que lo hago de manera libre y voluntaria, y acepto íntegramente los siguientes términos:',
+    'Al inscribirme en Formación RENASER, declaro que lo hago de manera libre y voluntaria, aceptando íntegramente los siguientes términos:',
   clausulas: TERMINOS_CLAUSULAS.map(c => c.texto),
   textoCasilla: 'He leído y acepto los Términos y Condiciones',
 };

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Alert } from '../../../components/Alerta';
 import { useTheme } from '../../../theme/ThemeContext';
@@ -7,7 +7,10 @@ import { MarcoDePaso } from '../components/MarcoDePaso';
 import { tacto } from '../../../utils/tacto';
 import { usePersistenciaOnboarding } from '../hooks/usePersistenciaOnboarding';
 import { ContenidoDeLosTerminos } from '../terminos/components/ContenidoDeLosTerminos';
+import { MiAceptacion } from '../terminos/components/MiAceptacion';
+import { MiCronogramaDePagos } from '../terminos/components/MiCronogramaDePagos';
 import { useMisTerminos } from '../terminos/hooks/useMisTerminos';
+import { leerAcuerdo, MENSAJE_DE_CRONOGRAMA_FALTA, TITULO_DE_CRONOGRAMA_FALTA } from '../terminos/utils/miAceptacion';
 import { avisoDeSellar, useSellarTerminos } from '../terminos/hooks/useSellarTerminos';
 import { borradorDesde, TERMINOS_DE_LA_APP } from '../terminos/utils/borradorDeTerminos';
 import {
@@ -37,9 +40,14 @@ export function TerminosScreen({
   const sellar = useSellarTerminos();
   /* Spec 027: el texto lo manda el servidor (los términos vigentes de MI formación, editables por Administración). Sin él —un backend anterior, o mientras
      llega— se usa el que la app lleva dentro, que es exactamente el de siempre. */
-  const { terminos, recargar } = useMisTerminos();
+  const { terminos, cargada, recargar } = useMisTerminos();
   const contenido = terminos?.version ? borradorDesde(terminos.version) : TERMINOS_DE_LA_APP;
   const versionId = terminos?.version?.id ?? null;
+  /* Spec 039: «Mi aceptación» (nombre, programa y fechas) lo llena el servidor; con un servidor anterior no llega y no se dibuja. Si la persona entra con cronograma
+     (spec 032), llega también para firmarlo aquí, debajo de «Mi aceptación». */
+  const acuerdo = useMemo(() => leerAcuerdo(terminos?.agreement), [terminos]);
+  const cronograma = acuerdo?.cronograma ?? null;
+  const huellaDelCronograma = cronograma?.huella ?? null;
   // Ref al lienzo para poder capturarlo como PNG al confirmar (ver SignatureCanvas.capturarComoPngBase64).
   const signatureRef = useRef<SignatureCanvasHandle>(null);
 
@@ -48,6 +56,12 @@ export function TerminosScreen({
   const [hasSigned, setHasSigned] = useState<boolean>(Boolean(savedSignature?.data && savedSignature.data.trim().length > 0));
   const [showError, setShowError] = useState(false);
   const [guardando, setGuardando] = useState(false);
+  const [cronogramaAceptado, setCronogramaAceptado] = useState(false);
+
+  /* Si Administración cambió el cronograma mientras leía (la lectura se repite tras el 409), lo que había marcado era de otro: se vuelve a pedir. */
+  useEffect(() => {
+    setCronogramaAceptado(false);
+  }, [huellaDelCronograma]);
 
   useEffect(() => {
     if (savedSignature && savedSignature.data && savedSignature.data.trim().length > 0) {
@@ -75,6 +89,12 @@ export function TerminosScreen({
       );
       return;
     }
+    if (cronograma && !cronogramaAceptado) {
+      setShowError(true);
+      tacto.error();
+      Alert.alert(TITULO_DE_CRONOGRAMA_FALTA, MENSAJE_DE_CRONOGRAMA_FALTA);
+      return;
+    }
     if (!hasSigned) {
       setShowError(true);
       tacto.error();
@@ -96,7 +116,14 @@ export function TerminosScreen({
     try {
       /* Firma con valor legal: se captura el lienzo ya dibujado como PNG y se sube a S3 con su referencia guardada en la base (ver mapaPreguntas.ts,
          PREGUNTA_FIRMA_TERMINOS). La constancia de QUÉ versión leyó va al final, en la misma llamada del hito (spec 027). */
-      const resultado = await sellar({ capturarFirma: async () => signatureRef.current?.capturarComoPngBase64(), trazos: signature?.data ?? null, versionId });
+      const resultado = await sellar({
+        capturarFirma: async () => signatureRef.current?.capturarComoPngBase64(),
+        trazos: signature?.data ?? null,
+        versionId,
+        /* Spec 039: lo que vio —el inicio de su programa— y el cronograma que firmó: si ya no son los de ahora, el servidor responde 409 y no registra nada. */
+        inicioVisto: acuerdo?.inicio ?? null,
+        huellaDelCronograma: cronograma && cronogramaAceptado ? cronograma.huella : null,
+      });
       if (resultado.tipo !== 'ok') {
         if (resultado.tipo === 'cambiaron') await recargar();
         const aviso = avisoDeSellar(resultado);
@@ -129,7 +156,7 @@ export function TerminosScreen({
            firma, al tocarlo se dice cuál («Aceptación requerida» / «Firma requerida») y el recuadro
            de la firma se marca. Antes quedaba apagado hasta tener las dos, sin decir qué faltaba, y
            esas dos alertas nunca llegaban a salir (ONB-02, e2e web del 2026-09-27). */
-        <GoldButton label="Continuar" onPress={handleContinue} loading={guardando} icon="arrow" />
+        <GoldButton label="Continuar" onPress={handleContinue} loading={guardando || !cargada} icon="arrow" />
       }
     >
       {/* Encabezado: mismos textos; alineado a la izquierda y sin el medallón, como el resto del
@@ -140,12 +167,26 @@ export function TerminosScreen({
           {contenido.titulo}
         </Text>
         <Text style={[t.body, { color: c.textSoft }]}>
-          {`Lee atentamente las ${contenido.clausulas.length} cláusulas y sella tu aceptación`}
+          {`Lee atentamente las ${contenido.clausulas.length} cláusulas y sella tu aceptación.`}
         </Text>
       </View>
 
       <View style={styles.cuerpo}>
         <ContenidoDeLosTerminos introduccion={contenido.introduccion} clausulas={contenido.clausulas} />
+
+        {/* Spec 039: «Mi aceptación» al final de los términos, antes de firmar, y —solo si entra con cronograma— «Mi cronograma de pagos» debajo. */}
+        {acuerdo ? <MiAceptacion acuerdo={acuerdo} /> : null}
+        {cronograma ? (
+          <MiCronogramaDePagos
+            cronograma={cronograma}
+            aceptado={cronogramaAceptado}
+            alCambiar={marcado => {
+              setCronogramaAceptado(marcado);
+              if (marcado && showError) setShowError(false);
+            }}
+            error={showError}
+          />
+        ) : null}
 
         {/* Signature Box */}
         <View style={[styles.signatureCard, { backgroundColor: c.cardBg, borderColor: c.border }]}>

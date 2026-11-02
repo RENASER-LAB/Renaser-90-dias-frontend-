@@ -23,13 +23,26 @@ describe('los términos editables están conectados', () => {
     expect(pantalla).toContain('TERMINOS_DE_LA_APP');
     expect(pantalla).toContain('versionId');
     expect(pantalla).toContain('<ContenidoDeLosTerminos');
-    expect(fuente('src/features/onboarding/terminos/hooks/useSellarTerminos.ts')).toContain('aceptarTerminos(datos.versionId)');
+    // Spec 039: «Mi aceptación» y, solo con cronograma, «Mi cronograma de pagos»; el pedido lleva el inicio visto y la huella.
+    expect(pantalla).toContain('<MiAceptacion acuerdo={acuerdo} />');
+    expect(pantalla).toContain('<MiCronogramaDePagos');
+    expect(pantalla).toContain('inicioVisto: acuerdo?.inicio ?? null');
+    expect(pantalla).toContain('huellaDelCronograma: cronograma && cronogramaAceptado ? cronograma.huella : null');
+    expect(fuente('src/features/onboarding/terminos/hooks/useSellarTerminos.ts')).toContain('aceptarTerminos(datos.versionId,');
+  });
+
+  it('quien vuelve a aceptar (spec 039) ve «Mi aceptación» y NUNCA el cronograma: no manda ninguna huella', () => {
+    const pantalla = fuente('src/features/onboarding/terminos/screens/TerminosActualizadosScreen.tsx');
+    expect(pantalla).toContain('<MiAceptacion acuerdo={acuerdo} />');
+    expect(pantalla).not.toContain('MiCronogramaDePagos');
+    expect(pantalla).not.toContain('huellaDelCronograma');
+    expect(pantalla).toContain('inicioVisto: acuerdo?.inicio ?? null');
   });
 
   it('la constancia no se ignora si falla: aceptarTerminos devuelve el desenlace y quien llama no avanza', () => {
     const hook = fuente('src/features/onboarding/hooks/usePersistenciaOnboarding.ts');
     expect(hook).toContain('const aceptarTerminos = useCallback');
-    expect(hook).toContain("esConflicto) return { ok: false, cambiaron: true }");
+    expect(hook).toContain("esConflicto) return { ok: false, cambiaron: true, mensaje");
   });
 
   it('Administración: Más opciones y el centro de Formaciones llevan a los términos, y la ficha de la persona muestra su constancia', () => {

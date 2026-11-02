@@ -93,11 +93,28 @@ describe('el borrador que viene del servidor', () => {
 });
 
 describe('el texto que la app lleva por dentro (para un servidor sin términos editables)', () => {
-  it('son las 23 cláusulas de siempre, con su título y su casilla', () => {
+  it('son las 23 cláusulas del Acuerdo de transformación (spec 039), con su título y su casilla', () => {
     expect(TERMINOS_DE_LA_APP.clausulas).toHaveLength(23);
     expect(TERMINOS_DE_LA_APP.titulo).toBe('Términos y condiciones');
     expect(TERMINOS_DE_LA_APP.textoCasilla).toBe('He leído y acepto los Términos y Condiciones');
-    expect(TERMINOS_DE_LA_APP.introduccion).toContain('Al inscribirme en el programa Renaser');
+    expect(TERMINOS_DE_LA_APP.introduccion).toBe(
+      'Al inscribirme en Formación RENASER, declaro que lo hago de manera libre y voluntaria, aceptando íntegramente los siguientes términos:',
+    );
     expect(TERMINOS_DE_LA_APP.clausulas[0]).toContain('conozco el contenido del programa');
+    expect(TERMINOS_DE_LA_APP.clausulas[18]).toContain('Acepto que la inversión, modalidad de pago y fechas de vencimiento');
+  });
+
+  it('las cláusulas 18, 21, 22 y 23 conservan sus dos párrafos, separados por una línea en blanco', () => {
+    const conDosParrafos = TERMINOS_DE_LA_APP.clausulas.map((c, i) => (c.includes('\n\n') ? i + 1 : 0)).filter(n => n > 0);
+    expect(conDosParrafos).toEqual([18, 21, 22, 23]);
+    expect(TERMINOS_DE_LA_APP.clausulas[17].split('\n\n')[1]).toMatch(/^Autorizo expresamente el uso de mi imagen/);
+    expect(TERMINOS_DE_LA_APP.clausulas[22].split('\n\n')[1]).toMatch(/^Acepto que cualquier controversia se procurará resolver/);
+  });
+
+  it('no queda ningún marcador entre corchetes ni llaves del texto de la plantilla', () => {
+    for (const clausula of [TERMINOS_DE_LA_APP.introduccion, ...TERMINOS_DE_LA_APP.clausulas]) {
+      expect(clausula).not.toMatch(/[\[\]{}]/);
+      expect(clausula).not.toContain('PROGRAMA');
+    }
   });
 });

@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Alert } from '../../../../components/Alerta';
@@ -11,7 +11,9 @@ import { tacto } from '../../../../utils/tacto';
 import { MarcoDePaso } from '../../components/MarcoDePaso';
 import type { TerminosDeMiFormacionApi } from '../api/terminosSchemas';
 import { ContenidoDeLosTerminos } from '../components/ContenidoDeLosTerminos';
+import { MiAceptacion } from '../components/MiAceptacion';
 import { avisoDeSellar, useSellarTerminos } from '../hooks/useSellarTerminos';
+import { leerAcuerdo } from '../utils/miAceptacion';
 import { explicacionDeLaAceptacion, titularDeLaAceptacion } from '../utils/pendienteDeTerminos';
 
 /**
@@ -21,6 +23,10 @@ import { explicacionDeLaAceptacion, titularDeLaAceptacion } from '../utils/pendi
  *
  * Es la misma pantalla de siempre en lo que importa —las cláusulas numeradas, la casilla, el lienzo de la firma— con otro titular. El atrás del sistema cierra la
  * sesión, que es la única salida: nunca deja pasar a la app sin aceptar.
+ *
+ * Spec 039 (Acuerdo de transformación): trae «Mi aceptación» con el programa y las fechas REALES de la persona (ya empezó), antes de la firma. **Nunca** lleva la
+ * sección «Mi cronograma de pagos», aunque tenga uno: el cronograma se firma solo al entrar a la app (el onboarding); a quien ya estaba dentro se le pide en «Mi
+ * ingreso» (spec 032). Por eso el servidor tampoco lo manda aquí y esta pantalla no manda ninguna huella.
  */
 export function TerminosActualizadosScreen({
   terminos,
@@ -43,6 +49,7 @@ export function TerminosActualizadosScreen({
   const [mostrarError, setMostrarError] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const version = terminos.version;
+  const acuerdo = useMemo(() => leerAcuerdo(terminos.agreement), [terminos]);
 
   useSystemBackHandler(() => {
     alCerrarSesion();
@@ -67,7 +74,12 @@ export function TerminosActualizadosScreen({
     if (guardando) return;
     setGuardando(true);
     try {
-      const resultado = await sellar({ capturarFirma: async () => firmaRef.current?.capturarComoPngBase64(), trazos: firma.data, versionId: version.id });
+      const resultado = await sellar({
+        capturarFirma: async () => firmaRef.current?.capturarComoPngBase64(),
+        trazos: firma.data,
+        versionId: version.id,
+        inicioVisto: acuerdo?.inicio ?? null,
+      });
       if (resultado.tipo !== 'ok') {
         if (resultado.tipo === 'cambiaron') await alCambiar();
         const aviso = avisoDeSellar(resultado);
@@ -105,6 +117,8 @@ export function TerminosActualizadosScreen({
         ) : null}
 
         <ContenidoDeLosTerminos introduccion={version.introduction ?? ''} clausulas={version.clauses} />
+
+        {acuerdo ? <MiAceptacion acuerdo={acuerdo} /> : null}
 
         <View style={[estilos.tarjetaFirma, { backgroundColor: c.cardBg, borderColor: c.border }]}>
           <SignatureCanvas
