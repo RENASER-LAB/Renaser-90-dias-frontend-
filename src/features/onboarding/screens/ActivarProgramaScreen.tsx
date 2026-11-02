@@ -3,64 +3,50 @@ import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { useTheme } from '../../../theme/ThemeContext';
 import { useSystemBackHandler } from '../../../hooks/useSystemBackHandler';
 import { GoldButton } from '../../../components/GoldButton';
+import { Icon, TAMANO_ICONO } from '../../../components/Icon';
 import { MarcoDePaso } from '../components/MarcoDePaso';
-import { OpcionElegible } from '../components/OpcionElegible';
 import { tacto } from '../../../utils/tacto';
 import * as onboardingApi from '../api/onboardingApi';
 import { ApiError, mensajeDeError } from '../../../services/http/apiClient';
 import { avisarDiaUnoElegido } from '../../programa/events/avisoDiaUnoElegido';
 import { useFormacionDeLaSesion } from '../../formaciones/context/FormacionContext';
-import { introduccionDelDiaUno } from '../utils/textoDelDiaUno';
+import {
+  AVISO_COMPROBANDO,
+  AVISO_FECHA_CAMBIO,
+  AVISO_SIN_RED_AL_ACTIVAR,
+  AVISO_SIN_RED_AL_LEER,
+  BOTON_ENTENDIDO,
+  TITULO_EMPIEZA_MANANA,
+  fechaDelDiaUno,
+  lineaDelPlazo,
+} from '../utils/textoDelDiaUno';
 
 /**
- * Último paso del onboarding, entre Términos y el Home: elegir el Día 1 del programa. (El Pacto —
- * "VERDAD", Código I — salió del onboarding inicial el 2026-09-03, hasta una futura actualización
- * del cliente; ver el comentario en `OnboardingFlow.tsx`.)
+ * Último paso del onboarding, entre Términos y el Home: «Tu programa empieza mañana» (spec 036, D-309, cambio de gerencia del 2026-11-02).
+ * Antes era «Elige tu Día 1», con tres fechas a elegir; ahora **la persona no elige nada**: el servidor pone el Día 1 en mañana, en SU zona
+ * horaria, y esta pantalla solo se lo dice y pide el «Entendido» que activa el programa. (El Pacto —"VERDAD", Código I— salió del onboarding
+ * inicial el 2026-09-03, hasta una futura actualización del cliente; ver el comentario en `OnboardingFlow.tsx`.)
  *
- * El backend (`ParticipacionPrograma.activarPrograma`, `GET/POST /onboarding/activate-program`)
- * ya existía y estaba probado, pero ninguna pantalla lo llamaba — `OnboardingFlow` pasaba directo
- * de Términos a `completeOnboarding`. Sin esto la persona nunca elegía fecha, así que
+ * Qué dice, poco a propósito (el dueño pidió poco texto): el título, la fecha («Martes 3 de noviembre»), una línea con el plazo de SU programa
+ * («Son tus 90 días.», «Son tus 3 meses.», «Es tu año.») y «Entendido».
+ *
+ * La fecha **la manda el servidor** (`GET /onboarding/activate-program` → `validStartDates[0]`) y es la que se envía al activar: así, si la
+ * persona dejó la pantalla abierta pasada la medianoche, el servidor responde 400 (ya no es «mañana»), la pantalla vuelve a leer, muestra la
+ * fecha nueva con un aviso corto y NUNCA se activa con un día distinto al que se vio. Contra un servidor anterior (que ofrece tres fechas) la
+ * primera es mañana, así que también funciona. Sin red: el mismo botón «Entendido» reintenta, y si ni se pudo leer la fecha, «Reintentar».
+ *
+ * El backend (`ParticipacionPrograma.activarPrograma`, `GET/POST /onboarding/activate-program`) ya existía y estaba probado, pero ninguna pantalla
+ * lo llamaba — `OnboardingFlow` pasaba directo de Términos a `completeOnboarding`. Sin esto la persona nunca activaba el programa, así que
  * `diaPrograma` quedaba en 0 (programa nunca activado) para siempre.
- *
- * Las fechas ofrecidas son siempre mañana/+2/+3 en SU zona horaria — nunca hoy (ver el javadoc del
- * backend: firmar de tarde y elegir "hoy" dejaría un Día 1 de pocas horas). Es justo la ventana
- * para "programar sus hábitos" antes de que arranque la cuenta de los 90 días.
  */
 
 interface ActivarProgramaScreenProps {
   onActivated: () => void;
   /**
-   * Volver sin elegir. Solo fuera del onboarding (D-260): el personal abre esta misma pantalla
-   * desde «Elegir mi Día 1» en Training, Hoy o Yo, y ahí sí tiene a dónde volver. En el onboarding
-   * no viene, y la pantalla sigue tragándose el gesto de retroceso como siempre.
+   * Volver sin activar. Solo fuera del onboarding (D-260): el personal abre esta misma pantalla desde «Empezar mañana» en Training, Hoy, Plan,
+   * Yo o Mi Radar, y ahí sí tiene a dónde volver. En el onboarding no viene, y la pantalla sigue tragándose el gesto de retroceso como siempre.
    */
   alVolver?: () => void;
-}
-
-const NOMBRES_DIA = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
-const NOMBRES_MES = [
-  'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
-  'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
-];
-
-/**
- * El backend manda `yyyy-MM-dd` (`LocalDate`, sin hora). `new Date(iso)` lo interpreta como
- * medianoche UTC y en husos horarios negativos (América) puede mostrar el día ANTERIOR — por eso
- * se arma la fecha local a mano, componente por componente, en vez de parsear el string directo.
- */
-function fechaLocalDesdeIso(iso: string): Date {
-  const [anio, mes, dia] = iso.split('-').map(Number);
-  return new Date(anio, mes - 1, dia);
-}
-
-/**
- * «Martes 6 de octubre». Mayúscula sólo al principio: la pantalla usaba `textTransform: 'capitalize'`,
- * que pone mayúscula a CADA palabra y mostraba «Martes 6 De Octubre» (corregido 2026-10-05).
- */
-function formatearFecha(iso: string): string {
-  const fecha = fechaLocalDesdeIso(iso);
-  const texto = `${NOMBRES_DIA[fecha.getDay()]} ${fecha.getDate()} de ${NOMBRES_MES[fecha.getMonth()]}`;
-  return texto.charAt(0).toUpperCase() + texto.slice(1);
 }
 
 export function ActivarProgramaScreen({ onActivated, alVolver }: ActivarProgramaScreenProps) {
@@ -69,15 +55,15 @@ export function ActivarProgramaScreen({ onActivated, alVolver }: ActivarPrograma
   const { formacion } = useFormacionDeLaSesion();
 
   const [cargando, setCargando] = useState(true);
-  const [fechas, setFechas] = useState<string[]>([]);
-  const [seleccionada, setSeleccionada] = useState<string | null>(null);
+  /* La fecha de mañana, tal como la manda el servidor (`yyyy-MM-dd`). */
+  const [fecha, setFecha] = useState<string | null>(null);
   const [confirmando, setConfirmando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [consulta, setConsulta] = useState(0);
 
   // En el onboarding no hay a dónde volver desde acá: Términos ya quedó firmado y guardado. Tragarse
-  // el gesto de retroceso evita que la persona salga a mitad de elegir su fecha de inicio. Fuera
-  // del onboarding (`alVolver`), atrás cierra la pantalla sin elegir nada.
+  // el gesto de retroceso evita que la persona salga a mitad de este paso. Fuera del onboarding
+  // (`alVolver`), atrás cierra la pantalla sin activar nada.
   useSystemBackHandler(() => {
     alVolver?.();
     return true;
@@ -86,24 +72,25 @@ export function ActivarProgramaScreen({ onActivated, alVolver }: ActivarPrograma
   useEffect(() => {
     let vigente = true;
     setCargando(true);
-    setFechas([]);
-    setSeleccionada(null);
+    setFecha(null);
     (async () => {
       try {
         const estado = await onboardingApi.consultarActivacionPrograma();
         if (!vigente) return;
         if (estado.activated) {
           // Ya estaba activado (ej. la persona cerró la app a mitad de este paso y volvió): no
-          // hay nada que elegir, seguir directo al Home.
+          // hay nada que hacer, seguir directo al Home.
           avisarDiaUnoElegido();
           onActivated();
           return;
         }
-        setFechas(estado.validStartDates);
-        setSeleccionada(estado.validStartDates[0] ?? null);
+        // Mañana es la primera (y desde la spec 036 la única); contra un servidor anterior, que ofrecía tres, también es la primera.
+        const manana = estado.validStartDates[0] ?? null;
+        setFecha(manana);
+        if (!manana) setError(AVISO_SIN_RED_AL_LEER);
       } catch (e) {
         if (!vigente) return;
-        setError(mensajeDeError(e, 'No pudimos cargar las fechas disponibles. Revisa tu conexión.'));
+        setError(mensajeDeError(e, AVISO_SIN_RED_AL_LEER));
       } finally {
         if (vigente) setCargando(false);
       }
@@ -114,22 +101,22 @@ export function ActivarProgramaScreen({ onActivated, alVolver }: ActivarPrograma
   }, [onActivated, consulta]);
 
   const handleConfirmar = async () => {
-    if (!seleccionada || confirmando) return;
+    if (!fecha || confirmando) return;
     setConfirmando(true);
     setError(null);
     try {
-      await onboardingApi.activarPrograma({ startDate: seleccionada });
+      await onboardingApi.activarPrograma({ startDate: fecha });
       tacto.logro();
       avisarDiaUnoElegido();
       onActivated();
     } catch (e) {
       if (e instanceof ApiError && (e.status === 400 || e.status === 409)) {
-        setError(e.status === 400
-          ? 'Las fechas disponibles cambiaron. Elige tu Día 1 nuevamente.'
-          : 'Vamos a comprobar el Día 1 que ya elegiste.');
+        // 400: pasó la medianoche y la fecha que se veía ya no es «mañana». 409: ya estaba activado con otra fecha (otro teléfono).
+        // En los dos casos se vuelve a leer: se muestra la fecha nueva, o se entra directo si ya estaba activado.
+        setError(e.status === 400 ? AVISO_FECHA_CAMBIO : AVISO_COMPROBANDO);
         setConsulta(v => v + 1);
       } else {
-        setError(mensajeDeError(e, 'No pudimos activar tu programa. Revisa tu conexión e inténtalo de nuevo.'));
+        setError(mensajeDeError(e, AVISO_SIN_RED_AL_ACTIVAR));
       }
     } finally {
       setConfirmando(false);
@@ -139,54 +126,57 @@ export function ActivarProgramaScreen({ onActivated, alVolver }: ActivarPrograma
   return (
     <MarcoDePaso
       alVolver={alVolver}
-      accesibilidadVolver={alVolver ? 'Volver sin elegir' : undefined}
+      accesibilidadVolver={alVolver ? 'Volver sin empezar' : undefined}
       pie={
         <GoldButton
-          label="Confirmar mi Día 1"
+          label={BOTON_ENTENDIDO}
           onPress={handleConfirmar}
-          disabled={!seleccionada || cargando}
+          disabled={!fecha || cargando}
           loading={confirmando}
           icon="check"
         />
       }
     >
-      {/* Mismos textos; el encabezado va como en el resto del onboarding desde el 2026-10-05
-          (alineado a la izquierda, sin el medallón con el calendario). */}
+      {/* El encabezado va como en el resto del onboarding desde el 2026-10-05 (alineado a la izquierda, sin el medallón con el calendario). */}
       <View style={styles.headerBlock}>
         <Text style={[t.micro, { color: c.micro, textTransform: 'uppercase' }]}>
           {alVolver ? 'Tu programa' : 'Un último paso'}
         </Text>
         <Text accessibilityRole="header" style={[t.screenTitle, { color: c.textStrong }]}>
-          Elige tu Día 1
+          {TITULO_EMPIEZA_MANANA}
         </Text>
-        <Text style={[t.body, { color: c.textSoft }]}>{introduccionDelDiaUno(formacion?.duracionDias, formacion?.activa?.codigo)}</Text>
       </View>
 
       {cargando ? (
         <View style={styles.loadingBox}>
           <ActivityIndicator color={c.goldInk} />
         </View>
-      ) : (
-        <View accessibilityRole="radiogroup" style={styles.dateOptionsGroup}>
-          {fechas.map(fecha => (
-            <OpcionElegible
-              key={fecha}
-              etiqueta={formatearFecha(fecha)}
-              elegida={seleccionada === fecha}
-              onElegir={() => setSeleccionada(fecha)}
-            />
-          ))}
+      ) : fecha ? (
+        <View
+          accessible
+          accessibilityLabel={`${fechaDelDiaUno(fecha)}. ${lineaDelPlazo(formacion?.duracionDias, formacion?.activa?.codigo)}`}
+          style={[styles.fechaCard, { backgroundColor: c.cardBg, borderColor: c.border }]}
+        >
+          <View style={[styles.medallon, { backgroundColor: c.goldWash }]}>
+            <Icon name="calendarRange" size={TAMANO_ICONO.grande} color={c.goldInk} />
+          </View>
+          <View style={styles.fechaTextos}>
+            <Text style={[t.cardTitle, styles.fecha, { color: c.textStrong }]}>{fechaDelDiaUno(fecha)}</Text>
+            <Text style={[t.body, { color: c.textSoft }]}>
+              {lineaDelPlazo(formacion?.duracionDias, formacion?.activa?.codigo)}
+            </Text>
+          </View>
         </View>
-      )}
+      ) : null}
 
       {error ? (
         <View style={[styles.alertBox, { backgroundColor: c.dangerWash, borderColor: c.danger }]}>
           <Text style={[t.small, { color: c.danger, textAlign: 'center' }]}>{error}</Text>
         </View>
       ) : null}
-      {error && !cargando && fechas.length === 0 ? (
+      {error && !cargando && !fecha ? (
         <View style={{ marginTop: 16 }}>
-          <GoldButton label="Reintentar Día 1" onPress={() => {
+          <GoldButton label="Reintentar" onPress={() => {
             setError(null);
             setConsulta(v => v + 1);
           }} />
@@ -206,10 +196,18 @@ const styles = StyleSheet.create({
     paddingVertical: 24,
     alignItems: 'center',
   },
-  dateOptionsGroup: {
-    gap: 10,
+  fechaCard: {
     width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 17,
   },
+  medallon: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+  fechaTextos: { flex: 1, flexShrink: 1, gap: 4 },
+  fecha: { fontSize: 22, lineHeight: 28 },
   alertBox: {
     width: '100%',
     borderWidth: 1,

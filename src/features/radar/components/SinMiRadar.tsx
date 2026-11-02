@@ -17,7 +17,7 @@ import {
  * Lo que dice Yo → Mi Radar cuando todavía no hay Mi Radar que mostrar (spec 019): el motivo en una línea y, solo si hay algo que
  * hacer, un botón. Qué se dice lo decide `vistaDeMiRadar`; esto solo lo dibuja.
  *
- *  - **Sin programa**: «Elegir mi Día 1» (el selector del onboarding, con su flecha para volver). Al elegir, `alElegirElDiaUno` vuelve a
+ *  - **Sin programa**: «Empezar mañana» (el selector del onboarding, con su flecha para volver). Al elegir, `alElegirElDiaUno` vuelve a
  *    leer.
  *  - **Sin red o 5xx**: «Reintentar».
  *  - Lo demás (cargando, antes del día 8, suspendida, sin permiso): una línea y nada más.

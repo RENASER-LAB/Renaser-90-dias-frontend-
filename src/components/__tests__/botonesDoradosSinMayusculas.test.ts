@@ -129,7 +129,7 @@ describe('ningún botón dorado escribe su texto en MAYÚSCULAS', () => {
     for (const viejo of ['LISTO', 'CONFIRMAR MI DÍA 1', 'ENTRAR A MI DÍA 01 (HOY)', '💬 ENVIAR MENSAJE DIRECTO 1 A 1', '✓ GUARDAR HORA']) {
       expect(estaEnMayusculas(viejo)).toBe(true);
     }
-    for (const nuevo of ['Listo', 'Confirmar mi Día 1', 'Entrar a mi Día 1 (hoy)', 'Continuar a términos', 'Empezar ahora', '', 'OK']) {
+    for (const nuevo of ['Listo', 'Entendido', 'Empezar mañana', 'Entrar a mi Día 1 (hoy)', 'Continuar a términos', 'Empezar ahora', '', 'OK']) {
       expect(estaEnMayusculas(nuevo)).toBe(false);
     }
   });

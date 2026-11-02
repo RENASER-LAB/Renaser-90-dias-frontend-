@@ -3,7 +3,7 @@ import { useCallback, useState } from 'react';
 import { useArranqueDelPrograma } from './useArranqueDelPrograma';
 
 /**
- * ¿Tiene fila en el programa y todavía no eligió su Día 1? (D-260)
+ * ¿Tiene fila en el programa y todavía no empezó su programa? (D-260)
  *
  * Reusa `useArranqueDelPrograma` —el mismo `GET /onboarding/activate-program` de Plan y Training—
  * y solo pregunta cuando puede ser: inscrito y en el día 0. Quien va por el día 5, o quien no tiene
@@ -18,7 +18,7 @@ export function useDiaUnoPorElegir(inscrito: boolean | undefined, diaPrograma: n
   const habilitado = inscrito === true && diaPrograma === 0;
   const arranque = useArranqueDelPrograma(habilitado, version, usuarioId);
   const alElegir = useCallback(() => setVersion(v => v + 1), []);
-  /* Issue #72: ya eligió su Día 1 y la fecha todavía no llega (día 0 con el programa activado). Es el estado que Hoy no decía nunca: el Día 1
+  /* Issue #72: ya activó su programa y la fecha todavía no llega (día 0 con el programa activado). Es el estado que Hoy no decía nunca: el Día 1
      no puede ser hoy, así que todo aprendiz recién activado pasa al menos un día así. `fechaInicio` es `null` si el servidor no la mandó. */
   const esperando = habilitado && (arranque.estado === 'ESPERANDO_INICIO' || arranque.estado === 'EN_CURSO');
   const fechaInicio =

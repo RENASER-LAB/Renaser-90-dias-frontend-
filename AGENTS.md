@@ -1043,6 +1043,7 @@ días de Plan. Esta entrada es solo la mitad de la **persona** (spec y contrato 
   volver a editar. Al entrar a la app se llama `completeOnboarding()` **sin ficha** (la ficha estándar no existe para ella: el diagnóstico ya
   está en el servidor). **La ficha estándar no cambia en nada.** Límite aceptado: si `GET /onboarding/state` falla por red justo al abrir,
   se queda con la ficha estándar (el comportamiento de siempre); `AuthContext` ya leyó ese mismo endpoint un instante antes.
+  > **Corregido 2026-11-02 (spec 036, D-309).** El último paso ya no es «Elige tu Día 1» sino «Tu programa empieza mañana» (un solo botón, «Entendido»). El recorrido (Diagnóstico → Términos → ese paso → Hoy) y los saltos de reanudación no cambian.
 * **El recorrido** (`components/RecorridoDelDiagnostico`, la misma pantalla para la persona y para la vista previa de Administración):
   **portada** (título, mensaje con sus saltos de línea y «Empezar»; la barra de avance no la cuenta) → **pasos cortos** → **cierre**.
   Es la ficha estándar con otro contenido: el mismo esqueleto (`MarcoDePaso`: barra arriba, un solo scroll, botón fijo abajo que sube con
@@ -1411,6 +1412,9 @@ eligió su Día 1: «¿y por qué no le salió cuándo empezar? eso es un bug».
   una **✕ chica de 48 de área** a la derecha, fuera de la fila tocable, y hace lo mismo que el botón de antes: deja de ofrecer la invitación a esa cuenta en
   ese teléfono, sin borrar nada. Si una lectura falló, en su lugar va el aviso de siempre «No pudimos comprobar tu Día 1» con «Reintentar Día 1». Igual en todos los
   roles y formaciones: lo decide el servidor (`canStartProgram`, `activated`). **Ningún pedido nuevo en Hoy**: las mismas lecturas que hacía la tarjeta.
+  > **Corregido 2026-11-02 (spec 036, D-309).** Ya no se elige el Día 1: el programa empieza siempre mañana. La tabla de arriba dice ahora «Haz tu programa de
+  > {plazo} · **Empieza mañana**» (sin fila) y «**Todavía no empezaste tu programa** · **Empieza mañana**» (con fila sin activar); el aviso de error es «No pudimos comprobar
+  > tu programa» con «Reintentar». Al tocarlas se abre «Tu programa empieza mañana» (ver la entrada del 2026-11-02). «Tu programa empieza el …» (día 0) no cambia.
 * **Sin hueco vacío antes del fénix**: el bloque entre la frase y el fénix solo existe si tiene algo que dibujar (la fila, la tarjeta de acciones o el error de `/home`).
   Vacío dejaba sus dos separaciones de 28 (`gapLg`) y a la cuenta sin programa le quedaba un hueco grande entre «Escuela Renaser» y «Tu acompañante». Si hay fila y
   también tarjeta de acciones, la fila va primero. Para saberlo antes de dibujar, el hook `useFilaDelProgramaPropio` vive en Hoy (y en Plan), no dentro de la fila.
@@ -1444,6 +1448,7 @@ Pedido del dueño: corregir todo lo que salió, también lo menor. Solo JavaScri
   de lado (con 3, el control de siempre). El número de mes es el que viaja al servidor en `PUT /rocks/monthly/{eje}/{mes}`. **Límite conocido:** el mes de la hoja es un bloque de semanas y el «mes actual» del
   servidor se cuenta por días (30, 60, …): pueden decir meses distintos unos días al año, igual que ya pasaba en 90 días (decisión del dueño 028-2).
 * **#75 «Elige tu Día 1»** nombra el programa de la persona (`introduccionDelDiaUno`: «90 días», «3 meses», «1 año», con `plazoDelObjetivo`) en vez de «90 días» fijo.
+  > **Corregido 2026-11-02 (spec 036, D-309).** «Elige tu Día 1» ya no existe; el plazo lo dice ahora «Tu programa empieza mañana» con `lineaDelPlazo` («Son tus 90 días.», «Son tus 3 meses.», «Es tu año.»).
 * **#76 El 80/20 de la ficha** habla en tercera persona para quien acompaña (`voz="ficha"`): «Su 80/20», «Sus cifras al día. Su análisis llega cuando cierre la semana.», flechas, avisos, «Lo que se le fue» y
   el pie del análisis. Plan (la propia persona) no cambia. Los textos de las dos voces viven en `textosDelOchentaVeinte` (`textosDeLaVoz`, `avisoDelEstado(vista, voz)`).
 * **#77 Editor del diagnóstico:** las tarjetas muestran `[formación]` y `[duración]` en vez de `{formacion}` y `{duracion}` (`verLasMarcas`, solo para mostrar; al editar se conserva el texto con sus marcas).
@@ -1548,6 +1553,50 @@ componente traía por defecto: versales de 11 px con `letterSpacing` 2,2 (1,6 en
   HORA» del selector de hora, que reescribe la rama `hora-picker-compacto` (#97) para que diga «Guardar hora»: la prueba lo deja exento hasta que se
   fusione (`PENDIENTES_EN_OTRA_RAMA`) y el flujo `pagos/09` sigue con su texto de ahora.
 * **Hace falta un APK nuevo** (solo JavaScript: ni `package.json`, ni `app.json`, ni código nativo; la app no se actualiza por aire). Backend nuevo, ninguno.
+
+## Cambio por pedido del dueño — 2026-11-02 — el programa empieza al día siguiente, sin elegir el Día 1
+
+Cambio de gerencia relayado por el dueño (02/11), textual: «Después de la ficha inicial se preguntaba qué día quiere empezar. Ahora iniciará al día siguiente: el
+usuario no podrá elegir, lo hará al día siguiente. No es un gran cambio, pero sí cambiaría el mensaje: que comienza al día siguiente.» Backend: spec 036 / D-309
+(`specs/036-empieza-al-dia-siguiente/`). Rama `036-empieza-al-dia-siguiente`, sobre `botones-tipo-oracion`. Lo que cambia y nada más:
+* **Regla única: el Día 1 es MAÑANA** en la zona de la persona, **para todos**: el aprendiz al terminar la ficha y los Términos, el personal que se suma a su programa propio
+  (D-260/D-261) y las cuentas antiguas que nunca eligieron (E-594/596/597). **Nadie elige la fecha.** La duración (90 días, 3 meses o 1 año) y el estado del día 0 («Tu programa
+  empieza el martes 3 de noviembre», issue #72) no cambian; quien ya había elegido +2 o +3 conserva su fecha.
+* **La pantalla** (`ActivarProgramaScreen`, la de siempre, ahora corta; el dueño pidió poco texto): «Tu programa empieza mañana» (título), la fecha en una tarjeta con el ícono
+  `calendarRange` («Martes 3 de noviembre»), una línea con el plazo de SU programa (`lineaDelPlazo` sobre `plazoDelObjetivo` y la formación de la sesión: «Son tus 90 días.», «Son tus
+  3 meses.», «Es tu año.») y un solo botón, **«Entendido»**, que activa (`tacto.logro()` y a Hoy). Se fueron la lista de fechas (`OpcionElegible`), «Confirmar mi Día 1» y «Elige tu Día 1».
+  La fecha **la manda el servidor** (`GET /onboarding/activate-program` → `validStartDates[0]`) y es la que se envía en el `POST`: contra un servidor anterior, que ofrecía tres, la primera
+  también es mañana. Todos los textos viven en `onboarding/utils/textoDelDiaUno` (con `fechaDelDiaUno`, que arma la fecha sin pasar por UTC).
+* **Errores**: sin red al activar, «No pudimos activar tu programa. Revisa tu conexión e inténtalo de nuevo.» y el **mismo botón «Entendido» reintenta** con la misma fecha; sin red al leer
+  la fecha, «No pudimos cargar tu fecha de inicio. Revisa tu conexión.» con «Reintentar». **400** (pasó la medianoche con la pantalla abierta y la fecha mostrada ya no es mañana): se
+  vuelve a leer, se muestra la fecha nueva y se dice «Pasó la medianoche y tu fecha cambió. Mira la nueva.»; nunca se activa con un día distinto al que se vio. **409** (otro teléfono ya
+  activó): «Vamos a comprobar tu programa.», se relee y entra directo. Ya activado al abrir, entra sin mostrar nada.
+* **Las entradas, con la misma pantalla** (los nombres internos `BotonElegirDiaUno`, `useSelectorDelDiaUno`, `SelectorDelDiaUno` y `ELEGIR_DIA_UNO` se conservan: renombrarlos tocaría una docena
+  de archivos sin cambiar nada de lo que se ve):
+  | Dónde | Antes | Ahora |
+  |---|---|---|
+  | Hoy y Plan, sin fila (fila compacta) | «Haz tu programa de 90 días · Elige tu Día 1 ›» | «Haz tu programa de {plazo} · **Empieza mañana** ›» |
+  | Hoy y Plan, con fila sin activar | «Todavía no elegiste tu Día 1 · Elige cuándo empiezas ›» | «**Todavía no empezaste tu programa** · **Empieza mañana** ›» |
+  | Training, Plan (estado vacío), Yo (tarjeta), Mi Radar (botón) | «Elegir mi Día 1» | «**Empezar mañana**» |
+  | Training, con fila sin activar | «Todavía no elegiste tu Día 1» + «Elige en qué día quieres empezar tus 90 días. Hasta entonces no hay evidencia que entregar.» | «Todavía no empezaste tu programa» + «**Tu programa empieza mañana. Hasta entonces no hay evidencia que entregar.**» |
+  | Yo, tarjeta de la fila sin activar | «Todavía no elegiste tu Día 1» + «Elige en qué día quieres empezar tus 90 días. Tu programa arranca ese día.» | «Todavía no empezaste tu programa» + «**Tu programa empieza mañana.**» |
+  | Plan, estado vacío | «Cuando elijas tu Día 1 podrás escribir tus objetivos y agendar tus acciones aquí.» | «Cuando empiece tu programa podrás escribir tus objetivos y agendar tus acciones aquí.» |
+  | Mi Radar (motivo y fila de Yo) | «Mi Radar empieza en tu día 8. Primero elige tu Día 1.» / «Primero elige tu Día 1» | «Mi Radar empieza en tu día 8. **Primero empieza tu programa.**» / «**Primero empieza tu programa**» |
+  | Aviso de error (Hoy, Yo, Training) | «No pudimos comprobar tu Día 1» + «Reintentar Día 1» | «No pudimos comprobar tu programa» + «**Reintentar**» |
+  | Objetivos sin programa; fin del diagnóstico; Administración (cambiar día) | «Cuando elijas tu Día 1…»; «…aceptar los Términos y elegir tu Día 1»; «Todavía no eligió su Día 1» | «Cuando empiece tu programa…»; «…aceptar los Términos y empezar tu programa»; «Todavía no empezó su programa» |
+  «Ahora no» (la ✕ de la fila de Hoy), el «volver» de la pantalla fuera del onboarding (su etiqueta pasa de «Volver sin elegir» a «Volver sin empezar») y que en el onboarding la pantalla se
+  trague el gesto de retroceso no cambian.
+* **Cómo se comporta un APK anterior contra el backend nuevo**: ve UNA sola fecha en el selector, preseleccionada, y «Confirmar mi Día 1» activa con ella; si guardó las fechas antes de la
+  medianoche, el servidor responde 400 y ese APK vuelve a leerlas (E-594). **La app nueva contra un backend anterior** también funciona: usa la primera fecha que ofrece (mañana).
+* **No cambian**: la duración por formación, `POST /mentor/activate-tracking` (inicio hoy; solo lo llaman APK ≤ 1.5.0), el reloj del programa, Hoy ni Plan fuera de estos textos, los
+  demás tabs, ninguna animación (la pantalla es la misma, sin movimiento propio), ícono ni dependencia nueva.
+* **Pruebas:** Jest `textoDelDiaUno` (el plazo y la fecha), `diaUnoRecuperacion` (la pantalla: una fecha, 400 con aviso y fecha nueva, 409, red perdida, servidor anterior),
+  `elegirDiaUnoDelPersonal`, `filaDelProgramaPropio`, `filaDelPrograma`, `botonElegirDiaUnoSinEspaciado`, `onboardingFlowConDiagnostico`, `vistaDeMiRadar`, `miRadarEnYo`, `miRadarScreen`,
+  `planFilaDelPrograma` y `planSinProgramaPropio` ajustadas. `e2e/dia-uno/` (Playwright) ajustado. Maestro, escritos y sin correr: `.maestro/empieza-manana/` (01 aprendiz en el
+  onboarding, 02 personal sin fila, 03 fila sin activar con Training y Mi Radar, 04 el plazo según la formación); se ajustaron `hoy-programa-propio/01` y `mi-radar/16`.
+* **Supuestos para el dueño**: «al día siguiente» es el día calendario siguiente (quien termina a las 23:58 empieza dos minutos después); `activate-tracking` queda como está; no hay
+  aviso del teléfono nuevo.
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire) y el backend con la spec 036 (sin migración); sin él la app funciona igual.
 
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
@@ -2238,6 +2287,8 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     * **Compatibilidad:** `GET/PUT /radar/mi-radar` devuelven los siete días ya resueltos; una respuesta de un backend anterior a la 019 (con `horas`) se
       lee como un error y la fila de Yo no aparece. **Hace falta el backend con V122 antes y un APK nuevo** (la app no se actualiza por aire).
     * **El 403 de Mi Radar dice por qué y lleva a elegir el Día 1** (último pedido del dueño sobre la spec 019: «no quiero bugs en esa parte»).
+      > **Corregido 2026-11-02 (spec 036, D-309).** Ya no se elige el Día 1: el motivo dice «Mi Radar empieza en tu día 8. **Primero empieza tu programa.**», la fila de Yo
+      > «**Primero empieza tu programa**» y el botón es «**Empezar mañana**», que abre «Tu programa empieza mañana». El 403 `PROGRAMA_NO_ACTIVADO`, "Cargando…" y el resto de lo de abajo no cambian.
       Hasta hoy un 403 de `GET/PUT /api/v1/radar/mi-radar` se leía como «no hay Mi Radar», en silencio. Ahora el cuerpo trae `codigo`
       (`PROGRAMA_NO_ACTIVADO`, `CUENTA_SUSPENDIDA` o `SIN_PERMISO`; el formato `ApiErrorConCodigo` de siempre) y la lectura
       (`useConfigDeMiRadar.lecturaDeUnError`) lo distingue; la pantalla dice lo que toca con `utils/vistaDeMiRadar` y
@@ -2993,6 +3044,7 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       Términos atiende el gesto atrás de Android (vuelve a la ficha).
       > **Corregido 2026-11-02.** Los botones dicen «Continuar» y «Confirmar mi Día 1» (también «Aceptar» en Términos actualizados,
       > «Comenzar mi viaje» en la bienvenida y «Entrar a mi Día 1 (hoy)» en el gong). Ver la entrada del 2026-11-02.
+      > **Corregido 2026-11-02 (spec 036, D-309).** «Confirmar mi Día 1» ya no existe: el último paso es «Tu programa empieza mañana» con «Entendido». Ver la entrada del 2026-11-02 (spec 036).
     * **Lo que NO cambia:** preguntas, claves y respuestas (`mapaPreguntas.ts`), el guardado por
       capítulo (mismo `POST /onboarding/answers`, mismo `avanzarEstado`, sólo al terminar cada
       capítulo), las 23 cláusulas, la firma y los avisos de validación (mismos títulos y mensajes).
@@ -3687,6 +3739,8 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       > APK:** con un backend anterior, el selector de quien no tiene fila muestra «No pudimos cargar las fechas…» (404).
       > Prueba: `programa/__tests__/elegirDiaUnoDelPersonal.test.ts` (la invitación abre el selector, elige con el
       > servidor y no llama a `activate-tracking`; ninguna pantalla contiene `/mentor/activate-tracking`).
+      > **Corregido 2026-11-02 (spec 036, D-309).** Nadie elige ya su Día 1: «Elegir mi Día 1» es «**Empezar mañana**», «Todavía no elegiste tu Día 1» es «**Todavía no empezaste tu programa**» y la
+      > pantalla que abre es «Tu programa empieza mañana» (sin fechas a elegir, con «Entendido»). El POST sigue creando la fila ya activada, con inicio mañana. `activate-tracking` no cambia.
     * **«Ahora no»** sigue escondiendo la invitación solo en Hoy; Yo la ofrece siempre que el servidor diga
       `canStartProgram` (`useProgramaPersonal` devuelve además `puedeActivar`, sin el pospuesto).
     * Nada depende del nombre del rol (los dos idiomas: `MENTOR_LEAD`/`LIDER_MENTORES`, `ALCHEMIST`/`ALQUIMISTA`): lo
@@ -3990,6 +4044,9 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     elección existente; una respuesta perdida permite repetir la misma fecha. La matriz E2E vive en
     `playwright.dia-uno.config.ts` y su preparación y alcance en `e2e/mapa-poder/README.md`.
     **Requiere publicar ambos proyectos:** el backend serializa la elección por usuario hasta el commit.
+    > **Corregido 2026-11-02 (spec 036, D-309).** «Ofrecen el selector», «Reintentar Día 1», «Un 400 refresca fechas» y «repetir la misma fecha» ya no son así: se ofrece «Empezar mañana» (la pantalla
+    > «Tu programa empieza mañana»), el aviso dice «No pudimos comprobar tu programa» con «Reintentar», un 400 significa que pasó la medianoche y la fecha mostrada ya no es mañana (se vuelve a leer y se avisa),
+    > y «Entendido» otra vez manda la misma fecha. El resto (nada se asigna solo, vencen a los 15 s, respuestas fuera de orden) sigue igual.
     Verificación final del 2026-10-12: 34/34 E2E de Día 1 y 5/5 mapas completos, cero reintentos,
     fallos, errores u omitidos. JUnit y persistencia SQL en `artifacts/e2e-dia-uno/` y `artifacts/e2e-mapa/`.
 

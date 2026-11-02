@@ -39,7 +39,7 @@ const mockElegirDia: Array<{ onActivado: () => void }> = [];
 jest.mock('../../../programa/components/BotonElegirDiaUno', () => ({
   BotonElegirDiaUno: (props: { onActivado: () => void }) => {
     mockElegirDia.push(props);
-    return require('react').createElement('Text', { accessibilityLabel: 'Elegir mi Día 1', onPress: props.onActivado }, 'Elegir mi Día 1');
+    return require('react').createElement('Text', { accessibilityLabel: 'Empezar mañana', onPress: props.onActivado }, 'Empezar mañana');
   },
 }));
 
@@ -545,17 +545,17 @@ describe('cuando todavía no hay Mi Radar, la pantalla dice por qué', () => {
     sinConfig({ estado: 'pendiente' });
     const r = montar();
     expect(textos(r)).toContain('Cargando Mi Radar…');
-    expect(hay(r, 'Elegir mi Día 1')).toBe(false);
+    expect(hay(r, 'Empezar mañana')).toBe(false);
     expect(hay(r, 'Reintentar')).toBe(false);
     sinFormulario(r);
   });
 
-  it('sin programa activado: la línea del motivo y «Elegir mi Día 1»; ni interruptor ni nada de Mi Radar', () => {
+  it('sin programa activado: la línea del motivo y «Empezar mañana»; ni interruptor ni nada de Mi Radar', () => {
     sinConfig({ estado: 'sin-programa' });
     const r = montar();
-    expect(MENSAJE_SIN_PROGRAMA).toBe('Mi Radar empieza en tu día 8. Primero elige tu Día 1.');
-    expect(textos(r)).toContain('Mi Radar empieza en tu día 8. Primero elige tu Día 1.');
-    expect(hay(r, 'Elegir mi Día 1')).toBe(true);
+    expect(MENSAJE_SIN_PROGRAMA).toBe('Mi Radar empieza en tu día 8. Primero empieza tu programa.');
+    expect(textos(r)).toContain('Mi Radar empieza en tu día 8. Primero empieza tu programa.');
+    expect(hay(r, 'Empezar mañana')).toBe(true);
     expect(textos(r)).not.toContain('Cargando');
     sinFormulario(r);
   });
@@ -581,7 +581,7 @@ describe('cuando todavía no hay Mi Radar, la pantalla dice por qué', () => {
     sinConfig({ estado: 'bloqueada', motivo: 'suspendida' });
     const r = montar();
     expect(textos(r)).toContain('Tu cuenta está suspendida: Mi Radar no está disponible.');
-    expect(hay(r, 'Elegir mi Día 1')).toBe(false);
+    expect(hay(r, 'Empezar mañana')).toBe(false);
     expect(hay(r, 'Reintentar')).toBe(false);
     sinFormulario(r);
   });
@@ -590,7 +590,7 @@ describe('cuando todavía no hay Mi Radar, la pantalla dice por qué', () => {
     sinConfig({ estado: 'bloqueada', motivo: 'sin-permiso' });
     const r = montar();
     expect(textos(r)).toContain('No tienes permiso para usar Mi Radar.');
-    expect(hay(r, 'Elegir mi Día 1')).toBe(false);
+    expect(hay(r, 'Empezar mañana')).toBe(false);
     expect(hay(r, 'Reintentar')).toBe(false);
     sinFormulario(r);
   });
@@ -599,7 +599,7 @@ describe('cuando todavía no hay Mi Radar, la pantalla dice por qué', () => {
     const mi = sinConfig({ estado: 'fallo' });
     const r = montar();
     expect(textos(r)).toContain('No pudimos cargar Mi Radar.');
-    expect(hay(r, 'Elegir mi Día 1')).toBe(false);
+    expect(hay(r, 'Empezar mañana')).toBe(false);
     pulsar(r, 'Reintentar');
     expect(mi.reiniciarConfig).toHaveBeenCalledTimes(1);
     sinFormulario(r);
@@ -618,7 +618,7 @@ describe('cuando todavía no hay Mi Radar, la pantalla dice por qué', () => {
     mockMi.actual = crearMi(miRadarDePrueba(false, {}, '2026-10-29'));
     const r = montar({ diaPrograma: 5 });
     expect(textos(r)).toContain('Mi Radar empieza en tu día 8, el domingo 1 de noviembre.');
-    expect(hay(r, 'Elegir mi Día 1')).toBe(false);
+    expect(hay(r, 'Empezar mañana')).toBe(false);
     sinFormulario(r);
   });
 
@@ -642,7 +642,7 @@ describe('cuando todavía no hay Mi Radar, la pantalla dice por qué', () => {
     sinConfig({ estado: 'sin-programa' });
     const r = montar();
     const lineas = r.root.findAll(n => (n.type as unknown) === 'Text' && n.props.accessibilityRole === 'text');
-    expect(lineas.map(textosDe)).toContain('Mi Radar empieza en tu día 8. Primero elige tu Día 1.');
+    expect(lineas.map(textosDe)).toContain('Mi Radar empieza en tu día 8. Primero empieza tu programa.');
   });
 });
 

@@ -10,7 +10,7 @@ import { escucharDiaUnoElegido } from '../events/avisoDiaUnoElegido';
  * `diaPrograma === 0` esconde DOS situaciones que en pantalla se veían idénticas — un plan
  * vacío, sin una palabra — y que para el aprendiz son muy distintas:
  *
- *  - `PENDIENTE_ELEGIR`: nunca eligió su Día 1. Hay algo que hacer, y la app tiene que
+ *  - `PENDIENTE_ELEGIR`: nunca empezó su programa. Hay algo que hacer, y la app tiene que
  *    llevarlo ahí.
  *  - `ESPERANDO_INICIO`: ya eligió, la fecha todavía no llegó. No hay nada que hacer más que
  *    esperar, y saber la fecha exacta es justamente lo que calma.
@@ -66,8 +66,8 @@ function fechaCivil(fecha: Date): string {
 }
 
 /**
- * `version` (D-260): cambiarla vuelve a consultar. La usa quien acaba de elegir su Día 1 desde
- * «Elegir mi Día 1» (Training, Hoy, Yo): sin esto el aviso «Todavía no elegiste tu Día 1» seguía en
+ * `version` (D-260): cambiarla vuelve a consultar. La usa quien acaba de empezar su programa desde
+ * «Empezar mañana» (Training, Hoy, Yo): sin esto el aviso «Todavía no empezaste tu programa» seguía en
  * pantalla después de elegirlo, porque `habilitado` no cambia (el día sigue en 0 hasta que llega).
  */
 export function useArranqueDelPrograma(habilitado: boolean, version = 0, usuarioId?: string | null): ArranquePrograma {

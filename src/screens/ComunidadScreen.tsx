@@ -876,7 +876,7 @@ function ComunidadPorFormacion({
    * BUG ENCONTRADO 2026-09-17: decía `"Grupo 07 · Día 37"` **escrito a mano** en el JSX. Le
    * mostraba ese texto a todo el mundo: a quien todavía no tiene grupo asignado (la mayoría, ver
    * el WARN de "no hay grupo de recepción vigente") y a quien todavía no arrancó el programa
-   * (`diaPrograma === 0`, que es el estado normal entre elegir el Día 1 y que llegue esa fecha).
+   * (`diaPrograma === 0`, que es el estado normal entre empezar el programa y que llegue esa fecha).
    * O sea que la primera publicación de alguien salía firmada con un grupo y un día que no eran
    * los suyos.
    *

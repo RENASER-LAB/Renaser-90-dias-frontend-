@@ -53,9 +53,9 @@ export async function obtenerEstado(): Promise<EstadoOnboardingApi> {
  * guardia acá contra llamadas repetidas.
  */
 /**
- * GET /api/v1/onboarding/activate-program — las fechas válidas para arrancar el Día 1 (mañana,
- * +2 o +3 en la zona del aprendiz — nunca hoy, ver `ParticipacionPrograma.activarPrograma` en el
- * backend). `validStartDates` viene vacío si el programa ya está activado.
+ * GET /api/v1/onboarding/activate-program — la fecha en que empieza el programa: mañana en la zona de la persona, nunca hoy (spec 036,
+ * D-309; ver `ParticipacionPrograma.activarPrograma` en el backend). Ya no hay nada que elegir: `validStartDates` trae UNA fecha (un servidor
+ * anterior mandaba tres, mañana, +2 y +3; la primera es siempre mañana) y viene vacío si el programa ya está activado.
  */
 export async function consultarActivacionPrograma(): Promise<EstadoActivacionProgramaApi> {
   const r = await apiFetch<unknown>('/api/v1/onboarding/activate-program', { timeoutMs: 15_000 });
@@ -67,9 +67,9 @@ export async function consultarActivacionPrograma(): Promise<EstadoActivacionPro
 }
 
 /**
- * POST /api/v1/onboarding/activate-program — confirma el Día 1 con una de las fechas devueltas por
- * `consultarActivacionPrograma`. Reintentar con la MISMA fecha ya activada es un no-op (200); con
- * una fecha distinta el backend responde 409 (`ApiError.esConflicto`).
+ * POST /api/v1/onboarding/activate-program — activa el programa con la fecha que devolvió `consultarActivacionPrograma` (mañana). El servidor
+ * la valida: si ya no es mañana (pasó la medianoche con la pantalla abierta) responde 400 y no activa nada. Reintentar con la MISMA fecha
+ * ya activada es un no-op (200); con una fecha distinta el backend responde 409 (`ApiError.esConflicto`).
  */
 export async function activarPrograma(input: ActivarProgramaInput): Promise<ActivarProgramaApi> {
   const r = await apiFetch<unknown>('/api/v1/onboarding/activate-program', { method: 'POST', body: input, timeoutMs: 15_000 });

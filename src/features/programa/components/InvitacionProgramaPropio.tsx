@@ -20,10 +20,10 @@ type ProgramaPersonal = ReturnType<typeof useProgramaPersonal>;
  * Invitación secundaria, no un bloqueo. Acompañar no exige cursar (D-07), así que es una oferta:
  * «Ahora no» (solo en Hoy) no llama a nada, y menos al DELETE, que borraría la participación entera.
  *
- * D-261 (decisión del dueño del 2026-10-07: «que elija el día como los demás»): el botón ya no es
- * «Empezar» (`POST /mentor/activate-tracking`, que arrancaba HOY). Es «Elegir mi Día 1», que abre el
- * selector del aprendiz (`BotonElegirDiaUno` → `ActivarProgramaScreen`): las mismas fechas que da el
- * servidor, y al confirmar el `POST /onboarding/activate-program` le crea la fila con esa fecha.
+ * D-261 (decisión del dueño del 2026-10-07): el botón ya no es «Empezar» (`POST /mentor/activate-tracking`, que
+ * arrancaba HOY). Abre la pantalla del aprendiz (`BotonElegirDiaUno` → `ActivarProgramaScreen`) y al confirmar el
+ * `POST /onboarding/activate-program` le crea la fila. Spec 036 (D-309): ya no se elige el día; el botón es «Empezar
+ * mañana» y el programa empieza mañana, como el del aprendiz.
  */
 export function InvitacionProgramaPropio({
   programa,
@@ -32,7 +32,7 @@ export function InvitacionProgramaPropio({
 }: {
   programa: ProgramaPersonal;
   conAhoraNo?: boolean;
-  /** Después de elegir el Día 1, para que la pantalla que la muestra se relea (Training). */
+  /** Después de activar el programa, para que la pantalla que la muestra se relea (Training). */
   onActivado?: () => void;
 }) {
   const { c, t } = useTheme();

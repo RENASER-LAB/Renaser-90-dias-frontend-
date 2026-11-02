@@ -13,8 +13,8 @@ import { AvisoConsultaDiaUno } from './AvisoConsultaDiaUno';
 /**
  * La entrada al programa propio en Hoy y en Yo (D-260).
  *
- * - Fila sin Día 1 → «Todavía no elegiste tu Día 1» con «Elegir mi Día 1» (el selector del
- *   onboarding). Antes no había ninguna: la invitación de Hoy se esconde a quien ya tiene fila.
+ * - Fila sin activar → «Todavía no empezaste tu programa» con «Empezar mañana» (la pantalla del
+ *   onboarding «Tu programa empieza mañana»). Antes no había ninguna: la invitación de Hoy se esconde a quien ya tiene fila.
  * - Sin fila → «Hacer mi programa de 90 días». En Hoy, con «Ahora no»; en Yo, siempre que el
  *   servidor diga que puede empezar, sin «Ahora no»: es la entrada para volver después de
  *   posponerlo (antes «Ahora no» la escondía para siempre).
@@ -61,9 +61,9 @@ function TarjetaElegirDiaUno({ onActivado }: { onActivado: () => void }) {
   return (
     <Card>
       <MicroLabel>Tu programa</MicroLabel>
-      <Text style={[t.cardTitle, { color: c.textStrong, marginTop: 8 }]}>Todavía no elegiste tu Día 1</Text>
+      <Text style={[t.cardTitle, { color: c.textStrong, marginTop: 8 }]}>Todavía no empezaste tu programa</Text>
       <Text style={[t.body, { color: c.textSoft, marginTop: 8 }]}>
-        Elige en qué día quieres empezar tus 90 días. Tu programa arranca ese día.
+        Tu programa empieza mañana.
       </Text>
       <View style={{ marginTop: 18 }}>
         <BotonElegirDiaUno onActivado={onActivado} />

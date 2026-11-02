@@ -14,8 +14,12 @@ if (semilla.dayOneActors?.length !== 35) throw new Error('Preparar cuentas con -
 const ACT = '/api/v1/onboarding/activate-program';
 const texto = (page: Page, contenido: string) => page.getByText(contenido, { exact: true })
   .and(page.locator(':visible:not([aria-hidden="true"] *)'));
-const elegir = (page: Page) => page.getByRole('button', { name: /^Elegir mi Día 1$/i }).first();
-const confirmar = (page: Page) => page.getByRole('button', { name: /^Confirmar mi Día 1$/i });
+// Spec 036 (D-309): el programa empieza siempre mañana y nadie elige el Día 1. El botón que abre la pantalla es «Empezar mañana» y la
+// pantalla «Tu programa empieza mañana» se cierra con «Entendido». (Los nombres `elegir` y `confirmar` se conservan por el diff.)
+const elegir = (page: Page) => page.getByRole('button', { name: /^Empezar mañana$/i }).first();
+const confirmar = (page: Page) => page.getByRole('button', { name: /^Entendido$/i });
+const pantallaDeManana = (page: Page) => page.getByRole('heading', { name: 'Tu programa empieza mañana', exact: true });
+const reintentar = (page: Page) => page.getByRole('button', { name: 'Reintentar', exact: true }).first();
 const pestaña = (page: Page, nombre: string) => page.getByRole('tab', { name: new RegExp(`^${nombre}$`, 'i') });
 const actor = (caso: string) => semilla.dayOneActors.find(a => a.case === caso)!;
 
@@ -43,15 +47,15 @@ async function estado(request: APIRequestContext, token: string) {
   return r.json() as Promise<{ activated: boolean; startDate: string | null; validStartDates: string[] }>;
 }
 
-async function elegirFecha(page: Page, indice = 1) {
-  await expect(page.getByRole('heading', { name: 'Elige tu Día 1', exact: true })).toBeVisible();
-  await expect(page.getByRole('radio')).toHaveCount(3);
-  await page.getByRole('radio').nth(indice).click();
+/** «Tu programa empieza mañana» → «Entendido»: sin fechas que elegir (ningún radio). Devuelve la fecha que se activó. */
+async function activarMananaConLaPantalla(page: Page) {
+  await expect(pantallaDeManana(page)).toBeVisible();
+  await expect(page.getByRole('radio')).toHaveCount(0);
   const respuesta = page.waitForResponse(r => r.url() === `${API}${ACT}` && r.request().method() === 'POST');
   await confirmar(page).click();
   const r = await respuesta;
   expect(r.status()).toBe(200);
-  await expect(page.getByRole('heading', { name: 'Elige tu Día 1', exact: true })).toHaveCount(0);
+  await expect(pantallaDeManana(page)).toHaveCount(0);
   return r.request().postDataJSON().startDate as string;
 }
 
@@ -59,7 +63,7 @@ async function sinSelectorEnPestañas(page: Page) {
   for (const nombre of ['hoy', 'yo', 'training']) {
     await pestaña(page, nombre).click();
     await expect(elegir(page)).toHaveCount(0);
-    await expect(texto(page, 'Todavía no elegiste tu Día 1')).toHaveCount(0);
+    await expect(texto(page, 'Todavía no empezaste tu programa')).toHaveCount(0);
     await expect(texto(page, 'Hacer mi programa de 90 días')).toHaveCount(0);
   }
 }
@@ -75,9 +79,9 @@ for (const persona of semilla.dayOneActors.filter(a => ['PENDIENTE', 'FUTURO', '
       expect(r.status()).toBe(404);
       await expect(elegir(page)).toHaveCount(0);
       await pestaña(page, 'training').click();
-      await expect(texto(page, 'No pudimos comprobar tu Día 1')).toBeVisible();
+      await expect(texto(page, 'No pudimos comprobar tu programa')).toBeVisible();
       await expect(texto(page, 'No encontramos tu inscripción al programa. Pide al equipo que revise tu cuenta.')).toBeVisible();
-      await expect(page.getByRole('button', { name: 'Reintentar Día 1', exact: true })).toBeVisible();
+      await expect(reintentar(page)).toBeVisible();
       expect(envios).toBe(0);
       return;
     }
@@ -86,22 +90,24 @@ for (const persona of semilla.dayOneActors.filter(a => ['PENDIENTE', 'FUTURO', '
       expect(antes.activated).toBe(false);
       expect(antes.startDate).toBeNull();
       // La actualización ofrece la entrada por sí misma; no abre un modal ni confirma una fecha.
-      await expect(texto(page, 'Todavía no elegiste tu Día 1')).toBeVisible();
-      await expect(page.getByRole('heading', { name: 'Elige tu Día 1', exact: true })).toHaveCount(0);
+      await expect(texto(page, 'Todavía no empezaste tu programa')).toBeVisible();
+      await expect(pantallaDeManana(page)).toHaveCount(0);
       for (const nombre of ['yo', 'training']) {
         await pestaña(page, nombre).click();
-        await expect(texto(page, 'Todavía no elegiste tu Día 1')).toBeVisible();
+        await expect(texto(page, 'Todavía no empezaste tu programa')).toBeVisible();
         await expect(elegir(page)).toBeVisible();
       }
       expect(envios).toBe(0);
       await elegir(page).click();
-      await expect(page.getByRole('radio')).toHaveCount(3);
-      await page.getByRole('button', { name: 'Volver sin elegir', exact: true }).click();
+      await expect(pantallaDeManana(page)).toBeVisible();
+      await expect(page.getByRole('radio')).toHaveCount(0);
+      await page.getByRole('button', { name: 'Volver sin empezar', exact: true }).click();
       expect((await estado(request, token)).activated).toBe(false);
       await pestaña(page, 'yo').click();
       await elegir(page).click();
-      const fecha = await elegirFecha(page);
-      expect(fecha).toBe(antes.validStartDates[1]);
+      const fecha = await activarMananaConLaPantalla(page);
+      expect(antes.validStartDates).toHaveLength(1); // spec 036: una sola fecha, mañana
+      expect(fecha).toBe(antes.validStartDates[0]);
       expect((await estado(request, token)).startDate).toBe(fecha);
       await sinSelectorEnPestañas(page);
       await page.reload();
@@ -121,7 +127,8 @@ for (const persona of semilla.dayOneActors.filter(a => ['PENDIENTE', 'FUTURO', '
       }
       expect(envios).toBe(0);
       await elegir(page).click();
-      const fecha = await elegirFecha(page, 0);
+      const fecha = await activarMananaConLaPantalla(page);
+      expect(antes.validStartDates).toHaveLength(1);
       expect(fecha).toBe(antes.validStartDates[0]);
       await sinSelectorEnPestañas(page);
     } else {
@@ -147,10 +154,10 @@ test('un error al consultar el estado ofrece reintento y recupera la entrada', a
   let fallar = true;
   await page.route(`${API}${ACT}`, r => fallar && r.request().method() === 'GET' ? r.abort('failed') : r.continue());
   const token = await entrar(page, actor('ERROR_ESTADO'));
-  await expect(texto(page, 'No pudimos comprobar tu Día 1')).toBeVisible();
+  await expect(texto(page, 'No pudimos comprobar tu programa')).toBeVisible();
   expect((await estado(request, token)).activated).toBe(false);
   fallar = false;
-  await page.getByRole('button', { name: 'Reintentar Día 1', exact: true }).click();
+  await reintentar(page).click();
   await expect(elegir(page)).toBeVisible();
 });
 
@@ -166,25 +173,26 @@ test('una consulta sin respuesta termina en reintento; Training no muestra hábi
   await pestaña(page, 'training').click();
   await expect(page.getByLabel('Cargando tu entrenamiento', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: /planificar|registrar/i })).toHaveCount(0);
-  await expect(texto(page, 'No pudimos comprobar tu Día 1')).toBeVisible({ timeout: 25_000 });
+  await expect(texto(page, 'No pudimos comprobar tu programa')).toBeVisible({ timeout: 25_000 });
   await expect(page.getByLabel('Cargando tu entrenamiento', { exact: true })).toHaveCount(0);
   demorar = false;
   soltar();
-  await page.getByRole('button', { name: 'Reintentar Día 1', exact: true }).click();
+  await reintentar(page).click();
   await expect(elegir(page)).toBeVisible();
 });
 
-test('un error al cargar fechas se recupera dentro del selector', async ({ page, request }) => {
+test('un error al cargar la fecha se recupera dentro de la pantalla «Tu programa empieza mañana»', async ({ page, request }) => {
   const token = await entrar(page, actor('ERROR_FECHAS'));
   await expect(elegir(page)).toBeVisible();
   let fallar = true;
   await page.route(`${API}${ACT}`, r => fallar && r.request().method() === 'GET' ? r.abort('failed') : r.continue());
   await elegir(page).click();
-  await expect(page.getByRole('button', { name: 'Reintentar Día 1', exact: true })).toBeVisible();
+  await expect(reintentar(page)).toBeVisible();
   await expect(confirmar(page)).toBeDisabled();
   fallar = false;
-  await page.getByRole('button', { name: 'Reintentar Día 1', exact: true }).click();
-  await expect(page.getByRole('radio')).toHaveCount(3);
+  await reintentar(page).click();
+  await expect(pantallaDeManana(page)).toBeVisible();
+  await expect(confirmar(page)).toBeEnabled();
   expect((await estado(request, token)).activated).toBe(false);
 });
 
@@ -192,18 +200,17 @@ test('si fallan capacidades no se oculta definitivamente el programa opcional', 
   let fallar = true;
   await page.route(`${API}/api/v1/mentor/context`, r => fallar ? r.abort('failed') : r.continue());
   await entrar(page, actor('ERROR_CAPACIDADES'));
-  await expect(texto(page, 'No pudimos comprobar tu Día 1')).toBeVisible();
+  await expect(texto(page, 'No pudimos comprobar tu programa')).toBeVisible();
   fallar = false;
-  await page.getByRole('button', { name: 'Reintentar Día 1', exact: true }).click();
+  await reintentar(page).click();
   await expect(texto(page, 'Hacer mi programa de 90 días')).toBeVisible();
   await expect(elegir(page)).toBeVisible();
 });
 
-test('si se pierde la respuesta del POST, repetir la misma fecha no duplica ni reinicia', async ({ page, request }) => {
+test('si se pierde la respuesta del POST, «Entendido» otra vez no duplica ni reinicia', async ({ page, request }) => {
   const token = await entrar(page, actor('POST_SIN_RED'));
   await elegir(page).click();
-  await expect(page.getByRole('radio')).toHaveCount(3);
-  await page.getByRole('radio').nth(2).click();
+  await expect(pantallaDeManana(page)).toBeVisible();
   let perdida = false;
   await page.route(`${API}${ACT}`, async r => {
     if (r.request().method() === 'POST' && !perdida) {
@@ -218,59 +225,63 @@ test('si se pierde la respuesta del POST, repetir la misma fecha no duplica ni r
   const guardada = await estado(request, token);
   expect(guardada.activated).toBe(true);
   await confirmar(page).click();
-  await expect(page.getByRole('heading', { name: 'Elige tu Día 1', exact: true })).toHaveCount(0);
+  await expect(pantallaDeManana(page)).toHaveCount(0);
   expect((await estado(request, token)).startDate).toBe(guardada.startDate);
 });
 
-test('un 400 de fecha fuera de ventana vuelve a consultar y permite elegir una vigente', async ({ page, request }) => {
+test('un 400 porque la fecha ya no es mañana vuelve a consultar, avisa y deja activar con la nueva', async ({ page, request }) => {
   const token = await entrar(page, actor('VENTANA'));
   await elegir(page).click();
-  await expect(page.getByRole('radio')).toHaveCount(3);
+  await expect(pantallaDeManana(page)).toBeVisible();
   let primera = true;
   let consultas = 0;
   await page.route(`${API}${ACT}`, async r => {
     if (r.request().method() === 'GET') consultas++;
     if (r.request().method() === 'POST' && primera) {
       primera = false;
+      // La fecha que se veía quedó vieja (pasó la medianoche): el servidor responde 400 y no activa nada.
       await r.continue({ postData: JSON.stringify({ startDate: '2000-01-01' }) });
     } else await r.continue();
   });
   await confirmar(page).click();
-  await expect(texto(page, 'Las fechas disponibles cambiaron. Elige tu Día 1 nuevamente.')).toBeVisible();
-  await expect(page.getByRole('radio')).toHaveCount(3);
+  await expect(texto(page, 'Pasó la medianoche y tu fecha cambió. Mira la nueva.')).toBeVisible();
+  await expect(pantallaDeManana(page)).toBeVisible();
+  await expect(page.getByRole('radio')).toHaveCount(0);
   expect(consultas).toBeGreaterThan(0);
   expect((await estado(request, token)).activated).toBe(false);
-  const fecha = await elegirFecha(page, 2);
+  const fecha = await activarMananaConLaPantalla(page);
   expect((await estado(request, token)).startDate).toBe(fecha);
 });
 
-test('si otro dispositivo eligió mientras el selector estaba abierto, conserva su fecha', async ({ page, request }) => {
+test('si otro dispositivo ya activó mientras la pantalla estaba abierta, «Entendido» no cambia su fecha', async ({ page, request }) => {
   const token = await entrar(page, actor('OTRO_DISPOSITIVO'));
   const opciones = (await estado(request, token)).validStartDates;
+  expect(opciones).toHaveLength(1);
   await elegir(page).click();
-  await expect(page.getByRole('radio')).toHaveCount(3);
-  const r = await request.post(`${API}${ACT}`, { headers: { 'X-Auth-Token': token }, data: { startDate: opciones[2] } });
+  await expect(pantallaDeManana(page)).toBeVisible();
+  const r = await request.post(`${API}${ACT}`, { headers: { 'X-Auth-Token': token }, data: { startDate: opciones[0] } });
   expect(r.status()).toBe(200);
-  const conflicto = page.waitForResponse(r => r.url() === `${API}${ACT}` && r.request().method() === 'POST');
+  // Con una sola fecha posible, la misma de los dos teléfonos: es idempotente (200), nunca un conflicto ni un cambio de fecha.
+  const repetido = page.waitForResponse(r => r.url() === `${API}${ACT}` && r.request().method() === 'POST');
   await confirmar(page).click();
-  expect((await conflicto).status()).toBe(409);
-  await expect(page.getByRole('heading', { name: 'Elige tu Día 1', exact: true })).toHaveCount(0);
-  expect((await estado(request, token)).startDate).toBe(opciones[2]);
+  expect((await repetido).status()).toBe(200);
+  await expect(pantallaDeManana(page)).toHaveCount(0);
+  expect((await estado(request, token)).startDate).toBe(opciones[0]);
   await sinSelectorEnPestañas(page);
 });
 
-test('aprendiz que cerró tras Términos retoma directamente la elección del Día 1', async ({ page, request }) => {
+test('aprendiz que cerró tras Términos retoma directamente «Tu programa empieza mañana»', async ({ page, request }) => {
   const token = await entrar(page, actor('TERMINOS_SIN_DIA'), true);
-  await expect(page.getByRole('heading', { name: 'Elige tu Día 1', exact: true })).toBeVisible();
+  await expect(pantallaDeManana(page)).toBeVisible();
   await expect(pestaña(page, 'hoy')).toHaveCount(0);
   expect((await estado(request, token)).activated).toBe(false);
   await page.reload();
-  await expect(page.getByRole('heading', { name: 'Elige tu Día 1', exact: true })).toBeVisible();
-  await elegirFecha(page);
+  await expect(pantallaDeManana(page)).toBeVisible();
+  await activarMananaConLaPantalla(page);
   await expect(pestaña(page, 'hoy')).toBeVisible();
 });
 
-test('«Ahora no» de una cuenta no esconde el Día 1 de otra en el mismo navegador', async ({ page }) => {
+test('«Ahora no» de una cuenta no esconde «Empezar mañana» de otra en el mismo navegador', async ({ page }) => {
   await entrar(page, actor('CUENTA_A'));
   await page.getByRole('button', { name: 'Ahora no. No se borra nada.', exact: true }).click();
   await pestaña(page, 'yo').click();

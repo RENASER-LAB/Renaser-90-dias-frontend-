@@ -6,7 +6,7 @@ import * as wallApi from '../../community/api/wallApi';
 import { escucharPostPublicado } from '../events/avisoPrimerPost';
 
 /**
- * En qué punto del arranque guiado está el aprendiz, apenas eligió su Día 1.
+ * En qué punto del arranque guiado está el aprendiz, apenas activó su programa.
  *
  * Secuencia pedida por el dueño (2026-09-04): elegir Día 1 → el asistente saluda → lo guía a
  * publicar su primer post en el Muro → aparece el Pacto para firmar → la app queda libre.
@@ -15,7 +15,7 @@ import { escucharPostPublicado } from '../events/avisoPrimerPost';
  * alguien puede cerrar la app a mitad del arranque o cambiar de celular, y "ya publicó" / "ya
  * firmó" tienen que seguir siendo ciertos.
  *
- *  - "ya eligió su Día 1"  → `GET /onboarding/activate-program` (`activated`).
+ *  - "ya activó su programa"  → `GET /onboarding/activate-program` (`activated`).
  *  - "ya publicó su primer post" → `GET /wall/mine` (`count > 0`).
  *  - "ya firmó el Pacto"   → `GET /onboarding/state` (`pactSignedAt`).
  *
@@ -27,7 +27,7 @@ import { escucharPostPublicado } from '../events/avisoPrimerPost';
 export type PasoArranque =
   /** Todavía no se sabe: no se dibuja nada. Nunca mostrar UI sobre una duda. */
   | { paso: 'CARGANDO' }
-  /** No corresponde acompañar (no eligió su Día 1 todavía, o ya terminó todo el arranque). */
+  /** No corresponde acompañar (no empezó su programa todavía, o ya terminó todo el arranque). */
   | { paso: 'NINGUNO' }
   /** Saludo + guía para publicar el primer post. */
   | { paso: 'PUBLICAR_PRIMER_POST' }

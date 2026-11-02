@@ -61,7 +61,7 @@ const MARGEN_BAJO_EL_CAMPO = 36;
 const ALTO_FUNDIDO = 16;
 
 interface MarcoDePasoProps {
-  /** Volver. Sin esto no hay flecha (p. ej. «Elige tu Día 1», que no tiene a dónde volver). */
+  /** Volver. Sin esto no hay flecha (p. ej. «Tu programa empieza mañana», que no tiene a dónde volver). */
   alVolver?: () => void;
   /** Si viene, el botón de volver muestra esta palabra en vez de la flecha sola (p. ej. «Salir»). */
   etiquetaVolver?: string;

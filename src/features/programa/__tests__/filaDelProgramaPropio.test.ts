@@ -4,7 +4,7 @@
  * (`useFilaDelProgramaPropio`) y los pedidos simulados.
  *
  * Contra el código anterior falla: Hoy dibujaba la tarjeta grande «Tu programa · Hacer mi programa de 90 días · Puedes recorrerlo tú
- * también… · Elegir mi Día 1 / Ahora no», que quedaba debajo del fénix.
+ * también… · Empezar mañana / Ahora no», que quedaba debajo del fénix.
  */
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import React from 'react';
@@ -56,7 +56,8 @@ import { formatearFechaLarga } from '../hooks/useArranqueDelPrograma';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
-const FECHAS = ['2026-11-03', '2026-11-04', '2026-11-05'];
+/* Spec 036: el servidor ofrece UNA fecha, mañana. */
+const FECHAS = ['2026-11-04'];
 let raiz: ReactTestRenderer | null = null;
 let programaVisto: ReturnType<typeof useFilaDelProgramaPropio> | null = null;
 
@@ -116,9 +117,9 @@ async function pulsar(nodo: ReactTestInstance) {
 }
 
 describe('personal sin programa (sin fila, el servidor dice que puede empezar)', () => {
-  it('«Haz tu programa de 90 días · Elige tu Día 1 ›», sin el párrafo de antes ni botón dorado', async () => {
+  it('«Haz tu programa de 90 días · Empieza mañana ›», sin el párrafo de antes ni botón dorado', async () => {
     const r = await montar({ inscrito: false, diaPrograma: 0 }, { canStartProgram: true, canAdminister: true });
-    expect(textos(r)).toEqual(['Haz tu programa de 90 días', 'Elige tu Día 1']);
+    expect(textos(r)).toEqual(['Haz tu programa de 90 días', 'Empieza mañana']);
     expect(textos(r).join(' ')).not.toContain('Puedes recorrerlo');
     expect(textos(r).join(' ')).not.toContain('Tu programa');
     expect(iconos(r)).toEqual(expect.arrayContaining(['calendarRange', 'chevron', 'close']));
@@ -128,7 +129,7 @@ describe('personal sin programa (sin fila, el servidor dice que puede empezar)',
 
   it('toda la fila es tocable, mide 72 como mínimo (el alto de Coherencia / Racha) y dice lo mismo al lector de pantalla', async () => {
     const r = await montar({ inscrito: false, diaPrograma: 0 }, { canStartProgram: true, canAdminister: true });
-    const fila = porEtiqueta(r, 'Haz tu programa de 90 días. Elige tu Día 1.');
+    const fila = porEtiqueta(r, 'Haz tu programa de 90 días. Empieza mañana.');
     expect(fila).toBeTruthy();
     expect(fila.props.accessibilityRole).toBe('button');
     expect(StyleSheet.flatten(fila.props.style).minHeight).toBe(72);
@@ -142,22 +143,21 @@ describe('personal sin programa (sin fila, el servidor dice que puede empezar)',
     expect(textos(r)[0]).toBe('Haz tu programa de 1 año');
   });
 
-  it('tocar la fila abre el MISMO selector del Día 1 y elegir manda la fecha al mismo POST', async () => {
+  it('tocar la fila abre «Tu programa empieza mañana» y «Entendido» manda la fecha de mañana al mismo POST', async () => {
     mockConsultarActivacion.mockResolvedValue({ activated: false, validStartDates: FECHAS, startDate: null });
     mockActivarPrograma.mockResolvedValue({});
     const r = await montar({ inscrito: false, diaPrograma: 0 }, { canStartProgram: true, canAdminister: true });
     expect(modal(r).props.visible).toBe(false);
 
-    await pulsar(porEtiqueta(r, 'Haz tu programa de 90 días. Elige tu Día 1.'));
+    await pulsar(porEtiqueta(r, 'Haz tu programa de 90 días. Empieza mañana.'));
     expect(modal(r).props.visible).toBe(true);
-    expect(textos(r)).toContain('Elige tu Día 1');
+    expect(textos(r)).toContain('Tu programa empieza mañana');
+    expect(textos(r)).toContain('Miércoles 4 de noviembre');
 
-    // Elegir crea la fila: las lecturas siguientes ya no lo dejan empezar.
+    // Activar crea la fila: las lecturas siguientes ya no lo dejan empezar.
     mockCapacidades.mockResolvedValue({ programRequired: false, canStartProgram: false, canAccompany: false, canAdminister: true });
     mockConsultarActivacion.mockResolvedValue({ activated: true, validStartDates: [], startDate: '2026-11-04' });
-    const dia = r.root.findAll(n => typeof n.props?.onPress === 'function' && n.findAll(m => m.type === Text && decir(m) === 'Miércoles 4 de noviembre').length > 0);
-    await pulsar(dia[dia.length - 1]);
-    const confirmar = r.root.findAll(n => typeof n.props?.onPress === 'function' && n.findAll(m => m.type === Text && decir(m) === 'Confirmar mi Día 1').length > 0);
+    const confirmar = r.root.findAll(n => typeof n.props?.onPress === 'function' && n.findAll(m => m.type === Text && decir(m) === 'Entendido').length > 0);
     await pulsar(confirmar[confirmar.length - 1]);
     expect(mockActivarPrograma).toHaveBeenCalledWith({ startDate: '2026-11-04' });
   });
@@ -168,7 +168,7 @@ describe('personal sin programa (sin fila, el servidor dice que puede empezar)',
     expect(equis).toBeTruthy();
     expect(StyleSheet.flatten(equis.props.contenedorStyle)).toMatchObject({ width: 48, height: 48 });
     // No es hija de la fila tocable: sus toques no se mezclan.
-    const fila = porEtiqueta(r, 'Haz tu programa de 90 días. Elige tu Día 1.');
+    const fila = porEtiqueta(r, 'Haz tu programa de 90 días. Empieza mañana.');
     expect(fila.findAll(n => n === equis).length).toBe(0);
 
     await pulsar(equis);
@@ -178,13 +178,13 @@ describe('personal sin programa (sin fila, el servidor dice que puede empezar)',
   });
 });
 
-describe('la cuenta con fila pero sin Día 1', () => {
-  it('«Todavía no elegiste tu Día 1 · Elige cuándo empiezas ›», sin ✕, y abre el selector', async () => {
+describe('la cuenta con fila pero sin activar', () => {
+  it('«Todavía no empezaste tu programa · Empieza mañana ›», sin ✕, y abre «Tu programa empieza mañana»', async () => {
     mockConsultarActivacion.mockResolvedValue({ activated: false, validStartDates: FECHAS, startDate: null });
     const r = await montar({ inscrito: true, diaPrograma: 0 }, { canStartProgram: false, canAdminister: true });
-    expect(textos(r)).toEqual(['Todavía no elegiste tu Día 1', 'Elige cuándo empiezas']);
+    expect(textos(r)).toEqual(['Todavía no empezaste tu programa', 'Empieza mañana']);
     expect(iconos(r)).not.toContain('close');
-    await pulsar(porEtiqueta(r, 'Todavía no elegiste tu Día 1. Elige cuándo empiezas.'));
+    await pulsar(porEtiqueta(r, 'Todavía no empezaste tu programa. Empieza mañana.'));
     expect(modal(r).props.visible).toBe(true);
   });
 });
@@ -197,10 +197,10 @@ function enDias(n: number): string {
 }
 
 /**
- * Issue #72: quien ya eligió su Día 1 y está esperando (día 0) no veía NINGUNA fecha en Hoy. El Día 1 nunca puede ser hoy, así que todo
+ * Issue #72: quien ya activó su programa y está esperando (día 0) no veía NINGUNA fecha en Hoy. El Día 1 nunca puede ser hoy, así que todo
  * aprendiz recién activado pasa al menos un día así. Contra el código anterior falla: ningún texto decía «empieza el…».
  */
-describe('quien ya eligió su Día 1 y espera (día 0)', () => {
+describe('quien ya activó su programa y espera (día 0)', () => {
   it('«Tu programa empieza el <fecha>», con la fecha en español y sin chevron, ✕ ni botón', async () => {
     mockConsultarActivacion.mockResolvedValue({ activated: true, validStartDates: [], startDate: enDias(3) });
     const r = await montar({ inscrito: true, diaPrograma: 0 }, { canStartProgram: false });
@@ -258,7 +258,7 @@ describe('quien ya eligió su Día 1 y espera (día 0)', () => {
 
     mockConsultarActivacion.mockRejectedValue(new Error('sin red'));
     r = await montar({ inscrito: true, diaPrograma: 0 }, { canStartProgram: false });
-    expect(textos(r)).toContain('No pudimos comprobar tu Día 1');
+    expect(textos(r)).toContain('No pudimos comprobar tu programa');
     expect(textos(r)).not.toContain('Tu programa empieza pronto');
   });
 
@@ -269,7 +269,7 @@ describe('quien ya eligió su Día 1 y espera (día 0)', () => {
   });
 });
 
-describe('quien no tiene nada que elegir', () => {
+describe('quien no tiene nada que empezar', () => {
   it('el aprendiz en su día 5 no ve la fila ni hace pedidos del Día 1', async () => {
     mockRol = 'TRAINEE';
     const r = await montar({ inscrito: true, diaPrograma: 5 }, { canStartProgram: false });
@@ -280,9 +280,9 @@ describe('quien no tiene nada que elegir', () => {
 });
 
 describe('si no se pudo comprobar', () => {
-  it('sale el aviso de siempre, «No pudimos comprobar tu Día 1», con «Reintentar Día 1»', async () => {
+  it('sale el aviso de siempre, «No pudimos comprobar tu programa», con «Reintentar»', async () => {
     const r = await montar({ inscrito: false, diaPrograma: 0 }, null);
-    expect(textos(r)).toContain('No pudimos comprobar tu Día 1');
-    expect(textos(r)).toContain('Reintentar Día 1');
+    expect(textos(r)).toContain('No pudimos comprobar tu programa');
+    expect(textos(r)).toContain('Reintentar');
   });
 });

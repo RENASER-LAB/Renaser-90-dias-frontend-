@@ -6,7 +6,7 @@
 export const TITULO_DEL_CIERRE = 'Tus objetivos ya están preparados';
 export const TEXTO_SIN_OBJETIVOS = 'Los escribirás en Plan.';
 export const QUE_SIGUE_EN_EL_INGRESO =
-  'Ahora sigue aceptar los Términos y elegir tu Día 1. Después, en Plan, revisas tus objetivos y los confirmas.';
+  'Ahora sigue aceptar los Términos y empezar tu programa. Después, en Plan, revisas tus objetivos y los confirmas.';
 export const QUE_SIGUE_DENTRO_DE_LA_APP = 'En Plan puedes revisar tus objetivos y confirmarlos. Cuando los confirmes, quedan fijos.';
 
 export const FALLO_AL_GUARDAR = 'No se pudo guardar. Revisa tu conexión.';

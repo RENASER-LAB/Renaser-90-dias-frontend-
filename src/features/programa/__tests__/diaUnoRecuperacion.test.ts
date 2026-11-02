@@ -41,7 +41,8 @@ import { avisarDiaUnoElegido } from '../events/avisoDiaUnoElegido';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
-const FECHAS = ['2026-10-11', '2026-10-12', '2026-10-13'];
+/* Spec 036: el servidor ofrece UNA fecha, mañana. El reloj de la prueba es el sábado 10 de octubre en Lima, así que mañana es el domingo 11. */
+const FECHAS = ['2026-10-11'];
 let raiz: ReactTestRenderer | null = null;
 const decir = (n: ReactTestInstance) => [n.props.children].flat().join('');
 const textos = () => raiz!.root.findAll(n => n.type === Text).map(decir);
@@ -107,80 +108,96 @@ describe('Día 1 de una cuenta anterior que ya terminó el onboarding', () => {
     expect(textos()).toEqual(['PENDIENTE_ELEGIR']);
   });
 
-  it.each(['hoy', 'yo'] as const)('un fallo al consultar no es un programa iniciado: %s permite reintentar y luego elegir', async lugar => {
+  it.each(['hoy', 'yo'] as const)('un fallo al consultar no es un programa iniciado: %s permite reintentar y luego empezar', async lugar => {
     mockConsultar.mockRejectedValueOnce(new Error('sin conexión'));
     await montar(React.createElement(EntradaAlProgramaPropio,
       { lugar, activo: false, usuarioId: 'aprendiz', inscrito: true, diaPrograma: 0 }));
 
-    expect(textos()).toContain('No pudimos comprobar tu Día 1');
+    expect(textos()).toContain('No pudimos comprobar tu programa');
     expect(mockActivar).not.toHaveBeenCalled();
-    await tocar('Reintentar Día 1');
-    expect(textos()).toContain('Todavía no elegiste tu Día 1');
-    await tocar('Elegir mi Día 1');
-    expect(textos()).toContain('Elige tu Día 1');
+    await tocar('Reintentar');
+    expect(textos()).toContain('Todavía no empezaste tu programa');
+    await tocar('Empezar mañana');
+    expect(textos()).toContain('Tu programa empieza mañana');
     expect(mockActivar).not.toHaveBeenCalled();
   });
 
   it.each(['2026-10-09', '2026-10-10', '2026-10-11', '2026-10-12', '2026-10-13', null])(
-    'una cuenta activada (%s) no vuelve a elegir aunque su contador aún diga 0', async startDate => {
+    'una cuenta activada (%s) no vuelve a empezar aunque su contador aún diga 0', async startDate => {
       mockConsultar.mockResolvedValue({ activated: true, validStartDates: [], startDate });
       await montar(React.createElement(EntradaAlProgramaPropio,
         { lugar: 'hoy', activo: false, usuarioId: 'aprendiz', inscrito: true, diaPrograma: 0 }));
-      expect(textos()).not.toContain('Elegir mi Día 1');
+      expect(textos()).not.toContain('Empezar mañana');
       expect(mockActivar).not.toHaveBeenCalled();
     },
   );
 });
 
-describe('el selector recupera errores sin asignar una fecha por su cuenta', () => {
+describe('la pantalla «Tu programa empieza mañana» recupera errores sin asignar una fecha por su cuenta', () => {
+  it('muestra la fecha de mañana, el plazo y un solo botón, sin lista de fechas', async () => {
+    await montar(React.createElement(ActivarProgramaScreen, { onActivated: jest.fn() }));
+    expect(textos()).toEqual(expect.arrayContaining(['Tu programa empieza mañana', 'Domingo 11 de octubre', 'Son tus 90 días.', 'Entendido']));
+    expect(textos().some(t => /elige|elegir|confirmar mi/i.test(t))).toBe(false);
+  });
+
   it('si falla la carga en el onboarding, se puede volver a cargar sin reiniciar la app', async () => {
     const alActivar = jest.fn();
     mockConsultar.mockRejectedValueOnce(new Error('sin conexión'));
     await montar(React.createElement(ActivarProgramaScreen, { onActivated: alActivar }));
-    expect(textos()).toContain('No pudimos cargar las fechas disponibles. Revisa tu conexión.');
-    await tocar('Reintentar Día 1');
+    expect(textos()).toContain('No pudimos cargar tu fecha de inicio. Revisa tu conexión.');
+    await tocar('Reintentar');
     expect(textos()).toContain('Domingo 11 de octubre');
     expect(mockActivar).not.toHaveBeenCalled();
     expect(alActivar).not.toHaveBeenCalled();
   });
 
-  it('si cambió la ventana de fechas, vuelve a consultar y exige confirmar una fecha vigente', async () => {
+  it('si pasó la medianoche (400), vuelve a consultar, avisa y activa solo con la fecha nueva que se vio', async () => {
     const alActivar = jest.fn();
     await montar(React.createElement(ActivarProgramaScreen, { onActivated: alActivar }));
-    mockActivar.mockRejectedValueOnce(new ApiError(400, 'fecha fuera de la ventana'));
-    mockConsultar.mockResolvedValue({ activated: false,
-      validStartDates: ['2026-10-12', '2026-10-13', '2026-10-14'], startDate: null });
-    await tocar('Confirmar mi Día 1');
+    mockActivar.mockRejectedValueOnce(new ApiError(400, 'El programa empieza siempre mañana'));
+    mockConsultar.mockResolvedValue({ activated: false, validStartDates: ['2026-10-12'], startDate: null });
+    await tocar('Entendido');
 
     expect(textos()).not.toContain('Domingo 11 de octubre');
-    expect(textos()).toContain('Miércoles 14 de octubre');
+    expect(textos()).toContain('Lunes 12 de octubre');
+    expect(textos()).toContain('Pasó la medianoche y tu fecha cambió. Mira la nueva.');
     expect(mockActivar).toHaveBeenCalledTimes(1);
+    expect(mockActivar).toHaveBeenLastCalledWith({ startDate: '2026-10-11' });
     expect(alActivar).not.toHaveBeenCalled();
-    await tocar('Miércoles 14 de octubre');
-    await tocar('Confirmar mi Día 1');
-    expect(mockActivar).toHaveBeenLastCalledWith({ startDate: '2026-10-14' });
+    await tocar('Entendido');
+    expect(mockActivar).toHaveBeenLastCalledWith({ startDate: '2026-10-12' });
     expect(alActivar).toHaveBeenCalledTimes(1);
   });
 
-  it('si otro dispositivo ya eligió, un 409 relee la fecha y sale sin sobrescribirla', async () => {
+  it('si otro dispositivo ya activó, un 409 relee el estado y sale sin sobrescribirlo', async () => {
     const alActivar = jest.fn();
     await montar(React.createElement(ActivarProgramaScreen, { onActivated: alActivar }));
     mockActivar.mockRejectedValueOnce(new ApiError(409, 'ya activado'));
-    mockConsultar.mockResolvedValue({ activated: true, validStartDates: [], startDate: FECHAS[2] });
-    await tocar('Confirmar mi Día 1');
+    mockConsultar.mockResolvedValue({ activated: true, validStartDates: [], startDate: FECHAS[0] });
+    await tocar('Entendido');
     expect(alActivar).toHaveBeenCalledTimes(1);
     expect(mockActivar).toHaveBeenCalledTimes(1);
   });
 
-  it('un fallo de red al confirmar conserva la elección y deja reintentar la misma fecha', async () => {
+  it('un fallo de red al confirmar deja el mismo botón para reintentar con la misma fecha', async () => {
     const alActivar = jest.fn();
     await montar(React.createElement(ActivarProgramaScreen, { onActivated: alActivar }));
-    await tocar('Martes 13 de octubre');
     mockActivar.mockRejectedValueOnce(new Error('respuesta perdida'));
-    await tocar('Confirmar mi Día 1');
+    await tocar('Entendido');
     expect(alActivar).not.toHaveBeenCalled();
-    await tocar('Confirmar mi Día 1');
-    expect(mockActivar.mock.calls.map(([input]) => input.startDate)).toEqual([FECHAS[2], FECHAS[2]]);
+    expect(textos()).toContain('No pudimos activar tu programa. Revisa tu conexión e inténtalo de nuevo.');
+    await tocar('Entendido');
+    expect(mockActivar.mock.calls.map(([input]) => input.startDate)).toEqual([FECHAS[0], FECHAS[0]]);
     expect(alActivar).toHaveBeenCalledTimes(1);
+  });
+
+  it('contra un servidor anterior que ofrece tres fechas, activa con la primera (mañana)', async () => {
+    mockConsultar.mockResolvedValue({ activated: false, validStartDates: ['2026-10-11', '2026-10-12', '2026-10-13'], startDate: null });
+    const alActivar = jest.fn();
+    await montar(React.createElement(ActivarProgramaScreen, { onActivated: alActivar }));
+    expect(textos()).toContain('Domingo 11 de octubre');
+    expect(textos()).not.toContain('Lunes 12 de octubre');
+    await tocar('Entendido');
+    expect(mockActivar).toHaveBeenLastCalledWith({ startDate: '2026-10-11' });
   });
 });

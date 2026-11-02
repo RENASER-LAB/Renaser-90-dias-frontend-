@@ -15,12 +15,12 @@ import * as onboardingApi from '../api/onboardingApi';
 
 /**
  * Spec 026 (2026-10-31): quien entra «con diagnóstico» ve el diagnóstico EN LUGAR de la ficha estándar: Diagnóstico → Términos →
- * Elegir tu Día 1. La ficha estándar —la de hoy— no cambia. `mi-diagnostico` es solo el «volver» de Términos para esa persona
+ * Tu programa empieza mañana. La ficha estándar —la de hoy— no cambia. `mi-diagnostico` es solo el «volver» de Términos para esa persona
  * (lo que respondió, en solo lectura): no hay una ficha a la que volver a editar.
  *
  * Decisión 2026-09-03: el Pacto ("VERDAD", Código I de Renaser — `PactoScreen`) SALE del
  * onboarding inicial hasta una futura actualización del cliente. El flujo pasa a ser
- * Ficha → Términos → Elegir tu Día 1 → Home. `PactoScreen` queda intacta y sin usar (no se borra,
+ * Ficha → Términos → Tu programa empieza mañana → Home. `PactoScreen` queda intacta y sin usar (no se borra,
  * vuelve a conectarse acá cuando se retome).
  */
 type OnboardingStep = 'ficha' | 'diagnostico' | 'mi-diagnostico' | 'terminos' | 'activar-programa';

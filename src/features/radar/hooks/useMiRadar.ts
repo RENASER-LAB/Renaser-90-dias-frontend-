@@ -82,7 +82,7 @@ export function useMiRadar() {
     ahora,
     /** Lo que se leyó de Mi Radar, con el motivo si no se pudo (sin programa, bloqueada, fallo). */
     lectura,
-    /** «Reintentar» y volver de elegir el Día 1: olvida el motivo (queda «Cargando…») y lee. Estable: lo recibe un `Modal`. */
+    /** «Reintentar» y volver de empezar el programa: olvida el motivo (queda «Cargando…») y lee. Estable: lo recibe un `Modal`. */
     reiniciarConfig,
     config,
     guardando,

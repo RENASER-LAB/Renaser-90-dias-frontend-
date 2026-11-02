@@ -7,13 +7,13 @@ import { BotonElegirDiaUno } from './BotonElegirDiaUno';
 
 /** Lo que dice Plan a quien todavía no tiene programa propio: su plan nace del programa. */
 export const TITULO_DE_PLAN_SIN_PROGRAMA = 'Tu plan empieza con tu programa';
-export const TEXTO_DE_PLAN_SIN_PROGRAMA = 'Cuando elijas tu Día 1 podrás escribir tus objetivos y agendar tus acciones aquí.';
+export const TEXTO_DE_PLAN_SIN_PROGRAMA = 'Cuando empiece tu programa podrás escribir tus objetivos y agendar tus acciones aquí.';
 
 /**
  * Plan del personal que todavía no tiene su programa andando (sin programa, o con la fila y sin Día 1; E2E de las formaciones, 01/11/2026, issues #81,
  * #82, #83 y #85). No hay objetivos que leer —el servidor rechaza todo `/rocks/*` hasta que el programa esté activo—, pero la pantalla no se deja vacía:
  * una tarjeta más de Plan, **arriba, pegada a la cabecera** y con el aire de siempre entre secciones (regla del dueño: sin huecos entre la cabecera y lo
- * de abajo), con su ícono, el título, la explicación y el botón «Elegir mi Día 1» (el mismo selector de siempre, `BotonElegirDiaUno`). Es el MISMO estado para
+ * de abajo), con su ícono, el título, la explicación y el botón «Empezar mañana» (abre «Tu programa empieza mañana», `BotonElegirDiaUno`). Es el MISMO estado para
  * todos: el mismo componente, sin variantes según el rol o la fila.
  *
  * **Sin movimiento propio**: se ve de vez en cuando y no reemplaza nada que se esté usando.

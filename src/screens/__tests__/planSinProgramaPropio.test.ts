@@ -11,7 +11,7 @@ const ESTADO_VACIO = fs.readFileSync(path.resolve(__dirname, '../../features/pro
  * muestra un estado con cuerpo centrado en el alto que sobra; el selector de eje, el objetivo, «Esta semana» y las acciones no se dibujan.
  */
 describe('Plan sin programa propio', () => {
-  it('lo decide `/home` (no estar inscrito) o, para el PERSONAL, tener la fila sin haber elegido su Día 1 (#83); el aprendiz con la fila ve Plan como siempre', () => {
+  it('lo decide `/home` (no estar inscrito) o, para el PERSONAL, tener la fila sin haber empezado su programa (#83); el aprendiz con la fila ve Plan como siempre', () => {
     expect(PLAN).toContain(
       "const sinProgramaPropio = resumen?.inscrito === false || (programaPropio.vista?.tipo === 'elegir' && programaPropio.delPersonal);",
     );
@@ -45,9 +45,9 @@ describe('Plan sin programa propio', () => {
     expect(ESTADO_VACIO).not.toMatch(/cuerpo:/);
   });
 
-  it('dice qué pasa y trae el botón «Elegir mi Día 1» (el mismo selector de siempre)', () => {
+  it('dice qué pasa y trae el botón «Empezar mañana» (abre «Tu programa empieza mañana»)', () => {
     expect(ESTADO_VACIO).toContain("'Tu plan empieza con tu programa'");
-    expect(ESTADO_VACIO).toContain("'Cuando elijas tu Día 1 podrás escribir tus objetivos y agendar tus acciones aquí.'");
+    expect(ESTADO_VACIO).toContain("'Cuando empiece tu programa podrás escribir tus objetivos y agendar tus acciones aquí.'");
     expect(ESTADO_VACIO).toContain('<BotonElegirDiaUno onActivado={alElegirDiaUno} />');
   });
 });

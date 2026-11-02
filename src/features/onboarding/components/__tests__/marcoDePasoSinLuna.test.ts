@@ -6,7 +6,7 @@ import TestRenderer, { act, type ReactTestRenderer } from 'react-test-renderer';
 /**
  * El botón de luna/sol salió del onboarding junto con el del login (2026-10-05, pedido del dueño:
  * «quitamos la luna para que no afecte»). `MarcoDePaso` es el esqueleto de la Ficha Inicial, de
- * Términos y de «Elige tu Día 1», así que con mirarlo a él alcanza: ninguna de esas pantallas
+ * Términos y de «Tu programa empieza mañana», así que con mirarlo a él alcanza: ninguna de esas pantallas
  * puede volver a dibujar el interruptor sin pasar por acá. El modo oscuro sigue en Yo.
  */
 

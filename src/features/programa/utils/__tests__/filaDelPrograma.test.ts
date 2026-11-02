@@ -7,15 +7,15 @@ import { entradaAlProgramaPropio } from '../entradaAlProgramaPropio';
 import { vistaDeLaFilaDelPrograma } from '../filaDelPrograma';
 
 describe('vistaDeLaFilaDelPrograma', () => {
-  it('sin fila en el programa: «Haz tu programa de 90 días · Elige tu Día 1», con «Ahora no» y abriendo el selector', () => {
+  it('sin fila en el programa: «Haz tu programa de 90 días · Empieza mañana», con «Ahora no» y abriendo «Tu programa empieza mañana»', () => {
     const v = vistaDeLaFilaDelPrograma({ entrada: 'EMPEZAR', plazo: '90 días' });
     expect(v).toEqual({
       tipo: 'empezar',
       titulo: 'Haz tu programa de 90 días',
-      linea: 'Elige tu Día 1',
+      linea: 'Empieza mañana',
       abreElSelector: true,
       conAhoraNo: true,
-      etiquetaAccesible: 'Haz tu programa de 90 días. Elige tu Día 1.',
+      etiquetaAccesible: 'Haz tu programa de 90 días. Empieza mañana.',
     });
   });
 
@@ -24,12 +24,12 @@ describe('vistaDeLaFilaDelPrograma', () => {
     expect(vistaDeLaFilaDelPrograma({ entrada: 'EMPEZAR', plazo: '1 año' })?.titulo).toBe('Haz tu programa de 1 año');
   });
 
-  it('con la fila sin Día 1: «Todavía no elegiste tu Día 1 · Elige cuándo empiezas», sin «Ahora no»', () => {
+  it('con la fila sin activar: «Todavía no empezaste tu programa · Empieza mañana», sin «Ahora no»', () => {
     const v = vistaDeLaFilaDelPrograma({ entrada: 'ELEGIR_DIA_UNO', plazo: '90 días' });
     expect(v).toMatchObject({
       tipo: 'elegir',
-      titulo: 'Todavía no elegiste tu Día 1',
-      linea: 'Elige cuándo empiezas',
+      titulo: 'Todavía no empezaste tu programa',
+      linea: 'Empieza mañana',
       abreElSelector: true,
       conAhoraNo: false,
     });
@@ -50,14 +50,14 @@ describe('vistaDeLaFilaDelPrograma', () => {
   });
 });
 
-describe('quien ya eligió su Día 1 y espera (issue #72)', () => {
+describe('quien ya activó su programa y espera (issue #72)', () => {
   it('dice cuándo empieza, con la fecha en español: «Tu programa empieza el martes 3 de noviembre»', () => {
     const v = vistaDeLaFilaDelPrograma({ entrada: 'ESPERANDO_INICIO', plazo: '90 días', fechaInicio: '2026-11-03' });
     expect(v).toEqual({
       tipo: 'esperando',
       titulo: 'Tu programa empieza el martes 3 de noviembre',
       linea: null,
-      // No lleva a nada: sin chevron ni selector, y sin «Ahora no» (no hay nada que posponer).
+      // No lleva a nada: sin chevron ni pantalla, y sin «Ahora no» (no hay nada que posponer).
       abreElSelector: false,
       conAhoraNo: false,
       etiquetaAccesible: 'Tu programa empieza el martes 3 de noviembre',

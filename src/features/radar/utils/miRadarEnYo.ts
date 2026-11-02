@@ -3,8 +3,8 @@
  *
  * **Quién ve la fila «Mi Radar»:**
  *  - Quien ya lo tiene en marcha: desde el día 8 y con el servidor respondiendo (como siempre).
- *  - **El personal que todavía no eligió su Día 1**, pero SOLO cuando el servidor lo confirmó (403 `PROGRAMA_NO_ACTIVADO`): ahí la
- *    fila dice «Primero elige tu Día 1» y la pantalla le deja elegirlo. Con un backend anterior —que no manda ese motivo— no hay
+ *  - **El personal que todavía no empezó su programa**, pero SOLO cuando el servidor lo confirmó (403 `PROGRAMA_NO_ACTIVADO`): ahí la
+ *    fila dice «Primero empieza tu programa» y la pantalla le deja elegirlo. Con un backend anterior —que no manda ese motivo— no hay
  *    fila (FR-010). Nada de esto mira el rol: lo dice el servidor.
  *  - Nadie más: el aprendiz y quien ya va por su programa no ven ningún cambio.
  */
@@ -48,7 +48,7 @@ interface EstadoDeLaPantalla {
 /**
  * ¿Se dibuja la pantalla estando abierta?
  *
- *  - Con Mi Radar a la vista, o abierta desde la fila del personal sin programa (aunque la lectura esté «cargando» tras elegir el Día 1).
+ *  - Con Mi Radar a la vista, o abierta desde la fila del personal sin programa (aunque la lectura esté «cargando» tras empezar el programa).
  *  - Al venir de un aviso desde el día 8, cuando el servidor dijo por qué no (suspendida, sin permiso) o no se pudo leer: la pantalla
  *    lo explica en vez de quedar abierta sin dibujarse.
  *  - Mientras se lee (y no viene de la fila), no: espera a saber.
@@ -72,4 +72,4 @@ export function hayQueCerrarLaPantallaDeMiRadar({ abierta, lectura, diaPrograma,
 }
 
 /** La línea de la fila: el estado de Mi Radar si anda, o lo único que hay que hacer si todavía no. */
-export const DETALLE_DE_LA_FILA_SIN_PROGRAMA = 'Primero elige tu Día 1';
+export const DETALLE_DE_LA_FILA_SIN_PROGRAMA = 'Primero empieza tu programa';

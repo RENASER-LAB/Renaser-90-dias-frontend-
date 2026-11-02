@@ -249,7 +249,7 @@ export default function TrainingScreen() {
     loading: cargandoDiaPrograma,
     recargar: recargarDiaPrograma,
   } = useProgramaDia();
-  /* D-260: tras «Elegir mi Día 1» se vuelve a preguntar, y el aviso de abajo se va solo. */
+  /* D-260: tras «Empezar mañana» se vuelve a preguntar, y el aviso de abajo se va solo. */
   const [versionArranque, setVersionArranque] = useState(0);
   const { user } = useAuth();
   /* Las lecturas guardadas de Training (eventos, días cerrados, plan de la semana) se separan por cuenta Y formación (spec 022). */
@@ -1005,18 +1005,18 @@ export default function TrainingScreen() {
                   <Icon name="lock" size={15} color={c.goldInk} />
                   <Text style={[t.cardTitle, { color: c.textStrong }]}>
                     {arranque.estado === 'PENDIENTE_ELEGIR'
-                      ? 'Todavía no elegiste tu Día 1'
+                      ? 'Todavía no empezaste tu programa'
                       : 'Tu programa arranca pronto'}
                   </Text>
                 </View>
                 <Text style={[t.body, { color: c.textSoft }]}>
                   {arranque.estado === 'PENDIENTE_ELEGIR'
-                    ? 'Elige en qué día quieres empezar tus 90 días. Hasta entonces no hay evidencia que entregar.'
+                    ? 'Tu programa empieza mañana. Hasta entonces no hay evidencia que entregar.'
                     : `Empiezas el ${formatearFechaLarga(arranque.fechaInicio)}. Desde el ${formatearFechaLarga(
                         diaAnterior(arranque.fechaInicio),
                       )} vas a poder organizar tus hábitos y entregar evidencia; hasta entonces no hay nada que hacer acá.`}
                 </Text>
-                {/* D-260: el aviso pedía elegir y no había dónde. Abre el selector del onboarding. */}
+                {/* D-260: el aviso pedía empezar y no había dónde. Abre «Tu programa empieza mañana», el paso del onboarding. */}
                 {arranque.estado === 'PENDIENTE_ELEGIR' ? (
                   <View style={{ marginTop: 4 }}>
                     <BotonElegirDiaUno onActivado={alActivarProgramaPropio} />
