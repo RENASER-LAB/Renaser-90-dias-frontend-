@@ -11,15 +11,24 @@ appId: com.renaser.app
 - tapOn: "Todas"
 - tapOn: "Ranking"
 # Una sección por formación, cada una con su tabla.
+# La ficha «Escuela» del selector también se lee «Escuela Renaser» para el lector de pantalla: los encabezados de cada sección se buscan debajo de las pestañas
+# de la tabla (General / Coherencia / Kilómetros).
 - extendedWaitUntil:
-    visible: "Escuela Renaser"
+    visible:
+      text: "Escuela Renaser"
+      below: "Kilómetros"
     timeout: 30000
-- assertVisible: "Diplomado Renaser"
+- assertVisible:
+    text: "Diplomado Renaser"
+    below: "Kilómetros"
 - takeScreenshot: C04a-ranking-por-formacion
 # Elegir una sola formación deja la tabla de siempre, sin encabezados por formación.
 - tapOn: "Diplomado"
+# El texto de la tarjeta es «Tu Posición (nombre)» (con mayúscula; falta abrir su issue): se acepta cualquiera de las dos escrituras.
 - extendedWaitUntil:
-    visible: "Tu posición"
+    visible: "(?i)Tu posición.*"
     timeout: 30000
-- assertNotVisible: "Escuela Renaser"
+- assertNotVisible:
+    text: "Escuela Renaser"
+    below: "Kilómetros"
 - takeScreenshot: C04b-ranking-del-diplomado

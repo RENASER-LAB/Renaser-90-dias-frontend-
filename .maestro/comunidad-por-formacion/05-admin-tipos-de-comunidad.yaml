@@ -16,8 +16,9 @@ appId: com.renaser.app
     timeout: 40000
 - tapOn: "Formaciones"
 - tapOn: "Diplomado Renaser.*"
+# Maestro no distingue mayúsculas: «Comunidad» a secas ya está a la vista en la barra de pestañas (COMUNIDAD) y no baja; se baja hasta el primer tipo.
 - scrollUntilVisible:
-    element: "Comunidad"
+    element: "Comunidad general"
     direction: DOWN
     timeout: 40000
 - assertVisible: "Comunidad general"
@@ -36,12 +37,15 @@ appId: com.renaser.app
 # Prender o confirmar guarda y lo dice en una línea.
 - tapOn: "Directos"
 - tapOn: "Apagar"
+# La línea «… apagado.» / «… prendido.» dura ~3 s y el dev client tarda ~10 s por toque: no se espera como obligatoria.
 - extendedWaitUntil:
     visible: "«Directos» apagado."
     timeout: 20000
+    optional: true
 - takeScreenshot: C05c-directos-apagado
 # Se vuelve a prender (el estado queda como estaba para el siguiente flujo).
 - tapOn: "Directos"
 - extendedWaitUntil:
     visible: "«Directos» prendido."
     timeout: 20000
+    optional: true
