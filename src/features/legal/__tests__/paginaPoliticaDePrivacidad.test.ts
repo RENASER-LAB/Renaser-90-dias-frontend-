@@ -53,6 +53,20 @@ describe('la Política de Privacidad publicada', () => {
     expect(texto).toContain('Autoridad Nacional de Protección de Datos Personales del Perú');
   });
 
+  it('declara que el diagnóstico inicial completo llega al proveedor de IA y que la memoria no guarda dinero (spec 038)', () => {
+    // SER lee el diagnóstico completo (decisión Q8-B del dueño, spec 026): ingresos, emociones y situación personal viajan al modelo.
+    expect(texto).toContain('Tu diagnóstico inicial: si tu formación incluye un diagnóstico, el acompañante puede leer tus respuestas completas');
+    expect(texto).toContain('también las que hablan de tu dinero, tus emociones o tu situación personal');
+    expect(texto).toContain('esas respuestas se envían al proveedor de inteligencia artificial');
+    expect(texto).toContain('no lee tus pagos ni tu cronograma de cuotas');
+    expect(texto).toContain('sin dinero personal (ingresos, deudas, cuotas o pagos)');
+    // La tabla de terceros lo repite donde se dice qué se le envía a Google.
+    expect(texto).toContain('tu diagnóstico inicial completo');
+    // No promete lo que ya no existe ni fija una duración: son tres formaciones.
+    expect(texto).not.toContain('conociendo tus hábitos de hoy o tu Mapa');
+    expect(texto).not.toContain('programa de 90 días: tus hábitos');
+  });
+
   it('vercel.json la sirve antes del rewrite a la app', () => {
     const vercel = JSON.parse(fs.readFileSync(path.join(RAIZ, 'vercel.json'), 'utf8')) as { rewrites: { source: string; destination: string }[] };
     const i = vercel.rewrites.findIndex(r => r.source === '/privacidad');
