@@ -50,7 +50,10 @@ const SELLO: Partial<Record<TipoDeAvatar, IconName>> = {
  * - **Soporte:** con `fotoPath`, la tarjeta con el primer nombre de SU aprendiz (decisión del dueño
  *   del 2026-09-27, D-205 del backend), en la lista, la cabecera y la info; sin ella, la sin nombre.
  * - **Comunidad:** el fénix del programa (`FotoDelPrograma`), que también es la foto de los MENSAJES
- *   del programa.
+ *   del programa. Si su formación tiene imagen propia (spec 035), el servidor manda `fotoPath` y esa es la
+ *   foto; el fénix queda debajo.
+ * - **Grupo sin foto propia:** con la imagen de su formación (spec 035) llega la misma `fotoPath` que si
+ *   tuviera foto propia; sin ella, la tarjeta.
  *
  * > **Corregido 2026-09-27 (D-206).** Decía «Grupo, comunidad y soporte: el avatar del PROGRAMA …
  * > desde el 2026-09-27 es la tarjeta de Canva sin nombre». La comunidad volvió al fénix: el dueño
@@ -70,7 +73,7 @@ export function AvatarDeChat({
   tipo: TipoDeAvatar;
   nombre?: string | null;
   avatarUrl?: string | null;
-  /** En un soporte, la ruta de su tarjeta; en un grupo, la de su foto propia (`ChatConversation.fotoPath`). */
+  /** En un soporte, la ruta de su tarjeta; en un grupo, la de su foto propia o la de su formación; en la comunidad, la de su formación (`ChatConversation.fotoPath`). */
   fotoPath?: string | null;
   size: number;
   conSello?: boolean;
@@ -87,7 +90,12 @@ export function AvatarDeChat({
       {foto === 'fenix' ? (
         <FotoDelPrograma size={size} />
       ) : foto === 'foto-del-servidor' && fotoPath ? (
-        <FotoConSesion ruta={fotoPath} size={size} debajo={<FotoDelGrupo size={size} />} />
+        <FotoConSesion
+          ruta={fotoPath}
+          size={size}
+          // Debajo, lo de siempre de ESE tipo: el fénix en la comunidad (spec 035) y la tarjeta en un grupo o un soporte.
+          debajo={tipo === 'global' ? <FotoDelPrograma size={size} /> : <FotoDelGrupo size={size} />}
+        />
       ) : (
         <FotoDelGrupo size={size} />
       )}

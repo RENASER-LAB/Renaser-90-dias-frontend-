@@ -38,7 +38,12 @@ export function useFormacionDeLaComunidad() {
       : null
     : (estado.activa?.nombre ?? null);
 
+  /* El CÓDIGO de la formación que se mira (el rótulo de la sección de grupos de Tribu): quien ve todas, la que eligió (`null` = «Todas»); las demás
+     cuentas, la suya. `null` si no se sabe (un backend anterior a las formaciones). */
+  const codigoDeLaQueSeMira = estado.veTodas ? estado.eleccion : (estado.activa?.codigo ?? null);
+
   return {
+    codigoDeLaQueSeMira,
     mostrarSelector: estado.veTodas,
     veTodas: estado.veTodas,
     eleccion: estado.eleccion,

@@ -127,7 +127,7 @@ import {
   type ElementoDelChat,
 } from '../features/chat/utils/formatoChat';
 import { mostrarBotonBajar, posicionAMantener } from '../features/chat/utils/bajadaDelChat';
-import { conLaFotoDeLaLista, pideReleerAlCerrarElChat } from '../features/chat/utils/refrescoDeLaLista';
+import { conLaFotoDeLaLista, grupoTieneFotoPropia, pideReleerAlCerrarElChat } from '../features/chat/utils/refrescoDeLaLista';
 import { avisoDelLargoDelMensaje, LARGO_MAXIMO_DEL_MENSAJE } from '../features/chat/utils/largoDelMensaje';
 import { conLeidoHasta } from '../features/chat/utils/lecturaDelChat';
 import {
@@ -147,6 +147,7 @@ import { mapearMensaje, resumenDelUltimoMensaje } from '../features/chat/api/cha
 import { abrirConversacionDirecta } from '../features/chat/api/chatApi';
 import { formacionDeLaLectura, MENSAJE_ELEGIR_PARA_PUBLICAR } from '../features/formaciones/estado/formacionDeLaComunidad';
 import { useFormacionDeLaComunidad } from '../features/formaciones/hooks/useFormacionDeLaComunidad';
+import { rotuloDeLaSeccionDeTribu } from '../features/formaciones/utils/rotuloDeTribu';
 import { RotuloDeFormacion } from '../features/formaciones/components/RotuloDeFormacion';
 import { SelectorDeFormacionDeLaComunidad } from '../features/formaciones/components/SelectorDeFormacionDeLaComunidad';
 import { AvisoDeFormacionPorElegir } from '../features/formaciones/components/AvisoDeFormacionPorElegir';
@@ -441,6 +442,8 @@ export interface ChatConversation {
   /* 2026-09-27 (D-205 del backend): en un chat de soporte, la ruta de su foto —la tarjeta de Canva
      con el primer nombre del aprendiz—, pedida con la sesión. `null` en lo demás. */
   fotoPath?: string | null;
+  /* Spec 035: en un grupo, si `fotoPath` es la foto PROPIA (`true`) o la de su formación (`false`). Ausente con un backend anterior. */
+  fotoPropia?: boolean | null;
   /* D-244 (2026-10-02): en un chat de soporte, el aprendiz de ese chat (`supportTraineeId`). Quien
      atiende lo usa para ver si pidió ayuda por una emergencia. `null` en lo demás. */
   aprendizDelSoporte?: string | null;
@@ -4287,7 +4290,12 @@ function ComunidadPorFormacion({
           ) : (
           <>
           <View style={styles.tribuConversaciones}>
-            <MicroLabel>Formación Renaser</MicroLabel>
+            <MicroLabel>
+              {rotuloDeLaSeccionDeTribu(
+                formacionDeLaComunidad.codigoDeLaQueSeMira,
+                formacionDeLaComunidad.codigoDeLaQueSeMira ? formacionDeLaComunidad.nombreDe(formacionDeLaComunidad.codigoDeLaQueSeMira) : null,
+              )}
+            </MicroLabel>
 
             {/* Los grupos a los que la persona PERTENECE: el general, el de su mentor y el de
                 soporte.
@@ -4753,7 +4761,7 @@ function ComunidadPorFormacion({
             puedeCambiarLaFotoDelGrupo({ mentorId: grupoAbierto?.mentorId, yoId: user?.id, miRol: user?.role })
               ? {
                   grupoId: celulaIdAbierto,
-                  tieneFotoPropia: !!activeChat.fotoPath,
+                  tieneFotoPropia: grupoTieneFotoPropia(activeChat),
                   // La lista relee y trae la ruta nueva (otro `?v=`); la abierta la toma de ahí.
                   onCambiada: () => void recargarConversaciones({ forzar: true }),
                 }
@@ -4952,6 +4960,10 @@ function ComunidadPorFormacion({
         post={shareSheetPost}
         conversations={conversations}
         tieneCelula={tieneGrupo}
+        rotuloDeLaSeccion={rotuloDeLaSeccionDeTribu(
+          formacionDeLaComunidad.codigoDeLaQueSeMira,
+          formacionDeLaComunidad.codigoDeLaQueSeMira ? formacionDeLaComunidad.nombreDe(formacionDeLaComunidad.codigoDeLaQueSeMira) : null,
+        )}
         onClose={() => setShareSheetPost(null)}
         onShareExternal={() => (shareSheetPost ? handleShareExternal(shareSheetPost) : undefined)}
         onShareToConversation={async conv => {
