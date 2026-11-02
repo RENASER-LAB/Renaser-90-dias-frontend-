@@ -21,6 +21,13 @@ appId: com.renaser.app
     element: "Recordatorios de pago"
     direction: DOWN
     timeout: 30000
+# Este teléfono recuerda lo que se tocó en una corrida anterior (no se borran datos): se vuelve al valor de fábrica antes de mirar.
+- runFlow:
+    when:
+      visible: "1 día antes y el mismo día · 09:00"
+    commands:
+      - tapOn: "3 días antes"
+      - tapOn: "1 día antes"
 # Por defecto: encendido, 3 días antes y el mismo día, a las 09:00.
 - assertVisible: "Recordarme mis cuotas"
 - assertVisible: "3 días antes y el mismo día · 09:00"

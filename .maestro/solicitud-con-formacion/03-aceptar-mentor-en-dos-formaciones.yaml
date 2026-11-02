@@ -27,9 +27,8 @@ appId: com.renaser.app
 - tapOn: "Mentor"
 - tapOn: "1. Formación.*"
 - tapOn: "Diplomado Renaser"
-- tapOn:
-    text: "Aceptar"
-    index: 1
+# Hay un solo «Aceptar»: el del pie fijo de la hoja (con `index: 1` no hay segundo y el toque falla).
+- tapOn: "Aceptar"
 - extendedWaitUntil:
     visible: "Sol-Mentor Uno entró.*"
     timeout: 20000

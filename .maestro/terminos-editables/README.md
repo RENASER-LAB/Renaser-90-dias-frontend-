@@ -11,3 +11,6 @@ producción). Cada archivo dice arriba su precondición y su cuenta (`# cuenta: 
 | `04-releer-lo-aceptado` | aprendiz | Yo → Ajustes → Mi onboarding → «Términos y condiciones»: versión, día, firma y texto de lo aceptado, en solo lectura |
 
 Aislamiento (SC-007), para el E2E: una persona del Diplomado no ve ni acepta los términos de la Escuela, y publicar los del Diplomado no mueve los de la Escuela.
+
+> **02/11/2026.** `01` escribe textos cortos y sin tildes («Prueba E2E» como cláusula, «Nota E2E» como nota del cambio) en comandos de pocas letras: `inputText` con el dev client
+> pasa de 120 s con más de ~10 letras y Maestro no escribe bien los caracteres que no son ASCII. `02` espera esa misma nota.

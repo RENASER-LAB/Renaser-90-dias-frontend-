@@ -12,5 +12,8 @@ appId: com.renaser.app
 - takeScreenshot: P06-tu-pago-fue-cancelado
 - back
 - assertVisible: "Coherencia"
-# La fila de Yo dice lo mismo.
-- assertVisible: "Tu pago fue cancelado"
+# La fila de Yo dice lo mismo (Yo vuelve arriba: la fila de «Mi ingreso» queda más abajo, se baja hasta ella).
+- scrollUntilVisible:
+    element: "Tu pago fue cancelado"
+    direction: DOWN
+    timeout: 30000

@@ -2,7 +2,8 @@
 # guía plegada y «Escribir cómo me siento» (2026-10-31: los rituales piden solo texto, ya no «Tomar foto»); la guía se despliega sin
 # marcar nada; el botón abre «¿Cómo te sientes después de realizar el ritual?» y, al enviar, el ritual sale de la lista y sube a
 # «hechos hoy». El nombre se ve en tipo oración (viene en mayúsculas del servidor).
-# Precondición: `reset-hoy.sql`.
+# Precondición: el ritual de la mañana PENDIENTE (lo deja la línea `# antes:`: este flujo lo cumple).
+# antes: .maestro/comun/estado-de-hoy.sh PENDIENTE RITUAL_MORNING
 # cuenta: aprendiz
 appId: com.renaser.app
 ---
@@ -33,7 +34,8 @@ appId: com.renaser.app
 - takeScreenshot: T02c-pregunta-del-ritual
 # La respuesta es obligatoria: sin escribir nada, «Enviar» no hace nada.
 - tapOn: "Cuéntalo con tus palabras"
-- inputText: "Me siento en calma"
+# Maestro escribe ~10 s por letra con el dev client (#3667): un texto largo pasa los 120 s y el flujo muere; el campo solo exige que no esté vacío.
+- inputText: "Bien"
 - hideKeyboard
 - tapOn: "Enviar"
 - runFlow: ../comun/cerrar-aviso-dev.yaml

@@ -6,6 +6,7 @@
 # Precondición: la del 01 (el aprendiz tiene el hábito en su día de hoy y sin registrar; fotos en local: fotos-local + adb reverse).
 # Antes de #49 la pantalla partida no volvía: el resultado de la cámara se descartaba («Tried to access onActivityResult while
 # context is not ready» en logcat) y el hábito seguía pendiente. Sirve también para otro hábito con foto: cambia el nombre.
+# antes: .maestro/comun/estado-de-hoy.sh PENDIENTE DAILY_KM
 # cuenta: aprendiz
 appId: com.renaser.app
 ---
@@ -18,11 +19,7 @@ appId: com.renaser.app
     centerElement: true
     timeout: 30000
 - tapOn: "(?i).*KILÓMETROS DIARIOS.*"
-- runFlow:
-    when:
-      visible: "Tomar foto"
-    commands:
-      - tapOn: "Tomar foto"
+# La fila de Kilómetros abre DIRECTO la hoja de origen («Tomar foto» / «Elegir de la galería»): no hay una hoja del hábito antes. (Antes este bloque tocaba «Tomar foto» de la hoja del hábito; hoy ese texto es el de la propia hoja de origen y saltaba la comprobación.)
 - extendedWaitUntil:
     visible: "Elegir de la galería.*"
     timeout: 15000

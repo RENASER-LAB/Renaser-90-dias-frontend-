@@ -9,8 +9,13 @@ de aprendiz; ver `../README.md`):
 
 - **Datos**: un aprendiz en el día 20 con hábitos de todos los tipos a distintas horas, dos acciones con hora, un evento de hoy
   al que dijo «Voy», un evento ya terminado, guías en varios hábitos, un hábito propio y la semana (lun–mié) ya vivida.
-  Cada flujo dice arriba su precondición; los que registran necesitan el hábito pendiente: se repone el día con un script
-  idempotente (en el E2E de la spec: `reset-hoy.sql`).
+  Cada flujo dice arriba su precondición; los que registran necesitan el hábito pendiente y los que miran lo hecho lo piden hecho: **cada uno trae su línea
+  `# antes:`** (02/11/2026) que lo deja así con `comun/estado-de-hoy.sh`, así el orden de los flujos no importa (ver `../README.md`). El `reset-hoy.sql` de la
+  spec ya no hace falta. `10` deja «Meditar 10 minutos» en pausa «solo hoy»: para repetirlo el mismo día hay que reactivarlo (Planificar) o sembrarlo de nuevo.
+- **Fechas**: `09` no escribe ninguna; saca los nombres de los días de la fecha de hoy (`comun/dias-de-la-semana.js`), así sirve cualquier día. El lunes no tiene día
+  anterior y el domingo no tiene día que viene: esa parte se salta sola.
+- **Textos largos**: `inputText` con el dev client tarda ~7 a 10 s por letra y pasa de 120 s con más de ~10 letras. Los campos que piden 15 (la Pastilla en `05`, la clase
+  en `06`) se escriben en dos comandos de 8 letras.
 - **01** lista por hora · **02** hábito con guía + foto + «¿Qué sentiste?» · **03** hábito sin guía (cámara directa) ·
   **04** ✓ de Despertar y Dormir · **05** Pastilla · **06** Clase diaria · **07** acción del día · **08** evento ·
   **09** días anteriores (✓ y candado) y que vienen · **10** engranaje, Planificar y pausa «Solo hoy» ·

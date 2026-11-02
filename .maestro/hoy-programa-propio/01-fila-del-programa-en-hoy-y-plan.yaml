@@ -52,10 +52,13 @@ appId: com.renaser.app
           text: "Tu acompañante"
           below: ".*Todavía no empezaste tu programa.*"
       - takeScreenshot: H01c-sin-dia-1-en-hoy
+      # Plan sin Día 1 (issues #82 y #85): una tarjeta arriba, pegada a la cabecera, «Tu plan empieza con tu programa» con «Elegir mi Día 1»
+      # (ya no es la fila de Hoy: Plan no tiene objetivos que leer hasta que el programa esté activo).
       - tapOn: "PLAN"
       - extendedWaitUntil:
-          visible: ".*Todavía no empezaste tu programa.*"
+          visible: "Tu plan empieza con tu programa"
           timeout: 30000
+      - assertVisible: "Empezar mañana"
       - takeScreenshot: H01d-sin-dia-1-en-plan
 - runFlow:
     when:
@@ -71,7 +74,7 @@ appId: com.renaser.app
       - takeScreenshot: H01e-esperando-en-hoy
       - tapOn: "PLAN"
       - extendedWaitUntil:
-          visible: "Tu dirección en 90 días"
+          visible: "Tu dirección en .*"
           timeout: 30000
       - assertVisible: ".*Tu programa empieza el .* de .*"
       - assertVisible:

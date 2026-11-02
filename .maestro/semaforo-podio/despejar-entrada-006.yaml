@@ -14,9 +14,13 @@ appId: com.renaser.app
       visible: "¿Dónde estás ahora mismo\\?"
     commands:
       - tapOn: "Estoy…"
-      - inputText: "Probando la app"
+      # `inputText` con el dev client pasa de 120 s con más de ~10 letras (Maestro #3667): los textos largos van en comandos cortos.
+      - inputText: "Probando "
+      - inputText: "la app"
       - tapOn: "Estoy pensando en…"
-      - inputText: "El mensaje del semaforo"
+      - inputText: "El mensa"
+      - inputText: "je del s"
+      - inputText: "emaforo"
       - hideKeyboard
       - tapOn: "Siento…"
       - inputText: "Calma"

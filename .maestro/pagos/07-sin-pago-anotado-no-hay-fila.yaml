@@ -13,11 +13,19 @@ appId: com.renaser.app
     direction: DOWN
     timeout: 40000
 - assertNotVisible: "Mi ingreso"
-# Alarmas tampoco ofrece los recordatorios de pago.
+# Alarmas tampoco ofrece los recordatorios de pago. (Yo quedó desplazado hacia abajo: el engranaje de Ajustes se busca hacia arriba.)
+- scrollUntilVisible:
+    element: "Ajustes"
+    direction: UP
+    timeout: 30000
 - tapOn: "Ajustes"
 - scrollUntilVisible:
     element: "Alarmas"
     direction: DOWN
+# Con la lista sin desplazar del todo la fila queda detrás del botón redondo de TRAINING: se sube un poco antes de tocarla.
+- swipe:
+    start: 50%, 70%
+    end: 50%, 50%
 - tapOn: "Alarmas"
 - extendedWaitUntil:
     visible: "Acciones de tus objetivos"

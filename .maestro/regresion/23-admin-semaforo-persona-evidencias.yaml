@@ -78,10 +78,15 @@ appId: com.renaser.app
     direction: DOWN
     timeout: 30000
 - tapOn: "Ver su ficha"
-# La ficha abre arriba (cabecera, día del programa, semáforo); su detalle de hábitos queda más abajo.
+# La ficha abre arriba (cabecera, día del programa, formación, términos, ficha de ingreso); «Cambiar día del programa» y su
+# detalle de hábitos quedan más abajo (con las formaciones la ficha creció), así que se baja hasta ellos.
 - extendedWaitUntil:
-    visible: "Cambiar día del programa"
+    visible: "Día .* del programa.*"
     timeout: 45000
+- scrollUntilVisible:
+    element: "Cambiar día del programa"
+    direction: DOWN
+    timeout: 60000
 - scrollUntilVisible:
     element: "Detalle de hábitos .*"
     direction: DOWN

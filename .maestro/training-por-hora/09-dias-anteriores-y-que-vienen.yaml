@@ -1,55 +1,94 @@
 # T09 — La semana (spec 014). Un día ANTERIOR es el resultado de lo planificado: lo hecho con ✓ y lo no subido con candado; tocar el
 # candado dice «Ese día ya cerró. No se puede registrar.» y no abre ningún registro; tocar un ✓ dice «Ya hecho». Un día que
 # VIENE muestra lo planificado, sin botones.
-# Precondición: `sembrar-2-datos.sql` (registros del lunes 26, martes 27 y miércoles 28) y hoy = jueves 29/10/2026 (zona Lima).
+# Sin fechas fijas (2026-11-02): los nombres de los días salen de la fecha de hoy (`comun/dias-de-la-semana.js`), así que el flujo sirve
+# cualquier día. La semana va de lunes a domingo: el lunes no tiene día anterior y el domingo no tiene día que viene, y esa parte del
+# flujo se salta sola (queda dicho en la captura). Lo anterior se lee del servidor (`GET /habit-tracks/day`): sin lectura (404/400) la
+# pantalla dice «Así lo planificaste. Ese día ya cerró.» y «Lo que hiciste ese día está en Yo → Mis evidencias.», sin ✓ ni candados.
+# Precondición: la cuenta tiene registros de AYER (los que dejó el día anterior; para verlos con ✓ y candado hace falta que el
+# servidor los devuelva) y, para que haya algo que tocar, al menos un hábito cumplido y uno sin cumplir ese día.
 # cuenta: aprendiz
 appId: com.renaser.app
 ---
 - runFlow: ../comun/ya-adentro.yaml
+- runScript: ../comun/dias-de-la-semana.js
 - runFlow: ../comun/abrir-training.yaml
-- tapOn: "Miércoles 28"
-- extendedWaitUntil:
-    visible: "Miércoles 28"
-    timeout: 20000
-- assertVisible: ".* de .* hechos · ese día ya cerró"
-- extendedWaitUntil:
-    visible: "17:30, Clase diaria.*"
-    timeout: 20000
-- assertNotVisible: "Subir|Tomar foto|Ver la clase|Marcar .*"
-- takeScreenshot: T09a-miercoles-check-y-candado
-- tapOn: "17:30, Clase diaria.*"
-# El aviso dura 4 s y en el emulador el toque de Maestro tarda hasta ~14 s en volver: la frase se lee de forma opcional y lo que
-# no puede faltar es que NO se abra nada para registrar.
-- assertVisible:
-    text: "Ese día ya cerró\\. No se puede registrar\\."
-    optional: true
-- assertNotVisible: "Tomar foto|Ver la clase|Guía de esta práctica"
-- takeScreenshot: T09b-candado
-- tapOn: "(?i)06:00, AGUA TIBIA CON LIMÓN.*"
-- assertVisible:
-    text: "Ya hecho"
-    optional: true
-- assertNotVisible: "Tomar foto|Ver la clase|Guía de esta práctica|Entregar evidencia"
-- tapOn: "Martes 27"
-- extendedWaitUntil:
-    visible: ".* de .* hechos · ese día ya cerró"
-    timeout: 20000
-- takeScreenshot: T09c-martes
-- tapOn: "Lunes 26"
-- extendedWaitUntil:
-    visible: ".* de .* hechos · ese día ya cerró"
-    timeout: 20000
-- takeScreenshot: T09d-lunes
-- tapOn: "Domingo 1"
-- extendedWaitUntil:
-    visible: "Así quedó planificado\\. Se registra ese día\\."
-    timeout: 20000
-- assertNotVisible: "Subir|Tomar foto|Ver la clase|Escuchar|Publicar|Marcar .*"
-- takeScreenshot: T09e-domingo-planificado
-- tapOn: "Viernes 30"
-- extendedWaitUntil:
-    visible: "Así quedó planificado\\. Se registra ese día\\."
-    timeout: 20000
-- assertNotVisible: "Subir|Tomar foto|Ver la clase|Escuchar|Publicar|Marcar .*"
-- tapOn: "Jueves 29, hoy"
-- assertVisible: ".* de .* hechos · .* pts"
+- assertVisible: "${output.hoy}"
+
+# --- Día anterior (de lunes a domingo; el lunes no tiene) ---
+- runFlow:
+    when:
+      true: ${output.hayAnterior == 'si'}
+    commands:
+      - tapOn: "${output.ayer}"
+      - extendedWaitUntil:
+          visible: ".* de .* hech(o|os) · ese día ya cerró|Ese día no tuviste hábitos registrados\\.|Así lo planificaste\\. Ese día ya cerró\\.|No pudimos cargar este día\\."
+          timeout: 30000
+      # Un día que terminó no tiene botones para registrar nada.
+      - assertNotVisible: "Subir|Tomar foto|Ver la clase|Escuchar|Publicar"
+      - takeScreenshot: T09a-dia-anterior
+      # Un candado (lo no cumplido) dice que ese día ya cerró y no abre ningún registro.
+      - runFlow:
+          when:
+            visible: ".*, ya no se puede registrar"
+          commands:
+            - tapOn: ".*, ya no se puede registrar"
+            # El aviso dura unos segundos y en el emulador el toque de Maestro tarda: se lee de forma opcional; lo que no puede faltar
+            # es que NO se abra nada para registrar.
+            - assertVisible:
+                text: "Ese día ya cerró\\. No se puede registrar\\."
+                optional: true
+            - assertNotVisible: "Tomar foto|Ver la clase|Guía de esta práctica|Entregar evidencia|Escribir cómo me siento"
+            - takeScreenshot: T09b-candado
+      # Un ✓ (lo cumplido) dice «Ya hecho» y tampoco abre nada.
+      - runFlow:
+          when:
+            visible: ".*, hecho"
+          commands:
+            - tapOn: ".*, hecho"
+            - assertVisible:
+                text: "Ya hecho"
+                optional: true
+            - assertNotVisible: "Tomar foto|Ver la clase|Guía de esta práctica|Entregar evidencia|Escribir cómo me siento"
+            - takeScreenshot: T09c-ya-hecho
+      # El lunes de la semana (si no es hoy ni ayer) también se puede mirar.
+      - runFlow:
+          when:
+            true: ${output.lunes != output.ayer && output.lunes + ', hoy' != output.hoy}
+          commands:
+            - tapOn: "${output.lunes}"
+            - extendedWaitUntil:
+                visible: ".* de .* hech(o|os) · ese día ya cerró|Ese día no tuviste hábitos registrados\\.|Así lo planificaste\\. Ese día ya cerró\\.|No pudimos cargar este día\\.|Tu programa empezó después de este día\\."
+                timeout: 30000
+            - takeScreenshot: T09d-lunes
+
+# --- Día que viene (el domingo no tiene) ---
+- runFlow:
+    when:
+      true: ${output.hayPosterior == 'si'}
+    commands:
+      - tapOn: "${output.manana}"
+      - extendedWaitUntil:
+          visible: "Así quedó planificado\\. Se registra ese día\\."
+          timeout: 30000
+      # La nota «Es tu planificación…» va al pie de la lista (17 hábitos): se baja hasta ella y luego se sube a la semana.
+      - scrollUntilVisible:
+          element: "Es tu planificación\\. Para cambiar una hora, toca el engranaje\\."
+          direction: DOWN
+          timeout: 40000
+      - assertNotVisible: "Subir|Tomar foto|Ver la clase|Escuchar|Publicar|Marcar .*"
+      - takeScreenshot: T09e-dia-que-viene
+      - scrollUntilVisible:
+          element: "${output.domingo}"
+          direction: UP
+          timeout: 40000
+      - tapOn: "${output.domingo}"
+      - extendedWaitUntil:
+          visible: "Así quedó planificado\\. Se registra ese día\\."
+          timeout: 30000
+      - assertNotVisible: "Subir|Tomar foto|Ver la clase|Escuchar|Publicar|Marcar .*"
+
+# --- De vuelta a hoy ---
+- tapOn: "${output.hoy}"
+- assertVisible: ".* de .* hech(o|os) · .* pts"
+- takeScreenshot: T09f-hoy

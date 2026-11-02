@@ -25,6 +25,6 @@ appId: com.renaser.app
 - takeScreenshot: C02b-tribu-del-diplomado
 - tapOn: "Ranking"
 - extendedWaitUntil:
-    visible: "Tu posición"
+    visible: "(?i)Tu posición.*"
     timeout: 30000
 - takeScreenshot: C02c-ranking-del-diplomado

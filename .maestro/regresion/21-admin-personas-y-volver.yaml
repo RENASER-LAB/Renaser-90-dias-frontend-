@@ -25,4 +25,8 @@ appId: com.renaser.app
 - back
 - assertVisible: "Operación del programa"
 - back
-- assertVisible: "Abrir Administración"
+# Yo vuelve arriba (sin desplazar): la fila de Administración queda más abajo, se baja hasta ella.
+- scrollUntilVisible:
+    element: "Abrir Administración"
+    direction: DOWN
+    timeout: 30000

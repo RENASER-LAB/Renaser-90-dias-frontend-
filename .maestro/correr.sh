@@ -3,6 +3,7 @@
 #
 # Uso:  E2E_APRENDIZ_EMAIL=… E2E_APRENDIZ_PASSWORD=… E2E_ADMIN_EMAIL=… E2E_ADMIN_PASSWORD=… .maestro/correr.sh [flujo…]
 #       Sin argumentos corre todo .maestro/regresion/ en orden. Cada flujo dice arriba `# cuenta: aprendiz|admin|soporte`.
+#       Si el flujo necesita un estado de datos propio, dice `# antes: <comando>` (se corre antes de entrar; ver comun/estado-de-hoy.sh).
 #       Los flujos `# cuenta: soporte` (consola Soporte TI, spec 002 fase 2) piden además E2E_SOPORTE_EMAIL y
 #       E2E_SOPORTE_PASSWORD; la contraseña llega al flujo como `CONTRASENA` (desbloquea la consola).
 #
@@ -121,6 +122,9 @@ for f in "${flujos[@]}"; do
   # grupo. Van siempre: Maestro no deja que `-e` pise un `env:` del flujo, así que los flujos no traen valor propio.
   extra+=(-e "PERSONA=${E2E_PERSONA:-a}")
   extra+=(-e "GRUPO=${E2E_GRUPO:-}")
+  # `# antes: <comando>` (opcional, arriba del flujo): deja el estado de datos que el flujo necesita al empezar (un hábito pendiente, un
+  # evento a la vista…). Se corre desde la raíz del repo, en la base LOCAL de pruebas; ver comun/antes-del-flujo.sh.
+  "$(dirname "$0")/comun/antes-del-flujo.sh" "$f"
   estado=1
   if entrar "$correo" "$clave"; then
     ~/.maestro/bin/maestro test "${extra[@]}" "$f" --test-output-dir "$SALIDA" 2>&1 | tapar | grep -E "COMPLETED|FAILED|Flow "

@@ -1,6 +1,7 @@
 # T03 — Un hábito SIN guía (JUGO VERDE) abre directo la cámara, sin hoja intermedia ni otro «Subir»; al aceptar la foto se registra
 # (no pregunta «¿Qué sentiste?»: solo los rituales) y sale de la lista.
-# Precondición: `reset-hoy.sql`; fotos en local.
+# Precondición: Jugo verde PENDIENTE (lo deja la línea `# antes:`: este flujo lo cumple); fotos en local.
+# antes: .maestro/comun/estado-de-hoy.sh PENDIENTE GREEN_JUICE
 # cuenta: aprendiz
 appId: com.renaser.app
 ---

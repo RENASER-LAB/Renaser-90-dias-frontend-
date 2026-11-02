@@ -15,6 +15,9 @@ appId: com.renaser.app
     direction: DOWN
     timeout: 40000
 - tapOn: "Personas.*"
+# Personas lista a todos (más de cien en la base de prueba): se busca a la persona.
+- tapOn: "Buscar por nombre o correo"
+- inputText: "Pagos"
 - extendedWaitUntil:
     visible: "Sol-Pagos Uno"
     timeout: 30000
@@ -23,34 +26,64 @@ appId: com.renaser.app
     element: "Pagos"
     direction: DOWN
     timeout: 40000
-- assertVisible: "Con cronograma en dólares \\(US\\$\\)\\. Todavía no lo confirmó\\."
+# «Pagos» asoma al borde de abajo: se baja hasta el contenido de la sección (la ficha es larga).
+- scrollUntilVisible:
+    element: "Con cronograma en dólares \\(US\\$\\)\\. Todavía no lo confirmó\\."
+    direction: DOWN
+    timeout: 40000
 - assertVisible: "Pendiente"
 - takeScreenshot: P03a-la-seccion-pagos
+- scrollUntilVisible:
+    element: "Marcar pagado"
+    direction: DOWN
+    timeout: 40000
 - tapOn:
     text: "Marcar pagado"
     index: 0
+# El aviso «Listo: …» dura ~3 s y Maestro llega tarde (dev client): se mira lo que queda (quién y cuándo).
 - extendedWaitUntil:
     visible: "Listo: cuota marcada como pagada."
     timeout: 15000
+    optional: true
+- scrollUntilVisible:
+    element: "Marcó pagada:.*"
+    direction: DOWN
+    timeout: 30000
 - assertVisible: "Pagado"
-- assertVisible: "Marcó pagada:.*"
 - assertVisible: "Volver a pendiente"
 - takeScreenshot: P03b-una-cuota-pagada
 # Lo pagado no se edita ni se quita.
 - assertNotVisible: "Reemplazar el cronograma"
-- assertVisible: "Con cuotas pagadas no se reemplaza el cronograma entero.*"
+- scrollUntilVisible:
+    element: "Con cuotas pagadas no se reemplaza el cronograma entero.*"
+    direction: DOWN
+    timeout: 30000
 - tapOn: "Volver a pendiente"
 - extendedWaitUntil:
     visible: "Listo: la cuota volvió a pendiente."
     timeout: 15000
-- assertVisible: "La devolvió a pendiente:.*"
-- assertVisible: "Reemplazar el cronograma"
+    optional: true
+- scrollUntilVisible:
+    element: "La devolvió a pendiente:.*"
+    direction: UP
+    timeout: 30000
+- scrollUntilVisible:
+    element: "Reemplazar el cronograma"
+    direction: DOWN
+    timeout: 30000
 # Una cuota más.
+- scrollUntilVisible:
+    element: "Agregar una cuota"
+    direction: DOWN
+    timeout: 30000
 - tapOn: "Agregar una cuota"
 - extendedWaitUntil:
-    visible: "Agregar una cuota"
+    visible: "Fecha de la cuota"
     timeout: 10000
-- tapOn: "Fecha de la cuota"
+- tapOn: "Elige la fecha"
+- extendedWaitUntil:
+    visible: "Listo"
+    timeout: 10000
 - tapOn: "Listo"
 - tapOn: "Monto.*"
 - inputText: "500"
@@ -59,4 +92,9 @@ appId: com.renaser.app
 - extendedWaitUntil:
     visible: "Listo: agregaste una cuota."
     timeout: 15000
+    optional: true
+- scrollUntilVisible:
+    element: "US\\$.500"
+    direction: DOWN
+    timeout: 30000
 - takeScreenshot: P03c-una-cuota-mas

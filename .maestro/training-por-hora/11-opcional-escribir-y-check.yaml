@@ -1,22 +1,25 @@
-# T11 — Un hábito de evidencia OPCIONAL sin flujo propio (observación del dueño, 2026-10-29: «no es solo foto, sino también
-# escritura»). Su fila lleva la píldora «Subir» (que abre las cuatro formas: Foto, Texto, Audio, Video) Y el ✓ (que cierra sin
-# evidencia), como la tarjeta de hoy de master. ESCRITURA LIBRE NOCTURNA: se entrega un texto por la píldora; DÍA SIN CELULAR:
-# se cierra con el ✓. En la hoja de un hábito con guía: «Subir evidencia» y, aparte, «Marcar como hecho».
-# Precondición: `reset-hoy.sql`.
+# T11 — Hábitos de evidencia OPCIONAL (Escritura libre nocturna, Día sin celular…): la fila lleva solo «Subir» (sin círculo, ajuste del
+# 2026-10-30); tocar el nombre abre la hoja con «Subir evidencia» y «Marcar como hecho». «Última comida del día» es la excepción: lleva
+# el círculo (2026-10-31, punto 8). Actualizado el 02/11/2026 a la app de hoy.
+# Precondición: aprendiz de la Escuela con esos tres hábitos PENDIENTES hoy (los deja la línea `# antes:`: este flujo los cumple).
+# antes: .maestro/comun/estado-de-hoy.sh PENDIENTE "ESCRITURA LIBRE NOCTURNA" PHONE_FREE_DAY "ÚLTIMA COMIDA DEL DÍA"
 # cuenta: aprendiz
 appId: com.renaser.app
 ---
 - runFlow: ../comun/ya-adentro.yaml
 - runFlow: ../comun/abrir-training.yaml
 - scrollUntilVisible:
-    element: "(?i)Marcar ESCRITURA LIBRE NOCTURNA"
+    element: "Subir evidencia de Escritura libre nocturna"
     direction: DOWN
     centerElement: true
     timeout: 30000
-- assertVisible: "(?i)Marcar DÍA SIN CELULAR|Marcar Meditar 10 minutos"
-- takeScreenshot: T11a-fila-con-subir-y-check
-# La fila empieza por su hora: «.*ESCRITURA…» también casaba con el ✓ («Marcar ESCRITURA LIBRE NOCTURNA») y lo marcaba.
-- tapOn: "(?i)[0-9:]+, ESCRITURA LIBRE NOCTURNA.*"
+- assertVisible: "Subir evidencia de Día sin celular"
+# Sin círculo en los opcionales.
+- assertNotVisible: "Marcar Escritura libre nocturna"
+- assertNotVisible: "Marcar Día sin celular"
+- takeScreenshot: T11a-fila-con-subir
+# La fila empieza por su hora: «.*Escritura…» también casaba con el botón «Subir evidencia de Escritura…» y lo tocaba.
+- tapOn: "[0-9:]+, Escritura libre nocturna.*"
 - extendedWaitUntil:
     visible: "Subir evidencia"
     timeout: 10000
@@ -31,16 +34,33 @@ appId: com.renaser.app
     optional: true   # el aviso en línea dura unos segundos: lo que se prueba es que la fila sale de la lista
 - takeScreenshot: T11c-escritura-entregada
 - extendedWaitUntil:
-    notVisible: "(?i)Marcar ESCRITURA LIBRE NOCTURNA"
+    notVisible: "Subir evidencia de Escritura libre nocturna"
     timeout: 20000
-# Por separado, el ✓ cierra sin evidencia.
+# Por separado, «Marcar como hecho» de la hoja cierra sin evidencia.
 - scrollUntilVisible:
-    element: "(?i)Marcar DÍA SIN CELULAR"
+    element: "[0-9:]+, Día sin celular.*"
     direction: DOWN
     centerElement: true
     timeout: 30000
-- tapOn: "(?i)Marcar DÍA SIN CELULAR"
+- tapOn: "[0-9:]+, Día sin celular.*"
 - extendedWaitUntil:
-    notVisible: "(?i)Marcar DÍA SIN CELULAR"
+    visible: "Marcar como hecho"
+    timeout: 10000
+- tapOn: "Marcar como hecho"
+- extendedWaitUntil:
+    notVisible: "Subir evidencia de Día sin celular"
     timeout: 20000
-- takeScreenshot: T11d-dia-sin-celular-con-check
+- takeScreenshot: T11d-dia-sin-celular-marcado
+# «Última comida del día»: el círculo la cierra de un toque, sin pedir foto.
+- scrollUntilVisible:
+    element: "Marcar Última comida del día"
+    direction: DOWN
+    centerElement: true
+    timeout: 30000
+- assertNotVisible: "Subir evidencia de Última comida del día"
+- tapOn: "Marcar Última comida del día"
+- extendedWaitUntil:
+    notVisible: "Marcar Última comida del día"
+    timeout: 20000
+- assertNotVisible: "Tomar foto|Entregar evidencia"
+- takeScreenshot: T11e-ultima-comida-cerrada-con-el-circulo

@@ -13,5 +13,11 @@ appId: com.renaser.app
     timeout: 15000
 - takeScreenshot: 20a-administracion
 - back
-- assertVisible: "Abrir Administración"
-- assertVisible: "TRAINING"
+# Yo vuelve arriba (sin desplazar): la fila de Administración queda más abajo, se baja hasta ella.
+- scrollUntilVisible:
+    element: "Abrir Administración"
+    direction: DOWN
+    timeout: 30000
+# La barra de pestañas se esconde al desplazar (D-246): no se mira TRAINING. Basta con haber vuelto a Yo (la fila de
+# Administración está a la vista) y con que la pantalla de Administración ya no esté.
+- assertNotVisible: "Operación del programa"

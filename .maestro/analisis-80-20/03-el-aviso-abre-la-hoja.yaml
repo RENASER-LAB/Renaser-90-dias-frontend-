@@ -9,7 +9,10 @@ appId: com.renaser.app
 - launchApp:
     appId: com.renaser.app
     stopApp: false
-- openNotifications
+# Maestro 2.11 no tiene `openNotifications`: la bandeja se abre arrastrando desde el borde de arriba (en el emulador basta una pasada).
+- swipe:
+    start: 50%,1%
+    end: 50%,75%
 - extendedWaitUntil:
     visible: "Tu análisis de la semana está listo"
     timeout: 30000

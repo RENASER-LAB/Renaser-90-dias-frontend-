@@ -6,9 +6,14 @@ appId: com.renaser.app
 ---
 - runFlow: comun-abrir-solicitudes.yaml
 - extendedWaitUntil:
-    visible: "Sol-Escuela Uno"
+    visible: "Seleccionar varias"
     timeout: 30000
 - takeScreenshot: S01a-por-decidir
+# Con 19 solicitudes por decidir, el «Aceptar» de esta queda abajo de lo que se ve al abrir: se baja hasta él.
+- scrollUntilVisible:
+    element: "Aceptar a Sol-Escuela Uno"
+    direction: DOWN
+    timeout: 40000
 - tapOn: "Aceptar a Sol-Escuela Uno"
 # La hoja abre con todo marcado (menos el pago, spec 032) y la frase del resumen.
 - extendedWaitUntil:
@@ -22,9 +27,8 @@ appId: com.renaser.app
 - assertVisible: "Rol"
 - assertVisible: "Ficha de entrada"
 - takeScreenshot: S01b-la-hoja-con-todo-marcado
-- tapOn:
-    text: "Aceptar"
-    index: 1
+# Hay un solo «Aceptar»: el del pie fijo de la hoja (con `index: 1` no hay segundo y el toque falla).
+- tapOn: "Aceptar"
 # Se acepta, la hoja se cierra y la solicitud sale de «Por decidir».
 - extendedWaitUntil:
     visible: "Sol-Escuela Uno entró a la Escuela Renaser como Aprendiz.*"
@@ -32,10 +36,16 @@ appId: com.renaser.app
 - assertNotVisible: "Aceptar a Sol-Escuela Uno"
 - takeScreenshot: S01c-aceptada
 # En «Aceptadas» dice quién y qué se eligió.
+- scrollUntilVisible:
+    element: "Aceptadas"
+    direction: UP
+    timeout: 40000
 - tapOn: "Aceptadas"
-- extendedWaitUntil:
-    visible: "Sol-Escuela Uno"
-    timeout: 20000
+# La lista de aceptadas (65) sigue el orden de las solicitudes, no el de la decisión: se baja hasta la de esta corrida.
+- scrollUntilVisible:
+    element: "Sol-Escuela Uno"
+    direction: DOWN
+    timeout: 60000
 - assertVisible: "Aceptada por.*"
 - assertVisible: "Escuela · Aprendiz · sin diagnóstico"
 - takeScreenshot: S01d-en-aceptadas
