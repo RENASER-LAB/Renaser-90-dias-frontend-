@@ -52,6 +52,21 @@ local (nunca contra producción).
   Renaser (Más opciones → «Código Renaser en las fichas»); apagado de fábrica. **Escritos y sin correr**: piden el backend con la
   spec 034 y, además de la cuenta de Administración, la de un mentor con un aprendiz que ya respondió el Radar; ver su `README.md`.
 
+## El estado de los datos de cada flujo (`# antes:`)
+
+Un flujo que cumple un hábito lo deja cumplido, y el flujo que sigue puede pedir justo lo contrario (`training-por-hora/01` quiere Agua tibia hecha;
+`diseno-31/04`, pendiente). Maestro no puede deshacer un hábito cumplido desde la app, así que **cada flujo que depende de ese estado lo dice arriba
+con una línea `# antes: <comando>`** y `correr.sh` la corre (desde la raíz del repo, contra la base LOCAL de pruebas) antes de entrar. Otro corredor que no
+pase por `correr.sh` llama a `.maestro/comun/antes-del-flujo.sh <flujo.yaml>` antes de cada flujo.
+
+- `comun/estado-de-hoy.sh PENDIENTE|COMPLETADO <clave o título>…` deja los registros de hoy de una cuenta (por omisión `ef-aprendiz-escuela@renaser.test`, base
+  `renaser_e2e_final`, contenedor `renaser-db`; se cambian con `E2E_CORREO`, `E2E_BASE`, `E2E_CONTENEDOR`) en ese estado. Usa la clave de sistema del hábito
+  (`WAKE_UP`, `SLEEP`, `WARM_LEMON_WATER`, `RITUAL_MORNING`, `GYM`, `DAILY_KM`, `PASTILLA_RENACER`, `DAILY_CLASS`, `PHONE_FREE_DAY`…) o, si no tiene, su título
+  exacto del catálogo (en mayúsculas). Con `accion:<título>` es una acción del día de los objetivos. Se niega a tocar una base que no empiece con `renaser_e2e`.
+- `comun/evento-de-prueba.sh "<título>" <minutos>` pone el comienzo de un evento de prueba a tantos minutos desde ahora (los eventos terminados salen de la lista de
+  hoy, así que el evento sembrado dejaría de verse pasada su hora).
+- Lo que ningún comando puede deshacer queda dicho en la cabecera del flujo (por ejemplo, `training-por-hora/10` deja «Meditar 10 minutos» en pausa «solo hoy»).
+
 ## Cómo correrla
 
 1. Backend local (worktree propio, base clonada) con las fotos en local (`docs/DESPLIEGUE_Y_CI.md` §1.3 del backend).
