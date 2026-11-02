@@ -10,7 +10,7 @@ appId: com.renaser.app
     timeout: 60000
 - assertNotVisible: "(?i).*Leer treinta minutos E2E.*"
 - takeScreenshot: H03a-training-de-la-escuela
-- tapOn: "Tus prácticas"
+- tapOn: "Tus prácticas: planificar"
 - extendedWaitUntil:
     visible: "Cuerpo.*"
     timeout: 30000

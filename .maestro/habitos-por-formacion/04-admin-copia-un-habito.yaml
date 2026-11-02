@@ -1,6 +1,8 @@
 # «Copiar a otra formación» (spec 023, historia 3). ESCRITO Y SIN CORRER.
 # cuenta: admin  (Administración o Alquimista)
-# Precondición: la Certificación tiene al menos una categoría activa (créala antes con «Categorías» si no) y ningún hábito «Agua tibia con limón».
+# Precondición: la Certificación tiene al menos una categoría activa (créala antes con «Categorías» si no) y ningún hábito «Descanso profundo».
+# Cada corrida COPIA un hábito y no se puede deshacer desde la app: «Agua tibia con limón» ya está copiado en la base local (E2E del 01/11); hoy se copia «Descanso profundo»
+# y el siguiente que sirve es «Ducha fria». Para repetirlo, cambia el nombre en las tres líneas `(?i).*…*`.
 # Copia un hábito de la Escuela a la Certificación, en una categoría de ELLA; la copia aparece en la lista de la Certificación y la original sigue en la Escuela.
 appId: com.renaser.app
 ---
@@ -26,9 +28,9 @@ appId: com.renaser.app
     timeout: 30000
 - tapOn: "Escuela"
 - extendedWaitUntil:
-    visible: "(?i).*Agua tibia con limón.*"
+    visible: "(?i).*Descanso profundo.*"
     timeout: 30000
-- tapOn: "(?i).*Agua tibia con limón.*"
+- tapOn: "(?i).*Descanso profundo.*"
 - scrollUntilVisible:
     element: "Copiar a otra formación"
     direction: DOWN
@@ -47,10 +49,10 @@ appId: com.renaser.app
 # La Certificación ya lo tiene y la Escuela sigue con el suyo.
 - tapOn: "Certificación"
 - extendedWaitUntil:
-    visible: "(?i).*Agua tibia con limón.*"
+    visible: "(?i).*Descanso profundo.*"
     timeout: 30000
 - takeScreenshot: H04b-la-certificacion-tiene-la-copia
 - tapOn: "Escuela"
 - extendedWaitUntil:
-    visible: "(?i).*Agua tibia con limón.*"
+    visible: "(?i).*Descanso profundo.*"
     timeout: 30000

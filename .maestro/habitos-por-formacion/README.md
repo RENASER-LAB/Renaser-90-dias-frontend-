@@ -14,3 +14,7 @@ apuntan a la cuenta que el archivo dice (como en `../formaciones/README.md`).
 
 Orden sugerido: 01 → 02 → 03 → 04. El 01 deja la categoría y el hábito sembrados para el 02; el 04 deja una copia en la Certificación que se borra desde
 Administración → «Hábitos del programa» → Certificación → el hábito → «Eliminar».
+
+> **02/11/2026.** `04` copiaba «Agua tibia con limón», que ya está copiado en la Certificación de la base local (E2E del 01/11): ahora copia «Descanso profundo» (el siguiente
+> que sirve es «Ducha fria»; cada corrida deja una copia más, que se borra a mano como arriba). `02` y `03` abren el engranaje por su nombre de hoy, «Tus prácticas: planificar».
+> `01` escribe los nombres largos en comandos de 8 letras (`inputText` con el dev client pasa de 120 s con más de ~10 letras).

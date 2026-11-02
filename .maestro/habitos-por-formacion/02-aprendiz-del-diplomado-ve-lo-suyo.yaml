@@ -13,7 +13,8 @@ appId: com.renaser.app
 - assertNotVisible: "(?i).*Despertar.*"
 - assertNotVisible: "(?i).*Agua tibia.*"
 # «Tus prácticas» (el engranaje) lista las dimensiones de SU formación.
-- tapOn: "Tus prácticas"
+# El engranaje de Training se llama «Tus prácticas: planificar» (el nombre solo, «Tus prácticas», no lo encuentra).
+- tapOn: "Tus prácticas: planificar"
 - extendedWaitUntil:
     visible: "Estudio E2E.*"
     timeout: 30000

@@ -37,7 +37,9 @@ appId: com.renaser.app
     timeout: 30000
 - tapOn: "Nueva categoría"
 - tapOn: "Nombre"
-- inputText: "Estudio E2E"
+# `inputText` con el dev client tarda ~7 a 10 s por letra y pasa de 120 s con más de ~10 (Maestro #3667): los nombres largos van en comandos de 8 letras.
+- inputText: "Estudio "
+- inputText: "E2E"
 - hideKeyboard
 - tapOn: "Libro abierto"
 - tapOn: "Crear categoría"
@@ -55,7 +57,9 @@ appId: com.renaser.app
     visible: "Nuevo hábito"
     timeout: 20000
 - tapOn: "Nombre"
-- inputText: "Leer treinta minutos E2E"
+- inputText: "Leer tre"
+- inputText: "inta min"
+- inputText: "utos E2E"
 - hideKeyboard
 # Solo ofrece las categorías del Diplomado.
 - assertVisible: "Estudio E2E"
