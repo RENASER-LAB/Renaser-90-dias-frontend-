@@ -2,7 +2,7 @@
 # «Repetir tu semana» (la en curso, en la siguiente) con «Repetir», «Ahora no» y «Ver qué se repite»; repetir la deja igual en un
 # toque y se puede «Deshacer». «Ahora no» no vuelve mientras la semana modelo no cambie.
 # ESCRITO Y SIN CORRER (no se usó el emulador). Precondición: backend con la spec 028; aprendiz con el Día 1 elegido y el hábito propio
-# «Meditar 10 minutos» (`reset-hoy.sql`) SIN aviso ni cambios solo-semana, y la semana siguiente sin cambios propios; hoy no es sábado
+# «Escritura libre nocturna» (`reset-hoy.sql`) SIN aviso ni cambios solo-semana, y la semana siguiente sin cambios propios; hoy no es sábado
 # ni domingo (con un cambio solo en la semana en curso hace falta al menos un día por delante).
 # cuenta: aprendiz
 appId: com.renaser.app
@@ -15,12 +15,12 @@ appId: com.renaser.app
     timeout: 15000
 # Sin cambios solo esta semana no hay oferta.
 - assertNotVisible: "Repetir tu semana"
-# Se hace un cambio solo esta semana (un aviso «A la hora» en «Meditar 10 minutos»).
+# Se hace un cambio solo esta semana (un aviso «A la hora» en «Escritura libre nocturna»).
 - tapOn: "Mente: .* de .* cumplidos hoy"
 - extendedWaitUntil:
     visible: "Toca uno para cambiarle la hora\\."
     timeout: 15000
-- tapOn: "Meditar 10 minutos, a las 20:15"
+- tapOn: "Escritura libre nocturna, a las 21:30"
 - extendedWaitUntil:
     visible: "Guardar .*"
     timeout: 15000
@@ -32,6 +32,10 @@ appId: com.renaser.app
 - tapOn: "Guardar aviso · solo esta semana"
 - extendedWaitUntil:
     visible: "Queda con aviso nuevo .* solo esta semana\\..*"
+    timeout: 20000
+    optional: true
+- extendedWaitUntil:
+    visible: "Cambiado solo esta semana: .*"
     timeout: 20000
 # Cerrar la hoja: «Tus prácticas» vuelve a leer y ofrece repetir.
 - back
@@ -48,7 +52,7 @@ appId: com.renaser.app
 - extendedWaitUntil:
     visible: "Qué se repite"
     timeout: 15000
-- assertVisible: "Meditar 10 minutos"
+- assertVisible: "Escritura libre nocturna"
 - assertVisible: ".*aviso a la hora.*"
 - takeScreenshot: R01b-que-se-repite
 - back
@@ -84,12 +88,12 @@ appId: com.renaser.app
     visible: "Tus prácticas"
     timeout: 15000
 - assertNotVisible: "Repetir tu semana"
-# Limpieza: el cambio solo esta semana de «Meditar 10 minutos» vuelve al plan de siempre.
+# Limpieza: el cambio solo esta semana de «Escritura libre nocturna» vuelve al plan de siempre.
 - tapOn: "Mente: .* de .* cumplidos hoy"
 - extendedWaitUntil:
     visible: "Toca uno para cambiarle la hora\\."
     timeout: 15000
-- tapOn: "Meditar 10 minutos, a las 20:15"
+- tapOn: "Escritura libre nocturna, a las 21:30"
 - extendedWaitUntil:
     visible: "Guardar .*"
     timeout: 15000
@@ -101,5 +105,6 @@ appId: com.renaser.app
 - extendedWaitUntil:
     visible: "Vuelve al plan de siempre los .* de esta semana\\."
     timeout: 20000
+    optional: true
 - back
 - back

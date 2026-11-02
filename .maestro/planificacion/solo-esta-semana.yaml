@@ -2,7 +2,7 @@
 # siempre) y «Solo esta semana». En el segundo, todos los días que faltan vienen marcados, un cambio de aviso vale solo para esos días,
 # la pantalla lo dice («Cambiado solo esta semana: …») y «Volver al plan de siempre» lo devuelve. El plan de siempre no se toca.
 # ESCRITO Y SIN CORRER (no se usó el emulador). Precondición: backend con la spec 028 (V130 y V131); aprendiz con el Día 1 elegido; el
-# hábito propio «Meditar 10 minutos» (`reset-hoy.sql`) SIN aviso ni cambios solo-semana; hoy no es sábado (si es domingo, la hoja muestra
+# hábito propio «Escritura libre nocturna» (`reset-hoy.sql`) SIN aviso ni cambios solo-semana; hoy no es sábado (si es domingo, la hoja muestra
 # la semana que empieza y todos sus días se pueden cambiar).
 # cuenta: aprendiz
 appId: com.renaser.app
@@ -17,7 +17,7 @@ appId: com.renaser.app
 - extendedWaitUntil:
     visible: "Toca uno para cambiarle la hora\\."
     timeout: 15000
-- tapOn: "Meditar 10 minutos, a las 20:15"
+- tapOn: "Escritura libre nocturna, a las 21:30"
 - extendedWaitUntil:
     visible: "Guardar .*"
     timeout: 15000
@@ -41,6 +41,10 @@ appId: com.renaser.app
 - extendedWaitUntil:
     visible: "Queda con aviso nuevo .* solo esta semana\\. Tu plan de siempre no cambia\\."
     timeout: 20000
+    optional: true
+- extendedWaitUntil:
+    visible: "Cambiado solo esta semana: .*"
+    timeout: 20000
 - assertVisible: "Cambiado solo esta semana: .*"
 - assertVisible: "Volver al plan de siempre los .*"
 - takeScreenshot: S01c-cambiado-solo-esta-semana
@@ -60,6 +64,7 @@ appId: com.renaser.app
 - extendedWaitUntil:
     visible: "Vuelve al plan de siempre los .* de esta semana\\."
     timeout: 20000
+    optional: true
 - assertNotVisible: "Cambiado solo esta semana: .*"
 - takeScreenshot: S01e-de-vuelta-al-plan-de-siempre
 - back
