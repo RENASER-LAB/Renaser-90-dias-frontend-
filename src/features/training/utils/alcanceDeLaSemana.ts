@@ -10,9 +10,10 @@ import {
 } from './avisoDeLosDias';
 
 /**
- * El alcance de un cambio en el editor de «Planificar» (spec 028, decisión del dueño 028-1 A): «Todas las semanas» (el de siempre y el
- * valor por defecto) o «Solo esta semana» (los días que faltan de la semana que el editor dibuja, sin tocar el plan de siempre). Puro:
- * decide qué mostrar y qué mandar sin tocar la pantalla ni el servidor.
+ * El alcance de un cambio en el editor de «Planificar» (spec 028, decisión del dueño 028-1 A; renombrado el 2026-11-02): «Siempre» (el de
+ * siempre: el plan de todas las semanas) o «Por semana» (los días que faltan de la semana que el editor muestra, sin tocar el plan de
+ * siempre; se pasa de semana con las flechas o deslizando, `semanasDelEditor`). Puro: decide qué mostrar y qué mandar sin tocar la
+ * pantalla ni el servidor.
  *
  * Reutiliza lo que ya hay: los datos de la semana se mapean al mismo `DiaDelEditor` con el que funcionan las pastillas, el aviso y «Cómo
  * suena», y «solo lo que se tocó» es la misma regla de `queGuardarConAlarma`.
@@ -21,12 +22,12 @@ import {
 export type AlcanceDelCambio = 'siempre' | 'semana';
 
 export const OPCIONES_DE_ALCANCE: readonly { valor: AlcanceDelCambio; etiqueta: string; accessibilityLabel: string }[] = [
-  { valor: 'siempre', etiqueta: 'Todas las semanas', accessibilityLabel: 'El cambio vale para todas las semanas' },
-  { valor: 'semana', etiqueta: 'Solo esta semana', accessibilityLabel: 'El cambio vale solo para esta semana' },
+  { valor: 'siempre', etiqueta: 'Siempre', accessibilityLabel: 'El cambio vale siempre, para todas las semanas' },
+  { valor: 'semana', etiqueta: 'Por semana', accessibilityLabel: 'El cambio vale solo para la semana que elijas' },
 ];
 
 /**
- * ¿El servidor sabe de «Solo esta semana»? El servidor nuevo manda siempre `dateOverrides` en la lista (vacía si no hay ninguna fecha
+ * ¿El servidor sabe de «Por semana»? El servidor nuevo manda siempre `dateOverrides` en la lista (vacía si no hay ninguna fecha
  * propia); uno anterior no lo manda. Sin él la hoja es la de siempre (FR-021).
  */
 export function elServidorSabeDeLaSemana(preferencia: PreferenciaHabitoApi | undefined): boolean {
@@ -55,7 +56,7 @@ export function diasDelEditorDeLaSemana(
 }
 
 /**
- * Un día cuyo plan de siempre lo deja apagado (`activo = false` sin cambio propio de la fecha) no se puede cambiar solo esta semana: el
+ * Un día cuyo plan de siempre lo deja apagado (`activo = false` sin cambio propio de la fecha) no se puede cambiar por semana: el
  * servidor rechaza encenderlo y escribirle una hora no cambiaría nada. Se trata como un día en que el hábito no corre.
  */
 export function apagadoPorElPlanDeSiempre(dia: DiaDelEditor | undefined): boolean {
@@ -63,7 +64,7 @@ export function apagadoPorElPlanDeSiempre(dia: DiaDelEditor | undefined): boolea
 }
 
 /**
- * Los días que se pueden marcar en «Solo esta semana»: el hábito corre ese día, la fecha todavía no pasó (ni es hoy) y el plan de siempre no
+ * Los días que se pueden marcar en «Por semana»: el hábito corre ese día, la fecha todavía no pasó (ni es hoy) y el plan de siempre no
  * lo apaga. En el orden de la semana.
  */
 export function diasQueSePuedenMarcar(
@@ -74,7 +75,7 @@ export function diasQueSePuedenMarcar(
   return DIAS_DEL_PLAN.filter(d => corre[d] && planificable(d) && !apagadoPorElPlanDeSiempre(horarios[d]));
 }
 
-/** Los días con cambio «solo esta semana» (fecha propia) entre los que se pueden marcar. */
+/** Los días con cambio «por semana» (fecha propia) entre los que se pueden marcar. */
 export function diasConCambioSoloEstaSemana(
   marcables: readonly DiaDelPlan[],
   horarios: Readonly<Record<string, DiaDelEditor>>,
@@ -83,7 +84,7 @@ export function diasConCambioSoloEstaSemana(
 }
 
 /**
- * Marcar o desmarcar un día en «Solo esta semana»: nunca queda vacío (en este alcance «sin días marcados» no significa «general») y
+ * Marcar o desmarcar un día en «Por semana»: nunca queda vacío (en este alcance «sin días marcados» no significa «general») y
  * siempre en el orden de la semana. Un día que no se puede marcar no hace nada.
  */
 export function alternarDiaDeLaSemana(
@@ -98,25 +99,9 @@ export function alternarDiaDeLaSemana(
   return DIAS_DEL_PLAN.filter(d => d === dia || marcados.includes(d));
 }
 
-/** El rótulo de los días en «Solo esta semana»: «Toda esta semana» con todos los que faltan, o «Solo sáb, dom». */
-export function rotuloDeLosDiasDeLaSemana(marcados: readonly DiaDelPlan[], marcables: readonly DiaDelPlan[]): string {
-  return marcados.length === marcables.length ? 'Toda esta semana' : `Solo ${diasEnFrase(marcados)}`;
-}
-
-/** «Cambiado solo esta semana: sáb, dom», o `null` si ningún día tiene cambio propio. */
-export function lineaDeLosCambiosDeLaSemana(conCambio: readonly DiaDelPlan[]): string | null {
-  return conCambio.length === 0 ? null : `Cambiado solo esta semana: ${diasEnFrase(conCambio)}`;
-}
-
-/** La ayuda bajo la fila de días en «Solo esta semana». */
-export function ayudaDeLaSemana(marcados: readonly DiaDelPlan[], marcables: readonly DiaDelPlan[]): string {
-  const cuales = marcados.length === marcables.length ? 'los días que faltan' : diasEnFrase(marcados);
-  return `Solo esta semana: ${cuales}. Tu plan de siempre no cambia. Hoy y lo pasado van con candado.`;
-}
-
 /**
- * El botón de guardar en «Solo esta semana»: «Guardar 07:00 · solo esta semana» con todos los días que faltan y «Guardar aviso · sáb, dom ·
- * solo esta semana» con algunos. Es el texto de siempre (`textoDelBoton`) con el alcance dicho al final.
+ * El botón de guardar en «Por semana»: «Guardar 21:30 · semana 9–15 nov» con todos los días que faltan y «Guardar aviso · sáb, dom · semana
+ * 9–15 nov» con algunos. Es el texto de siempre (`textoDelBoton`) con la semana dicha al final.
  */
 export function textoDelBotonDeLaSemana({
   guardando,
@@ -125,6 +110,7 @@ export function textoDelBotonDeLaSemana({
   que,
   hora,
   alarma,
+  semana,
 }: {
   guardando: boolean;
   marcados: readonly DiaDelPlan[];
@@ -132,6 +118,8 @@ export function textoDelBotonDeLaSemana({
   que: QueGuardarConAlarma;
   hora: string;
   alarma: boolean;
+  /** La semana en corto: «9–15 nov» (`rangoCortoDeLaSemana`). */
+  semana: string;
 }): string {
   if (guardando) return 'Guardando…';
   const todos = marcados.length === marcables.length;
@@ -139,10 +127,10 @@ export function textoDelBotonDeLaSemana({
   const base = textoDelBoton({ guardando, dias: [...marcados], que, hora, alarma });
   const cierreDeLosDias = ` · ${diasEnFrase(marcados)}`;
   const sinDias = todos && base.endsWith(cierreDeLosDias) ? base.slice(0, base.length - cierreDeLosDias.length) : base;
-  return `${sinDias} · solo esta semana`;
+  return `${sinDias} · semana ${semana}`;
 }
 
-/** Lo que se tocó en el editor, para armar el pedido de «Solo esta semana». */
+/** Lo que se tocó en el editor, para armar el pedido de «Por semana». */
 export interface TocadoParaLaSemana {
   /** Los días marcados, en el orden de la semana. */
   dias: readonly DiaDelPlan[];
@@ -183,12 +171,12 @@ export function cambiosDeLaSemana(tocado: TocadoParaLaSemana): CambioDeFechaApi[
   });
 }
 
-/** El cuerpo para apagar esos días solo esta semana. */
+/** El cuerpo para apagar esos días en esa semana. */
 export function cambiosParaApagar(dias: readonly DiaDelPlan[], fechas: Readonly<Record<DiaDelPlan, string>>): CambioDeFechaApi[] {
   return dias.map(dia => ({ date: fechas[dia], active: false }));
 }
 
-/** El cuerpo para devolver esos días al plan de siempre (o volver a encender uno apagado solo esta semana). */
+/** El cuerpo para devolver esos días al plan de siempre (o volver a encender uno apagado en esa semana). */
 export function cambiosParaVolverAlPlanDeSiempre(
   dias: readonly DiaDelPlan[],
   fechas: Readonly<Record<DiaDelPlan, string>>,
@@ -216,18 +204,21 @@ export function confirmacionDeLaSemana({
   aviso,
   dias,
   alarma,
+  semana,
 }: {
   que: QueGuardarConAlarma;
   hora: string;
   aviso: readonly number[] | null;
   dias: readonly DiaDelPlan[];
   alarma: boolean;
+  /** La semana en corto: «9–15 nov». */
+  semana: string;
 }): string {
-  const cuales = diasEnFrase(dias);
+  const cuales = dias.length === DIAS_DEL_PLAN.length ? 'todos los días' : `los ${diasEnFrase(dias)}`;
   const partes: string[] = [];
   if (que === 'hora' || que === 'ambos') partes.push(`a las ${hora}`);
   if ((que === 'aviso' || que === 'ambos') && aviso) partes.push(aviso.length > 0 ? 'con aviso nuevo' : 'sin aviso');
   if (alarma) partes.push('con su alarma nueva');
   const queda = partes.length > 0 ? partes.join(', ') : 'como lo pediste';
-  return `Queda ${queda} los ${cuales}, solo esta semana. Tu plan de siempre no cambia.`;
+  return `Queda ${queda} ${cuales} de la semana ${semana}.`;
 }

@@ -433,3 +433,60 @@ describe('«Repetir si no la atiendo» (spec 009) respeta la fecha propia', () =
     expect(planDeRepeticiones(entrada({ fechas: [] }), MARTES_5AM)).toEqual(planDeRepeticiones(entrada(), MARTES_5AM));
   });
 });
+
+describe('«Por semana»: un cambio en una semana lejana (2026-11-02, hasta la última del programa)', () => {
+  it('un sábado dos semanas adelante: los sábados de antes siguen con lo de siempre (de fecha), el cambio suena a su hora y la cola sigue', () => {
+    // Hoy es martes 20/10; el sábado 7 de noviembre es la semana +2 (18 días): no es ni la en curso ni la siguiente.
+    const plan = planDeAlarmas(entradaDelPlan({
+      fechas: [propia('2026-11-07', { hora: '09:00', avisos: [0] })],
+    }));
+    const sabados = deFecha(plan);
+    expect(sabados.map(p => instante(p))).toEqual([
+      fecha(2026, 10, 24, 6, 50).getTime(),
+      fecha(2026, 10, 31, 6, 50).getTime(),
+      fecha(2026, 11, 7, 9, 0).getTime(),
+      fecha(2026, 11, 14, 6, 50).getTime(),
+      fecha(2026, 11, 21, 6, 50).getTime(),
+    ]);
+    expect(sabados.map(p => p.horaDelDia)).toEqual(['07:00', '07:00', '09:00', '07:00', '07:00']);
+    expect(sabados.map(p => p.identificador)).toEqual([
+      'habito-h-gym-d6-0',
+      'habito-h-gym-f20261031-0',
+      'habito-h-gym-f20261107-0',
+      'habito-h-gym-f20261114-0',
+      'habito-h-gym-f20261121-0',
+    ]);
+    // Los otros seis días no se enteran: siguen semanales.
+    expect(semanales(plan)).toHaveLength(6);
+    expect(semanales(plan).some(p => p.diaIso === 6)).toBe(false);
+  });
+
+  it('apagar un día de una semana lejana: ese día no suena, los de antes y los de después sí', () => {
+    const plan = planDeAlarmas(entradaDelPlan({ fechas: [propia('2026-11-07', { activo: false })] }));
+    const instantes = deFecha(plan).map(p => instante(p));
+    expect(instantes).toContain(fecha(2026, 10, 31, 6, 50).getTime());
+    expect(instantes).not.toContain(fecha(2026, 11, 7, 6, 50).getTime());
+    expect(instantes).toContain(fecha(2026, 11, 14, 6, 50).getTime());
+  });
+
+  it('dos semanas completas planificadas con tres avisos: el tope gasta las más próximas primero y la cola vuelve cuando se abre la app', () => {
+    // Semana +1 (26/10 al 1/11) y semana +2 (2/11 al 8/11), todos los días, 08:00 con avisos de 30, 10 y a la hora.
+    const dias = Array.from({ length: 14 }, (_, i) => {
+      const f = fecha(2026, 10, 26 + i);
+      return `${f.getFullYear()}-${String(f.getMonth() + 1).padStart(2, '0')}-${String(f.getDate()).padStart(2, '0')}`;
+    });
+    const plan = planDeAlarmas(entradaDelPlan({ fechas: dias.map(f => propia(f, { hora: '08:00', avisos: [30, 10, 0] })) }));
+    const delPlan = deFecha(plan);
+
+    expect(delPlan).toHaveLength(TOPE_DE_ALARMAS_DE_FECHA);
+    // Hoy y los cinco días de antes (con lo de siempre, uno por día) y los 14 días planificados, de tres avisos: 6 + 42 = 48.
+    expect(Math.max(...delPlan.map(instante))).toBeLessThan(fecha(2026, 11, 9, 0, 0).getTime());
+    expect(delPlan.filter(p => instante(p) >= fecha(2026, 11, 2, 0, 0).getTime())).toHaveLength(7 * 3);
+    // Cada día planificado conserva sus tres avisos a la hora planificada (07:30, 07:50 y 08:00).
+    const del3Nov = delPlan.filter(p => instante(p) >= fecha(2026, 11, 3, 0, 0).getTime() && instante(p) < fecha(2026, 11, 4, 0, 0).getTime());
+    expect(del3Nov.map(p => instante(p))).toEqual([fecha(2026, 11, 3, 7, 30).getTime(), fecha(2026, 11, 3, 7, 50).getTime(), fecha(2026, 11, 3, 8, 0).getTime()]);
+    // Nunca dos alarmas con el mismo identificador y ninguna semanal: los siete días están afectados.
+    expect(new Set(porDia(plan).map(p => p.identificador)).size).toBe(porDia(plan).length);
+    expect(semanales(plan)).toHaveLength(0);
+  });
+});

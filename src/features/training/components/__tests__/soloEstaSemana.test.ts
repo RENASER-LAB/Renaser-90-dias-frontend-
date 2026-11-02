@@ -7,9 +7,9 @@ import type { HabitItem } from '../../../../screens/TrainingScreen';
 import { ApiError } from '../../../../services/http/apiClient';
 
 /**
- * Spec 028 (decisión del dueño 028-1 A): el alcance «Solo esta semana» del editor de Planificar, montado de verdad. Hoy es un miércoles
+ * Spec 028 (decisión del dueño 028-1 A): el alcance «Por semana» (antes «Solo esta semana») del editor de Planificar, montado de verdad. Hoy es un miércoles
  * (2 de noviembre de 2026 es lunes): se pueden cambiar jueves a domingo. El resto del editor es el de siempre (specs 008 a 011) y no
- * se prueba acá: lo que importa es que «Todas las semanas» sea IDÉNTICO a hoy y que «Solo esta semana» mande SOLO lo tocado, por fecha.
+ * se prueba acá: lo que importa es que «Siempre» sea IDÉNTICO a hoy y que «Por semana» mande SOLO lo tocado, por fecha.
  */
 
 const FECHAS = {
@@ -185,13 +185,13 @@ describe('FR-021: contra un servidor anterior la hoja es la de siempre', () => {
   });
 });
 
-describe('«Todas las semanas» es IDÉNTICO a hoy (SC-007)', () => {
-  it('arranca en «Todas las semanas», sin pedir la semana, con los textos de siempre', async () => {
+describe('«Siempre» es IDÉNTICO a hoy (SC-007)', () => {
+  it('arranca en «Siempre», sin pedir la semana, con los rótulos de siempre', async () => {
     raiz = await montar();
     await abrir(raiz, 'Jugo verde');
     expect(control(raiz)).toHaveLength(1);
     expect(control(raiz)[0].props.valor).toBe('siempre');
-    expect(control(raiz)[0].props.opciones.map((o: { etiqueta: string }) => o.etiqueta)).toEqual(['Todas las semanas', 'Solo esta semana']);
+    expect(control(raiz)[0].props.opciones.map((o: { etiqueta: string }) => o.etiqueta)).toEqual(['Siempre', 'Por semana']);
     expect(mockSemana).not.toHaveBeenCalled();
     expect(textos(raiz)).toContain('Todos los días');
     expect(filaDeDias().enEdicion).toEqual([]);
@@ -220,7 +220,7 @@ describe('«Todas las semanas» es IDÉNTICO a hoy (SC-007)', () => {
   });
 });
 
-describe('«Solo esta semana»: los días', () => {
+describe('«Por semana»: los días', () => {
   it('lee la semana del editor, marca los días que faltan y no deja marcar hoy ni lo pasado', async () => {
     raiz = await montar();
     await abrir(raiz, 'Jugo verde');
@@ -228,9 +228,7 @@ describe('«Solo esta semana»: los días', () => {
 
     expect(mockSemana).toHaveBeenCalledWith('h-jugo', '2026-11-02');
     expect(filaDeDias().enEdicion).toEqual(['JUE', 'VIE', 'SÁB', 'DOM']);
-    const todo = textos(raiz);
-    expect(todo).toContain('Toda esta semana');
-    expect(todo).toContain('Solo esta semana: los días que faltan. Tu plan de siempre no cambia.');
+    expect(textos(raiz)).toContain('Semana del 2 al 8 nov');
     // Hoy y lo pasado no se marcan.
     await act(async () => { filaDeDias().onAlternarDia('LUN'); });
     expect(filaDeDias().enEdicion).toEqual(['JUE', 'VIE', 'SÁB', 'DOM']);
@@ -242,13 +240,12 @@ describe('«Solo esta semana»: los días', () => {
     await cambiarAlcance(raiz, 'semana');
     await act(async () => { filaDeDias().onAlternarDia('JUE'); });
     expect(filaDeDias().enEdicion).toEqual(['VIE', 'SÁB', 'DOM']);
-    expect(textos(raiz)).toContain('Solo vie, sáb, dom');
     await act(async () => { filaDeDias().onAlternarDia('VIE'); filaDeDias().onAlternarDia('SÁB'); });
     await act(async () => { filaDeDias().onAlternarDia('DOM'); });
     expect(filaDeDias().enEdicion).toEqual(['DOM']);
   });
 
-  it('el día que ya tiene cambio solo esta semana se distingue, y se dice en una línea', async () => {
+  it('el día que ya tiene cambio de esa semana se distingue con un punto, sin una línea de explicación', async () => {
     mockSemana.mockResolvedValue(semana({ SATURDAY: { customDate: true, customTime: true, triggerTime: '10:00:00' } }));
     raiz = await montar();
     await abrir(raiz, 'Jugo verde');
@@ -256,7 +253,7 @@ describe('«Solo esta semana»: los días', () => {
     const { marcaDelDia } = filaDeDias();
     expect(marcaDelDia!('SÁB')).toEqual({ largo: 'Cambiado solo esta semana' });
     expect(marcaDelDia!('VIE')).toBeNull();
-    expect(textos(raiz)).toContain('Cambiado solo esta semana: sáb');
+    expect(textos(raiz)).not.toContain('Cambiado solo esta semana: sáb');
   });
 
   it('un día que el plan de siempre apaga no corre ni se puede marcar', async () => {
@@ -268,7 +265,7 @@ describe('«Solo esta semana»: los días', () => {
     expect(filaDeDias().corre.DOM).toBe(false);
   });
 
-  it('si no se puede leer la semana se vuelve a «Todas las semanas» y se dice', async () => {
+  it('si no se puede leer la semana se vuelve a «Siempre» y se dice', async () => {
     mockSemana.mockRejectedValue(new ApiError(500, 'se cayó'));
     raiz = await montar();
     await abrir(raiz, 'Jugo verde');
@@ -278,7 +275,7 @@ describe('«Solo esta semana»: los días', () => {
     expect(textos(raiz)).toContain('Todos los días');
   });
 
-  it('volver a «Todas las semanas» deja el editor como estaba', async () => {
+  it('volver a «Siempre» deja el editor como estaba', async () => {
     raiz = await montar();
     await abrir(raiz, 'Jugo verde');
     await cambiarAlcance(raiz, 'semana');
@@ -289,13 +286,13 @@ describe('«Solo esta semana»: los días', () => {
   });
 });
 
-describe('«Solo esta semana»: guardar SOLO lo tocado, por fecha', () => {
+describe('«Por semana»: guardar SOLO lo tocado, por fecha', () => {
   it('sin tocar nada no hay nada que guardar: el botón está apagado y dice el alcance', async () => {
     raiz = await montar();
     await abrir(raiz, 'Jugo verde');
     await cambiarAlcance(raiz, 'semana');
     const boton = botonGuardar(raiz);
-    expect(boton.props.label).toBe('Guardar 09:00 · solo esta semana');
+    expect(boton.props.label).toBe('Guardar 09:00 · semana 2–8 nov');
     expect(boton.props.disabled).toBe(true);
     await guardar(raiz);
     expect(mockGuardarSemana).not.toHaveBeenCalled();
@@ -306,7 +303,7 @@ describe('«Solo esta semana»: guardar SOLO lo tocado, por fecha', () => {
     await abrir(raiz, 'Jugo verde');
     await cambiarAlcance(raiz, 'semana');
     await act(async () => { mockRueda.mock.lastCall![0].onCambiar(9, 30); });
-    expect(botonGuardar(raiz).props.label).toBe('Guardar 09:30 · solo esta semana');
+    expect(botonGuardar(raiz).props.label).toBe('Guardar 09:30 · semana 2–8 nov');
     await guardar(raiz);
 
     expect(mockGuardarSemana).toHaveBeenCalledTimes(1);
@@ -319,7 +316,7 @@ describe('«Solo esta semana»: guardar SOLO lo tocado, por fecha', () => {
     // Lo de siempre NO se toca.
     expect(mockCambiarHorario).not.toHaveBeenCalled();
     expect(mockFijarHorarioDelDia).not.toHaveBeenCalled();
-    expect(textos(raiz)).toContain('Queda a las 09:30 los jue, vie, sáb, dom, solo esta semana. Tu plan de siempre no cambia.');
+    expect(textos(raiz)).toContain('Queda a las 09:30 los jue, vie, sáb, dom de la semana 2–8 nov.');
   });
 
   it('con dos días marcados solo van esos dos', async () => {
@@ -339,7 +336,7 @@ describe('«Solo esta semana»: guardar SOLO lo tocado, por fecha', () => {
     const [aLaHora] = raiz.root.findAll(n => typeof n.props.onPress === 'function'
       && typeof n.props.accessibilityLabel === 'string' && n.props.accessibilityLabel.startsWith('A la hora exacta'));
     await act(async () => { aLaHora.props.onPress(); });
-    expect(botonGuardar(raiz).props.label).toBe('Guardar aviso · solo esta semana');
+    expect(botonGuardar(raiz).props.label).toBe('Guardar aviso · semana 2–8 nov');
     await guardar(raiz);
     const dias = mockGuardarSemana.mock.calls[0][2];
     expect(dias).toHaveLength(4);
@@ -374,11 +371,11 @@ describe('«Solo esta semana»: guardar SOLO lo tocado, por fecha', () => {
     await guardar(raiz);
     expect(mockAlerta).toHaveBeenCalledWith('No pudimos guardar esta semana', expect.any(String));
     expect(mockAjustarAlarmas).not.toHaveBeenCalled();
-    expect(botonGuardar(raiz).props.label).toBe('Guardar 09:30 · solo esta semana');
+    expect(botonGuardar(raiz).props.label).toBe('Guardar 09:30 · semana 2–8 nov');
   });
 });
 
-describe('«Solo esta semana»: apagar y volver al plan de siempre', () => {
+describe('«Por semana»: apagar y volver al plan de siempre', () => {
   it('«No hacerlo» apaga esas fechas; en un obligatorio del programa no se ofrece', async () => {
     raiz = await montar([JUGO, OBLIGATORIO]);
     await abrir(raiz, 'Jugo verde');
@@ -409,7 +406,7 @@ describe('«Solo esta semana»: apagar y volver al plan de siempre', () => {
     expect(mockVolver).toHaveBeenCalledWith('h-jugo', '2026-11-02');
     expect(mockGuardarSemana).not.toHaveBeenCalled();
     expect(mockAjustarAlarmas).toHaveBeenCalledTimes(1);
-    expect(textos(raiz)).toContain('Vuelve al plan de siempre los sáb de esta semana.');
+    expect(textos(raiz)).toContain('Vuelve al plan de siempre los sáb de la semana 2–8 nov.');
   });
 
   it('con otros días con cambio sin marcar, solo se devuelven los marcados (reset por fecha)', async () => {

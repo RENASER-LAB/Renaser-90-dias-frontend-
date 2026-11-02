@@ -245,6 +245,7 @@ export default function TrainingScreen() {
    */
   const {
     diaPrograma,
+    duracionDias,
     inscrito,
     loading: cargandoDiaPrograma,
     recargar: recargarDiaPrograma,
@@ -966,6 +967,8 @@ export default function TrainingScreen() {
           sinLista={programaSinConfirmar || sinProgramaPropio || programaEnOtraFormacion !== null}
           userId={user?.id}
           renombre={renombre}
+          diaPrograma={cargandoDiaPrograma ? null : diaPrograma}
+          duracionDias={duracionDias}
           onGuardado={texto => {
             void recargarEntrenamiento();
             // El hábito recién creado: se confirma en línea (2026-10-05).

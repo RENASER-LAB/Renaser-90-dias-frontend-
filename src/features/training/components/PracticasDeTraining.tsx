@@ -49,6 +49,8 @@ export function PracticasDeTraining({
   sinLista,
   userId,
   renombre,
+  diaPrograma,
+  duracionDias,
   onGuardado,
   confirmacion,
   onConfirmacionTerminada,
@@ -70,6 +72,9 @@ export function PracticasDeTraining({
   sinLista: boolean;
   userId: string | undefined;
   renombre: ReturnType<typeof useRenombreLocal>;
+  /** El día del programa y cuánto dura (`/home`): hasta qué semana deja planificar «Por semana». Opcionales. */
+  diaPrograma?: number | null;
+  duracionDias?: number | null;
   /** Hubo cambios en Planificar: Training recarga. Con texto, se confirma en línea. */
   onGuardado: (confirmacion?: string) => void;
   confirmacion: { clave: number; texto: string } | null;
@@ -203,6 +208,8 @@ export function PracticasDeTraining({
         nombreDimension={dimension?.nombre}
         habits={delaDimension}
         renombre={renombre}
+        diaPrograma={diaPrograma}
+        duracionDias={duracionDias}
         onCerrar={() => onEstado({ ...estado, dimension: null })}
         onGuardado={texto => {
           onEstado({ ...estado, dimension: null });
