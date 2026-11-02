@@ -18,11 +18,7 @@ appId: com.renaser.app
     centerElement: true
     timeout: 30000
 - tapOn: "(?i).*KILÓMETROS DIARIOS.*"
-- runFlow:
-    when:
-      visible: "Tomar foto"
-    commands:
-      - tapOn: "Tomar foto"
+# La fila de Kilómetros abre DIRECTO la hoja de origen («Tomar foto» / «Elegir de la galería»): no hay una hoja del hábito antes. (Antes este bloque tocaba «Tomar foto» de la hoja del hábito; hoy ese texto es el de la propia hoja de origen y saltaba la comprobación.)
 - extendedWaitUntil:
     visible: "Elegir de la galería.*"
     timeout: 15000

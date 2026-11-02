@@ -13,5 +13,9 @@ appId: com.renaser.app
     timeout: 15000
 - takeScreenshot: 20a-administracion
 - back
-- assertVisible: "Abrir Administración"
+# Yo vuelve arriba (sin desplazar): la fila de Administración queda más abajo, se baja hasta ella.
+- scrollUntilVisible:
+    element: "Abrir Administración"
+    direction: DOWN
+    timeout: 30000
 - assertVisible: "TRAINING"
