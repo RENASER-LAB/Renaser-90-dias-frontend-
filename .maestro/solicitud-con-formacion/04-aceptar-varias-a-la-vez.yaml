@@ -5,11 +5,24 @@ appId: com.renaser.app
 ---
 - runFlow: comun-abrir-solicitudes.yaml
 - extendedWaitUntil:
-    visible: "Sol-Lote Uno"
+    visible: "Seleccionar varias"
     timeout: 30000
 - tapOn: "Seleccionar varias"
+# Con 19 solicitudes por decidir las tres quedan abajo de lo que se ve al abrir (van de la más nueva a la más vieja): se baja hasta cada una.
+- scrollUntilVisible:
+    element: "Sol-Lote Uno.*"
+    direction: DOWN
+    timeout: 40000
 - tapOn: "Sol-Lote Uno.*"
+- scrollUntilVisible:
+    element: "Sol-Lote Dos.*"
+    direction: DOWN
+    timeout: 40000
 - tapOn: "Sol-Lote Dos.*"
+- scrollUntilVisible:
+    element: "Sol-Lote Tres.*"
+    direction: DOWN
+    timeout: 40000
 - tapOn: "Sol-Lote Tres.*"
 - assertVisible: "Aceptar 3 solicitudes"
 - takeScreenshot: S04a-tres-marcadas

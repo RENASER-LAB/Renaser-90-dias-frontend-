@@ -7,8 +7,13 @@ appId: com.renaser.app
 ---
 - runFlow: comun-abrir-solicitudes.yaml
 - extendedWaitUntil:
-    visible: "Sol-Diplomado Uno"
+    visible: "Seleccionar varias"
     timeout: 30000
+# Con 19 solicitudes por decidir, el «Aceptar» de esta queda abajo de lo que se ve al abrir: se baja hasta él.
+- scrollUntilVisible:
+    element: "Aceptar a Sol-Diplomado Uno"
+    direction: DOWN
+    timeout: 40000
 - tapOn: "Aceptar a Sol-Diplomado Uno"
 - extendedWaitUntil:
     visible: "Aceptar solicitud"
@@ -38,10 +43,17 @@ appId: com.renaser.app
 - extendedWaitUntil:
     visible: "Sol-Diplomado Uno entró al Diplomado Renaser de 1 año como Aprendiz, con diagnóstico.*"
     timeout: 20000
+# Al aceptar, la lista de «Por decidir» quedó desplazada: las pestañas están arriba, se sube hasta ellas.
+- scrollUntilVisible:
+    element: "Aceptadas"
+    direction: UP
+    timeout: 40000
 - tapOn: "Aceptadas"
 - tapOn: "Diplomado"
-- extendedWaitUntil:
-    visible: "Sol-Diplomado Uno"
-    timeout: 20000
+# Aunque se filtre por Diplomado, la lista tiene varias: se baja hasta la de esta corrida.
+- scrollUntilVisible:
+    element: "Sol-Diplomado Uno"
+    direction: DOWN
+    timeout: 60000
 - assertVisible: "Diplomado 1 año · Aprendiz · con diagnóstico"
 - takeScreenshot: S02c-filtradas-por-diplomado
