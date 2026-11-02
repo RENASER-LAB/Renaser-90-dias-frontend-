@@ -1,0 +1,96 @@
+# «Por semana» con flechas y deslizando (2026-11-02, pedido del dueño: «debería deslizar hacia la derecha y poder planificar»): arriba de la
+# fila de días va «‹ Semana del … al … ›»; se pasa de semana con las flechas o deslizando la fila de días (el dedo a la izquierda trae la
+# semana siguiente; a la derecha, la anterior), desde la semana en curso hasta la última del programa. Lo que se guarda vale SOLO para la
+# semana que se ve; la semana anterior no cambia.
+# ESCRITO Y SIN CORRER. Precondición: backend con la spec 028 y su ampliación a cualquier semana del programa; aprendiz con el Día 1 elegido
+# y un hábito de la dimensión `DIMENSION` SIN cambios por semana (por defecto «Escritura libre nocturna» de «Mente»; otro:
+# `-e HABITO="Jugo verde" -e DIMENSION=Cuerpo`). Los avisos que se van solos a los 3 s no se esperan: se comprueba el estado que queda.
+# cuenta: aprendiz
+appId: com.renaser.app
+env:
+  HABITO: "Escritura libre nocturna"
+  DIMENSION: "Mente"
+---
+- runFlow: ../comun/ya-adentro.yaml
+- runFlow: ../comun/abrir-training.yaml
+- tapOn: "Tus prácticas: planificar"
+- extendedWaitUntil:
+    visible: "Tus prácticas"
+    timeout: 15000
+- tapOn: "${DIMENSION}: .* de .* cumplidos hoy"
+- extendedWaitUntil:
+    visible: "Toca uno para cambiarle la hora\\."
+    timeout: 15000
+- tapOn: "${HABITO}, .*"
+- extendedWaitUntil:
+    visible: "Guardar .*"
+    timeout: 15000
+- tapOn: "El cambio vale solo para la semana que elijas"
+- extendedWaitUntil:
+    visible: "Semana del .* al .*"
+    timeout: 15000
+# En la primera semana no se puede ir hacia atrás; hacia adelante sí.
+- assertVisible:
+    text: "Semana anterior"
+    enabled: false
+- assertVisible:
+    text: "Semana siguiente"
+    enabled: true
+- takeScreenshot: W01a-semana-en-curso
+# Con la flecha: la semana siguiente. Todos sus días se pueden marcar (sin candado).
+- tapOn: "Semana siguiente"
+- assertVisible:
+    text: "Semana anterior"
+    enabled: true
+- assertVisible: "Guardar .* · semana .*"
+- assertVisible: "Lunes .*"
+- takeScreenshot: W01b-semana-siguiente
+# Deslizando la fila de días: a la izquierda, otra semana más adelante.
+- swipe:
+    from:
+      text: "Miércoles .*"
+    direction: LEFT
+- assertVisible:
+    text: "Semana anterior"
+    enabled: true
+- takeScreenshot: W01c-deslizar-a-la-izquierda
+# A la derecha, de vuelta (dos veces: a la primera semana).
+- swipe:
+    from:
+      text: "Miércoles .*"
+    direction: RIGHT
+- swipe:
+    from:
+      text: "Miércoles .*"
+    direction: RIGHT
+- assertVisible:
+    text: "Semana anterior"
+    enabled: false
+- takeScreenshot: W01d-deslizar-a-la-derecha
+# Se guarda en la segunda semana, y solo en ella.
+- tapOn: "Semana siguiente"
+- tapOn: "A la hora exacta"
+- tapOn: "Guardar aviso · .*semana .*"
+- extendedWaitUntil:
+    visible: "Queda .* de la semana .*"
+    timeout: 20000
+    optional: true
+- extendedWaitUntil:
+    visible: "Volver al plan de siempre los .*"
+    timeout: 20000
+- assertVisible: ".*cambiado solo esta semana.*"
+- takeScreenshot: W01e-guardado-en-la-segunda-semana
+# La primera semana no cambió; al volver a la segunda, sigue marcada (sin pedir nada de nuevo).
+- tapOn: "Semana anterior"
+- assertNotVisible: ".*cambiado solo esta semana.*"
+- tapOn: "Semana siguiente"
+- assertVisible: ".*cambiado solo esta semana.*"
+# Limpieza: la segunda semana vuelve al plan de siempre.
+- tapOn: "Volver al plan de siempre los .*"
+- extendedWaitUntil:
+    notVisible: "Volver al plan de siempre los .*"
+    timeout: 20000
+- assertNotVisible: ".*cambiado solo esta semana.*"
+- back
+- back
+- back

@@ -1,11 +1,16 @@
-# «Solo esta semana» (spec 028, decisión del dueño 028-1 A): el editor de Planificar ofrece «Todas las semanas» (por defecto, lo de
-# siempre) y «Solo esta semana». En el segundo, todos los días que faltan vienen marcados, un cambio de aviso vale solo para esos días,
-# la pantalla lo dice («Cambiado solo esta semana: …») y «Volver al plan de siempre» lo devuelve. El plan de siempre no se toca.
-# ESCRITO Y SIN CORRER (no se usó el emulador). Precondición: backend con la spec 028 (V130 y V131); aprendiz con el Día 1 elegido; el
-# hábito propio «Meditar 10 minutos» (`reset-hoy.sql`) SIN aviso ni cambios solo-semana; hoy no es sábado (si es domingo, la hoja muestra
-# la semana que empieza y todos sus días se pueden cambiar).
+# «Siempre | Por semana» (spec 028, decisión del dueño 028-1 A; 2026-11-02: nombres nuevos y sin párrafos de ayuda): el editor de
+# Planificar ofrece «Siempre» (por defecto, lo de siempre) y «Por semana». En «Por semana» se ve «Semana del … al …», todos los días que
+# faltan vienen marcados, un cambio de aviso vale solo para esos días, el día cambiado lleva el punto (su etiqueta dice «cambiado solo
+# esta semana») y «Volver al plan de siempre» lo devuelve. El plan de siempre no se toca.
+# ESCRITO Y SIN CORRER. Precondición: backend con la spec 028 (V130 y V131); aprendiz con el Día 1 elegido; un hábito de la dimensión
+# `DIMENSION` SIN cambios por semana (por defecto «Escritura libre nocturna» de «Mente», que existe en la base de prueba de Ana;
+# otro: `-e HABITO="Jugo verde" -e DIMENSION=Cuerpo`). Los avisos que se van solos a los 3 s («Queda con aviso nuevo…») NO se esperan: se
+# comprueba el estado que queda guardado (el punto del día y «Volver al plan de siempre»).
 # cuenta: aprendiz
 appId: com.renaser.app
+env:
+  HABITO: "Escritura libre nocturna"
+  DIMENSION: "Mente"
 ---
 - runFlow: ../comun/ya-adentro.yaml
 - runFlow: ../comun/abrir-training.yaml
@@ -13,54 +18,66 @@ appId: com.renaser.app
 - extendedWaitUntil:
     visible: "Tus prácticas"
     timeout: 15000
-- tapOn: "Mente: .* de .* cumplidos hoy"
+- tapOn: "${DIMENSION}: .* de .* cumplidos hoy"
 - extendedWaitUntil:
     visible: "Toca uno para cambiarle la hora\\."
     timeout: 15000
-- tapOn: "Meditar 10 minutos, a las 20:15"
+- tapOn: "${HABITO}, .*"
 - extendedWaitUntil:
     visible: "Guardar .*"
     timeout: 15000
-# Por defecto, «Todas las semanas»: la hoja de siempre.
-- assertVisible: "Todas las semanas"
-- assertVisible: "Solo esta semana"
+# Por defecto, «Siempre»: la hoja de siempre, sin párrafos de ayuda.
+- assertVisible: "Siempre"
+- assertVisible: "Por semana"
 - assertVisible: "Todos los días"
-- takeScreenshot: S01a-alcance-por-defecto
-# «Solo esta semana»: los días que faltan, marcados; el plan de siempre no cambia.
-- tapOn: "El cambio vale solo para esta semana"
+- assertNotVisible: "Toca un día para darle.*"
+- assertNotVisible: "Todas las semanas"
+- takeScreenshot: S01a-siempre-por-defecto
+# «Por semana»: la semana en curso, los días que faltan marcados; el plan de siempre no cambia.
+- tapOn: "El cambio vale solo para la semana que elijas"
 - extendedWaitUntil:
-    visible: "Toda esta semana"
+    visible: "Semana del .* al .*"
     timeout: 15000
-- assertVisible: "Solo esta semana: .* Tu plan de siempre no cambia\\..*"
-- assertVisible: "Guardar .* · solo esta semana"
-- takeScreenshot: S01b-solo-esta-semana
-# Un aviso «A la hora» solo esta semana.
+- assertVisible: "Guardar .* · semana .*"
+- assertNotVisible: "Tu plan de siempre no cambia.*"
+- assertNotVisible: "Toda esta semana"
+- takeScreenshot: S01b-por-semana
+# Un aviso «A la hora» solo en esta semana.
 - tapOn: "A la hora exacta"
-- assertVisible: "Guardar aviso · solo esta semana"
-- tapOn: "Guardar aviso · solo esta semana"
+- assertVisible: "Guardar aviso · .*semana .*"
+- tapOn: "Guardar aviso · .*semana .*"
+# El mensaje de «Queda con aviso nuevo…» dura ~3 s y Maestro puede llegar tarde: no se espera. Lo que importa es lo que queda guardado.
 - extendedWaitUntil:
-    visible: "Queda con aviso nuevo .* solo esta semana\\. Tu plan de siempre no cambia\\."
+    visible: "Queda .* de la semana .*"
     timeout: 20000
-- assertVisible: "Cambiado solo esta semana: .*"
-- assertVisible: "Volver al plan de siempre los .*"
-- takeScreenshot: S01c-cambiado-solo-esta-semana
-# El plan de siempre sigue intacto: «Todas las semanas» no tiene el aviso.
-- tapOn: "El cambio vale para todas las semanas"
+    optional: true
+- extendedWaitUntil:
+    visible: "Volver al plan de siempre los .*"
+    timeout: 20000
+- assertVisible: ".*cambiado solo esta semana.*"
+- takeScreenshot: S01c-cambiado-por-semana
+# El plan de siempre sigue intacto: «Siempre» no tiene el cambio.
+- tapOn: "El cambio vale siempre, para todas las semanas"
 - extendedWaitUntil:
     visible: "Todos los días"
     timeout: 15000
-- assertNotVisible: "Cambiado solo esta semana: .*"
-- takeScreenshot: S01d-todas-las-semanas-sin-cambio
+- assertNotVisible: ".*cambiado solo esta semana.*"
+- takeScreenshot: S01d-siempre-sin-cambio
 # Volver al plan de siempre.
-- tapOn: "El cambio vale solo para esta semana"
+- tapOn: "El cambio vale solo para la semana que elijas"
 - extendedWaitUntil:
     visible: "Volver al plan de siempre los .*"
     timeout: 15000
 - tapOn: "Volver al plan de siempre los .*"
 - extendedWaitUntil:
-    visible: "Vuelve al plan de siempre los .* de esta semana\\."
+    visible: "Vuelve al plan de siempre los .*"
     timeout: 20000
-- assertNotVisible: "Cambiado solo esta semana: .*"
+    optional: true
+# El estado que queda: ya no hay día cambiado ni el enlace para volver.
+- extendedWaitUntil:
+    notVisible: "Volver al plan de siempre los .*"
+    timeout: 20000
+- assertNotVisible: ".*cambiado solo esta semana.*"
 - takeScreenshot: S01e-de-vuelta-al-plan-de-siempre
 - back
 - back
