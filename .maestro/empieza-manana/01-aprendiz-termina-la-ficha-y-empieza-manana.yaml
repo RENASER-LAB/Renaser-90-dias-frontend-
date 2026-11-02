@@ -1,25 +1,43 @@
-# 01 — El aprendiz que termina la ficha y los Términos ve «Tu programa empieza mañana», sin elegir nada, y «Entendido» activa el programa
-# (spec 036, D-309: antes era «Elige tu Día 1» con tres fechas). ESCRITO Y SIN CORRER.
+# 01 — El aprendiz que termina la ficha y firma los Términos queda con el programa ACTIVADO en ese momento: la pantalla «Tu programa empieza mañana» lo
+# activa sola al montarse (sin tocar nada), muestra la fecha de mañana y «Entendido» solo continúa a la app (spec 036, D-309 + ajuste del dueño del
+# 2026-11-02: «Firma, y al día siguiente ya es su día número 1»). ESCRITO Y SIN CORRER.
 # Precondición: backend con la spec 036; aprendiz de la Escuela con la ficha y los Términos hechos y SIN su programa activado (`programa_activado_en`
-# vacío). Con los Términos aceptados la app salta directo a este último paso. Se corre una vez por cuenta (activar no se deshace: volver a clonar la
-# base o usar otra cuenta sin activar). Si el programa de la cuenta es del Diplomado, mira `04`.
+# vacío). Con los Términos aceptados la app salta directo a este último paso. Se corre una vez por cuenta (activar no se deshace: para repetirlo, dejar
+# `programa_activado_en` en NULL o usar otra cuenta sin activar). Si el programa de la cuenta es del Diplomado, mira `04`.
 # cuenta: aprendiz
 appId: com.renaser.app
 ---
 - extendedWaitUntil:
     visible: "Tu programa empieza mañana"
     timeout: 60000
+# Nadie toca nada: la fecha aparece cuando el servidor responde («Preparando tu programa…» dura un instante y no se espera).
+- extendedWaitUntil:
+    visible: "(Lunes|Martes|Miércoles|Jueves|Viernes|Sábado|Domingo) [0-9]+ de [a-z]+"
+    timeout: 30000
+- assertNotVisible: "Preparando tu programa…"
 - takeScreenshot: M01a-tu-programa-empieza-manana
 # Poco texto: la fecha de mañana («<día> <n> de <mes>»), una línea con el plazo y un solo botón.
-- assertVisible: "(Lunes|Martes|Miércoles|Jueves|Viernes|Sábado|Domingo) [0-9]+ de [a-z]+"
 - assertVisible: "Son tus 90 días\\."
 - assertVisible: "Entendido"
 # Nada que elegir: ni lista de fechas ni los textos de antes.
 - assertNotVisible: "Elige tu Día 1"
 - assertNotVisible: "Confirmar mi Día 1"
 - assertNotVisible: "Elegir mi Día 1"
+# Cierra la app SIN tocar «Entendido»: el programa ya quedó activado al firmar. Al volver, el onboarding retoma en esta pantalla (se activa otra vez, el
+# servidor lo da por bueno: 200) con la misma fecha.
+- killApp
+- launchApp:
+    appId: com.renaser.app
+    stopApp: false
+- extendedWaitUntil:
+    visible: "Tu programa empieza mañana"
+    timeout: 120000
+- extendedWaitUntil:
+    visible: "(Lunes|Martes|Miércoles|Jueves|Viernes|Sábado|Domingo) [0-9]+ de [a-z]+"
+    timeout: 30000
+- takeScreenshot: M01b-retoma-con-la-misma-fecha
+# «Entendido» solo continúa: entra a la app y Hoy dice cuándo empieza (issue #72): el Día 1 es mañana, no hoy.
 - tapOn: "Entendido"
-# Entra a la app y Hoy dice cuándo empieza (issue #72): el Día 1 es mañana, no hoy.
 - extendedWaitUntil:
     visible: "TRAINING"
     timeout: 60000
@@ -28,4 +46,4 @@ appId: com.renaser.app
 - extendedWaitUntil:
     visible: ".*Tu programa empieza el .* de .*"
     timeout: 30000
-- takeScreenshot: M01b-hoy-dice-cuando-empieza
+- takeScreenshot: M01c-hoy-dice-cuando-empieza

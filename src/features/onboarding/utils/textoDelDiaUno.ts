@@ -10,9 +10,14 @@ import { plazoDelObjetivo } from '../../objetivos/utils/nombreDelObjetivo';
  *  - la fecha: «Martes 3 de noviembre» (la pone la pantalla, desde la que manda el servidor);
  *  - una línea con el plazo de SU programa: «Son tus 90 días.», «Son tus 3 meses.», «Es tu año.»;
  *  - el botón: «Entendido».
+ *
+ * En el onboarding (al firmar los Términos) el programa ya queda activado al llegar a esta pantalla: mientras responde el servidor dice
+ * «Preparando tu programa…», y «Entendido» solo continúa a la app.
  */
 export const TITULO_EMPIEZA_MANANA = 'Tu programa empieza mañana';
 export const BOTON_ENTENDIDO = 'Entendido';
+/** En el onboarding el programa se activa solo al llegar a la pantalla (al firmar); mientras responde el servidor se dice esto, sin fecha. */
+export const TEXTO_PREPARANDO = 'Preparando tu programa…';
 
 /**
  * «Son tus 90 días.», «Son tus 3 meses.» o «Es tu año.»: el plazo es el de la formación de la persona (`plazoDelObjetivo`: 90 días en la
@@ -48,4 +53,16 @@ export function fechaDelDiaUno(iso: string): string {
   const fecha = new Date(anio, mes - 1, dia);
   const texto = `${NOMBRES_DIA[fecha.getDay()]} ${fecha.getDate()} de ${NOMBRES_MES[fecha.getMonth()]}`;
   return texto.charAt(0).toUpperCase() + texto.slice(1);
+}
+
+/**
+ * ¿La fecha de inicio (`yyyy-MM-dd`) ya llegó, hoy o antes, en el reloj del teléfono? Sirve a la pantalla del onboarding: si la persona activó,
+ * cerró la app sin tocar «Entendido» y vuelve cuando su Día 1 ya empezó, decirle «empieza mañana» sería falso, así que entra directo. Se compara
+ * por componentes locales (como `fechaDelDiaUno`), sin pasar por UTC.
+ */
+export function yaEmpezo(iso: string, ahora: Date = new Date()): boolean {
+  const [anio, mes, dia] = iso.split('-').map(Number);
+  const inicio = new Date(anio, mes - 1, dia).getTime();
+  const hoy = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate()).getTime();
+  return inicio <= hoy;
 }

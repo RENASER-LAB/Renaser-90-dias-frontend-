@@ -70,8 +70,11 @@ export async function consultarActivacionPrograma(): Promise<EstadoActivacionPro
  * POST /api/v1/onboarding/activate-program — activa el programa con la fecha que devolvió `consultarActivacionPrograma` (mañana). El servidor
  * la valida: si ya no es mañana (pasó la medianoche con la pantalla abierta) responde 400 y no activa nada. Reintentar con la MISMA fecha
  * ya activada es un no-op (200); con una fecha distinta el backend responde 409 (`ApiError.esConflicto`).
+ *
+ * **Sin fecha** (`{}`, el valor por defecto) el servidor pone mañana en la zona de la persona, y un programa ya activado responde 200 con su fecha
+ * (idempotente, sin 409). Así activa el onboarding al firmar los Términos (spec 036); un servidor anterior a la 036 exige la fecha y responde 400.
  */
-export async function activarPrograma(input: ActivarProgramaInput): Promise<ActivarProgramaApi> {
+export async function activarPrograma(input: ActivarProgramaInput = {}): Promise<ActivarProgramaApi> {
   const r = await apiFetch<unknown>('/api/v1/onboarding/activate-program', { method: 'POST', body: input, timeoutMs: 15_000 });
   return validarRespuesta<ActivarProgramaApi>(activarProgramaSchema, r, 'POST /api/v1/onboarding/activate-program');
 }

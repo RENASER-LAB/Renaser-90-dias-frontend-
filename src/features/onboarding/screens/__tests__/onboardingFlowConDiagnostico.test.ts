@@ -84,9 +84,30 @@ describe('la ficha estándar no cambia', () => {
     expect(pantallaActual(await montar())).toBe('FICHA ESTANDAR');
   });
 
-  it('con Términos ya aceptados salta a «Tu programa empieza mañana», como antes', async () => {
+  it('con Términos ya aceptados salta a «Tu programa empieza mañana», como antes, y esa pantalla activa el programa sola', async () => {
     mockObtenerEstado.mockResolvedValue(estado({ termsAcceptedAt: '2026-10-30T10:00:00Z' }));
     expect(pantallaActual(await montar())).toBe('EMPIEZA MAÑANA');
+    expect(capturas['EMPIEZA MAÑANA'].activarAlMontar).toBe(true);
+  });
+
+  it('al firmar los Términos llega a «Tu programa empieza mañana» con la activación automática; «Entendido» (onActivated) entra a la app', async () => {
+    const r = await montar();
+    await act(async () => {
+      (capturas['FICHA ESTANDAR'].onComplete as (d: unknown) => void)({ identidad: { nombre: 'Ana' } });
+      await vaciar();
+    });
+    await act(async () => {
+      (capturas['TERMINOS'].onAccept as () => void)();
+      await vaciar();
+    });
+    expect(pantallaActual(r)).toBe('EMPIEZA MAÑANA');
+    expect(capturas['EMPIEZA MAÑANA'].activarAlMontar).toBe(true);
+    expect(mockCompletar).not.toHaveBeenCalled();
+    await act(async () => {
+      (capturas['EMPIEZA MAÑANA'].onActivated as () => void)();
+      await vaciar();
+    });
+    expect(mockCompletar).toHaveBeenCalledTimes(1);
   });
 
   it('sin red se queda en la ficha, como antes', async () => {

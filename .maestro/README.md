@@ -53,7 +53,7 @@ local (nunca contra producción).
   spec 034 y, además de la cuenta de Administración, la de un mentor con un aprendiz que ya respondió el Radar; ver su `README.md`.
 
 - `empieza-manana/` (spec 036, 2026-11-02): el programa empieza al día siguiente y la persona ya no elige su Día 1. «Tu programa empieza mañana … Entendido»
-  en el onboarding (01), la misma pantalla desde Hoy y Plan para el personal sin fila (02) y con la fila sin activar, Training y Mi Radar (03), y la línea del
+  en el onboarding, donde el programa se activa solo al firmar (01), la misma pantalla desde Hoy y Plan para el personal sin fila (02) y con la fila sin activar, Training y Mi Radar (03), y la línea del
   plazo según la formación (04). **Escritos y sin correr**; cada archivo dice su cuenta y su precondición (activar no se deshace: una vez por cuenta).
 
 ## Cómo correrla

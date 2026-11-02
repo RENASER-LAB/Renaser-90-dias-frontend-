@@ -45,8 +45,11 @@ export type EstadoActivacionProgramaApi = {
 
 /** Espejo de `ActivarProgramaRequest` (backend, `POST /onboarding/activate-program`). */
 export type ActivarProgramaInput = {
-  /** Formato `yyyy-MM-dd`: la que devolvió `EstadoActivacionProgramaApi` (mañana). Si ya no es mañana el servidor responde 400. */
-  startDate: string;
+  /**
+   * Formato `yyyy-MM-dd`: la que devolvió `EstadoActivacionProgramaApi` (mañana). Si ya no es mañana el servidor responde 400. Opcional desde la
+   * spec 036: ausente significa «mañana en tu zona» (así activa el onboarding al firmar); un servidor anterior la exige.
+   */
+  startDate?: string;
 };
 
 /** Espejo de `ActivarProgramaResponse` (backend, respuesta de `POST /onboarding/activate-program`). */

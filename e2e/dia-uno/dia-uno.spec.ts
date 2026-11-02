@@ -270,15 +270,32 @@ test('si otro dispositivo ya activó mientras la pantalla estaba abierta, «Ente
   await sinSelectorEnPestañas(page);
 });
 
-test('aprendiz que cerró tras Términos retoma directamente «Tu programa empieza mañana»', async ({ page, request }) => {
+test('aprendiz que cerró tras Términos retoma «Tu programa empieza mañana» y el programa ya queda activado al llegar, sin tocar nada', async ({ page, request }) => {
+  // Spec 036, ajuste del dueño (2026-11-02): «Firma, y al día siguiente ya es su día número 1». En el onboarding la pantalla activa SOLA al montarse
+  // (POST sin fecha); «Entendido» solo continúa a la app.
+  let envios = 0;
+  page.on('request', r => { if (r.url() === `${API}${ACT}` && r.method() === 'POST') envios++; });
   const token = await entrar(page, actor('TERMINOS_SIN_DIA'), true);
   await expect(pantallaDeManana(page)).toBeVisible();
   await expect(pestaña(page, 'hoy')).toHaveCount(0);
-  expect((await estado(request, token)).activated).toBe(false);
+  await expect(page.getByRole('radio')).toHaveCount(0);
+  // Sin tocar «Entendido» el servidor ya lo tiene activado, con inicio mañana.
+  await expect.poll(async () => (await estado(request, token)).activated).toBe(true);
+  const activado = await estado(request, token);
+  expect(activado.startDate).toBeTruthy();
+  expect(envios).toBe(1);
+  await expect(page.getByText(/^(Lunes|Martes|Miércoles|Jueves|Viernes|Sábado|Domingo) \d+ de \w+$/)).toBeVisible();
+  await expect(page.getByText('Preparando tu programa…')).toHaveCount(0);
+  // Cerrar y volver a abrir la app sin tocar nada: retoma en la misma pantalla, la activación es idempotente y la fecha no cambia.
   await page.reload();
   await expect(pantallaDeManana(page)).toBeVisible();
-  await activarMananaConLaPantalla(page);
+  await expect(pestaña(page, 'hoy')).toHaveCount(0);
+  await expect.poll(() => envios).toBe(2);
+  expect((await estado(request, token)).startDate).toBe(activado.startDate);
+  // «Entendido» solo continúa a la app: no manda otro pedido.
+  await confirmar(page).click();
   await expect(pestaña(page, 'hoy')).toBeVisible();
+  expect(envios).toBe(2);
 });
 
 test('«Ahora no» de una cuenta no esconde «Empezar mañana» de otra en el mismo navegador', async ({ page }) => {

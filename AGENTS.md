@@ -1597,6 +1597,14 @@ usuario no podrá elegir, lo hará al día siguiente. No es un gran cambio, pero
 * **Supuestos para el dueño**: «al día siguiente» es el día calendario siguiente (quien termina a las 23:58 empieza dos minutos después); `activate-tracking` queda como está; no hay
   aviso del teléfono nuevo.
 * **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire) y el backend con la spec 036 (sin migración); sin él la app funciona igual.
+  > **Corregido 2026-11-02, más tarde (ajuste del dueño: «Después de la ficha inicial ya no le sale qué día escogerá. Firma, y al día siguiente ya es su día número 1, ¿verdad?»).**
+  > En el **onboarding**, «Tu programa empieza mañana» ya no espera el toque: al montarse, justo después de firmar los Términos (o al reabrir la app con los Términos firmados),
+  > activa sola (`activarAlMontar`: `POST /onboarding/activate-program` sin fecha, una sola vez aunque se monte dos veces; `activacionAlFirmar`, `useActivacionAlFirmar`). Dice
+  > «Preparando tu programa…» sin fecha mientras responde; con la respuesta, la fecha del servidor y el plazo, y **«Entendido» solo continúa** a la app. Sin red: el mensaje de
+  > siempre y «Reintentar». Si ya había activado y su Día 1 ya llegó, entra directo sin decir «mañana»; contra un servidor anterior que exige la fecha, usa la primera que ofrece.
+  > **Siguen necesitando el toque** (para el personal el programa es opcional): Hoy, Plan, Yo, Training y Mi Radar, y las cuentas anteriores sin Día 1. Backend nuevo, ninguno (el
+  > cuerpo del POST ya era opcional). Maestro `empieza-manana/01` y `04` y `e2e/dia-uno` ajustados; Jest `diaUnoRecuperacion`, `activacionAlFirmar`, `textoDelDiaUno` y
+  > `onboardingFlowConDiagnostico`.
 
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 

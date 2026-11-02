@@ -6,6 +6,10 @@
 > «volver sin empezar», el 400 es «pasó la medianoche y la fecha cambió» y el 409 con otra fecha ya no puede darse entre dos teléfonos
 > (los dos mandan mañana: es idempotente, 200). Donde más abajo se lee «selector», «elegir» o «fecha inválida», léase esta pantalla.
 
+> **Ajuste 2026-11-02 (spec 036).** En el onboarding el programa se activa solo al llegar a «Tu programa empieza mañana» (al firmar los Términos): el
+> recorrido «aprendiz que cerró tras Términos» comprueba que el servidor ya lo tiene activado sin tocar nada, que volver a abrir lo retoma con la misma
+> fecha y que «Entendido» solo continúa. Las demás entradas (Hoy, Plan, Yo, Training) siguen activando con el toque.
+
 > **Cambio 2026-10-31 (spec 026).** Esta carpeta se llamaba `e2e/mapa-poder/` y traía también el recorrido del Mapa del Poder por
 > rol (`mapa-por-rol.spec.ts`). El Mapa de Renacimiento se retiró de la app y ese recorrido se borró; queda la suite del Día 1,
 > que no dependía de él. La preparación de cuentas (`preparar.py`) sigue creando los cinco actores base que usa el fixture.
