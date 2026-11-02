@@ -39,9 +39,11 @@ appId: com.renaser.app
 - assertVisible: ".*No se avisa a nadie.*"
 - takeScreenshot: CF01b-confirmacion
 - tapOn: "Mostrar"
+# La línea «Listo: …» dura ~3 s y el dev client tarda ~10 s por toque: no se espera como obligatoria; lo que sí se comprueba es el estado que queda.
 - extendedWaitUntil:
     visible: "Listo: el mentor y el líder ya ven el Código Renaser."
     timeout: 30000
+    optional: true
 - assertVisible: "El mentor, la guía y el líder lo ven en la ficha de cada aprendiz."
 - assertVisible: "Último cambio: .*"
 - takeScreenshot: CF01c-encendido
@@ -53,6 +55,10 @@ appId: com.renaser.app
 - tapOn: "Ocultar"
 - extendedWaitUntil:
     visible: "Listo: el mentor y el líder ya no ven el Código Renaser."
+    timeout: 30000
+    optional: true
+- extendedWaitUntil:
+    visible: "El mentor, la guía y el líder no lo ven.*"
     timeout: 30000
 - takeScreenshot: CF01d-apagado-otra-vez
 # El atrás vuelve a «Más opciones».
