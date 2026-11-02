@@ -12,6 +12,11 @@ env:
     element: "Abrir Administración"
     direction: DOWN
 - tapOn: "Abrir Administración"
+# Administración abre con la lista larga «¿A quién atiendo hoy?»: «Más opciones» queda abajo, se baja hasta él.
+- scrollUntilVisible:
+    element: "Más opciones"
+    direction: DOWN
+    timeout: 60000
 - tapOn: "Más opciones"
 - scrollUntilVisible:
     element: "Fichas"
