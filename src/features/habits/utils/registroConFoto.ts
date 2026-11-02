@@ -82,13 +82,31 @@ export function seOfreceGaleria(
 export const TOPE_KM_POR_DIA = 100;
 
 /** Lo que la pantalla de km necesita del registro: el total acumulado ANTES de hoy. */
-export type MedicionPedida = { unidad: 'KILOMETROS'; totalPrevio: number };
+export type MedicionPedida = {
+  unidad: 'KILOMETROS';
+  totalPrevio: number;
+  /**
+   * Spec 037 (D-310): la meta diaria que rige y lo que ya se registró hoy con su origen (`MANUAL` o `HEALTH_CONNECT`) y su
+   * fuente. Solo están cuando el servidor los manda; quien registra con la captura no los mira.
+   */
+  meta?: number;
+  valorDelDia?: number;
+  origenDelDia?: string;
+  fuenteDelDia?: string;
+};
 
 /** `null` si el track no pide un número (o si el backend es anterior a D-226). */
 export function medicionPedidaDe(track: Pick<TrackDelDiaApi, 'medicion'> | undefined): MedicionPedida | null {
   const medicion = track?.medicion;
   if (!medicion || medicion.unidad !== 'KILOMETROS') return null;
-  return { unidad: 'KILOMETROS', totalPrevio: Number.isFinite(medicion.total) ? medicion.total : 0 };
+  return {
+    unidad: 'KILOMETROS',
+    totalPrevio: Number.isFinite(medicion.total) ? medicion.total : 0,
+    ...(typeof medicion.meta === 'number' ? { meta: medicion.meta } : {}),
+    ...(typeof medicion.valorDelDia === 'number' ? { valorDelDia: medicion.valorDelDia } : {}),
+    ...(medicion.origenDelDia ? { origenDelDia: medicion.origenDelDia } : {}),
+    ...(medicion.fuenteDelDia ? { fuenteDelDia: medicion.fuenteDelDia } : {}),
+  };
 }
 
 /**
@@ -102,10 +120,9 @@ export function leerKilometros(texto: string): number | null {
   return km > 0 && km <= TOPE_KM_POR_DIA ? km : null;
 }
 
-/** "12,5", "7", "1234,05": coma decimal y sin ceros de más. */
-export function formatoKm(km: number): string {
-  return (Math.round(km * 100) / 100).toFixed(2).replace(/\.?0+$/, '').replace('.', ',');
-}
+/** "12,5", "7", "1234,05": coma decimal y sin ceros de más. Vive en `formatoKm.ts` (puro, sin red) y se reexporta acá. */
+export { formatoKm } from './formatoKm';
+import { formatoKm } from './formatoKm';
 
 /** El total que verá la persona si registra lo que escribió: lo previo más lo de hoy (si es válido). */
 export function totalConHoy(medicion: MedicionPedida, texto: string): number {

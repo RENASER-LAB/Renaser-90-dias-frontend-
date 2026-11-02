@@ -351,6 +351,14 @@ export interface MedicionDelTrackApi {
   unidad: string;
   valorDelDia: number | null;
   total: number;
+  /**
+   * Spec 037 (D-310): la meta diaria que rige (la de Administración o los 5 km del programa) y de dónde salió lo registrado ese
+   * día (`MANUAL` o `HEALTH_CONNECT`, con la fuente en este último). Un backend anterior no los manda: sin `meta`, la app no
+   * ofrece contar los pasos solos.
+   */
+  meta?: number | null;
+  origenDelDia?: string | null;
+  fuenteDelDia?: string | null;
 }
 
 /**

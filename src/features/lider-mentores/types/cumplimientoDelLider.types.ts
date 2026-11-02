@@ -1,3 +1,4 @@
+import type { MedicionDeLaFicha } from '../../pasos/utils/medicionDeLaFicha';
 import type { ColorSemaforo } from '../../semaforo/types/semaforo.types';
 
 /**
@@ -42,6 +43,8 @@ export interface ObligacionDeLaPersona {
   evidencias: EvidenciaDeLaObligacion[];
   /** El post diario: la publicación del Muro con la que se cumplió. */
   publicacionId: string | null;
+  /** Spec 037: los km del día y de dónde salieron; `null` en un hábito que no mide nada o con un backend anterior. */
+  medicion: MedicionDeLaFicha | null;
 }
 
 /**

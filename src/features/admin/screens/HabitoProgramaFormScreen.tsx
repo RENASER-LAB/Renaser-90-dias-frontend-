@@ -30,6 +30,7 @@ import {
 } from '../api/habitosProgramaApi';
 import { CabeceraAdmin } from '../components/CabeceraAdmin';
 import { ChipDeOpcion } from '../components/ChipDeOpcion';
+import { MetaDeKilometrosDelHabito } from '../components/MetaDeKilometrosDelHabito';
 import type { useHabitosProgramaAdmin } from '../hooks/useHabitosProgramaAdmin';
 import { confirmar } from '../utils/dialogo';
 import {
@@ -412,6 +413,9 @@ export function HabitoProgramaFormScreen({
             />
           </Seccion>
         ) : null}
+
+        {/* Spec 037 (D-310): solo «Kilómetros diarios» tiene meta diaria; el servidor responde 404 a los demás y a un backend anterior. */}
+        {habito && habito.systemKey === 'DAILY_KM' ? <MetaDeKilometrosDelHabito habitoId={habito.id} /> : null}
 
         {habito ? (
           <View style={{ gap: 10, marginTop: 8 }}>

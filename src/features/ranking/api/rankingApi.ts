@@ -35,6 +35,11 @@ export interface RankingAgregadoDto {
   kilometros?: EntradaRankingDto[];
   /** D-266 del backend: días de gimnasio desde el Día 1 (`puntaje` son días). Opcional: un backend anterior no lo manda. */
   gimnasio?: EntradaRankingDto[];
+  /**
+   * Spec 037 (D-310): ids de quienes salen en `kilometros` y tienen algún día de km leído por el teléfono (Health Connect). La
+   * tabla los marca «auto» junto a su total; no cambia ninguna cifra. Opcional: un backend anterior no lo manda.
+   */
+  kilometrosAutomaticos?: string[];
 }
 
 /**

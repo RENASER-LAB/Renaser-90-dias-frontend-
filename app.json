@@ -23,7 +23,9 @@
         "android.permission.MODIFY_AUDIO_SETTINGS",
         "android.permission.FOREGROUND_SERVICE",
         "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
-        "android.permission.SCHEDULE_EXACT_ALARM"
+        "android.permission.SCHEDULE_EXACT_ALARM",
+        "android.permission.health.READ_STEPS",
+        "android.permission.health.READ_DISTANCE"
       ],
       "package": "com.renaser.app"
     },
@@ -34,6 +36,14 @@
       "expo-font",
       "expo-web-browser",
       "expo-secure-store",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 26
+          }
+        }
+      ],
       [
         "expo-image-picker",
         {
@@ -110,7 +120,8 @@
           "resizeMode": "contain",
           "backgroundColor": "#FFFFFF"
         }
-      ]
+      ],
+      "./plugins/withHealthConnect"
     ],
     "extra": {
       "eas": {

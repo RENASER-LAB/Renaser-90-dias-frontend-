@@ -1,0 +1,26 @@
+# P06 — Lo que ven el mentor y el ranking (spec 037, maqueta 4.1 y 4.2). Precondición: un aprendiz del grupo del mentor que ya
+# registró sus km con los pasos hoy (P02) y salió en el corte del ranking. La ficha pide la semana; «Por revisar» solo sale con
+# una lectura dudosa (más de 30 km).
+# cuenta: mentor
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "Yo"
+- tapOn: "Mi grupo"
+- extendedWaitUntil:
+    visible: ".*"
+    timeout: 20000
+- tapOn: "${E2E_PERSONA}"
+- scrollUntilVisible:
+    element: ".* km · Medido por (el reloj|el teléfono)"
+    timeout: 30000
+- assertVisible: "Distancia .* km"
+- assertVisible: ".* · leído a las [0-9:]+"
+- takeScreenshot: P06a-ficha-del-mentor
+# El ranking de km: «auto» junto al total de quien tiene días leídos por el teléfono.
+- tapOn: "Comunidad"
+- tapOn: "Ranking"
+- tapOn: "Kilómetros"
+- assertVisible: "Km de tus pasos o de tu captura\\."
+- assertVisible: ".* km · auto"
+- takeScreenshot: P06b-ranking-con-auto

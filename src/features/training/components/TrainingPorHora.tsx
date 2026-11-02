@@ -17,6 +17,7 @@ import {
   TEXTO_DE_DIA_CERRADO,
   TEXTO_YA_HECHO,
   destinoDelToque,
+  metaDeLaHoja,
   type AccionDeLaHoja,
   type ModoDeLaFila,
 } from '../utils/filaDelDia';
@@ -30,6 +31,11 @@ import {
 import { contarElDia, textoDelResumenDeHoy } from '../utils/listaDelDia';
 import { fechaDelDiaUno, semanaDe, sePuedeLeerElDia, tituloDelDia } from '../utils/semanaDeTraining';
 import { vistaDeOtroDia } from '../utils/vistaDeOtroDia';
+import { HojaConectarPasos } from '../../pasos/components/HojaConectarPasos';
+import { HojaDeKilometros } from '../../pasos/components/HojaDeKilometros';
+import { ProveedorDePasosDeLaLista, type PasosDeLaLista } from '../../pasos/components/PasosDeLaLista';
+import type { PasosEnTraining } from '../../pasos/hooks/usePasosDelDia';
+import { abreLaHojaDeKilometros } from '../../pasos/utils/vistaDeKilometros';
 import { FilaDeSemana } from './FilaDeSemana';
 import { HojaDelHabito } from './HojaDelHabito';
 import { ListaDeHoy } from './ListaDeHoy';
@@ -69,6 +75,7 @@ export function TrainingPorHora({
   onRegistrar,
   onMarcar,
   onAbrirEvento,
+  pasos,
 }: {
   activa: boolean;
   /**
@@ -102,6 +109,8 @@ export function TrainingPorHora({
   onRegistrar: (habit: HabitItem) => void;
   onMarcar: (habit: HabitItem) => void;
   onAbrirEvento: (eventoId: string) => void;
+  /** Spec 037 (D-310): los pasos del teléfono para «Kilómetros diarios». Ausente = la fila de siempre. */
+  pasos?: PasosEnTraining;
 }) {
   const { c, t } = useTheme();
   // Con el día de hoy del servidor como llave: al pasar la medianoche la hora de «ahora» se toma de nuevo en ese mismo render.
@@ -163,6 +172,10 @@ export function TrainingPorHora({
   /** Lo que se hace cuando la hoja termina de irse: el registro no puede abrirse con la hoja todavía encima (Android). */
   const despuesDeLaHoja = useRef<(() => void) | null>(null);
 
+  /* Spec 037: las dos hojas de los pasos (conectar y la de los km). Se abren solo en HOY. */
+  const [conectarAbierta, setConectarAbierta] = useState(false);
+  const [kmAbierta, setKmAbierta] = useState(false);
+
   /* Lo que se dice al tocar una fila de un día anterior: «Ya hecho» o que ese día ya cerró. Nada más. */
   const [avisoDeFila, setAvisoDeFila] = useState<{ clave: number; texto: string; icono: 'check' | 'lock' } | null>(null);
   useEffect(() => {
@@ -175,6 +188,11 @@ export function TrainingPorHora({
   /** Abre lo que corresponde a una fila. `deHoy` dice si la fila es del día de hoy: en cualquier otro día solo se avisa. */
   const abrirFila = useCallback(
     (item: ItemDelDia, modo: ModoDeLaFila, deHoy: boolean) => {
+      // Con los pasos conectados, tocar «Kilómetros diarios» abre la hoja de los km (avance, sin pasos o sin permiso).
+      if (deHoy && pasos && item.habit?.id === pasos.registroId && (modo === 'hoy' || modo === 'atrasado') && abreLaHojaDeKilometros(pasos.vista)) {
+        setKmAbierta(true);
+        return;
+      }
       switch (destinoDelToque(item, modo, deHoy)) {
         case 'ya-hecho':
           setAvisoDeFila({ clave: Date.now(), texto: TEXTO_YA_HECHO, icono: 'check' });
@@ -196,7 +214,7 @@ export function TrainingPorHora({
           return;
       }
     },
-    [onAbrirEvento, onRegistrar],
+    [onAbrirEvento, onRegistrar, pasos],
   );
   const alTocarLaFila = useCallback((item: ItemDelDia, modo: ModoDeLaFila) => abrirFila(item, modo, esHoy), [abrirFila, esHoy]);
 
@@ -219,6 +237,8 @@ export function TrainingPorHora({
       return;
     }
     setHojaAbierta(false);
+    setKmAbierta(false);
+    setConectarAbierta(false);
     despuesDeLaHoja.current = null;
     setAvisoDeFila(null);
   }, [dia.iso, hoyIso]);
@@ -269,6 +289,27 @@ export function TrainingPorHora({
     // su valor entra a la lista de dependencias.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [esHoy, dia.iso, dia.relacion, hoyIso, diaPrograma, contexto, ocurrencias, planHabits, preferencias, acciones, estadoDe(dia.iso)]);
+
+  /* Lo que la fila de «Kilómetros diarios» necesita de los pasos (contexto de la lista de hoy). */
+  const pasosDeLaLista = useMemo<PasosDeLaLista | null>(
+    () =>
+      pasos && pasos.registroId
+        ? {
+            registroId: pasos.registroId,
+            vista: pasos.vista,
+            registrando: pasos.registrando,
+            onConectar: () => setConectarAbierta(true),
+            onActualizar: () => void pasos.actualizar(),
+            onRegistrar: () => void pasos.registrar(),
+          }
+        : null,
+    [pasos],
+  );
+  const itemDeKilometros = pasos?.registroId ? itemsHoy.find(x => x.habit?.id === pasos.registroId) ?? null : null;
+  /** La captura de siempre: se abre cuando la hoja de los pasos ya se fue (en Android una ventana apilada se come los toques). */
+  const subirLaCaptura = useCallback(() => {
+    if (itemDeKilometros?.habit) onRegistrar(itemDeKilometros.habit);
+  }, [itemDeKilometros, onRegistrar]);
 
   const resumen = esHoy
     ? estado !== 'listo'
@@ -324,7 +365,9 @@ export function TrainingPorHora({
             </Presionable>
           </View>
         ) : esHoy ? (
-          <ListaDeHoy items={itemsHoy} ahoraMs={ahoraMs} retenidos={retenidos} onAbrir={alTocarLaFila} onMarcar={item => item.habit && onMarcar(item.habit)} onSubir={item => item.habit && onRegistrar(item.habit)} />
+          <ProveedorDePasosDeLaLista value={pasosDeLaLista}>
+            <ListaDeHoy items={itemsHoy} ahoraMs={ahoraMs} retenidos={retenidos} onAbrir={alTocarLaFila} onMarcar={item => item.habit && onMarcar(item.habit)} onSubir={item => item.habit && onRegistrar(item.habit)} />
+          </ProveedorDePasosDeLaLista>
         ) : otroDia && otroDia.estado === 'cargando' ? (
           <Text style={[t.body, estilos.cargando, { color: c.textSoft }]} accessibilityLiveRegion="polite">
             {otroDia.resumen}
@@ -351,6 +394,40 @@ export function TrainingPorHora({
         alTerminarDeCerrar={alIrseLaHoja}
         onAccion={alElegirLaAccion}
       />
+
+      {pasos && pasos.registroId ? (
+        <>
+          <HojaConectarPasos
+            visible={conectarAbierta}
+            soporte={pasos.vista.modo === 'ofrecer' ? pasos.vista.soporte : 'disponible'}
+            conectar={pasos.conectar}
+            fuente={pasos.vista.modo === 'avance' ? pasos.vista.fuente.etiqueta : null}
+            desdeLasHoy={pasos.conectadoHoyA}
+            onCerrar={() => setConectarAbierta(false)}
+            onSubirCaptura={subirLaCaptura}
+            onAbrirHealthConnect={pasos.abrirHealthConnect}
+          />
+          <HojaDeKilometros
+            visible={kmAbierta}
+            titulo={itemDeKilometros?.titulo ?? 'Kilómetros diarios'}
+            subtitulo={itemDeKilometros ? metaDeLaHoja(itemDeKilometros, 'hoy') : undefined}
+            vista={pasos.vista}
+            registrando={pasos.registrando}
+            onRegistrar={() => {
+              setKmAbierta(false);
+              void pasos.registrar();
+            }}
+            onActualizar={() => void pasos.actualizar()}
+            onDesconectar={() => {
+              setKmAbierta(false);
+              pasos.desconectar();
+            }}
+            onAbrirHealthConnect={pasos.abrirHealthConnect}
+            onSubirCaptura={subirLaCaptura}
+            onCerrar={() => setKmAbierta(false)}
+          />
+        </>
+      ) : null}
     </View>
   );
 }

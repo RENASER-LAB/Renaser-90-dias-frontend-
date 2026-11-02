@@ -1,3 +1,4 @@
+import { medicionDeLaFichaDe } from '../../pasos/utils/medicionDeLaFicha';
 import { z } from 'zod';
 
 import {
@@ -58,6 +59,8 @@ const obligacionSchema = z
     respuestaTexto: z.string().nullish(),
     evidencias: z.array(evidenciaSchema).nullish(),
     publicacionId: z.string().nullish(),
+    // Spec 037: tolerante, un valor raro pierde la línea de los km y no el día.
+    medicion: z.unknown().optional(),
   })
   .passthrough();
 
@@ -230,6 +233,7 @@ function aObligacion(crudo: ObligacionCruda): ObligacionDeLaPersona {
     respuestaTexto: crudo.respuestaTexto?.trim() ? crudo.respuestaTexto : null,
     evidencias: evidenciasDe(crudo),
     publicacionId: crudo.publicacionId ?? null,
+    medicion: medicionDeLaFichaDe(crudo.medicion),
   };
 }
 
