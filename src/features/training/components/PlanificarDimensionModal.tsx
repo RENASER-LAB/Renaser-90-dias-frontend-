@@ -40,8 +40,9 @@ import { formatearFechaLarga } from '../../programa/hooks/useArranqueDelPrograma
 import {
   aFechaIso,
   DIAS_DEL_PLAN,
+  INDICE_DE_HOY,
+  MOSTRAR_SEMANA_SIGUIENTE,
   NOMBRE_ISO_DEL_DIA,
-  diasDelMesDeLaSemana,
   esPlanificable,
   fechasIsoDeLaSemana,
   type DiaDelPlan,
@@ -113,13 +114,23 @@ import {
   diasQueSePuedenMarcar,
   elServidorSabeDeLaSemana,
   hayAlgoQueGuardarEnLaSemana,
-  lineaDeLosCambiosDeLaSemana,
-  rotuloDeLosDiasDeLaSemana,
   textoDelBotonDeLaSemana,
   type AlcanceDelCambio,
 } from '../utils/alcanceDeLaSemana';
+import {
+  diasDelMesDeLaSemana,
+  fechasDeLaSemana as fechasDeUnaSemana,
+  hoyDesdeLaPrimeraSemana,
+  lunesDeLasSemanas,
+  primeraSemanaConCambiosPropios,
+  rangoCortoDeLaSemana,
+  rotuloDeLaSemana,
+  ultimoDiaDelPrograma,
+  type CambioDeSemana,
+} from '../utils/semanasDelEditor';
 import { reprogramarLasAlarmasConElServidor } from '../utils/reprogramarLasAlarmas';
 import { SeccionComoSuena } from './SeccionComoSuena';
+import { SelectorDeSemana } from './SelectorDeSemana';
 
 /**
  * PLANIFICAR los hábitos de una dimensión: a qué hora va cada uno, y prenderlo o apagarlo.
@@ -218,6 +229,12 @@ interface Props {
    * nuevo se ve al instante porque `titulos` es estado del hook.
    */
   renombre?: Pick<ReturnType<typeof useRenombreLocal>, 'titulos' | 'renombrar' | 'quitarRenombre'>;
+  /**
+   * **Opcional.** El día del programa de la persona y cuánto dura (`/home`: 90, o 365 en el Diplomado de un año). Con ellos «Por semana»
+   * deja pasar de semana hasta la última del programa; sin ellos solo se ve la primera semana.
+   */
+  diaPrograma?: number | null;
+  duracionDias?: number | null;
 }
 
 /** Los botones de la hoja, en tipo oración y a tamaño de lectura (no las versalitas de 11 del botón). */
@@ -290,7 +307,7 @@ function avisosDelServidor(p: PreferenciaHabitoApi | undefined): number[] {
   return [p.reminderMinutesBefore ?? 0];
 }
 
-export function PlanificarDimensionModal({ visible, dimension, nombreDimension, habits, onCerrar, onGuardado, renombre }: Props) {
+export function PlanificarDimensionModal({ visible, dimension, nombreDimension, habits, onCerrar, onGuardado, renombre, diaPrograma, duracionDias }: Props) {
   const { c, t } = useTheme();
   const insets = useSafeAreaInsets();
   const nombre = nombreDimension ?? dimension;
@@ -370,7 +387,15 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
    */
   const [alcance, setAlcance] = useState<AlcanceDelCambio>('siempre');
   const [horarioDeLaSemana, setHorarioDeLaSemana] = useState<Record<string, DiaDelEditor>>({});
-  const [cargandoLaSemana, setCargandoLaSemana] = useState(false);
+  /** «Por semana»: el lunes (`YYYY-MM-DD`) de la semana que se ve. `null` = todavía ninguna (se usa la primera). */
+  const [semanaVista, setSemanaVista] = useState<string | null>(null);
+  /**
+   * Las semanas ya leídas del hábito abierto, por lunes: ir y volver entre semanas no repite el pedido (una lectura por semana). Se vacía
+   * al abrir otro hábito y cuando cambia el plan de siempre (lo que rige cada fecha sale de él); tras guardar una semana se vuelve a leer.
+   */
+  const semanasLeidas = useRef(new Map<string, Record<string, DiaDelEditor>>());
+  /** La semana que se pidió por última vez: una lectura que llega tarde no pisa a la que se está viendo. */
+  const semanaPedidaRef = useRef<string | null>(null);
   /**
    * El aviso GENERAL ya guardado del hábito abierto: el que usan los días sin aviso propio (spec 008). Aparte de
    * `antelaciones`, que es lo que se está editando sin días marcados y puede no estar guardado todavía.
@@ -442,14 +467,21 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
   const hoyIso = aFechaIso(new Date());
 
   /**
-   * El día del mes (`09`) de cada día de la semana que se está mostrando, para que la pastilla diga
-   * "M 09" y no solo "M": sin el número no se sabe a qué martes le está pegando el cambio.
-   *
-   * `useMemo` atado a `visible` y no suelto en cada render: se construye a partir de `new Date()`,
-   * así que recalcularlo dejaría que la semana se corriera a mitad de una interacción si el reloj
-   * cruza la medianoche.
+   * Las semanas de «Por semana»: desde la primera (la en curso; el domingo, la que empieza) hasta la última del programa de la persona. El
+   * lunes de la primera y el «hoy» salen de `semanaDelPlan`, la única cuenta de la semana que dibuja el editor; el resto es puro
+   * (`semanasDelEditor`).
    */
-  const diasDelMes = useMemo(() => diasDelMesDeLaSemana(), [visible]);
+  const lunesInicial = useMemo(() => fechasIsoDeLaSemana().LUN, [visible]);
+  const hoyDelEditor = useMemo(
+    () => hoyDesdeLaPrimeraSemana(lunesInicial, INDICE_DE_HOY, MOSTRAR_SEMANA_SIGUIENTE),
+    [lunesInicial],
+  );
+  const semanasDelEditor = useMemo(
+    () => lunesDeLasSemanas(lunesInicial, ultimoDiaDelPrograma(hoyDelEditor, diaPrograma, duracionDias)),
+    [lunesInicial, hoyDelEditor, diaPrograma, duracionDias],
+  );
+  /** Hoy y los días pasados solo existen en la primera semana; las que vienen después son todas futuras. */
+  const planificableEn = (lunes: string) => (dia: DiaDelPlan): boolean => (lunes === lunesInicial ? esPlanificable(dia) : true);
 
   useEffect(() => {
     if (!visible) return;
@@ -555,6 +587,9 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
     setDiasEnEdicion([]);
     setHorarioSemanal({});
     setAlcance('siempre');
+    setSemanaVista(null);
+    semanaPedidaRef.current = null;
+    semanasLeidas.current.clear();
     setHorarioDeLaSemana({});
     setAvisoDiasTocado(null);
     setAlarmaTocada({});
@@ -577,6 +612,15 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
     // Se pide DESPUÉS de abrir, no antes: el toque tiene que responder ya. Mientras llega, las
     // pastillas muestran el día sin hora, que es lo honesto.
     void cargarSemana(h.habitoId, delServidor);
+    // Lo que ya se guardó por semana sale marcado (2026-11-02): si una semana por venir tiene cambios propios de este hábito, el editor abre
+    // en «Por semana», en esa semana, con sus días marcados. Sin cambios propios abre en «Siempre», como siempre.
+    const conCambios = primeraSemanaConCambiosPropios(previa?.dateOverrides, semanasDelEditor, hoyDelEditor);
+    if (conCambios !== null) {
+      setAlcance('semana');
+      setSemanaVista(conCambios);
+      semanaPedidaRef.current = conCambios;
+      void cargarLaSemanaDelHabito(h, conCambios, { marcar: true, alFallar: 'volver-a-siempre', avisar: false, avisoDeSiempre: delServidor });
+    }
     // El tono de Yo → Alarmas, para no ofrecer lo que no suena. Si no se puede leer, el de siempre.
     void Promise.resolve()
       .then(() => recordatorios.sonidoDe(claveUsuario, h.habitoId))
@@ -614,50 +658,126 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
    * ---------------------------------------------------------------------------------------------- */
 
   /**
-   * Lee la semana del hábito (el plan de siempre con lo de esta semana encima) y la deja en pantalla. Con `marcar`, deja
-   * marcados todos los días que se pueden cambiar. Si no se pudo leer, se vuelve a «Todas las semanas» y se dice.
+   * Los días que se pueden marcar en una semana: el hábito corre, la fecha no pasó (ni es hoy) y el plan de siempre no la apaga. Solo la
+   * primera semana tiene hoy y días pasados; las que vienen después son todas futuras.
+   */
+  const marcablesEn = (h: HabitoPlanificable, lunes: string, leidos: Readonly<Record<string, DiaDelEditor>>): DiaDelPlan[] =>
+    diasQueSePuedenMarcar(h.diasCatalogo ?? todosLosDias(), planificableEn(lunes), leidos);
+
+  /**
+   * Lee la semana del hábito que empieza ese lunes (el plan de siempre con lo de esa semana encima) y la deja en pantalla si es la que se
+   * está viendo. Cada semana se pide una sola vez (`semanasLeidas`); `forzar` la vuelve a pedir (tras guardar). Con `marcar`, deja marcados
+   * todos los días que se pueden cambiar.
+   *
+   * Si no se pudo leer: `alFallar` dice a dónde volver ('volver-a-siempre' al abrir «Por semana»; 'semana-anterior' al pasar de semana) y
+   * `avisar` si se dice en un diálogo (al abrir solo porque ya había cambios no hace falta: se queda en «Siempre»).
    */
   const cargarLaSemanaDelHabito = async (
     h: HabitoPlanificable,
-    marcar: boolean,
-    /** Al cambiar de alcance un fallo devuelve a «Todas las semanas»; tras un guardado que salió bien, no. */
-    sacarAlFallar = marcar,
+    lunes: string,
+    {
+      marcar,
+      forzar = false,
+      alFallar = 'nada',
+      avisar = true,
+      semanaAnterior = null,
+      avisoDeSiempre = avisoGeneral,
+    }: {
+      marcar: boolean;
+      forzar?: boolean;
+      alFallar?: 'nada' | 'volver-a-siempre' | 'semana-anterior';
+      avisar?: boolean;
+      semanaAnterior?: string | null;
+      /** El aviso de siempre del hábito, si todavía no está en el estado (al abrir el editor). */
+      avisoDeSiempre?: readonly number[];
+    },
   ): Promise<Record<string, DiaDelEditor> | null> => {
-    setCargandoLaSemana(true);
+    const guardada = forzar ? undefined : semanasLeidas.current.get(lunes);
+    if (guardada) {
+      if (abiertoRef.current === h.habitoId && semanaPedidaRef.current === lunes) {
+        setHorarioDeLaSemana(guardada);
+        if (marcar) setDiasEnEdicion(marcablesEn(h, lunes, guardada));
+      }
+      return guardada;
+    }
     try {
-      const semana = await habitsApi.obtenerSemanaDelHabito(h.habitoId, lunesDeLaSemana);
+      const semana = await habitsApi.obtenerSemanaDelHabito(h.habitoId, lunes);
       if (abiertoRef.current !== h.habitoId) return null;
-      const leidos = diasDelEditorDeLaSemana(semana, avisoGeneral);
-      setHorarioDeLaSemana(leidos);
-      if (marcar) setDiasEnEdicion(diasQueSePuedenMarcar(h.diasCatalogo ?? todosLosDias(), esPlanificable, leidos));
+      const leidos = diasDelEditorDeLaSemana(semana, avisoDeSiempre);
+      semanasLeidas.current.set(lunes, leidos);
+      // Una lectura que llega tarde (la persona ya pasó a otra semana) queda guardada, pero no pisa lo que se ve.
+      if (semanaPedidaRef.current === lunes) {
+        setHorarioDeLaSemana(leidos);
+        if (marcar) setDiasEnEdicion(marcablesEn(h, lunes, leidos));
+      }
       return leidos;
     } catch (e) {
-      if (sacarAlFallar && abiertoRef.current === h.habitoId) {
-        setAlcance('siempre');
-        setDiasEnEdicion([]);
-        Alert.alert('No pudimos cargar esta semana', mensajeDeError(e, 'Intenta de nuevo en unos segundos.'));
+      if (alFallar !== 'nada' && abiertoRef.current === h.habitoId && semanaPedidaRef.current === lunes) {
+        if (alFallar === 'semana-anterior' && semanaAnterior !== null) {
+          semanaPedidaRef.current = semanaAnterior;
+          setSemanaVista(semanaAnterior);
+          const previa = semanasLeidas.current.get(semanaAnterior) ?? {};
+          setHorarioDeLaSemana(previa);
+          setDiasEnEdicion(marcablesEn(h, semanaAnterior, previa));
+        } else {
+          setAlcance('siempre');
+          setSemanaVista(null);
+          semanaPedidaRef.current = null;
+          setHorarioDeLaSemana({});
+          setDiasEnEdicion([]);
+        }
+        if (avisar) Alert.alert('No pudimos cargar esta semana', mensajeDeError(e, 'Intenta de nuevo en unos segundos.'));
       }
       return null;
-    } finally {
-      setCargandoLaSemana(false);
     }
   };
 
-  /** Cambia entre «Todas las semanas» y «Solo esta semana». Lo tocado para un alcance no se lleva al otro. */
-  const cambiarAlcance = (nuevo: AlcanceDelCambio) => {
-    if (nuevo === alcance || !habitoEnEdicion || guardando) return;
+  /** Lo tocado en una semana no se lleva a otra: aviso, «Cómo suena», la fila de «Otra» y la rueda vuelven a donde arrancaron. */
+  const soltarLoTocado = () => {
     setAvisoDiasTocado(null);
     setAlarmaTocada({});
     setFilaOtraAbierta(false);
     setMinutosOtra(null);
+    if (arranqueDeLaRueda !== null && hora * 60 + minuto !== arranqueDeLaRueda) {
+      setHora(Math.floor(arranqueDeLaRueda / 60));
+      setMinuto(arranqueDeLaRueda % 60);
+      setSemillaRueda(n => n + 1);
+    }
+  };
+
+  /** Cambia entre «Siempre» y «Por semana». Lo tocado para un alcance no se lleva al otro. */
+  const cambiarAlcance = (nuevo: AlcanceDelCambio) => {
+    if (nuevo === alcance || !habitoEnEdicion || guardando) return;
+    soltarLoTocado();
     if (nuevo === 'siempre') {
       setAlcance('siempre');
       setDiasEnEdicion([]);
       return;
     }
+    const primera = semanasDelEditor[0] ?? lunesInicial;
     setAlcance('semana');
-    setHorarioDeLaSemana({});
-    void cargarLaSemanaDelHabito(habitoEnEdicion, true);
+    setSemanaVista(primera);
+    semanaPedidaRef.current = primera;
+    setHorarioDeLaSemana(semanasLeidas.current.get(primera) ?? {});
+    void cargarLaSemanaDelHabito(habitoEnEdicion, primera, { marcar: true, alFallar: 'volver-a-siempre' });
+  };
+
+  /** Pasa a otra semana (flechas o deslizando la fila): cambio instantáneo, con el tic de selección. Cada semana se lee una sola vez. */
+  const cambiarDeSemana = (cambio: CambioDeSemana) => {
+    if (!habitoEnEdicion || guardando || !semanaLista) return;
+    const destino = semanasDelEditor[indiceDeLaSemana + (cambio === 'siguiente' ? 1 : -1)];
+    if (destino === undefined) return;
+    tacto.seleccion();
+    soltarLoTocado();
+    const desde = lunesDeLaSemana;
+    const guardada = semanasLeidas.current.get(destino);
+    semanaPedidaRef.current = destino;
+    setSemanaVista(destino);
+    setHorarioDeLaSemana(guardada ?? {});
+    setDiasEnEdicion(guardada ? marcablesEn(habitoEnEdicion, destino, guardada) : []);
+    if (!guardada) {
+      void cargarLaSemanaDelHabito(habitoEnEdicion, destino, { marcar: true, alFallar: 'semana-anterior', semanaAnterior: desde });
+    }
   };
 
   /* ------------------------------------------------------------------------------------------------
@@ -669,21 +789,25 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
   const enSemana = alcance === 'semana';
   /** Los siete días que se dibujan y se editan: los de siempre, o los de esta semana en «Solo esta semana». */
   const horariosEnEdicion = enSemana ? horarioDeLaSemana : horarioSemanal;
-  /** La fecha de cada día de la semana que el editor dibuja (el domingo, la que empieza), y su lunes. */
-  const fechasDeLaSemana = useMemo(() => fechasIsoDeLaSemana(), [visible]);
-  const lunesDeLaSemana = fechasDeLaSemana.LUN;
-  /** Los días que se pueden marcar en «Solo esta semana» (el hábito corre, no pasó, el plan de siempre no lo apaga). */
-  const marcablesDeLaSemana = habitoEnEdicion
-    ? diasQueSePuedenMarcar(habitoEnEdicion.diasCatalogo ?? todosLosDias(), esPlanificable, horarioDeLaSemana)
-    : [];
-  /** La semana ya se leyó (siete días): hasta entonces «Solo esta semana» muestra «Cargando…». */
+  /** La semana que se ve en «Por semana» (la primera mientras no se elija otra), con su lunes, sus fechas y su lugar entre las que se pueden ver. */
+  const lunesDeLaSemana = semanaVista ?? semanasDelEditor[0] ?? lunesInicial;
+  const fechasDeLaSemana = useMemo(() => fechasDeUnaSemana(lunesDeLaSemana), [lunesDeLaSemana]);
+  const diasDelMesVista = useMemo(() => diasDelMesDeLaSemana(lunesDeLaSemana), [lunesDeLaSemana]);
+  const indiceDeLaSemana = Math.max(0, semanasDelEditor.indexOf(lunesDeLaSemana));
+  /** Los días que se pueden marcar en la semana que se ve (el hábito corre, no pasó, el plan de siempre no lo apaga). */
+  const marcablesDeLaSemana = habitoEnEdicion ? marcablesEn(habitoEnEdicion, lunesDeLaSemana, horarioDeLaSemana) : [];
+  /** La semana que se ve ya se leyó (siete días): hasta entonces la fila se ve atenuada. */
   const semanaLista = !enSemana || Object.keys(horarioDeLaSemana).length > 0;
-  /** ¿Se ofrece «Solo esta semana»? Solo si el servidor sabe de esto (manda `dateOverrides`) y hay un hábito abierto. */
-  const ofreceElAlcance = habitoEnEdicion !== null && elServidorSabeDeLaSemana(preferencias.get(habitoEnEdicion.habitoId));
-  /** Los días con cambio «solo esta semana»: todos los que se pueden cambiar, y los marcados entre ellos. */
+  /**
+   * ¿Se ofrece «Por semana»? Solo si el servidor sabe de esto (manda `dateOverrides`), hay un hábito abierto y todavía queda alguna semana del
+   * programa por delante.
+   */
+  const ofreceElAlcance = habitoEnEdicion !== null
+    && semanasDelEditor.length > 0
+    && elServidorSabeDeLaSemana(preferencias.get(habitoEnEdicion.habitoId));
+  /** Los días con cambio por semana: todos los que se pueden cambiar, y los marcados entre ellos. */
   const diasConCambioDeLaSemana = diasConCambioSoloEstaSemana(marcablesDeLaSemana, horarioDeLaSemana);
   const diasConCambioMarcados = diasConCambioDeLaSemana.filter(d => diasEnEdicion.includes(d));
-  const lineaDeLosCambios = lineaDeLosCambiosDeLaSemana(diasConCambioDeLaSemana);
   /**
    * `true` si el servidor informa el aviso de cada día (desde la spec 008). Con un backend anterior no se
    * ofrece elegirlo con días marcados y la pantalla se comporta como siempre (FR-014).
@@ -744,7 +868,7 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
    * anterior la hoja es la de siempre (FR-011).
    */
   const alarmaPorDiaDisponible = servidorInformaAlarmaPorDia(horariosEnEdicion);
-  const hayComoSuena = recordatorios.HAY_RECORDATORIOS_LOCALES && (enModoDias ? alarmaPorDiaDisponible : alarmaGeneral !== null);
+  const comoSuenaDisponible = recordatorios.HAY_RECORDATORIOS_LOCALES && (enModoDias ? alarmaPorDiaDisponible : alarmaGeneral !== null);
   /** La combinación de siempre del hábito, para los días que no tienen la suya. */
   const generalDeComoSuena = alarmaGeneral ?? COMBINACION_POR_DEFECTO;
   /** La combinación de cada día que se está editando (o la general, sin días marcados). */
@@ -753,11 +877,11 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
     : [generalDeComoSuena];
   const inicialesDeComoSuena = estadosIniciales(combinacionesEnEdicion);
   const mostradosDeComoSuena = estadosMostrados(inicialesDeComoSuena, alarmaTocada);
-  /** Se tocó algo que cambia lo que ya estaba (tocar y dejarlo como estaba no cuenta). */
-  const cambioLaAlarma = hayComoSuena && hayCambios(combinacionesEnEdicion, alarmaTocada);
-  const reglaDeComoSuena = hayComoSuena ? reglaIncumplidaDeLaSeleccion(combinacionesEnEdicion, alarmaTocada) : null;
-  /** Sin aviso (o el hábito apagado ese día) no hay alarma que decidir: la sección se ve atenuada y se explica. */
-  const motivoDeAtenuarComoSuena = hayComoSuena
+  /**
+   * Sin aviso (o el hábito apagado ese día) no hay alarma que decidir: «Cómo suena» NO se dibuja (2026-11-02, menos texto: antes se veía
+   * atenuada con «Este hábito no tiene aviso / Elige un aviso en Recordatorio…»). Lo que se había tocado ahí no se guarda: no se ve.
+   */
+  const motivoDeAtenuarComoSuena = comoSuenaDisponible
     ? motivoDeAtenuacion({
       sinAviso: avisoMostrado.length === 0 && !avisosDistintos,
       todosApagados: enModoDias && diasEnEdicion.every(d => horariosEnEdicion[d]?.activo === false),
@@ -765,6 +889,11 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
       cuantosDias: diasEnEdicion.length,
     })
     : null;
+  /** «Cómo suena» está a la vista: se ofrece y vale lo que se toque en ella. */
+  const hayComoSuena = comoSuenaDisponible && motivoDeAtenuarComoSuena === null;
+  /** Se tocó algo que cambia lo que ya estaba (tocar y dejarlo como estaba no cuenta). */
+  const cambioLaAlarma = hayComoSuena && hayCambios(combinacionesEnEdicion, alarmaTocada);
+  const reglaDeComoSuena = hayComoSuena ? reglaIncumplidaDeLaSeleccion(combinacionesEnEdicion, alarmaTocada) : null;
   /** Qué se guardaría ahora con los días marcados. Sin avisos por día en el servidor, la hora, como siempre. */
   const queSeGuarda: QueGuardarConAlarma = enModoDias && avisoPorDiaDisponible
     ? queGuardarConAlarma({ movioLaRueda, cambioElAviso: avisoDiasTocado !== null, cambioLaAlarma })
@@ -943,6 +1072,7 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
         })),
       }));
       setHuboEscritura(true);
+      semanasLeidas.current.clear();
       if (guardaHora) setArranqueDeLaRueda(hora * 60 + minuto);
       alarmaPuesta = await releerYReprogramar(h);
     }
@@ -1026,6 +1156,7 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
         }])),
       }));
       setHuboEscritura(true);
+      semanasLeidas.current.clear();
       volverATodos();
       void releerYReprogramar(h);
     } catch (e) {
@@ -1052,6 +1183,7 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
         ...Object.fromEntries(dias.map(d => [d, { ...prev[d], propio: true, activo: false }])),
       }));
       setHuboEscritura(true);
+      semanasLeidas.current.clear();
       setDiasEnEdicion([]);
       confirmar(`No va los ${diasEnFrase(dias)}. El resto de la semana sigue igual.`);
       // Un día apagado no suena: las alarmas del teléfono se rehacen sin él.
@@ -1129,7 +1261,7 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
    * al día las alarmas de este teléfono con lo que dice el servidor (spec 028, R5). Nunca lanza.
    */
   const refrescarTrasCambiarLaSemana = async (h: HabitoPlanificable): Promise<boolean | null> => {
-    await cargarLaSemanaDelHabito(h, false);
+    await cargarLaSemanaDelHabito(h, lunesDeLaSemana, { marcar: false, forzar: true });
     const { preferencias: leidas, alarmas } = await reprogramarLasAlarmasConElServidor(claveUsuario, {
       habitoId: h.habitoId,
       dimensionDe: () => dimension,
@@ -1181,13 +1313,14 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
       aviso: queSeGuarda === 'aviso' || queSeGuarda === 'ambos' ? avisoMostrado : null,
       dias: diasEnEdicion,
       alarma: cambioLaAlarma,
+      semana: rangoCortoDeLaSemana(lunesDeLaSemana),
     }));
     if (ok && guardaHora) setArranqueDeLaRueda(hora * 60 + minuto);
   };
 
-  /** «No hacerlo los sáb, dom» solo esta semana. */
+  /** «No hacerlo los sáb, dom» solo en la semana que se ve. */
   const apagarEstaSemana = async (h: HabitoPlanificable, dias: DiaDelPlan[]) => {
-    await escribirLaSemana(h, cambiosParaApagar(dias, fechasDeLaSemana), `No va los ${diasEnFrase(dias)} de esta semana. Tu plan de siempre no cambia.`);
+    await escribirLaSemana(h, cambiosParaApagar(dias, fechasDeLaSemana), `No va los ${diasEnFrase(dias)} de la semana ${rangoCortoDeLaSemana(lunesDeLaSemana)}.`);
   };
 
   /**
@@ -1197,7 +1330,7 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
   const volverAlPlanDeSiempreDeLaSemana = async (h: HabitoPlanificable, dias: DiaDelPlan[]) => {
     const conCambio = diasConCambioSoloEstaSemana(marcablesDeLaSemana, horarioDeLaSemana);
     const todosLosConCambio = conCambio.length > 0 && conCambio.every(d => dias.includes(d));
-    const texto = `Vuelve al plan de siempre los ${diasEnFrase(dias)} de esta semana.`;
+    const texto = `Vuelve al plan de siempre los ${diasEnFrase(dias)} de la semana ${rangoCortoDeLaSemana(lunesDeLaSemana)}.`;
     if (!todosLosConCambio) {
       await escribirLaSemana(h, cambiosParaVolverAlPlanDeSiempre(dias, fechasDeLaSemana), texto);
       return;
@@ -1607,6 +1740,40 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
   const textoPastilla = (on: boolean) => [t.small, styles.textoPastilla, styles.textoDeOpcion, { color: on ? c.goldInk : c.textSoft }];
   const rotulo = [t.body, styles.rotulo, { color: c.goldInk }];
 
+  /**
+   * La fila de los siete días (la misma de siempre, `FilaDeDiasDelPlan`): en «Siempre» los del plan de todas las semanas; en «Por semana» los
+   * de la semana que se ve, con el número del día de ESA semana, sin candado en las que vienen y con un punto en los días que ya tienen
+   * cambios propios. Con el aviso por día (spec 008) suma la campana de los días con aviso propio; un día que el plan de siempre apaga se ve
+   * como un día en que el hábito no corre.
+   */
+  const filaDeDias = habitoEnEdicion ? (
+    <FilaDeDiasDelPlan
+      corre={enSemana ? diasQueCorrenEstaSemana(diasDe(habitoEnEdicion), horarioDeLaSemana) : diasDe(habitoEnEdicion)}
+      horarios={horariosEnEdicion}
+      enEdicion={diasEnEdicion}
+      onAlternarDia={alternarDia}
+      avisoDelDia={recordatorios.HAY_RECORDATORIOS && avisoPorDiaDisponible
+        ? (dia => {
+          const d = horariosEnEdicion[dia];
+          return d && d.avisoPropio && d.activo ? resumenDelAvisoDelDia(d.aviso, avisoGeneral) : null;
+        })
+        : undefined}
+      alarmaDelDia={recordatorios.HAY_RECORDATORIOS_LOCALES && alarmaPorDiaDisponible
+        ? (dia => {
+          const d = horariosEnEdicion[dia];
+          return d && d.alarmaPropia && d.alarma && d.activo
+            ? { largo: `Alarma propia: ${resumenDeLaCombinacion(d.alarma)}` }
+            : null;
+        })
+        : undefined}
+      marcaDelDia={enSemana
+        ? (dia => (horarioDeLaSemana[dia]?.propioDeLaFecha ? { largo: 'Cambiado solo esta semana' } : null))
+        : undefined}
+      diasDelMes={enSemana ? diasDelMesVista : undefined}
+      planificable={enSemana ? planificableEn(lunesDeLaSemana) : undefined}
+    />
+  ) : null;
+
   const lineaConfirmacion = confirmacion ? (
     <ConfirmacionEnLinea key={confirmacion.clave} texto={confirmacion.texto} onTerminar={() => setConfirmacion(null)} />
   ) : null;
@@ -1633,6 +1800,7 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
             que: queSeGuarda,
             hora: horaTexto,
             alarma: cambioLaAlarma,
+            semana: rangoCortoDeLaSemana(lunesDeLaSemana),
           })
           : textoDelBoton({
             guardando,
@@ -1834,9 +2002,11 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
               onScroll={(e: NativeSyntheticEvent<NativeScrollEvent>) => { desplazamientoY.current = e.nativeEvent.contentOffset.y; }}
               scrollEventThrottle={32}
             >
-              {/* ALCANCE (spec 028, decisión del dueño 028-1 A). «Todas las semanas» es el de siempre y el valor por defecto;
-                  «Solo esta semana» guarda por FECHA los días que faltan, sin tocar el plan de siempre. Solo se ofrece si el
-                  servidor sabe de esto (manda `dateOverrides`): contra uno anterior la hoja es la de siempre. */}
+              {/* ALCANCE (spec 028, decisión del dueño 028-1 A; «Siempre | Por semana» desde el 2026-11-02). «Siempre» es el de siempre y el
+                  valor por defecto; «Por semana» guarda por FECHA los días que faltan de la semana que se ve, sin tocar el plan de siempre, y
+                  deja pasar de semana con las flechas o deslizando la fila de días. Solo se ofrece si el servidor sabe de esto (manda
+                  `dateOverrides`): contra uno anterior la hoja es la de siempre. Sin párrafos de ayuda: el control, la semana, la fila de
+                  días y los botones se explican solos. */}
               {ofreceElAlcance && (
                 <View style={styles.bloqueDelAlcance}>
                   <ControlSegmentado
@@ -1844,92 +2014,53 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
                     valor={alcance}
                     onCambiar={cambiarAlcance}
                     rol="radio"
-                    achicarTexto
                     accessibilityLabel="Desde cuándo vale el cambio"
                   />
                 </View>
               )}
-              {enSemana && !semanaLista && (
-                <Text accessibilityLiveRegion="polite" style={[t.body, styles.estadoCentrado, { color: c.textSoft }]}>
-                  Cargando esta semana…
-                </Text>
+
+              {enSemana ? (
+                <SelectorDeSemana
+                  rotulo={rotuloDeLaSemana(lunesDeLaSemana)}
+                  puedeAnterior={indiceDeLaSemana > 0}
+                  puedeSiguiente={indiceDeLaSemana < semanasDelEditor.length - 1}
+                  alCambiar={cambiarDeSemana}
+                  ocupado={!semanaLista}
+                >
+                  {filaDeDias}
+                </SelectorDeSemana>
+              ) : (
+                <>
+                  {/* DÍAS, tocables (V39). Tocar uno pasa a editar SU hora y su aviso; tocarlo de nuevo vuelve
+                      al horario general. Cada pastilla muestra la hora que rige ese día y, si su aviso es
+                      distinto del general, la campana: la fila entera se lee de un vistazo. */}
+                  <View style={styles.filaTituloCompacta}>
+                    <View style={styles.rotuloDeLosDias}>
+                      <MicroLabel>
+                        {diasEnEdicion.length === 0 ? 'Todos los días' : `Solo ${diasEnFrase(diasEnEdicion)}`}
+                      </MicroLabel>
+                    </View>
+                    {diasEnEdicion.length > 0 && (
+                      <Presionable
+                        onPress={volverATodos}
+                        accessibilityRole="button"
+                        accessibilityLabel="Volver a todos los días"
+                        style={styles.enlaceTodos}
+                      >
+                        <Icon name="arrowLeft" size={TAMANO_ICONO.chico} color={c.goldInk} />
+                        <Text style={[t.small, styles.textoDelEnlace, { color: c.goldInk }]}>Todos</Text>
+                      </Presionable>
+                    )}
+                  </View>
+                  {filaDeDias}
+                </>
               )}
               {enSemana && semanaLista && marcablesDeLaSemana.length === 0 && (
-                <Text style={[t.body, styles.ayuda, { color: c.textSoft }]}>
-                  Este hábito no corre en los días que faltan de esta semana. Hoy y lo pasado van con candado.
-                </Text>
+                <Text style={[t.body, styles.ayuda, { color: c.textSoft }]}>Sin días por cambiar esta semana.</Text>
               )}
 
               {(!enSemana || (semanaLista && marcablesDeLaSemana.length > 0)) && (
               <>
-              {/* DÍAS, tocables (V39). Tocar uno pasa a editar SU hora y su aviso; tocarlo de nuevo vuelve
-                  al horario general. Cada pastilla muestra la hora que rige ese día y, si su aviso es
-                  distinto del general, la campana con los minutos: la fila entera se lee de un vistazo. */}
-              <View style={styles.filaTituloCompacta}>
-                <View style={styles.rotuloDeLosDias}>
-                  <MicroLabel>
-                    {enSemana
-                      ? rotuloDeLosDiasDeLaSemana(diasEnEdicion, marcablesDeLaSemana)
-                      : diasEnEdicion.length === 0 ? 'Todos los días' : `Solo ${diasEnFrase(diasEnEdicion)}`}
-                  </MicroLabel>
-                </View>
-                {diasEnEdicion.length > 0 && (!enSemana || diasEnEdicion.length < marcablesDeLaSemana.length) && (
-                  <Presionable
-                    onPress={volverATodos}
-                    accessibilityRole="button"
-                    accessibilityLabel={enSemana ? 'Marcar todos los días de esta semana' : 'Volver a todos los días'}
-                    style={styles.enlaceTodos}
-                  >
-                    <Icon name="arrowLeft" size={TAMANO_ICONO.chico} color={c.goldInk} />
-                    <Text style={[t.small, styles.textoDelEnlace, { color: c.goldInk }]}>{enSemana ? 'Toda la semana' : 'Todos'}</Text>
-                  </Presionable>
-                )}
-              </View>
-              {/* La fila salió a `FilaDeDiasDelPlan` (2026-09-22) para que el planificador de las
-                  acciones del día use la MISMA, en vez de una copia. Acá no cambió nada: los mismos
-                  días, el mismo candado de D-91 y las mismas medidas. Con el aviso por día (spec 008) suma,
-                  solo acá, la campana de los días con aviso propio. En «Solo esta semana» (spec 028) un día que el plan de
-                  siempre apaga se ve como un día en que el hábito no corre, y los que tienen cambio propio llevan un punto. */}
-              <FilaDeDiasDelPlan
-                corre={enSemana ? diasQueCorrenEstaSemana(diasDe(habitoEnEdicion), horarioDeLaSemana) : diasDe(habitoEnEdicion)}
-                horarios={horariosEnEdicion}
-                enEdicion={diasEnEdicion}
-                onAlternarDia={alternarDia}
-                avisoDelDia={recordatorios.HAY_RECORDATORIOS && avisoPorDiaDisponible
-                  ? (dia => {
-                    const d = horariosEnEdicion[dia];
-                    return d && d.avisoPropio && d.activo ? resumenDelAvisoDelDia(d.aviso, avisoGeneral) : null;
-                  })
-                  : undefined}
-                alarmaDelDia={recordatorios.HAY_RECORDATORIOS_LOCALES && alarmaPorDiaDisponible
-                  ? (dia => {
-                    const d = horariosEnEdicion[dia];
-                    return d && d.alarmaPropia && d.alarma && d.activo
-                      ? { largo: `Alarma propia: ${resumenDeLaCombinacion(d.alarma)}` }
-                      : null;
-                  })
-                  : undefined}
-                marcaDelDia={enSemana
-                  ? (dia => (horarioDeLaSemana[dia]?.propioDeLaFecha ? { largo: 'Cambiado solo esta semana' } : null))
-                  : undefined}
-              />
-              {/* La ayuda, corta (2026-10-05; eran dos frases a 10,5 px). */}
-              <Text style={[t.small, styles.ayuda, { color: c.textSoft }]}>
-                {enSemana
-                  ? ayudaDeLaSemana(diasEnEdicion, marcablesDeLaSemana)
-                  : diasEnEdicion.length === 0
-                    ? (recordatorios.HAY_RECORDATORIOS && avisoPorDiaDisponible
-                      ? (alarmaPorDiaDisponible
-                        ? 'Toca un día para darle su propia hora, aviso y alarma. Hoy y lo pasado van con candado.'
-                        : 'Toca un día para darle su propia hora y aviso. Hoy y lo pasado van con candado.')
-                      : 'Toca un día para darle su propia hora. Hoy y lo pasado van con candado.')
-                    : `Solo ${diasEnFrase(diasEnEdicion)}, todas las semanas. Hoy no cambia.`}
-              </Text>
-              {enSemana && lineaDeLosCambios !== null && (
-                <Text accessibilityLiveRegion="polite" style={[t.small, styles.ayuda, { color: c.goldInk, fontFamily: fuentes.media }]}>
-                  {lineaDeLosCambios}
-                </Text>
-              )}
 
               {/* Apagar esos días, o volver a encenderlos. Se ofrece una cosa o la otra según cómo
                   estén los marcados: mostrar las dos sería pedir que la persona adivine cuál aplica.
@@ -1949,7 +2080,7 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
                   <Icon name="ban" size={TAMANO_ICONO.normal} color={c.danger} />
                   <Text style={[t.body, styles.textoAccion, { color: c.danger }]}>
                     {enSemana
-                      ? `No hacerlo los ${diasEnFrase(diasEnEdicion)} esta semana`
+                      ? `No hacerlo los ${diasEnFrase(diasEnEdicion)} · semana ${rangoCortoDeLaSemana(lunesDeLaSemana)}`
                       : `No hacerlo los ${diasEnFrase(diasEnEdicion)}`}
                   </Text>
                 </Presionable>
@@ -1966,7 +2097,7 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
                   <Icon name="rotateCcw" size={TAMANO_ICONO.normal} color={c.goldInk} />
                   <Text style={[t.body, styles.textoAccion, { color: c.goldInk }]}>
                     {enSemana
-                      ? `Volver a hacerlo los ${diasEnFrase(diasEnEdicion)} esta semana`
+                      ? `Volver a hacerlo los ${diasEnFrase(diasEnEdicion)} · semana ${rangoCortoDeLaSemana(lunesDeLaSemana)}`
                       : `Volver a hacerlo los ${diasEnFrase(diasEnEdicion)}`}
                   </Text>
                 </Presionable>
@@ -2002,7 +2133,7 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
                 </Presionable>
               )}
 
-              {/* «Volver al plan de siempre» (spec 028): los marcados que tienen un cambio solo de esta semana y siguen encendidos. */}
+              {/* «Volver al plan de siempre» (spec 028): los marcados que tienen un cambio de esa semana y siguen encendidos. */}
               {enSemana && diasConCambioMarcados.length > 0 && diasEnEdicion.every(d => horarioDeLaSemana[d]?.activo !== false) && (
                 <Presionable
                   onPress={() => void volverAlPlanDeSiempreDeLaSemana(habitoEnEdicion, diasConCambioMarcados)}
@@ -2142,6 +2273,7 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
                   marcados para el hábito entero. Es el último bloque: hora → días → recordatorio → cómo suena →
                   guardar (FR-012). Contra un backend anterior, que no la informa, el espacio queda vacío. */}
               <View testID="espacio-para-tipos-de-alarma" style={hayComoSuena ? undefined : styles.espacioParaTiposDeAlarma}>
+                {/* Sin aviso (o el hábito apagado ese día) no hay nada que decidir y la sección no se dibuja. */}
                 {hayComoSuena ? (
                   <SeccionComoSuena
                     titulo={enModoDias ? `Cómo suena de ${diasEnFrase(diasEnEdicion)}` : 'Cómo suena'}
@@ -2149,7 +2281,7 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
                     mostrados={mostradosDeComoSuena}
                     mensajes={mensajesEnLinea({ mostrados: mostradosDeComoSuena, regla: reglaDeComoSuena, tonoDeYo })}
                     vozPorElTono={tonoDeYo === 'voz'}
-                    atenuada={motivoDeAtenuarComoSuena}
+                    atenuada={null}
                     alTocar={tocarComoSuena}
                   />
                 ) : null}

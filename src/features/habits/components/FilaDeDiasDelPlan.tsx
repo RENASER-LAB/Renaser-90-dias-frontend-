@@ -117,6 +117,11 @@ interface FilaDeDiasDelPlanProps {
    * de pantalla. Solo la pasa el editor en ese alcance; Training y Plan no la pasan y la fila es exactamente la de siempre.
    */
   marcaDelDia?: (dia: DiaDelPlan) => MarcaDeUnDiaEnLaFila | null;
+  /**
+   * 2026-11-02, **opcional**: el día del mes (`09`) de cada pastilla cuando la fila no dibuja la semana en curso (el editor de Planificar
+   * deja pasar de semana en «Por semana»). Sin esta prop —Plan y el resto— es el de la semana que dibuja `diasDelMesDeLaSemana()`.
+   */
+  diasDelMes?: Record<DiaDelPlan, string>;
   onAlternarDia: (dia: DiaDelPlan) => void;
 }
 
@@ -136,10 +141,11 @@ export function FilaDeDiasDelPlan({
   alarmaDelDia,
   etiquetaPropiaDelDia,
   marcaDelDia,
+  diasDelMes: diasDelMesPropios,
   onAlternarDia,
 }: FilaDeDiasDelPlanProps) {
   const { c, t } = useTheme();
-  const diasDelMes = diasDelMesDeLaSemana();
+  const diasDelMes = diasDelMesPropios ?? diasDelMesDeLaSemana();
   /**
    * E-643: con el aviso o la alarma propios por día (el editor de Planificar), cada chip reserva SIEMPRE el mismo
    * bloque de abajo, tenga o no campana y reloj: los siete miden lo mismo y la letra, el número y la hora quedan

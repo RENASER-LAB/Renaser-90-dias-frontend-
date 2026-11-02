@@ -1,0 +1,86 @@
+# Lo guardado por semana sale marcado (issue #95, 2026-11-02): quien guarda un cambio «Por semana» y vuelve a abrir el hábito lo ve:
+# el editor abre en «Por semana», en la semana con cambios, con sus días marcados con el punto (su etiqueta dice «cambiado solo esta
+# semana»). Sin cambios guardados abre en «Siempre». Y «Siempre» no muestra el cambio de la semana.
+# ESCRITO Y SIN CORRER. Precondición: backend con la spec 028; aprendiz con el Día 1 elegido y un hábito de la dimensión `DIMENSION` SIN
+# cambios por semana (por defecto «Escritura libre nocturna» de «Mente»; otro: `-e HABITO="Jugo verde" -e DIMENSION=Cuerpo`).
+# cuenta: aprendiz
+appId: com.renaser.app
+env:
+  HABITO: "Escritura libre nocturna"
+  DIMENSION: "Mente"
+---
+- runFlow: ../comun/ya-adentro.yaml
+- runFlow: ../comun/abrir-training.yaml
+- tapOn: "Tus prácticas: planificar"
+- extendedWaitUntil:
+    visible: "Tus prácticas"
+    timeout: 15000
+- tapOn: "${DIMENSION}: .* de .* cumplidos hoy"
+- extendedWaitUntil:
+    visible: "Toca uno para cambiarle la hora\\."
+    timeout: 15000
+- tapOn: "${HABITO}, .*"
+- extendedWaitUntil:
+    visible: "Guardar .*"
+    timeout: 15000
+# Sin nada guardado por semana, abre en «Siempre».
+- assertVisible: "Todos los días"
+- assertNotVisible: "Semana del .* al .*"
+# Se guarda un aviso «A la hora» en la semana siguiente.
+- tapOn: "El cambio vale solo para la semana que elijas"
+- extendedWaitUntil:
+    visible: "Semana del .* al .*"
+    timeout: 15000
+- tapOn: "Semana siguiente"
+- tapOn: "A la hora exacta"
+- tapOn: "Guardar aviso · .*semana .*"
+- extendedWaitUntil:
+    visible: "Volver al plan de siempre los .*"
+    timeout: 20000
+- assertVisible: ".*cambiado solo esta semana.*"
+# Volver a la lista y abrir el hábito otra vez: abre en «Por semana», en la semana guardada, ya marcada.
+- tapOn: "Volver a la lista"
+- extendedWaitUntil:
+    visible: "Toca uno para cambiarle la hora\\."
+    timeout: 15000
+- tapOn: "${HABITO}, .*"
+- extendedWaitUntil:
+    visible: "Semana del .* al .*"
+    timeout: 20000
+- extendedWaitUntil:
+    visible: ".*cambiado solo esta semana.*"
+    timeout: 20000
+- assertVisible: "Volver al plan de siempre los .*"
+- assertVisible:
+    text: "Semana anterior"
+    enabled: true
+- takeScreenshot: M95a-reabre-en-por-semana-marcado
+# «Siempre» no lleva ese cambio.
+- tapOn: "El cambio vale siempre, para todas las semanas"
+- extendedWaitUntil:
+    visible: "Todos los días"
+    timeout: 15000
+- assertNotVisible: ".*cambiado solo esta semana.*"
+# Limpieza: la semana vuelve al plan de siempre y el hábito vuelve a abrir en «Siempre».
+- tapOn: "El cambio vale solo para la semana que elijas"
+- extendedWaitUntil:
+    visible: "Volver al plan de siempre los .*"
+    timeout: 20000
+- tapOn: "Volver al plan de siempre los .*"
+- extendedWaitUntil:
+    notVisible: "Volver al plan de siempre los .*"
+    timeout: 20000
+- tapOn: "Volver a la lista"
+- extendedWaitUntil:
+    visible: "Toca uno para cambiarle la hora\\."
+    timeout: 15000
+- tapOn: "${HABITO}, .*"
+- extendedWaitUntil:
+    visible: "Guardar .*"
+    timeout: 15000
+- assertVisible: "Todos los días"
+- assertNotVisible: "Semana del .* al .*"
+- takeScreenshot: M95b-sin-cambios-abre-en-siempre
+- back
+- back
+- back

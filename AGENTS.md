@@ -799,6 +799,11 @@ semana anterior; **028-2** «planificar el mes» es el **plan de OBJETIVOS de Pl
 **028-3** repetir la semana es de los **hábitos** y el mes es de los **objetivos**; **028-4 A**, **028-5 A**; y «lo único bueno que ya está es la
 planificación de hábitos»: se reutiliza el editor de Planificar (specs 008 a 011) y no se reescribe. Lo que cambia y nada más:
 
+> **Corregido 2026-11-02 (pedido del dueño).** El control ya no dice «Todas las semanas | Solo esta semana» sino **«Siempre | Por semana»**; «Por semana» deja
+> pasar de semana (flechas y deslizando) hasta la última del programa y ya no lleva la ayuda «Solo esta semana: los días que faltan…», el rótulo «Toda esta
+> semana», «Cargando esta semana…» ni la línea «Cambiado solo esta semana: sáb, dom» (queda el punto del día). El editor abre en «Por semana» cuando lo
+> guardado ya tiene cambios. Ver «Training → Planificar: «Siempre | Por semana»…», más abajo.
+
 * **El editor de un hábito** (`PlanificarDimensionModal`): un `ControlSegmentado` «Todas las semanas | Solo esta semana» arriba del bloque de los
   días. Por defecto «Todas las semanas», con **los mismos textos, pedidos y alarmas de siempre** (las pruebas de las specs 008 a 011 siguen
   sin modificarse). Solo se ofrece si el servidor sabe de esto (`GET /habit-preferences` manda `dateOverrides`).
@@ -846,6 +851,66 @@ planificación de hábitos»: se reutiliza el editor de Planificar (specs 008 a 
 * **Pruebas**: Jest — `alcanceDeLaSemana`, `ofertaDeRepetir`, `useOfertaDeRepetirSemana`, `ofertaDeRepetirSemana`, `soloEstaSemana`, `fechasPropiasDeAlarmas`, `fechasPropiasEnElTelefono`,
   `mesDelPrograma`, `objetivoDelMesEnPalabras`, `planDelMes`, `botonPlanificarMes`, `useObjetivosSemanalesDelMes` y `planificarMiMesEnPlan`. Maestro, **escritos y sin correr** (sin emulador en esta
   entrega): `.maestro/planificacion/solo-esta-semana.yaml`, `repetir-la-semana.yaml` y `planificar-el-mes.yaml`.
+
+## Cambio por pedido del dueño — 2026-11-02 — Training → Planificar: «Siempre | Por semana» con flechas, lo guardado marcado y menos texto
+
+Pedido del dueño con la captura del editor de «Escritura libre nocturna»: «el de todas las semanas, si yo guardo el de semana debería de salir marcado,
+cuidado; y dice todas las semanas, ¿a qué? debería deslizar hacia la derecha y poder planificar ¿no? arregla esa parte; y recuerda: mucho texto o entrada a
+veces no les conviene». Eligió: `[ Siempre | Por semana ]`, `‹ Semana del 9 al 15 nov ›`, la fila de días con su punto, «Recordatorio» y
+«Guardar 21:30 · semana 9–15 nov». Solo el editor de hábitos de **Training → Planificar** (`PlanificarDimensionModal`); Plan, Hoy, Yo y el control de
+recordatorios de las acciones de los objetivos no cambian. Issues: **#95** (lo guardado no salía marcado) y **#94** (el nombre en «Qué se repite»).
+Lo que cambia y nada más:
+
+* **«Siempre | Por semana».** El control de alcance deja «Todas las semanas | Solo esta semana». **«Siempre» es exactamente lo de antes**: el plan de todas las
+  semanas, con sus mismos pedidos, alarmas y pruebas (specs 008 a 011). **«Por semana»** guarda por fecha, como el «Solo esta semana» de la spec 028, pero de
+  **cualquier semana por venir**, no solo de la en curso.
+* **Pasar de semana** (`SelectorDeSemana`, `utils/semanasDelEditor`). Arriba de la fila de días: `‹  Semana del 9 al 15 nov  ›` (las flechas de 48 × 48 de
+  «Tiempo libre»; apagadas en la primera y la última semana). También se pasa **deslizando la fila de días**: el dedo a la izquierda trae la semana siguiente; a la
+  derecha, la anterior. Es un `PanResponder` (como el arrastre de `HojaDesdeAbajo`; Gesture Handler no está instalado) que solo toma el gesto cuando el dedo va
+  claramente de lado y no lo suelta, así que no pelea con el desplazamiento vertical de la hoja ni con los toques en las pastillas. El cambio de semana es
+  **instantáneo** (sin animación) y vibra con `tacto.seleccion()`. Va **desde la semana en curso** (el domingo, desde la que empieza) **hasta la última semana del
+  programa de la persona**: su lunes ≤ `hoy + duración − día del programa` (90 días, 3 meses = 90 o 1 año = 365; `/home` manda `diaPrograma` y `duracionDias`, que
+  `TrainingScreen` pasa por `PracticasDeTraining`; sin ellos solo se ve la primera semana). Hoy y lo pasado siguen con candado (solo existen en la primera
+  semana). **Cada semana se lee una sola vez** (`GET /habit-preferences/{id}/week?weekStart=`, al llegar a ella; memoria de la apertura del hábito): ir y volver
+  no repite el pedido. Mientras se lee, la fila se ve atenuada y no se pasa a otra; si falla, se vuelve a la anterior y se dice. Tras guardar se vuelve a leer **esa**
+  semana; cambiar el plan de siempre vacía lo leído.
+* **Guardar vale SOLO para la semana que se ve** (`PUT …/week`, la misma regla de «solo lo tocado», todo o nada). El botón dice `Guardar 21:30 · semana 9–15 nov`
+  (con algunos días: `Guardar aviso · sáb, dom · semana 9–15 nov`); la confirmación, `Queda a las 21:30 todos los días de la semana 9–15 nov.`. **Lo tocado en una
+  semana no se lleva a otra**: pasar de semana suelta el aviso, «Cómo suena» y la fila de «Otra», y la rueda vuelve a donde arrancó (supuesto, ver abajo).
+* **Lo guardado sale marcado (#95).** Al abrir un hábito, si alguna semana por venir ya tiene cambios propios de ese hábito (las fechas con fila propia que
+  `GET /habit-preferences` manda en `dateOverrides`: las de hoy o pasadas no cuentan), el editor abre en **«Por semana», en esa semana** (la más cercana con
+  cambios; si es la en curso, esa), con sus días marcados con el punto (`marcaDelDia`; su etiqueta dice «cambiado solo esta semana») y con sus valores (hora,
+  aviso, «Cómo suena»). Sin cambios propios abre en «Siempre». Si esa lectura falla, queda en «Siempre» sin diálogo. Al pasar a otra semana con cambios, también se
+  ven marcados.
+* **Menos texto.** Se quitaron: «Toca un día para darle su propia hora, aviso y alarma. Hoy y lo pasado van con candado.» (y sus variantes sin aviso/alarma), «Solo
+  sáb, dom, todas las semanas. Hoy no cambia.», «Solo esta semana: los días que faltan. Tu plan de siempre no cambia. Hoy y lo pasado van con candado.», «Cambiado
+  solo esta semana: sáb, dom», el rótulo «Toda esta semana» con su enlace, «Cargando esta semana…» y «Este hábito no corre en los días que faltan de esta semana. Hoy
+  y lo pasado van con candado.» (ahora, en una línea: «Sin días por cambiar esta semana.»). Con **«Sin aviso»** (o el hábito apagado ese día) **«Cómo suena» no se
+  dibuja** (antes, atenuada con «Este hábito no tiene aviso / Elige un aviso en Recordatorio…»). Quedan los rótulos (`MicroLabel`), la fila de días, el punto y los
+  botones; el aire entre bloques es el de siempre (el rótulo «Recordatorio» ya llevaba su propio margen). «No hacerlo los sáb, dom · semana 9–15 nov» y «Volver
+  a hacerlo…» dicen la semana; «Volver al plan de siempre los sáb» se queda.
+* **Backend** (`PlanDeLaSemanaService`, spec 028 al día): `GET` y `PUT …/week` aceptan cualquier semana por venir cuyo lunes caiga **dentro del programa de la
+  persona** (la misma cuenta que usa repetir la semana); **400 después de su último día**, sin escribir nada. La semana en curso y las pasadas no se acotan. Sin tablas
+  nuevas. Hace falta publicar el backend antes: con el anterior, «Por semana» acepta cualquier fecha (sin tope) y la app igual no ofrece más allá del programa.
+* **Alarmas del teléfono con semanas lejanas** (`habits/notificaciones/**`, sin cambios de código): el servidor manda en `dateOverrides` las fechas con fila propia
+  de los **próximos 20 días**, y la puesta al día (al abrir la app y al volver a primer plano) arma con ellas las alarmas de fecha (tope de 48 por hábito, las más
+  próximas primero). Un cambio en una semana lejana ya se respeta cuando entra en esa ventana; las alarmas semanales de antes de esa fecha pasan a ser de fecha con los
+  valores de siempre. **Límites aceptados**: (1) un cambio de una semana que está a más de 20 días solo llega a las alarmas del teléfono cuando entra en la ventana y la
+  persona abre la app; antes suena la alarma de siempre (el push de respaldo del servidor sí lo respeta); (2) con dos o tres semanas completas planificadas, el tope de 48
+  gasta las alarmas en los días planificados y la «cola» de siempre vuelve cuando se abre la app.
+* **#94**: «Repetir tu semana» → «Ver qué se repite» escribe el nombre del hábito en tipo oración (`tituloEnTipoOracion`), como el resto de la app.
+* **Supuestos a confirmar con el dueño**: (1) pasar de semana **descarta** lo que se tocó sin guardar (en vez de llevarlo a la otra semana), para que un guardado
+  nunca caiga en una semana distinta de la que se mira; (2) el editor abre en la **semana más cercana con cambios** (no solo la en curso), para que lo guardado en
+  una semana que viene tampoco se pierda de vista; (3) la lectura de lo ya guardado cubre los próximos 20 días (la ventana de `dateOverrides`): un cambio más lejano
+  se ve al navegar hasta esa semana; (4) las flechas son las de «Tiempo libre» (`arrowLeft`/`arrow`), no el `chevron`.
+* **No cambian**: «Siempre» (hora, días, aviso, «Cómo suena», alarmas, pedidos), «Tus prácticas» y la tarjeta «Repetir tu semana», Plan (incluido «Planificar mi mes»),
+  los demás tabs, la barra ni las animaciones (sin animación nueva). Sin dependencias ni código nativo.
+* **Pruebas**: Jest `semanasDelEditor` (las semanas hasta el final del programa, abrir en la semana con cambios, el deslizamiento), `planificarPorSemana` (pasar de
+  semana, una lectura por semana, guardar solo esa semana, lo guardado marcado al reabrir, menos texto), `alcanceDeLaSemana`, `soloEstaSemana` y `planificarComoSuena`
+  (ajustadas), `fechasPropiasDeAlarmas` (semanas lejanas y el tope) y `ofertaDeRepetirSemana` (#94); backend `PlanDeLaSemanaServiceTest` y `PlanificacionDeLaSemanaIT`.
+  Maestro, escritos y sin correr: `.maestro/planificacion/` (`solo-esta-semana` y `repetir-la-semana` adaptados y sin esperar los avisos de 3 s;
+  `por-semana-con-flechas-y-deslizando` y `lo-guardado-sale-marcado` nuevos).
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire) **y el backend con esta ampliación antes**.
 
 ## Cambio por pedido del dueño — 2026-10-31 — hábitos y categorías por formación (spec 023)
 
@@ -4413,6 +4478,9 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       Yo → Alarmas»), **Vibración** («El teléfono vibra»), **Voz que dice el hábito** («Una voz dice el nombre del
       hábito») y **Repetir si no la atiendo** («Vuelve a sonar a los 5 y a los 10 minutos»). Sin aviso, o con el hábito
       apagado ese día, la sección se atenúa, no se puede tocar y dice por qué («Este día no tiene aviso»).
+      > **Corregido 2026-11-02 (pedido del dueño: menos texto).** Con «Sin aviso» (o el hábito apagado ese día) «Cómo suena» **ya no se dibuja** en el editor de
+      > Planificar: ni la sección atenuada ni «Este hábito no tiene aviso / Elige un aviso en Recordatorio…». Lo que se había tocado ahí y quedó escondido no
+      > se guarda. El control de las acciones de los objetivos (Plan y Yo → Alarmas) conserva el suyo.
     * **`InterruptorGrande`** (`components/InterruptorGrande.tsx`), componente nuevo y aparte: **no reemplaza ni cambia
       a `Interruptor`**, que sigue con 51 × 31 en Yo, Plan, Training y Eventos. La fila entera es el área de toque (56 o
       más de alto), con el rótulo a 17 px y la explicación a 15; riel de 72 × 40, pulgar blanco de 34 con sombra suave,

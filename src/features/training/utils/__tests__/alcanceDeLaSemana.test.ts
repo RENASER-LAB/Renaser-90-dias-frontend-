@@ -3,9 +3,9 @@ import { describe, expect, it } from '@jest/globals';
 import type { SemanaDelHabitoApi } from '../../../habits/types/habits.types';
 import { DIAS_DEL_PLAN, type DiaDelPlan } from '../../../habits/utils/semanaDelPlan';
 import {
+  OPCIONES_DE_ALCANCE,
   alternarDiaDeLaSemana,
   apagadoPorElPlanDeSiempre,
-  ayudaDeLaSemana,
   cambiosDeLaSemana,
   cambiosParaApagar,
   cambiosParaVolverAlPlanDeSiempre,
@@ -15,8 +15,6 @@ import {
   diasQueSePuedenMarcar,
   elServidorSabeDeLaSemana,
   hayAlgoQueGuardarEnLaSemana,
-  lineaDeLosCambiosDeLaSemana,
-  rotuloDeLosDiasDeLaSemana,
   textoDelBotonDeLaSemana,
 } from '../alcanceDeLaSemana';
 
@@ -121,35 +119,37 @@ describe('marcar y desmarcar: nunca queda vacío', () => {
   });
 });
 
+describe('los alcances: «Siempre | Por semana»', () => {
+  it('se llaman así, en ese orden, y el lector de pantalla oye hasta cuándo vale cada uno', () => {
+    expect(OPCIONES_DE_ALCANCE.map(o => [o.valor, o.etiqueta])).toEqual([['siempre', 'Siempre'], ['semana', 'Por semana']]);
+    expect(OPCIONES_DE_ALCANCE[0].accessibilityLabel).toContain('todas las semanas');
+    expect(OPCIONES_DE_ALCANCE[1].accessibilityLabel).toContain('semana que elijas');
+  });
+});
+
 describe('los textos', () => {
   const marcables: DiaDelPlan[] = ['VIE', 'SÁB', 'DOM'];
 
-  it('el rótulo dice «Toda esta semana» con todos los que faltan y «Solo …» con algunos', () => {
-    expect(rotuloDeLosDiasDeLaSemana(marcables, marcables)).toBe('Toda esta semana');
-    expect(rotuloDeLosDiasDeLaSemana(['SÁB', 'DOM'], marcables)).toBe('Solo sáb, dom');
-  });
-  it('la línea de los cambios existe solo si hay alguno', () => {
-    expect(lineaDeLosCambiosDeLaSemana([])).toBeNull();
-    expect(lineaDeLosCambiosDeLaSemana(['SÁB', 'DOM'])).toBe('Cambiado solo esta semana: sáb, dom');
-  });
-  it('la ayuda dice el alcance y que el plan de siempre no cambia', () => {
-    expect(ayudaDeLaSemana(marcables, marcables)).toBe('Solo esta semana: los días que faltan. Tu plan de siempre no cambia. Hoy y lo pasado van con candado.');
-    expect(ayudaDeLaSemana(['SÁB'], marcables)).toContain('sáb');
-  });
-  it('el botón: «Guardar 07:00 · solo esta semana» con todos y con los días con algunos', () => {
-    const base = { guardando: false, marcables, hora: '07:00', alarma: false };
-    expect(textoDelBotonDeLaSemana({ ...base, marcados: marcables, que: 'hora' })).toBe('Guardar 07:00 · solo esta semana');
-    expect(textoDelBotonDeLaSemana({ ...base, marcados: ['SÁB', 'DOM'], que: 'hora' })).toBe('Guardar 07:00 · sáb, dom · solo esta semana');
-    expect(textoDelBotonDeLaSemana({ ...base, marcados: marcables, que: 'aviso' })).toBe('Guardar aviso · solo esta semana');
-    expect(textoDelBotonDeLaSemana({ ...base, marcados: ['SÁB'], que: 'aviso' })).toBe('Guardar aviso · sáb · solo esta semana');
-    expect(textoDelBotonDeLaSemana({ ...base, marcados: marcables, que: 'ninguno', alarma: true })).toBe('Guardar alarma · solo esta semana');
-    expect(textoDelBotonDeLaSemana({ ...base, marcados: ['SÁB'], que: 'ambos', alarma: true })).toBe('Guardar hora, aviso y alarma · sáb · solo esta semana');
+  it('el botón: «Guardar 21:30 · semana 9–15 nov» con todos y con los días con algunos', () => {
+    const base = { guardando: false, marcables, hora: '21:30', alarma: false, semana: '9–15 nov' };
+    expect(textoDelBotonDeLaSemana({ ...base, marcados: marcables, que: 'hora' })).toBe('Guardar 21:30 · semana 9–15 nov');
+    expect(textoDelBotonDeLaSemana({ ...base, marcados: ['SÁB', 'DOM'], que: 'hora' })).toBe('Guardar 21:30 · sáb, dom · semana 9–15 nov');
+    expect(textoDelBotonDeLaSemana({ ...base, marcados: marcables, que: 'aviso' })).toBe('Guardar aviso · semana 9–15 nov');
+    expect(textoDelBotonDeLaSemana({ ...base, marcados: ['SÁB'], que: 'aviso' })).toBe('Guardar aviso · sáb · semana 9–15 nov');
+    expect(textoDelBotonDeLaSemana({ ...base, marcados: marcables, que: 'ninguno', alarma: true })).toBe('Guardar alarma · semana 9–15 nov');
+    expect(textoDelBotonDeLaSemana({ ...base, marcados: ['SÁB'], que: 'ambos', alarma: true })).toBe('Guardar hora, aviso y alarma · sáb · semana 9–15 nov');
     expect(textoDelBotonDeLaSemana({ ...base, guardando: true, marcados: marcables, que: 'hora' })).toBe('Guardando…');
   });
-  it('la confirmación nombra lo guardado, los días y que el plan de siempre no cambia', () => {
-    expect(confirmacionDeLaSemana({ que: 'hora', hora: '09:00', aviso: null, dias: ['SÁB', 'DOM'], alarma: false }))
-      .toBe('Queda a las 09:00 los sáb, dom, solo esta semana. Tu plan de siempre no cambia.');
-    expect(confirmacionDeLaSemana({ que: 'aviso', hora: '09:00', aviso: [], dias: ['SÁB'], alarma: true }))
+  it('la semana que cruza de mes se dice entera en el botón', () => {
+    expect(textoDelBotonDeLaSemana({ guardando: false, marcados: marcables, marcables, que: 'hora', hora: '07:00', alarma: false, semana: '26 oct–1 nov' }))
+      .toBe('Guardar 07:00 · semana 26 oct–1 nov');
+  });
+  it('la confirmación nombra lo guardado, los días y la semana, en una línea', () => {
+    expect(confirmacionDeLaSemana({ que: 'hora', hora: '09:00', aviso: null, dias: ['SÁB', 'DOM'], alarma: false, semana: '9–15 nov' }))
+      .toBe('Queda a las 09:00 los sáb, dom de la semana 9–15 nov.');
+    expect(confirmacionDeLaSemana({ que: 'hora', hora: '21:30', aviso: null, dias: [...DIAS_DEL_PLAN], alarma: false, semana: '9–15 nov' }))
+      .toBe('Queda a las 21:30 todos los días de la semana 9–15 nov.');
+    expect(confirmacionDeLaSemana({ que: 'aviso', hora: '09:00', aviso: [], dias: ['SÁB'], alarma: true, semana: '9–15 nov' }))
       .toContain('sin aviso, con su alarma nueva');
   });
 });
