@@ -71,7 +71,15 @@ const eventoEvidenciaSchema = z
 
 /** Respuesta de confirmar una propuesta. */
 const resultadoPropuestaSchema = z
-  .object({ estado: z.enum(['CONFIRMADA', 'FALLIDA']), mensaje: z.string() })
+  .object({
+    estado: z.enum(['CONFIRMADA', 'FALLIDA']),
+    mensaje: z.string(),
+    /** Spec 038: el hábito que cumplió la propuesta. Tolerante: si viene mal formado se pierde SOLO esto, no la confirmación. */
+    habitoCumplido: z
+      .object({ registroId: z.string(), habitoId: z.string(), fecha: z.string(), puntos: z.number() })
+      .nullish()
+      .catch(null),
+  })
   .passthrough();
 
 /**

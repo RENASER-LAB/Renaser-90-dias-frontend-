@@ -57,7 +57,15 @@ import { useVozDelOrbe } from '../features/renasia/hooks/useVozDelOrbe';
 import { AvisoDeMantenimiento } from '../features/plataforma/components/AvisoDeMantenimiento';
 import { useDisponibilidad, useFuncionalidad } from '../features/plataforma/estado/useFuncionalidad';
 import { CLAVES } from '../features/plataforma/utils/clavesDeLaApp';
-import { cambioAlRegistrar, cambioTrasIniciar, estadoVisibleDelPedido, solicitudDelPedido } from '../features/renasia/utils/pedidosDeFoto';
+import {
+  cambioAlRegistrar,
+  cambioTrasIniciar,
+  estadoVisibleDelPedido,
+  seRegistraEscribiendoElPedido,
+  solicitudDelPedido,
+} from '../features/renasia/utils/pedidosDeFoto';
+import { RegistroDeRitualConTexto } from '../features/training/components/RegistroDeRitualConTexto';
+import { useRitualPorTexto } from '../features/renasia/hooks/useRitualPorTexto';
 import { REGLAS_DE_ACCION } from '../features/objetivos/utils/registroDeAccionConFoto';
 import type { PedidoDeFotoUI } from '../features/renasia/types/renasia.types';
 import { useRegistroConFoto } from '../features/habits/hooks/useRegistroConFoto';
@@ -124,12 +132,27 @@ export default function HoyScreen() {
   useEffect(() => {
     void reanudarPendiente();
   }, [reanudarPendiente]);
+  /* Spec 038: un ritual que pide el orbe no se registra con la cámara sino ESCRIBIENDO, como en Training: la misma hoja de
+     «¿Cómo te sientes después de realizar el ritual?». Al registrarse, Hoy relee igual que con la foto. */
+  const ritual = useRitualPorTexto({
+    alCompletar: registroId => {
+      tacto.logro();
+      voz.cambiarPedidoDeFoto(registroId, cambioAlRegistrar('habito', true));
+      void recargarResumen();
+      void recargarHabitoAhora();
+    },
+    alCambiarElDia: registroId => voz.cambiarPedidoDeFoto(registroId, cambioTrasIniciar('vencido', 'habito')),
+  });
   const tomarFotoDelOrbe = async (pedido: PedidoDeFotoUI) => {
     if (estadoVisibleDelPedido(pedido, Date.now()) !== 'pendiente') return;
     // La cámara no convive con el micrófono abierto ni con el orbe hablando: se lo calla antes.
     // Con la voz en vivo, tocar ya no cierra (E-458): se cierra la conversación entera.
     if (voz.terminar) voz.terminar();
     else if (voz.fase === 'escuchando' || voz.fase === 'hablando') voz.tocar();
+    if (seRegistraEscribiendoElPedido(pedido)) {
+      ritual.abrir(pedido);
+      return;
+    }
     voz.cambiarPedidoDeFoto(pedido.registroId, { estado: 'abriendo' });
     const resultado = await registroConFoto.iniciar(solicitudDelPedido(pedido));
     voz.cambiarPedidoDeFoto(pedido.registroId, cambioTrasIniciar(resultado, pedido.destino));
@@ -591,6 +614,7 @@ export default function HoyScreen() {
         onTomarFoto={pedido => void tomarFotoDelOrbe(pedido)}
       />
       <RegistroConFotoModal {...registroConFoto.modal} />
+      <RegistroDeRitualConTexto {...ritual.modal} />
     </SafeAreaView>
   );
 }

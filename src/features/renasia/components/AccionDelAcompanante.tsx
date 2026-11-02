@@ -7,7 +7,8 @@ import { Icon, TAMANO_ICONO, type IconName } from '../../../components/Icon';
 import { useTheme } from '../../../theme/ThemeContext';
 import type { EstadoPropuestaUI, PedidoDeFotoUI, PropuestaUI } from '../types/renasia.types';
 import { elegirAccionVisible, elegirPedidoVisible, primeraFrase, resumenCorto } from '../utils/accionDelOrbe';
-import { TEXTO_ACCION_REGISTRADA, TEXTO_REGISTRADO, tituloDelPedido } from '../utils/pedidosDeFoto';
+import { ETIQUETA_DEL_BOTON_DEL_RITUAL } from '../../habits/utils/registroConFoto';
+import { seRegistraEscribiendoElPedido, textoDeRegistrado, tituloDelPedido } from '../utils/pedidosDeFoto';
 import { estadoVisible } from '../utils/propuestas';
 import { FenixDeSerQuieto } from '../../fenix/components/FenixDeSerQuieto';
 import { ESPACIO_PARA_LANZADOR } from './RenasiaLauncher';
@@ -154,13 +155,17 @@ export function AccionDelAcompanante({ propuestas, onConfirmar, onCancelar, pedi
   );
 }
 
-/** La hoja cuando el acompañante pidió una foto: el hábito y "Tomar foto"; registrada, una línea. */
+/**
+ * La hoja cuando el acompañante pidió una foto: el hábito y «Tomar foto»; registrada, una línea. Un ritual (spec 038) no pide foto sino
+ * que se escribe: ícono de lápiz y «Escribir cómo me siento».
+ */
 function HojaPedidoDeFoto({ pedido, onTomarFoto }: { pedido: PedidoDeFotoUI; onTomarFoto: () => void }) {
   const { c, t } = useTheme();
   const registrado = pedido.estado === 'registrado';
   const cerrado = registrado || pedido.estado === 'vencido';
+  const seEscribe = seRegistraEscribiendoElPedido(pedido);
   const texto = registrado
-    ? pedido.mensaje || (pedido.destino === 'roca' ? TEXTO_ACCION_REGISTRADA : TEXTO_REGISTRADO)
+    ? pedido.mensaje || textoDeRegistrado(pedido)
     : cerrado
       ? `${tituloDelPedido(pedido)} · ${pedido.mensaje || 'Ya venció'}`
       : tituloDelPedido(pedido);
@@ -173,7 +178,7 @@ function HojaPedidoDeFoto({ pedido, onTomarFoto }: { pedido: PedidoDeFotoUI; onT
       <Aparicion desplazamiento={12} style={styles.contenido}>
         <View style={styles.linea}>
           <Icon
-            name={registrado ? 'checkCircle' : cerrado ? 'clock' : 'camera'}
+            name={registrado ? 'checkCircle' : cerrado ? 'clock' : seEscribe ? 'pencil' : 'camera'}
             size={TAMANO_ICONO.normal}
             color={registrado ? c.success : cerrado ? c.textSoft : c.goldInk}
           />
@@ -183,7 +188,7 @@ function HojaPedidoDeFoto({ pedido, onTomarFoto }: { pedido: PedidoDeFotoUI; onT
         </View>
         {!cerrado ? (
           <GoldButton
-            label="Tomar foto"
+            label={seEscribe ? ETIQUETA_DEL_BOTON_DEL_RITUAL : 'Tomar foto'}
             textStyle={TEXTO_DE_BOTON}
             onPress={onTomarFoto}
             disabled={pedido.estado === 'abriendo'}

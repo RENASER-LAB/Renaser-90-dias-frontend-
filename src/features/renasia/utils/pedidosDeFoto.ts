@@ -10,6 +10,8 @@ import type { EstadoPedidoDeFotoUI, PedidoDeFotoUI, RenasiaEventoEvidencia } fro
  */
 
 export const TEXTO_REGISTRADO = 'Listo, quedó registrado.';
+/** Lo que dice la tarjeta de un ritual al registrarse (spec 038): no hubo foto. */
+export const TEXTO_RITUAL_REGISTRADO = 'Listo, quedó registrado tu ritual.';
 /** D-178: lo que dice la tarjeta de una acción del día al registrarse. */
 export const TEXTO_ACCION_REGISTRADA = 'Listo, quedó registrada tu acción.';
 
@@ -26,6 +28,21 @@ export function pedidoDesdeEvento(evento: RenasiaEventoEvidencia): PedidoDeFotoU
     destino: destinoDeEvidencia(evento.destino) ?? 'habito',
     estado: 'pendiente',
   };
+}
+
+/**
+ * ¿Esta tarjeta se registra ESCRIBIENDO, sin cámara? (spec 038) Los tres rituales: el servidor los manda con `conPregunta` (antes era la foto seguida de
+ * «¿Qué sentiste?»; desde el 31/10 los rituales piden solo texto). Una acción del día nunca es un ritual. Así también las tarjetas que ya estaban en un
+ * chat, de cuando se pedía la cámara, abren el registro por texto de Training.
+ */
+export function seRegistraEscribiendoElPedido(pedido: Pick<PedidoDeFotoUI, 'conPregunta' | 'destino'>): boolean {
+  return pedido.destino === 'habito' && pedido.conPregunta;
+}
+
+/** Lo que dice la tarjeta al registrarse: el ritual, el hábito o la acción. */
+export function textoDeRegistrado(pedido: Pick<PedidoDeFotoUI, 'conPregunta' | 'destino'>): string {
+  if (pedido.destino === 'roca') return TEXTO_ACCION_REGISTRADA;
+  return seRegistraEscribiendoElPedido(pedido) ? TEXTO_RITUAL_REGISTRADO : TEXTO_REGISTRADO;
 }
 
 /**
@@ -83,8 +100,11 @@ export function cambioTrasIniciar(resultado: ResultadoDeInicio, destino: Destino
   }
 }
 
-export function cambioAlRegistrar(destino: DestinoDeFoto = 'habito'): Partial<PedidoDeFotoUI> {
-  return { estado: 'registrado', mensaje: destino === 'roca' ? TEXTO_ACCION_REGISTRADA : TEXTO_REGISTRADO };
+export function cambioAlRegistrar(destino: DestinoDeFoto = 'habito', comoRitual = false): Partial<PedidoDeFotoUI> {
+  return {
+    estado: 'registrado',
+    mensaje: textoDeRegistrado({ destino, conPregunta: comoRitual }),
+  };
 }
 
 /** Si el cambio cierra la tarjeta, le anota cuándo (la hoja del orbe la retira sola después). */
