@@ -33,7 +33,8 @@ appId: com.renaser.app
 - takeScreenshot: T02c-pregunta-del-ritual
 # La respuesta es obligatoria: sin escribir nada, «Enviar» no hace nada.
 - tapOn: "Cuéntalo con tus palabras"
-- inputText: "Me siento en calma"
+# Maestro escribe ~10 s por letra con el dev client (#3667): un texto largo pasa los 120 s y el flujo muere; el campo solo exige que no esté vacío.
+- inputText: "Bien"
 - hideKeyboard
 - tapOn: "Enviar"
 - runFlow: ../comun/cerrar-aviso-dev.yaml
