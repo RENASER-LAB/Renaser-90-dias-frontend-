@@ -9,6 +9,7 @@ import { useTheme } from '../../../../theme/ThemeContext';
 import { fuenteDeLaFirma } from '../../../yo/utils/firmaDelPacto';
 import { fechaDeFirma } from '../../../yo/utils/navegacionDeYo';
 import type { TerminosAceptadosApi } from '../api/terminosSchemas';
+import { resumenDeLoAceptado } from '../utils/miAceptacion';
 import { ContenidoDeLosTerminos } from './ContenidoDeLosTerminos';
 
 /** El papel de la firma: el blanco del lienzo en los dos temas, como la del Pacto (`PactoFirmado`). */
@@ -21,6 +22,9 @@ const PROPORCION_DEL_LIENZO = 5 / 2;
  * firmar de nuevo desde acá (si hay unos nuevos que aceptar, la app los pide al abrir).
  *
  * Sin firma (no quedó guardada, el archivo ya no está o la imagen no carga) se ve igual, sin ese recuadro.
+ *
+ * Spec 039: y lo que se le mostró en «Mi aceptación» cuando firmó —el programa, el inicio y el fin— y si firmó su cronograma de pagos con los términos. Lo aceptado
+ * antes de esa spec no lo guardó y no dice nada de eso.
  */
 export function TerminosAceptadosVista({ aceptados }: { aceptados: TerminosAceptadosApi }) {
   const { c, t } = useTheme();
@@ -32,12 +36,15 @@ export function TerminosAceptadosVista({ aceptados }: { aceptados: TerminosAcept
   const [urlQueFallo, setUrlQueFallo] = useState<string | null>(null);
   const [proporcion, setProporcion] = useState(PROPORCION_DEL_LIENZO);
   const firma = encontrada && encontrada.uri !== urlQueFallo ? encontrada : null;
+  const mostrado = resumenDeLoAceptado(aceptados.agreement);
 
   return (
     <View style={{ gap: 14 }}>
       <View
         accessible
-        accessibilityLabel={`${titulo}. ${fecha ? `Aceptada el ${fecha}.` : 'Aceptada.'}${firma ? ' Con tu firma.' : ''}`}
+        accessibilityLabel={`${titulo}. ${fecha ? `Aceptada el ${fecha}.` : 'Aceptada.'}${mostrado?.programa ? ` ${mostrado.programa}.` : ''}${mostrado?.periodo ? ` ${mostrado.periodo}.` : ''}${
+          mostrado?.cronogramaFirmado ? ' Firmaste tu cronograma de pagos con los términos.' : ''
+        }${firma ? ' Con tu firma.' : ''}`}
         style={[estilos.caja, { borderColor: c.border, backgroundColor: c.cardBg }]}
       >
         <View style={estilos.fila}>
@@ -47,6 +54,9 @@ export function TerminosAceptadosVista({ aceptados }: { aceptados: TerminosAcept
           <View style={{ flex: 1, gap: 2 }}>
             <Text style={[t.cardTitle, { color: c.textStrong }]}>{titulo}</Text>
             <Text style={[t.body, { color: c.textSoft }]}>{fecha ? `Aceptada el ${fecha}` : 'Aceptada'}</Text>
+            {mostrado?.programa ? <Text style={[t.body, { color: c.textSoft }]}>{mostrado.programa}</Text> : null}
+            {mostrado?.periodo ? <Text style={[t.body, { color: c.textSoft }]}>{mostrado.periodo}</Text> : null}
+            {mostrado?.cronogramaFirmado ? <Text style={[t.body, { color: c.textSoft }]}>Firmaste tu cronograma de pagos con los términos.</Text> : null}
           </View>
         </View>
         {firma ? (
