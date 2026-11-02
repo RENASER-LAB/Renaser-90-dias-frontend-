@@ -195,7 +195,7 @@ describe('la pantalla «Tu programa empieza mañana» recupera errores sin asign
     expect(alActivar).not.toHaveBeenCalled();
     expect(textos()).toContain('No pudimos activar tu programa. Revisa tu conexión e inténtalo de nuevo.');
     await tocar('Entendido');
-    expect(mockActivar.mock.calls.map(([input]) => input.startDate)).toEqual([FECHAS[0], FECHAS[0]]);
+    expect(mockActivar.mock.calls.map(([input]) => input?.startDate)).toEqual([FECHAS[0], FECHAS[0]]);
     expect(alActivar).toHaveBeenCalledTimes(1);
   });
 

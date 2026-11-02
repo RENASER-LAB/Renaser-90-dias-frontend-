@@ -35,6 +35,7 @@ function o(cambios: Partial<ObligacionDeLaPersona> = {}): ObligacionDeLaPersona 
     respuestaTexto: null,
     evidencias: [],
     publicacionId: null,
+    medicion: null,
     ...cambios,
   };
 }

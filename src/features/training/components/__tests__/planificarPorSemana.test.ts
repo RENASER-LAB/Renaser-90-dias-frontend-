@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import React from 'react';
-import TestRenderer, { act, type ReactTestRenderer } from 'react-test-renderer';
+import TestRenderer, { act, type ReactTestInstance, type ReactTestRenderer } from 'react-test-renderer';
 
 import type { CambioDeFechaApi, FechaDelHabitoApi, PreferenciaHabitoApi, SemanaDelHabitoApi } from '../../../habits/types/habits.types';
 import type { HabitItem } from '../../../../screens/TrainingScreen';
@@ -148,7 +148,7 @@ async function montar(props: { diaPrograma?: number | null; duracionDias?: numbe
   await esperar();
   return r;
 }
-const textoDe = (n: TestRenderer.ReactTestInstance) => React.Children.toArray(n.props.children).filter(h => typeof h === 'string' || typeof h === 'number').join('');
+const textoDe = (n: ReactTestInstance) => React.Children.toArray(n.props.children).filter(h => typeof h === 'string' || typeof h === 'number').join('');
 const textos = (r: ReactTestRenderer) => r.root.findAll(n => (n.type as unknown) === 'Text').map(textoDe).join(' | ');
 async function abrir(r: ReactTestRenderer) {
   const filas = r.root.findAll(n => typeof n.props.onPress === 'function' && n.findAll(h => (h.type as unknown) === 'Text' && h.props.children === 'Jugo verde').length > 0);

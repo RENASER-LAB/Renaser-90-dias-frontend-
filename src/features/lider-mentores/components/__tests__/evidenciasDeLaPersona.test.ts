@@ -262,6 +262,7 @@ function obligacion(cambios: Partial<ObligacionDeLaPersona> = {}): ObligacionDeL
     respuestaTexto: null,
     evidencias: [],
     publicacionId: null,
+    medicion: null,
     ...cambios,
   };
 }
