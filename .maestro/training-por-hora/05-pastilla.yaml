@@ -1,7 +1,8 @@
 # T05 — La Pastilla Renacer desde la lista: su fila abre el audio y las dos preguntas de siempre (no pasa por una hoja de guía
 # si el catálogo no trae una); al registrar sale de la lista.
-# Cada respuesta pide al menos 15 letras (`RESPUESTA_MIN_LENGTH`).
-# Precondición: `reset-hoy.sql`. (El audio puede quedar en «cargando…» en local: no hace falta oírlo para registrar.)
+# Cada respuesta pide al menos 15 letras (`RESPUESTA_MIN_LENGTH`); ver abajo cómo se escriben.
+# Precondición: la Pastilla PENDIENTE (la deja la línea `# antes:`) y el audio de Espíritu del día cargado en la base. (El audio puede quedar en «cargando…» en local: no hace falta oírlo para registrar.)
+# antes: .maestro/comun/estado-de-hoy.sh PENDIENTE PASTILLA_RENACER
 # cuenta: aprendiz
 appId: com.renaser.app
 ---
@@ -18,15 +19,18 @@ appId: com.renaser.app
     timeout: 20000
 - takeScreenshot: T05a-pastilla-pregunta-1
 - tapOn: "Escribe lo que te dejó este audio.*"
-# Textos cortos: Maestro escribe ~10 s por letra con el dev client (#3667).
-- inputText: "Paz"
+# Cada respuesta pide 15 letras o más (`RESPUESTA_MIN_LENGTH`: con menos, «Siguiente» no avanza) y Maestro escribe ~7 a 10 s por letra con el dev
+# client (#3667): cada `inputText` pasa de 120 s si trae más de ~10 letras, así que la respuesta va en DOS comandos de 8 letras (16 en total).
+- inputText: "Siento p"
+- inputText: "az total"
 - hideKeyboard
 - tapOn: "Siguiente"
 - extendedWaitUntil:
     visible: "Pregunta 2 de 2"
     timeout: 10000
 - tapOn: "Escribe lo que te dejó este audio.*"
-- inputText: "Calma"
+- inputText: "Siento c"
+- inputText: "alma hoy"
 - hideKeyboard
 - tapOn: "Registrar"
 - runFlow: ../comun/cerrar-aviso-dev.yaml

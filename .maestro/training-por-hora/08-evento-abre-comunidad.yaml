@@ -1,6 +1,8 @@
 # T08 — Un evento de hoy al que dijo «Voy» está en la lista, con «Evento · Zoom»; tocarlo abre su detalle en Comunidad → Eventos
 # (no hay hoja de registro: un evento no se «hace»). El evento de la mañana, que ya terminó, no está.
-# Precondición: `reset-hoy.sql` y `sembrar-2-datos.sql` (evento «Sesión de grupo E2E (tarde)» 16:30-17:30; si ya terminó, no sale).
+# Precondición: el evento «Sesión de grupo E2E (tarde)» sembrado, con «Voy» y link de Zoom. Su hora cambia con cada corrida: la línea `# antes:` lo pone a 45 min
+# desde ahora (un evento que ya terminó no sale de la lista de hoy).
+# antes: .maestro/comun/evento-de-prueba.sh "Sesión de grupo E2E (tarde)" 45
 # cuenta: aprendiz
 appId: com.renaser.app
 ---

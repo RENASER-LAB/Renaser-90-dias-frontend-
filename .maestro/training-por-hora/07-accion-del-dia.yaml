@@ -1,6 +1,7 @@
 # T07 — Una ACCIÓN del día con hora («Enviar la propuesta al cliente», 17:00) está en la lista entre los hábitos; su hoja trae el botón y
 # lleva a la evidencia de siempre (foto, texto, audio o video); con una forma sale de la lista.
-# Precondición: `reset-hoy.sql` (las acciones «Enviar la propuesta al cliente» 10:00 y «Enviar la propuesta al cliente» 17:00 de hoy).
+# Precondición: las acciones de hoy «Enviar la propuesta al cliente» (10:00, la verde) y «Llamar a mi mentor» (17:00) sin cumplir (la línea `# antes:` las deja así).
+# antes: .maestro/comun/estado-de-hoy.sh PENDIENTE "accion:Enviar la propuesta al cliente" "accion:Llamar a mi mentor"
 # cuenta: aprendiz
 appId: com.renaser.app
 ---

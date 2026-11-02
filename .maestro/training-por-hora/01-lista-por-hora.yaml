@@ -1,7 +1,9 @@
 # T01 — Training por hora (spec 014): la lista de hoy ordenada por la hora planificada. Se ve el día, el resumen, la semana,
 # «Te toca ahora» o «Lo que sigue» en el primero, «Sin hora», lo atrasado al final en «Se te pasó la hora», lo hecho plegado en «N hechos hoy»,
 # sin los eventos que ya terminaron y SIN las cinco dimensiones afuera.
-# Precondición: `reset-hoy.sql` (AGUA TIBIA hecha; el resto pendiente; evento «Sesión en vivo E2E (ya terminó)» de las 09:00).
+# Precondición: Despertar sin hora y PENDIENTE (así sale «Sin hora»), Agua tibia hecha (así hay «N hechos hoy») y el resto pendiente; el evento
+# «Sesión en vivo E2E (ya terminó)» de la mañana no debe salir. Los estados los deja la línea `# antes:` (diseno-31/04 pide Agua tibia al revés).
+# antes: .maestro/comun/estado-de-hoy.sh PENDIENTE WAKE_UP; .maestro/comun/estado-de-hoy.sh COMPLETADO WARM_LEMON_WATER
 # cuenta: aprendiz
 appId: com.renaser.app
 ---

@@ -1,7 +1,8 @@
 # T11 — Hábitos de evidencia OPCIONAL (Escritura libre nocturna, Día sin celular…): la fila lleva solo «Subir» (sin círculo, ajuste del
 # 2026-10-30); tocar el nombre abre la hoja con «Subir evidencia» y «Marcar como hecho». «Última comida del día» es la excepción: lleva
 # el círculo (2026-10-31, punto 8). Actualizado el 02/11/2026 a la app de hoy.
-# Precondición: aprendiz de la Escuela con esos hábitos pendientes hoy.
+# Precondición: aprendiz de la Escuela con esos tres hábitos PENDIENTES hoy (los deja la línea `# antes:`: este flujo los cumple).
+# antes: .maestro/comun/estado-de-hoy.sh PENDIENTE "ESCRITURA LIBRE NOCTURNA" PHONE_FREE_DAY "ÚLTIMA COMIDA DEL DÍA"
 # cuenta: aprendiz
 appId: com.renaser.app
 ---
