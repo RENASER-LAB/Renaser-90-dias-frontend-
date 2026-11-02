@@ -39,7 +39,7 @@ export function TerminosScreen({
   const { avanzarEstado } = usePersistenciaOnboarding();
   const sellar = useSellarTerminos();
   /* Spec 027: el texto lo manda el servidor (los términos vigentes de MI formación, editables por Administración). Sin él —un backend anterior, o mientras
-     llega— se usa el que la app lleva dentro, que es exactamente el de siempre. */
+     llega— se usa el que la app lleva dentro (el mismo texto del Acuerdo de transformación). */
   const { terminos, cargada, recargar } = useMisTerminos();
   const contenido = terminos?.version ? borradorDesde(terminos.version) : TERMINOS_DE_LA_APP;
   const versionId = terminos?.version?.id ?? null;
