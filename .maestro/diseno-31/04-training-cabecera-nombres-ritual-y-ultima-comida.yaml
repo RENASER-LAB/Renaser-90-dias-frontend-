@@ -3,7 +3,10 @@
 #  - Los nombres de los hábitos en tipo oración («Agua tibia con limón», «Ritual tierra - agua - fuego (mañana)»).
 #  - El ritual pide solo texto: «Escribir cómo me siento» → «¿Cómo te sientes después de realizar el ritual?» (obligatoria).
 #  - «Última comida del día» (opcional) lleva el círculo en lugar de «Subir»; los demás opcionales siguen con «Subir».
-# Precondición: `reset-hoy.sql`. cuenta: aprendiz
+# Precondición: Agua tibia, el ritual de la mañana, Última comida y otros opcionales PENDIENTES (los deja la línea `# antes:`; training-por-hora/01 pide
+# Agua tibia al revés, hecha).
+# antes: .maestro/comun/estado-de-hoy.sh PENDIENTE WARM_LEMON_WATER RITUAL_MORNING "ÚLTIMA COMIDA DEL DÍA" PHONE_FREE_DAY "ESCRITURA LIBRE NOCTURNA"
+# cuenta: aprendiz
 appId: com.renaser.app
 ---
 - runFlow: ../comun/ya-adentro.yaml
