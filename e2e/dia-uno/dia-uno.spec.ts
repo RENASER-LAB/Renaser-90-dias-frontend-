@@ -15,7 +15,7 @@ const ACT = '/api/v1/onboarding/activate-program';
 const texto = (page: Page, contenido: string) => page.getByText(contenido, { exact: true })
   .and(page.locator(':visible:not([aria-hidden="true"] *)'));
 const elegir = (page: Page) => page.getByRole('button', { name: /^Elegir mi Día 1$/i }).first();
-const confirmar = (page: Page) => page.getByRole('button', { name: /^CONFIRMAR MI DÍA 1$/i });
+const confirmar = (page: Page) => page.getByRole('button', { name: /^Confirmar mi Día 1$/i });
 const pestaña = (page: Page, nombre: string) => page.getByRole('tab', { name: new RegExp(`^${nombre}$`, 'i') });
 const actor = (caso: string) => semilla.dayOneActors.find(a => a.case === caso)!;
 

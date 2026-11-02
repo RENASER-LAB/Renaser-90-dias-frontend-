@@ -43,7 +43,7 @@ appId: com.renaser.app
 - tapOn:
     id: "com.android.camera2:id/done_button"
 - extendedWaitUntil:
-    visible: "REINTENTAR"
+    visible: "Reintentar"
     timeout: 60000
 - takeScreenshot: 13a-sin-red-reintentar
 # La pantalla sigue abierta con la foto: nada se perdió.
@@ -52,18 +52,18 @@ appId: com.renaser.app
 # Hasta que la red del emulador vuelve, «REINTENTAR» puede fallar; se insiste unas veces, como lo haría la persona.
 - repeat:
     while:
-      visible: "REINTENTAR"
+      visible: "Reintentar"
     times: 6
     commands:
       - waitForAnimationToEnd:
           timeout: 5000
-      - tapOn: "REINTENTAR"
+      - tapOn: "Reintentar"
       - extendedWaitUntil:
-          notVisible: "REINTENTAR"
+          notVisible: "Reintentar"
           timeout: 8000
           optional: true
 - extendedWaitUntil:
-    notVisible: "REINTENTAR"
+    notVisible: "Reintentar"
     timeout: 30000
 - runFlow: ../comun/cerrar-aviso-dev.yaml
 - extendedWaitUntil:

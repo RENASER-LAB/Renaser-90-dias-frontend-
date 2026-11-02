@@ -1553,6 +1553,37 @@ eventos (el de pagos es de la rama de formaciones). Lo que cambia y nada más:
 * **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
 
 
+## Decisión del dueño — 2026-11-02 — los botones dorados en tipo oración y sin espaciado, en toda la app
+
+Conviven dos estilos de `GoldButton`: el nuevo («Empezar ahora ›», «Elegir mi Día 1», «Guardar hora»: 16 px, sin espaciado) y el viejo, el que el
+componente traía por defecto: versales de 11 px con `letterSpacing` 2,2 (1,6 en el contorno), con el texto escrito en MAYÚSCULAS («LISTO»,
+«CONFIRMAR MI DÍA 1», «CONTINUAR A TÉRMINOS»). El dueño eligió **unificar todos al estilo nuevo**. Solo JavaScript, sin backend. Lo que cambia y nada más:
+* **`GoldButton` trae el estilo nuevo por defecto** (`src/components/GoldButton.tsx`), en sus tres variantes (primario, contorno y secundario): tipo
+  oración, **16 px y `letterSpacing: 0`**; la pesa no cambia (negrita en el primario, media en el contorno y el secundario, siempre por los roles de
+  `theme/fuentes.ts`). Sale `t.micro` y el espaciado; se suman `flexShrink: 1` y `textAlign: 'center'`, para que un texto largo baje de renglón dentro
+  del botón en vez de salirse de él en 360 dp (por ejemplo «Continuar al siguiente módulo» en el cuestionario). Es la regla global: se cambia en ese
+  único lugar. Los `textStyle` que ya pasaban 16 px y `letterSpacing: 0` quedan como estaban (ahora repiten el valor por defecto); los de 15 px siguen en 15.
+* **Los textos escritos en MAYÚSCULAS pasan a tipo oración** (antes → después): «LISTO» → «Listo» (selector de fecha y fecha del diagnóstico),
+  «REINTENTAR» → «Reintentar» (diagnóstico, bandeja de tickets, «Mis evidencias» de Yo y registro con foto), «EMPEZAR» → «Empezar», «SIGUIENTE» → «Siguiente»,
+  «TERMINAR» → «Terminar», «CERRAR VISTA PREVIA» → «Cerrar vista previa» y «Continuar» (ya no pasa por `toUpperCase()`) en el diagnóstico;
+  «REGISTRANDO…», «REGISTRAR» y «TERMINAR» → «Registrando…», «Registrar» y «Terminar» (registro con foto); en el onboarding, «CONFIRMAR MI DÍA 1» →
+  «Confirmar mi Día 1», «COMENZAR MI VIAJE» → «Comenzar mi viaje», «ANTERIOR», «GUARDANDO…», «CONTINUAR» y «CONTINUAR AL SIGUIENTE MÓDULO» del cuestionario →
+  «Anterior», «Guardando…», «Continuar» y «Continuar al siguiente módulo», «CONTINUAR A TÉRMINOS» / «SIGUIENTE» de la ficha → «Continuar a términos» /
+  «Siguiente», «ENTRAR A MI DÍA 01 (HOY)» → «Entrar a mi Día 1 (hoy)», «CONTINUAR» de Términos → «Continuar» y «ACEPTAR» de Términos actualizados → «Aceptar»;
+  «TOMAR FOTO» de la tarjeta de SER → «Tomar foto»; y «💬 ENVIAR MENSAJE DIRECTO 1 A 1» de la ficha de un integrante → «Enviar mensaje directo»,
+  **sin emoji** (los emojis no son íconos): lleva `messageCircle` a la izquierda. «Cancelar» de la pantalla de registro con foto (un botón de borde que
+  iba justo debajo del dorado) pasó de «CANCELAR» a «Cancelar», 16 px, para que los dos no se contradigan. «Día 1» lleva la D mayúscula.
+* **Pruebas:** `goldButtonTipoOracion` (las tres variantes, en claro y oscuro: 16 px, sin espaciado, sin versales, con la pesa de su rol) y
+  `botonesDoradosSinMayusculas` (barre cada `<GoldButton>` de `src/` y `App.tsx`: falla si el texto literal de su `label` vuelve a las mayúsculas, si
+  alguien lo pasa por `toUpperCase()` o le pide `textTransform` o un espaciado positivo; las siglas —OK, SER, IA…— se permiten). Se ajustaron las pruebas
+  Jest y los flujos de Maestro que buscaban el texto viejo (`ficha-con-diagnostico`, `pagos/01` y `03`, `regresion/01`, `12` y `13`,
+  `terminos-editables/02` y `04`, `hoy-programa-propio/01`, `mi-radar/16`) y el de Playwright `e2e/dia-uno`.
+* **Queda fuera, a la vista:** lo que no es un `GoldButton`: los botones de los diálogos del sistema (`components/Alerta`, que escriben su texto en
+  versales con `toUpperCase()`), enlaces como «VER EVENTO ›» y los rótulos de campo en mayúsculas del cuestionario y de Administración. Y el «✓ GUARDAR
+  HORA» del selector de hora, que reescribe la rama `hora-picker-compacto` (#97) para que diga «Guardar hora»: la prueba lo deja exento hasta que se
+  fusione (`PENDIENTES_EN_OTRA_RAMA`) y el flujo `pagos/09` sigue con su texto de ahora.
+* **Hace falta un APK nuevo** (solo JavaScript: ni `package.json`, ni `app.json`, ni código nativo; la app no se actualiza por aire). Backend nuevo, ninguno.
+
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
 Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel especializado en React Native, Expo y TypeScript. Al crear, refactorizar o modificar cualquier pantalla o componente, debes cumplir OBLIGATORIAMENTE con los siguientes estándares:
@@ -2991,8 +3022,12 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       «LISTO», «Código de país», «Sugerencias», «Usar «…»» (era `USAR: "…"`), «Sin resultados para
       «…».». **Sin dependencias nuevas:** el arrastre usa `PanResponder` (Gesture Handler no está
       instalado y agregarlo exige prebuild); las ruedas no usan el selector nativo de fecha.
+      > **Corregido 2026-11-02.** Los botones dorados ya no van en versales: «LISTO» es «Listo», y lo mismo «SIGUIENTE», «CONTINUAR A
+      > TÉRMINOS» y los demás de la Ficha. Ver «los botones dorados en tipo oración y sin espaciado», al final de las decisiones.
     * **Términos y Día 1:** el mismo esqueleto, con «CONTINUAR» / «CONFIRMAR MI DÍA 1» fijos abajo.
       Términos atiende el gesto atrás de Android (vuelve a la ficha).
+      > **Corregido 2026-11-02.** Los botones dicen «Continuar» y «Confirmar mi Día 1» (también «Aceptar» en Términos actualizados,
+      > «Comenzar mi viaje» en la bienvenida y «Entrar a mi Día 1 (hoy)» en el gong). Ver la entrada del 2026-11-02.
     * **Lo que NO cambia:** preguntas, claves y respuestas (`mapaPreguntas.ts`), el guardado por
       capítulo (mismo `POST /onboarding/answers`, mismo `avanzarEstado`, sólo al terminar cada
       capítulo), las 23 cláusulas, la firma y los avisos de validación (mismos títulos y mensajes).
@@ -3516,6 +3551,7 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       (`training/utils/horaDelEditor.ts`).
     * **Onboarding → Términos (ONB-02).** «CONTINUAR» ya no queda apagado hasta tener la casilla y la
       firma: al tocarlo dice cuál falta, con las alertas que ya existían y nunca salían.
+      > **Corregido 2026-11-02.** El botón dice «Continuar», en tipo oración (ver la entrada del 2026-11-02 sobre los botones dorados).
     * **Administración → «¿A quién atiendo hoy?» (ADM-01).** La etiqueta del lector de pantalla ya no
       repite «Grupo» («Grupo Grupo Plan E2E», «Grupo Sin grupo»); lo que se ve no cambia
       (`admin/utils/etiquetaDeAtencion.ts`).

@@ -12,6 +12,6 @@ appId: com.renaser.app
 - assertNotVisible: "TRAINING"
 - takeScreenshot: T02a-pantalla-que-bloquea
 # Sin casilla ni firma no avanza y dice cuál falta.
-- tapOn: "ACEPTAR"
+- tapOn: "Aceptar"
 - assertVisible: "Aceptación requerida"
 - takeScreenshot: T02b-falta-la-casilla

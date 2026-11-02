@@ -150,14 +150,14 @@ describe('el selector recupera errores sin asignar una fecha por su cuenta', () 
     mockActivar.mockRejectedValueOnce(new ApiError(400, 'fecha fuera de la ventana'));
     mockConsultar.mockResolvedValue({ activated: false,
       validStartDates: ['2026-10-12', '2026-10-13', '2026-10-14'], startDate: null });
-    await tocar('CONFIRMAR MI DÍA 1');
+    await tocar('Confirmar mi Día 1');
 
     expect(textos()).not.toContain('Domingo 11 de octubre');
     expect(textos()).toContain('Miércoles 14 de octubre');
     expect(mockActivar).toHaveBeenCalledTimes(1);
     expect(alActivar).not.toHaveBeenCalled();
     await tocar('Miércoles 14 de octubre');
-    await tocar('CONFIRMAR MI DÍA 1');
+    await tocar('Confirmar mi Día 1');
     expect(mockActivar).toHaveBeenLastCalledWith({ startDate: '2026-10-14' });
     expect(alActivar).toHaveBeenCalledTimes(1);
   });
@@ -167,7 +167,7 @@ describe('el selector recupera errores sin asignar una fecha por su cuenta', () 
     await montar(React.createElement(ActivarProgramaScreen, { onActivated: alActivar }));
     mockActivar.mockRejectedValueOnce(new ApiError(409, 'ya activado'));
     mockConsultar.mockResolvedValue({ activated: true, validStartDates: [], startDate: FECHAS[2] });
-    await tocar('CONFIRMAR MI DÍA 1');
+    await tocar('Confirmar mi Día 1');
     expect(alActivar).toHaveBeenCalledTimes(1);
     expect(mockActivar).toHaveBeenCalledTimes(1);
   });
@@ -177,9 +177,9 @@ describe('el selector recupera errores sin asignar una fecha por su cuenta', () 
     await montar(React.createElement(ActivarProgramaScreen, { onActivated: alActivar }));
     await tocar('Martes 13 de octubre');
     mockActivar.mockRejectedValueOnce(new Error('respuesta perdida'));
-    await tocar('CONFIRMAR MI DÍA 1');
+    await tocar('Confirmar mi Día 1');
     expect(alActivar).not.toHaveBeenCalled();
-    await tocar('CONFIRMAR MI DÍA 1');
+    await tocar('Confirmar mi Día 1');
     expect(mockActivar.mock.calls.map(([input]) => input.startDate)).toEqual([FECHAS[2], FECHAS[2]]);
     expect(alActivar).toHaveBeenCalledTimes(1);
   });

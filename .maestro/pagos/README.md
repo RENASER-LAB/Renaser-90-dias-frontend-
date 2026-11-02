@@ -30,4 +30,4 @@ La forma más rápida de sembrar es por la API con la sesión de Administración
 ## Lo que no se puede probar con Maestro
 
 - Que la alarma suene con el teléfono bloqueado y en reposo: se mira con `adb shell dumpsys alarm` (la de pago aparece como `pago-<ms>`) y con el sonido real.
-- La fecha de la primera cuota se elige con las ruedas: los flujos aceptan la de hoy (`LISTO`) y verifican solo lo que no depende del día.
+- La fecha de la primera cuota se elige con las ruedas: los flujos aceptan la de hoy (`Listo`) y verifican solo lo que no depende del día.

@@ -86,7 +86,7 @@ export function TerminosActualizadosScreen({
       alVolver={alCerrarSesion}
       etiquetaVolver="Cerrar sesión"
       accesibilidadVolver="Cerrar sesión"
-      pie={<GoldButton label="ACEPTAR" onPress={continuar} loading={guardando} icon="arrow" />}
+      pie={<GoldButton label="Aceptar" onPress={continuar} loading={guardando} icon="arrow" />}
     >
       <View style={estilos.encabezado}>
         <Text style={[t.micro, { color: c.micro, textTransform: 'uppercase' }]}>{terminos.formation.name}</Text>

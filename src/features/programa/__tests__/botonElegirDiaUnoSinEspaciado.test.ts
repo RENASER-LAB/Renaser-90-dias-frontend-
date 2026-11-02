@@ -7,7 +7,7 @@ const GOLD = fs.readFileSync(path.resolve(__dirname, '../../../components/GoldBu
 const TARJETA_HOY = fs.readFileSync(path.resolve(__dirname, '../../home/components/TarjetaAccionDeHoy.tsx'), 'utf8');
 
 /**
- * E2E de las formaciones (01/11/2026, issue #84): «Elegir mi Día 1» salía con las letras separadas («E l e g i r  m i  D í a  1»). `GoldButton` trae el
+ * E2E de las formaciones (01/11/2026, issue #84): «Elegir mi Día 1» salía con las letras separadas («E l e g i r  m i  D í a  1»). `GoldButton` traía el
  * espaciado de los rótulos en versales (11 px, 2,2) y un texto en tipo oración no lleva espaciado (AGENTS.md §4). Se le pasa el mismo `textStyle` que
  * a «Empezar ahora ›» de Hoy. Todos los usos (Plan, Hoy, Training, Yo, el aviso de Mi Radar) pasan por `BotonElegirDiaUno`.
  */
@@ -19,8 +19,10 @@ describe('«Elegir mi Día 1» sin letras espaciadas', () => {
 
   it('es el mismo ajuste que los demás botones dorados en tipo oración del rediseño', () => {
     expect(TARJETA_HOY).toMatch(/textoDelBoton: \{ fontSize: 16, letterSpacing: 0 \}/);
-    // Y lo que corrige: el espaciado por defecto del botón dorado, pensado para rótulos en versales.
-    expect(GOLD).toMatch(/letterSpacing: 2\.2/);
+    // Desde el 2026-11-02 el botón dorado trae él mismo el estilo nuevo (16 px, sin espaciado): el `textStyle` de arriba queda
+    // como estaba y ya no corrige nada (botonesDoradosEnTipoOracion vigila el estilo por defecto).
+    expect(GOLD).not.toMatch(/letterSpacing: 2\.2/);
+    expect(GOLD).toMatch(/fontSize: 16,\s*letterSpacing: 0/);
   });
 
   it('ningún otro lugar arma su propio «Elegir mi Día 1» con un botón dorado a pelo', () => {

@@ -121,7 +121,7 @@ export function BienvenidaScreen({ onContinue }: BienvenidaScreenProps) {
           </View>
 
           <GoldButton
-            label="COMENZAR MI VIAJE"
+            label="Comenzar mi viaje"
             onPress={onContinue}
             icon="arrow"
             style={{ marginTop: 6 }}

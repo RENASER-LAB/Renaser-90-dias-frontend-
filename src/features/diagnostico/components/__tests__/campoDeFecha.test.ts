@@ -70,7 +70,7 @@ describe('CampoDeFecha', () => {
     await tocar(r, '¿Cuándo empezó tu negocio?: 15 de junio de 2026');
     expect(textos(r)).toContain('15 de junio de 2026');
     await act(async () => {
-      botonDe(r, 'LISTO').props.onPress();
+      botonDe(r, 'Listo').props.onPress();
       await vaciar();
     });
     expect(alCambiar).toHaveBeenCalledWith('15/06/2026');
@@ -81,7 +81,7 @@ describe('CampoDeFecha', () => {
     const r = await montar('', alCambiar);
     await tocar(r, '¿Cuándo empezó tu negocio?: sin elegir');
     await act(async () => {
-      botonDe(r, 'LISTO').props.onPress();
+      botonDe(r, 'Listo').props.onPress();
       await vaciar();
     });
     const hoy = hoyEnLima();

@@ -155,7 +155,7 @@ describe.each(PERSONAL)('$rol', persona => {
     await tocar(r, 'Sábado 10 de octubre');
     // Ya eligió: la próxima consulta dice activado y la tarjeta se va.
     mockConsultarActivacion.mockResolvedValue({ activated: true, validStartDates: [], startDate: '2026-10-10' });
-    await tocar(r, 'CONFIRMAR MI DÍA 1');
+    await tocar(r, 'Confirmar mi Día 1');
     expect(mockActivarPrograma).toHaveBeenCalledWith({ startDate: '2026-10-10' });
     expect(textos(r)).not.toContain('Todavía no elegiste tu Día 1');
   });
@@ -208,7 +208,7 @@ describe.each(PERSONAL)('$rol', persona => {
     mockCapacidades.mockResolvedValue({ programRequired: false, canStartProgram: false,
       canAccompany: false, canAdminister: persona.administra });
     mockConsultarActivacion.mockResolvedValue({ activated: true, validStartDates: [], startDate: '2026-10-09' });
-    await tocar(r, 'CONFIRMAR MI DÍA 1');
+    await tocar(r, 'Confirmar mi Día 1');
 
     expect(mockActivarPrograma).toHaveBeenCalledWith({ startDate: '2026-10-09' });
     expect(mockActivarPersonal).not.toHaveBeenCalled();

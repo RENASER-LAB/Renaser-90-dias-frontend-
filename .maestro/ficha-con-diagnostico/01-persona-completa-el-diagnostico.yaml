@@ -14,35 +14,35 @@ appId: com.renaser.app
 # La ficha estándar NO se pide: su primer paso («Nombre completo») no aparece.
 - assertNotVisible: "Nombre completo"
 - takeScreenshot: D01a-portada
-- tapOn: "EMPEZAR"
+- tapOn: "Empezar"
 # Primer paso: nombre (precargado), edad y ciudad (precargada). La edad es obligatoria: sin ella no se avanza.
 - extendedWaitUntil:
     visible: "¿Cuál es tu nombre completo\\?"
     timeout: 20000
-- tapOn: "SIGUIENTE"
+- tapOn: "Siguiente"
 - assertVisible: "Escribe tu respuesta para continuar\\."
 - takeScreenshot: D01b-falta-la-edad
 - runFlow: ../comun/diagnostico-responder-el-paso.yaml
-- tapOn: "SIGUIENTE"
+- tapOn: "Siguiente"
 # El resto: una vuelta por paso hasta que el botón dice «TERMINAR».
 - repeat:
     while:
-      visible: "SIGUIENTE"
+      visible: "Siguiente"
     times: 40
     commands:
       - runFlow: ../comun/diagnostico-responder-el-paso.yaml
-      - tapOn: "SIGUIENTE"
+      - tapOn: "Siguiente"
       - waitForAnimationToEnd:
           timeout: 3000
 - runFlow: ../comun/diagnostico-responder-el-paso.yaml
 - takeScreenshot: D01c-ultimo-paso
-- tapOn: "TERMINAR"
+- tapOn: "Terminar"
 - extendedWaitUntil:
     visible: "Tus objetivos ya están preparados"
     timeout: 60000
 - takeScreenshot: D01d-cierre
 - assertVisible: ".*Términos.*"
-- tapOn: "CONTINUAR"
+- tapOn: "Continuar"
 # Después del diagnóstico sigue Términos (no la ficha estándar).
 - extendedWaitUntil:
     visible: ".*[Tt]érminos.*"

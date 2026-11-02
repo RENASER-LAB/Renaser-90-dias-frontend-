@@ -18,18 +18,18 @@ appId: com.renaser.app
 - extendedWaitUntil:
     visible: "Tiempo estimado: 15 minutos"
     timeout: 30000
-- tapOn: "EMPEZAR"
+- tapOn: "Empezar"
 - repeat:
     while:
-      visible: "SIGUIENTE"
+      visible: "Siguiente"
     times: 40
     commands:
       - runFlow: ../comun/diagnostico-responder-el-paso.yaml
-      - tapOn: "SIGUIENTE"
+      - tapOn: "Siguiente"
       - waitForAnimationToEnd:
           timeout: 3000
 - runFlow: ../comun/diagnostico-responder-el-paso.yaml
-- tapOn: "TERMINAR"
+- tapOn: "Terminar"
 - extendedWaitUntil:
     visible: "Tus objetivos ya están preparados"
     timeout: 60000
@@ -37,7 +37,7 @@ appId: com.renaser.app
 - assertVisible: "En Plan puedes revisar tus objetivos y confirmarlos\\."
 - assertNotVisible: ".*Términos.*"
 - takeScreenshot: D04b-cierre-ya-dentro
-- tapOn: "CONTINUAR"
+- tapOn: "Continuar"
 # De vuelta en la app: la tarjeta de Hoy se fue.
 - runFlow: ../comun/ya-adentro.yaml
 - tapOn: "HOY"

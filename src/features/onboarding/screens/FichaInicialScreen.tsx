@@ -352,7 +352,7 @@ export function FichaInicialScreen({
       direccion={navegacion.direccion}
       pie={
         <GoldButton
-          label={ubicacion.esUltimo ? 'CONTINUAR A TÉRMINOS' : 'SIGUIENTE'}
+          label={ubicacion.esUltimo ? 'Continuar a términos' : 'Siguiente'}
           onPress={handleNext}
           loading={guardando}
           icon="arrow"

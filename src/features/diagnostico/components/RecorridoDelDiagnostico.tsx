@@ -56,7 +56,7 @@ export function RecorridoDelDiagnostico(props: PropiedadesDelRecorrido) {
         etiquetaVolver={modo === 'vistaPrevia' ? 'Cerrar' : 'Salir'}
         accesibilidadVolver={modo === 'vistaPrevia' ? 'Cerrar la vista previa' : 'Salir del diagnóstico'}
         claveContenido="portada"
-        pie={<GoldButton label="EMPEZAR" onPress={r.empezar} icon="arrow" />}
+        pie={<GoldButton label="Empezar" onPress={r.empezar} icon="arrow" />}
       >
         <PortadaDelDiagnostico datos={datos} />
       </MarcoDePaso>
@@ -67,7 +67,7 @@ export function RecorridoDelDiagnostico(props: PropiedadesDelRecorrido) {
     return (
       <MarcoDePaso
         claveContenido="cierre"
-        pie={<GoldButton label={(etiquetaContinuar ?? 'Continuar').toUpperCase()} onPress={() => onContinuar?.()} icon="arrow" />}
+        pie={<GoldButton label={etiquetaContinuar ?? 'Continuar'} onPress={() => onContinuar?.()} icon="arrow" />}
       >
         <CierreDelDiagnostico resultado={r.resultado} queSigue={textoQueSigue ?? QUE_SIGUE_EN_EL_INGRESO} />
       </MarcoDePaso>
@@ -76,7 +76,7 @@ export function RecorridoDelDiagnostico(props: PropiedadesDelRecorrido) {
 
   if (!r.paso) return null;
 
-  const etiquetaDelBoton = r.esUltimo ? (modo === 'vistaPrevia' ? 'CERRAR VISTA PREVIA' : 'TERMINAR') : 'SIGUIENTE';
+  const etiquetaDelBoton = r.esUltimo ? (modo === 'vistaPrevia' ? 'Cerrar vista previa' : 'Terminar') : 'Siguiente';
 
   return (
     <MarcoDePaso
