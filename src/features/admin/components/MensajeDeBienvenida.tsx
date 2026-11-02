@@ -4,6 +4,7 @@ import { StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { BotonPrincipal, BotonSecundario } from '../../../components/Legible';
 import { useTheme } from '../../../theme/ThemeContext';
+import { FORMACION_POR_DEFECTO, type CodigoDeFormacion } from '../../formaciones/types/formaciones.types';
 import { guardarTextoDeBienvenida, volverAlTextoOriginal } from '../api/bienvenidaApi';
 import type { BienvenidaApi, TextoDeBienvenidaApi } from '../api/bienvenidaSchemas';
 import {
@@ -36,7 +37,10 @@ export function MensajeDeBienvenida({
   largoMaximo,
   nombre,
   onCambio,
+  formacion = FORMACION_POR_DEFECTO,
 }: {
+  /** La formación de este mensaje (spec 035): lo que se guarda o se vuelve al original es de ella. Por defecto, la Escuela. */
+  formacion?: CodigoDeFormacion;
   texto: TextoDeBienvenidaApi;
   largoMaximo: number;
   /** El nombre de ejemplo, tal como está escrito (vacío = «María»). */
@@ -93,7 +97,7 @@ export function MensajeDeBienvenida({
     setGuardando(true);
     setErrorDelServidor(null);
     try {
-      const nueva = await guardarTextoDeBienvenida(texto.clave, revision.texto);
+      const nueva = await guardarTextoDeBienvenida(texto.clave, revision.texto, formacion);
       setEditando(false);
       setAviso('Guardado. Desde ahora sale este mensaje.');
       onCambio(nueva);
@@ -115,7 +119,7 @@ export function MensajeDeBienvenida({
     setErrorDelServidor(null);
     setAviso(null);
     try {
-      const nueva = await volverAlTextoOriginal(texto.clave);
+      const nueva = await volverAlTextoOriginal(texto.clave, formacion);
       setEditando(false);
       setAviso('Listo: volvió al texto original.');
       onCambio(nueva);

@@ -1,5 +1,7 @@
 import { ApiError, mensajeDeError } from '../../../services/http/apiClient';
 import { fechaEnZona, horaEnZona, ZONA_POR_DEFECTO } from '../../eventos/utils/zonaHoraria';
+import { FORMACION_POR_DEFECTO, type CodigoDeFormacion } from '../../formaciones/types/formaciones.types';
+import { nombreCortoDeFormacion } from '../../formaciones/utils/nombreDeFormacion';
 import type { PortadaDeBienvenidaApi, TextoDeBienvenidaApi, UltimoCambioApi } from '../api/bienvenidaSchemas';
 import { fechaCorta } from './fechas';
 
@@ -180,7 +182,7 @@ export function fechaYHoraDelCambio(iso: string | null | undefined): string | nu
 }
 
 /** «Kelin Rojas el 27 de septiembre a las 10:04»; sin nombre (cuenta borrada), «alguien del equipo». */
-function quienYCuando(cambio: UltimoCambioApi): string {
+export function quienYCuando(cambio: UltimoCambioApi): string {
   const quien = cambio.por?.trim() || 'alguien del equipo';
   const cuando = fechaYHoraDelCambio(cambio.en);
   return cuando ? `${quien} el ${cuando}` : quien;
@@ -194,10 +196,18 @@ export function estadoDelTexto(texto: Pick<TextoDeBienvenidaApi, 'cambiado' | 'u
   return 'Texto original';
 }
 
-/** La línea de estado de la portada, con el mismo criterio que la de los mensajes. */
-export function estadoDeLaPortada(portada: Pick<PortadaDeBienvenidaApi, 'cambiada' | 'ultimoCambio'>): string {
+/**
+ * La línea de estado de la portada, con el mismo criterio que la de los mensajes. En el Diplomado y la Certificación, sin portada
+ * propia, dice que usa la de la Escuela (spec 035).
+ */
+export function estadoDeLaPortada(portada: Pick<PortadaDeBienvenidaApi, 'cambiada' | 'ultimoCambio' | 'heredada'>): string {
   const cambio = portada.ultimoCambio ?? null;
   if (portada.cambiada) return cambio ? `Cambiada por ${quienYCuando(cambio)}.` : 'Cambiada por Administración.';
+  if (portada.heredada) {
+    return cambio?.volvioAlOriginal
+      ? `Vuelve a ser la de la Escuela: ${quienYCuando(cambio)}.`
+      : 'Usa la portada de la Escuela.';
+  }
   if (cambio?.volvioAlOriginal) return `Volvió a la original: ${quienYCuando(cambio)}.`;
   return 'Es la portada original';
 }
@@ -234,4 +244,26 @@ export function sePuedeGuardar(
 export function mensajeDeErrorDeBienvenida(error: unknown, porDefecto: string): string {
   if (error instanceof ApiError && error.esProhibido) return SIN_PERMISO;
   return mensajeDeError(error, porDefecto);
+}
+
+/**
+ * ¿Esta respuesta es la bienvenida de la formación que se pidió? Un backend anterior a la spec 035 no manda `formation` y contesta SIEMPRE con la
+ * de la Escuela: mostrarla como si fuera la del Diplomado dejaría editar —y creer que se editó— la que no es. La Escuela, en cambio, se acepta
+ * con o sin el campo (es la que entiende cualquier backend).
+ */
+export function bienvenidaEsDe(
+  bienvenida: { formation?: string | null },
+  formacion: CodigoDeFormacion,
+): boolean {
+  if (formacion === FORMACION_POR_DEFECTO) return !bienvenida.formation || bienvenida.formation === FORMACION_POR_DEFECTO;
+  return bienvenida.formation === formacion;
+}
+
+/** Lo que dice la pantalla cuando el servidor todavía no sabe de una bienvenida por formación. */
+export const SERVIDOR_SIN_BIENVENIDA_POR_FORMACION =
+  'Este servidor todavía no tiene una bienvenida para cada formación. Cuando se actualice, la podrás cambiar acá.';
+
+/** Cómo se llama la formación en el control y en los avisos de esta pantalla («Escuela», «Diplomado», «Certificación»). */
+export function nombreDeLaFormacionEnBienvenida(formacion: CodigoDeFormacion): string {
+  return nombreCortoDeFormacion(formacion);
 }
