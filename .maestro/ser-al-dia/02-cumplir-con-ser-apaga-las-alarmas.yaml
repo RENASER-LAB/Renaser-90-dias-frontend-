@@ -1,0 +1,30 @@
+# 02 — Cumplir un hábito con SER hace lo mismo que cumplirlo en Training: apaga las alarmas de ese día y celebra (spec 038, issue #33).
+# Precondición: aprendiz con Despertar PENDIENTE hoy y su aviso de las 06:30 programado en este teléfono (Yo → Alarmas); backend con la spec 038.
+# cuenta: aprendiz
+# ESCRITO Y SIN CORRER. La parte de las alarmas se comprueba a mano con `adb shell dumpsys alarm | grep habito-` antes y después de confirmar: la alarma del
+# día debe haber pasado a ser una alarma de fecha desde mañana (el «puente» del issue #33); mañana suena normal.
+#
+# Lo que prueba:
+#   1. «Marca mi Despertar» deja una propuesta con «Confirmar» (NO una foto: Despertar no pide evidencia).
+#   2. Confirmar la cumple y Training la muestra hecha, con «+N pts».
+appId: com.renaser.app
+---
+- runFlow: ../comun/despejar-capas.yaml
+- tapOn: "Hablar con SER, tu acompañante.*"
+- extendedWaitUntil:
+    visible: "Cerrar SER"
+    timeout: 15000
+- tapOn: "Escríbele a SER…"
+- inputText: "Marca mi Despertar"
+- tapOn: "Enviar pregunta"
+- extendedWaitUntil:
+    visible: "Confirmar"
+    timeout: 60000
+- assertNotVisible: "Tomar foto"
+- takeScreenshot: 02a-propuesta-de-marcar
+- tapOn: "Confirmar"
+- extendedWaitUntil:
+    visible: ".*marcado como completado.*|.*Listo.*"
+    timeout: 20000
+- takeScreenshot: 02b-confirmada
+- tapOn: "Cerrar SER"
