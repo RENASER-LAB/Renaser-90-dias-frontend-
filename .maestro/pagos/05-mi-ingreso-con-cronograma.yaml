@@ -26,11 +26,12 @@ appId: com.renaser.app
 - tapOn: "Confirmar cronograma"
 - assertVisible: "Escribe tu nombre."
 - tapOn: "Tu nombre"
-- inputText: "Aprendiz Pagos"
+# Maestro escribe ~10 s por letra con el dev client (#3667): un nombre largo pasa los 120 s y el flujo muere; «Ana» basta (se pide solo no vacío).
+- inputText: "Ana"
 - hideKeyboard
 - tapOn: "Confirmar cronograma"
 - extendedWaitUntil:
-    visible: "Cronograma confirmado"
+    visible: "Confirmaste tu cronograma el.*"
     timeout: 20000
 - assertVisible: "Confirmaste tu cronograma el.*"
 - assertNotVisible: "Confirmar cronograma"
@@ -38,6 +39,10 @@ appId: com.renaser.app
 # Al volver a abrir, sigue confirmado y no se vuelve a pedir.
 - back
 - assertVisible: "Coherencia"
+- scrollUntilVisible:
+    element: "Mi ingreso"
+    direction: DOWN
+    timeout: 40000
 - tapOn: "Mi ingreso"
 - assertVisible: "Confirmaste tu cronograma el.*"
 - assertNotVisible: "Confirmar cronograma"

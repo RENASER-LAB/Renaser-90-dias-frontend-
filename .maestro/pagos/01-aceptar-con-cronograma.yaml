@@ -55,9 +55,20 @@ appId: com.renaser.app
 - tapOn: "Armar las cuotas"
 # Quedan tres filas editables y el total.
 - assertVisible: "3 cuotas"
-- assertVisible: "Total: US\\$.3.000"
-- assertVisible: "Con cronograma · 3 cuotas · US\\$.3.000"
-- assertVisible: "Sol-Pagos Uno entrará a la Escuela Renaser como Aprendiz, sin diagnóstico y con cronograma de 3 cuotas."
+# La hoja se desplaza: el total y la frase del resumen quedan por debajo de las filas, así que se bajan antes de mirarlos.
+- scrollUntilVisible:
+    element: "Total: US\\$.3.000"
+    direction: DOWN
+    timeout: 20000
+# El resumen del bloque «Pago» y la frase de la aceptación van ARRIBA de las filas: se vuelve hacia arriba para verlos.
+- scrollUntilVisible:
+    element: "Con cronograma · 3 cuotas · US\\$.3.000"
+    direction: UP
+    timeout: 20000
+- scrollUntilVisible:
+    element: "Sol-Pagos Uno entrará a la Escuela Renaser como Aprendiz, sin diagnóstico y con cronograma de 3 cuotas."
+    direction: UP
+    timeout: 20000
 - takeScreenshot: P01b-el-cronograma-armado
 # Hay un solo «Aceptar»: el del pie fijo de la hoja.
 - tapOn: "Aceptar"
