@@ -1894,6 +1894,10 @@ diseño nuevo ni dependencias:
   por SER siguen abriendo el registro por texto, pero cumplir con SER no apaga alarmas.
 * **Para cuando se integren 036 y 037:** el día 0 («tu programa empieza mañana») y los km con pasos conectados (SER no pide foto y manda al «Registrar» de la fila) se
   programan al integrarlas; ver `specs/038-ser-al-dia/` del backend.
+  > **Corregido 2026-11-02 (integración de las formaciones).** Esos dos pendientes (T020 y T021 de la spec 038) son **del servidor** y no cambian la app: en el día 0 SER
+  > dice que el programa empieza mañana, con la fecha y el plazo de la formación, y no habla de día ni de fase; `proponer_plan_del_dia` exige que el programa haya
+  > empezado; y en KILÓMETROS DIARIOS con medición automática SER no pide foto sino que manda al «Registrar» de la fila de Training (la fila y su pantalla son de la
+  > spec 037, ya en la app). La app solo dibuja lo que el servidor le manda, así que ni la tarjeta del chat ni la hoja del orbe cambian.
 
 ## Cambio de infraestructura — 2026-11-02 — CI de seguridad y alertas de Dependabot del frontend
 
