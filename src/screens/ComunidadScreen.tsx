@@ -3415,7 +3415,7 @@ function ComunidadPorFormacion({
                 </>
               )}
 
-              {/* Tu Posición Personal Con Datos Reales del Usuario */}
+              {/* Tu posición, personal, con datos reales del usuario */}
               <View style={[styles.myRankCard, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                   <View style={[styles.rankCircleNumber, { backgroundColor: c.gold }]}>
@@ -3429,7 +3429,7 @@ function ComunidadPorFormacion({
                       que ya traen las cifras tabulares, y a tamaño de lectura. */}
                   <View style={{ flex: 1, gap: 3 }}>
                     <Text style={[t.cardTitle, styles.cifras, { color: c.textStrong, fontSize: 15, fontFamily: fuentes.negrita }]}>
-                      Tu Posición ({nombreUsuario})
+                      Tu posición ({nombreUsuario})
                     </Text>
                     <Text style={[t.small, styles.cifras, { color: c.goldInk }]}>
                       {userRankEntry.cellText}
