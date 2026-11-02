@@ -33,9 +33,8 @@ appId: com.renaser.app
 - tapOn: "Sin cronograma \\(pagó completo\\)"
 - assertVisible: "Sol-Diplomado Uno entrará al Diplomado Renaser de 1 año como Aprendiz, con diagnóstico y pagó completo."
 - takeScreenshot: S02b-el-resumen
-- tapOn:
-    text: "Aceptar"
-    index: 1
+# Hay un solo «Aceptar»: el del pie fijo de la hoja (con `index: 1` no hay segundo y el toque falla).
+- tapOn: "Aceptar"
 - extendedWaitUntil:
     visible: "Sol-Diplomado Uno entró al Diplomado Renaser de 1 año como Aprendiz, con diagnóstico.*"
     timeout: 20000

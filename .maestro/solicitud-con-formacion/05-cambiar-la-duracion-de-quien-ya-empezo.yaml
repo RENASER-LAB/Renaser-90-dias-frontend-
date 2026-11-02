@@ -1,6 +1,7 @@
 # Cambiar la duración del programa de un aprendiz del Diplomado que ya empezó: conserva su día (spec 025, 025-2 A). ESCRITO Y SIN CORRER.
 # cuenta: admin
 # Precondición: «Dip-Empezó Uno», aprendiz del Diplomado de 3 meses con su Día 1 elegido y en curso (no terminó). Sale en Administración → Personas.
+# Datos (02/11/2026): esa cuenta NO existe en la base local renaser_e2e_final; hay que sembrarla (usuario, participante del Diplomado de 3 meses y su Día 1) antes de correr este flujo.
 appId: com.renaser.app
 ---
 - runFlow: ../comun/ya-adentro.yaml
@@ -16,7 +17,10 @@ appId: com.renaser.app
     timeout: 40000
 - tapOn: "Personas.*"
 - tapOn: "Buscar por nombre o correo"
-- inputText: "Dip-Empezó"
+- inputText: "Dip-Emp"
+- extendedWaitUntil:
+    visible: "Dip-Empezó Uno.*"
+    timeout: 30000
 - tapOn: "Dip-Empezó Uno.*"
 - scrollUntilVisible:
     element: "Cambiar la duración"
@@ -29,7 +33,9 @@ appId: com.renaser.app
 - assertVisible: "Hoy dura 3 meses. Seguirá en el mismo día; solo cambia cuándo termina."
 - tapOn: "1 año.*"
 - tapOn: "Por qué se cambia.*"
-- inputText: "Pidió más tiempo"
+# Dos comandos de pocas letras y sin tildes (Maestro no escribe bien los caracteres que no son ASCII): `inputText` con el dev client tarda ~7 a 10 s por letra y pasa de 120 s con más de ~10 (Maestro #3667).
+- inputText: "Pidio ma"
+- inputText: "s tiempo"
 - takeScreenshot: S05a-cambiar-la-duracion
 - tapOn:
     text: "Cambiar la duración"

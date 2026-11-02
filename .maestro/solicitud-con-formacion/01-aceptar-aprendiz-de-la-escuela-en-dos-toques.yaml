@@ -22,9 +22,8 @@ appId: com.renaser.app
 - assertVisible: "Rol"
 - assertVisible: "Ficha de entrada"
 - takeScreenshot: S01b-la-hoja-con-todo-marcado
-- tapOn:
-    text: "Aceptar"
-    index: 1
+# Hay un solo «Aceptar»: el del pie fijo de la hoja (con `index: 1` no hay segundo y el toque falla).
+- tapOn: "Aceptar"
 # Se acepta, la hoja se cierra y la solicitud sale de «Por decidir».
 - extendedWaitUntil:
     visible: "Sol-Escuela Uno entró a la Escuela Renaser como Aprendiz.*"

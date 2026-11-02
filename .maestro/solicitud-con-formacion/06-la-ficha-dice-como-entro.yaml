@@ -14,10 +14,18 @@ appId: com.renaser.app
 - takeScreenshot: S06a-la-lista
 # ...lo dice la ficha (Administración → Personas → la persona).
 - back
-- tapOn: "Personas"
+# Personas lista a todos (más de cien en la base de prueba): se busca a la persona, y la ficha es larga.
+- tapOn: "Personas.*"
+- tapOn: "Buscar por nombre o correo"
+- inputText: "Diplomado"
+- extendedWaitUntil:
+    visible: "Sol-Diplomado Uno"
+    timeout: 30000
 - tapOn: "Sol-Diplomado Uno"
 - scrollUntilVisible:
     element: "Cómo entró"
+    direction: DOWN
+    timeout: 40000
 - assertVisible: "Aceptada por .*"
 - assertVisible: "Diplomado 1 año.*con diagnóstico"
 - takeScreenshot: S06b-la-ficha

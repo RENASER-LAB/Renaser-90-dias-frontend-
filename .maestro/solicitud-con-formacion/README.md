@@ -18,3 +18,7 @@ Criterio de aislamiento (SC-007), para el E2E: una persona aceptada en el Diplom
 > **2026-11-01 (spec 032).** Contra el backend con la spec 032, la hoja «Aceptar» suma el bloque **«Pago»** y el aprendiz parte sin elegir cómo paga: «Aceptar» queda apagado
 > hasta que se elige. Los flujos `01`, `02` y `04` ahora lo eligen («Sin cronograma (pagó completo)») y su frase dice «… y pagó completo»; el `03` (mentor y Administración) no
 > cambia: el personal viene con «Sin cronograma» y no se anota nada. Los flujos de los pagos están en `.maestro/pagos/`.
+
+> **02/11/2026.** `01`, `02` y `03` tocaban el segundo «Aceptar» (`index: 1`): la hoja tiene uno solo (el del pie fijo), como ya decían los flujos de `pagos/`. `06` busca a la persona
+> en Personas antes de abrirla (la lista tiene más de cien). `05` pide a «Dip-Empezó Uno», que NO existe en la base local `renaser_e2e_final` (hay que sembrarla: usuario, participante
+> del Diplomado de 3 meses y su Día 1). Las solicitudes PENDIENTES que piden `01` a `04` están sembradas: Sol-Escuela Uno, Sol-Diplomado Uno, Sol-Mentor Uno y Sol-Lote Uno / Dos / Tres.
