@@ -112,6 +112,7 @@ describe('la actividad de la política', () => {
 describe('app.json', () => {
   const expo = json('app.json').expo as { android: { permissions: string[] }; plugins: unknown[] };
 
+  // spec 037 FR-003
   it('pide SOLO los permisos de lectura de pasos y de distancia de Health Connect', () => {
     const salud = expo.android.permissions.filter(p => p.startsWith('android.permission.health.'));
     expect(salud.sort()).toEqual(['android.permission.health.READ_DISTANCE', 'android.permission.health.READ_STEPS']);
@@ -126,6 +127,7 @@ describe('app.json', () => {
     expect(expo.plugins).not.toContain('react-native-health-connect');
   });
 
+  // spec 037 FR-001
   it('no suma Recording API, Google Fit ni un módulo propio de pasos (cambio del dueño del 2026-11-02)', () => {
     const todo = leer('package.json') + leer('app.json');
     expect(todo).not.toMatch(/play-services-fitness|expo-sensors|react-native-google-fit|renaser-pasos/);

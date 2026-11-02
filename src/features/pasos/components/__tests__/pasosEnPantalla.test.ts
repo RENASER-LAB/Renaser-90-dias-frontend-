@@ -77,6 +77,7 @@ describe('la línea bajo «Kilómetros diarios»', () => {
     expect(raiz!.toJSON()).toBeNull();
   });
 
+  // spec 037 FR-015
   it('sin conectar: «Cuenta tus pasos solo ›», de 48 de alto, y abre la hoja para conectar', () => {
     const a = acciones();
     montar(React.createElement(LineaDeKilometros, { vista: { modo: 'ofrecer', soporte: 'disponible' }, ...a }));

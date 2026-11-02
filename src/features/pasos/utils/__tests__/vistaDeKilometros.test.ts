@@ -49,6 +49,7 @@ describe('vistaDeKilometros', () => {
     expect(sePuedeRegistrar(vista)).toBe(false);
   });
 
+  // spec 037 FR-007
   it('al llegar a la meta (o pasarla) ofrece registrar (pantalla 2.2)', () => {
     const justo = vistaDeKilometros(entrada({ lectura: lectura({ km: 5 }) }));
     const pasada = vistaDeKilometros(entrada({ lectura: lectura({ km: 5.4 }) }));
@@ -90,6 +91,7 @@ describe('vistaDeKilometros', () => {
     expect(vistaDeKilometros(entrada({ conectado: false, permisos: null, lectura: null }))).toEqual({ modo: 'ofrecer', soporte: 'disponible' });
   });
 
+  // spec 037 FR-002
   it('Android menor a 14, sin Health Connect o iPhone web: se ofrece, y esa hoja dice «Sube tu captura» (pantalla 3.4)', () => {
     expect(vistaDeKilometros(entrada({ soporte: 'no-disponible', conectado: false, permisos: null, lectura: null }))).toEqual({
       modo: 'ofrecer',

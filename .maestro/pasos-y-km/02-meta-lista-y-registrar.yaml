@@ -1,6 +1,7 @@
 # P02 — Con la meta alcanzada, un toque registra los km (spec 037, maqueta 2.2 a 2.4). Precondición: P01 hecho, pasos sembrados
 # con MÁS de 5 km (README) y el hábito de hoy sin cumplir. El flujo cierra el hábito: para repetirlo hay que sembrar otro día.
 # cuenta: aprendiz
+# spec 037 FR-007
 appId: com.renaser.app
 ---
 - runFlow: ../comun/ya-adentro.yaml

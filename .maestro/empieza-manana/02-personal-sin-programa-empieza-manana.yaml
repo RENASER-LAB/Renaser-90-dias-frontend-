@@ -3,6 +3,7 @@
 # ESCRITO Y SIN CORRER. Precondición: backend con la spec 036; administrador (o mentor, líder o alquimista) SIN fila en `participantes_programa` y sin
 # «Ahora no» guardado. Activar CREA la fila: se corre una vez por cuenta (otra cuenta sin fila o volver a clonar la base).
 # cuenta: admin
+# spec 036 FR-010
 appId: com.renaser.app
 ---
 - runFlow: ../comun/ya-adentro.yaml

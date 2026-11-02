@@ -2,6 +2,7 @@
 # (README), un aprendiz con «Kilómetros diarios» hoy y SIN conexión en este teléfono (cerrar sesión y volver a entrar la borra).
 # Textos cortos a propósito (ver ../README.md).
 # cuenta: aprendiz
+# spec 037 FR-002, FR-003
 appId: com.renaser.app
 ---
 - runFlow: ../comun/ya-adentro.yaml

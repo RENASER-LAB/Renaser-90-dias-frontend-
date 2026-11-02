@@ -21,10 +21,12 @@ const cruda = (extra: Partial<LecturaCrudaDelDia>): LecturaCrudaDelDia => ({
 });
 
 describe('kilometrosDe', () => {
+  // spec 037 FR-006
   it('con distancia medida usa la distancia, sin «aprox.»', () => {
     expect(kilometrosDe(5400, 7120)).toEqual({ km: 5.4, aproximado: false });
   });
 
+  // spec 037 FR-006
   it('sin distancia estima con los pasos y la zancada media, y lo dice «aprox.»', () => {
     expect(ZANCADA_MEDIA_EN_METROS).toBe(0.75);
     expect(kilometrosDe(null, 8000)).toEqual({ km: 6, aproximado: true });
@@ -62,6 +64,7 @@ describe('armarLaLectura', () => {
     expect(lectura.leidoEn).toBe(AHORA);
   });
 
+  // spec 037 FR-005
   it('con dos fuentes a la vez: cuenta la que Health Connect usó y dice cuál no se suma', () => {
     const lectura = armarLaLectura(
       cruda({

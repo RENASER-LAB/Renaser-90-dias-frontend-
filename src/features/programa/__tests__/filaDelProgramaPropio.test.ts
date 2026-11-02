@@ -117,6 +117,7 @@ async function pulsar(nodo: ReactTestInstance) {
 }
 
 describe('personal sin programa (sin fila, el servidor dice que puede empezar)', () => {
+  // spec 036 FR-010
   it('«Haz tu programa de 90 días · Empieza mañana ›», sin el párrafo de antes ni botón dorado', async () => {
     const r = await montar({ inscrito: false, diaPrograma: 0 }, { canStartProgram: true, canAdminister: true });
     expect(textos(r)).toEqual(['Haz tu programa de 90 días', 'Empieza mañana']);
@@ -143,6 +144,7 @@ describe('personal sin programa (sin fila, el servidor dice que puede empezar)',
     expect(textos(r)[0]).toBe('Haz tu programa de 1 año');
   });
 
+  // spec 036 FR-008, FR-009
   it('tocar la fila abre «Tu programa empieza mañana» y «Entendido» manda la fecha de mañana al mismo POST', async () => {
     mockConsultarActivacion.mockResolvedValue({ activated: false, validStartDates: FECHAS, startDate: null });
     mockActivarPrograma.mockResolvedValue({});
@@ -179,6 +181,7 @@ describe('personal sin programa (sin fila, el servidor dice que puede empezar)',
 });
 
 describe('la cuenta con fila pero sin activar', () => {
+  // spec 036 FR-010
   it('«Todavía no empezaste tu programa · Empieza mañana ›», sin ✕, y abre «Tu programa empieza mañana»', async () => {
     mockConsultarActivacion.mockResolvedValue({ activated: false, validStartDates: FECHAS, startDate: null });
     const r = await montar({ inscrito: true, diaPrograma: 0 }, { canStartProgram: false, canAdminister: true });

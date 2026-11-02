@@ -4,6 +4,7 @@
 # (`PLAZO` = 90-dias | 3-meses | 1-anio). Solo mira, pero llegar a la pantalla ya ACTIVA el programa (ajuste del 2026-11-02): para repetirlo con la misma cuenta hay
 # que dejar su `programa_activado_en` en NULL. Tampoco toca «Entendido».
 # cuenta: aprendiz
+# spec 036 FR-008
 appId: com.renaser.app
 ---
 - extendedWaitUntil:

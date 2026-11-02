@@ -3,6 +3,7 @@
 # ESCRITO Y SIN CORRER. Precondición: backend con la spec 036; administrador CON fila y `programa_activado_en` vacío. Sigue ESTADO=antes|despues:
 # `antes` solo mira; `despues` toca «Empezar mañana» en Training y «Entendido».
 # cuenta: admin
+# spec 036 FR-010, FR-011
 appId: com.renaser.app
 ---
 - runFlow: ../comun/ya-adentro.yaml

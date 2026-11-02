@@ -9,6 +9,7 @@ import * as path from 'path';
  *  - un texto de «elegir el Día 1» («Elige tu Día 1», «Elegir mi Día 1», «Elige cuándo empiezas», «Todavía no elegiste tu Día 1»,
  *    «Confirmar mi Día 1», «Volver sin elegir»);
  *  - una lista, un selector o varias opciones para escoger la fecha de inicio: de lo que manda el servidor (`validStartDates`) solo se
+ // spec 036 FR-008
  *    toma la primera —mañana—, nunca se recorre, y la pantalla de activación no dibuja opciones.
  *
  * Se barre el código sin comentarios (los comentarios cuentan la historia: «antes era «Elige tu Día 1»») y sin las pruebas.
@@ -59,6 +60,7 @@ describe('el programa empieza mañana: la persona no elige su Día 1 (spec 036)'
     expect(CODIGO.some(c => c.archivo.endsWith('ActivarProgramaScreen.tsx'))).toBe(true);
   });
 
+  // spec 036 SC-001
   it('ningún texto de la app dice «Elige tu Día 1», «Elegir mi Día 1» o parecido', () => {
     const culpables = CODIGO.flatMap(({ archivo, fuente }) =>
       TEXTOS_PROHIBIDOS.filter(patron => patron.test(fuente)).map(patron => `${archivo}: ${patron}`),
@@ -66,6 +68,7 @@ describe('el programa empieza mañana: la persona no elige su Día 1 (spec 036)'
     expect(culpables).toEqual([]);
   });
 
+  // spec 036 FR-009
   it('de las fechas que manda el servidor solo se toma la primera (mañana): nunca se recorren ni se cuentan', () => {
     const usos = CODIGO.flatMap(({ archivo, fuente }) => {
       const encontrados: { archivo: string; despues: string }[] = [];
@@ -103,6 +106,7 @@ describe('el programa empieza mañana: la persona no elige su Día 1 (spec 036)'
     }
   });
 
+  // spec 036 FR-009
   it('la activación del onboarding manda una sola fecha, la primera, o ninguna', () => {
     const activacion = CODIGO.find(c => c.archivo.endsWith('utils/activacionAlFirmar.ts'));
     expect(activacion).toBeDefined();

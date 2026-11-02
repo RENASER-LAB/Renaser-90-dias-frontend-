@@ -132,6 +132,7 @@ async function tocar(r: ReactTestRenderer, texto: string) {
 }
 
 describe('entradaAlProgramaPropio (pura)', () => {
+  // spec 036 FR-010
   it('fila sin activar → empezar mañana (tarjeta); sin fila → invitación; nada que hacer → nada', () => {
     expect(entradaAlProgramaPropio({ diaUnoPorElegir: true, puedeEmpezar: false })).toBe('ELEGIR_DIA_UNO');
     expect(entradaAlProgramaPropio({ diaUnoPorElegir: false, puedeEmpezar: true })).toBe('EMPEZAR');

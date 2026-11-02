@@ -50,6 +50,7 @@ describe('origenesDelDia', () => {
     expect(sucios).toEqual([]);
   });
 
+  // spec 037 FR-005
   it('con UN registro escrito a mano el origen entero queda fuera: no se fía del resto', () => {
     const { limpios, sucios } = origenesDelDia([
       registro('com.mala.app', AUTOMATICO),

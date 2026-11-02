@@ -5,6 +5,7 @@
 # vacío). Con los Términos aceptados la app salta directo a este último paso. Se corre una vez por cuenta (activar no se deshace: para repetirlo, dejar
 # `programa_activado_en` en NULL o usar otra cuenta sin activar). Si el programa de la cuenta es del Diplomado, mira `04`.
 # cuenta: aprendiz
+# spec 036 FR-008, FR-009
 appId: com.renaser.app
 ---
 - extendedWaitUntil:

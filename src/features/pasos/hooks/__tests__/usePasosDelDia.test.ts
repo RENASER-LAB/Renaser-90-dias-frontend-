@@ -120,6 +120,7 @@ afterEach(() => {
 });
 
 describe('cuándo lee', () => {
+  // spec 037 FR-004
   it('conectado, con permiso y con Training a la vista: lee el día de hoy desde la medianoche y muestra el avance', async () => {
     await montar();
 
@@ -156,6 +157,7 @@ describe('cuándo lee', () => {
     expect(resultado.vista).toEqual({ modo: 'cumplido', km: 5.4, origen: 'HEALTH_CONNECT', fuente: 'Galaxy Watch' });
   });
 
+  // spec 037 FR-002
   it('en un teléfono sin soporte (Android menor a 14, sin Health Connect, web) no lee y se queda con la captura', async () => {
     soporte.mockResolvedValue('no-disponible');
     await montar();
@@ -259,6 +261,7 @@ describe('conectar y desconectar', () => {
 });
 
 describe('registrar', () => {
+  // spec 037 FR-007
   it('relee, ve que llegó a la meta y envía los km, los pasos y la fuente UNA vez; después avisa con los puntos del servidor', async () => {
     await montar();
     leer.mockResolvedValue(crudaDe(5400, 7120));
@@ -297,6 +300,7 @@ describe('registrar', () => {
     expect(alRegistrado).toHaveBeenCalledTimes(1);
   });
 
+  // spec 037 FR-007
   it('si al releer ya no llega a la meta, no envía nada y avisa', async () => {
     await montar();
     leer.mockResolvedValue(crudaDe(4200, 5600));
