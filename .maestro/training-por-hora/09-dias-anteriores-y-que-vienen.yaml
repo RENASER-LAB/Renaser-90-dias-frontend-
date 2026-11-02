@@ -71,9 +71,17 @@ appId: com.renaser.app
       - extendedWaitUntil:
           visible: "Así quedó planificado\\. Se registra ese día\\."
           timeout: 30000
-      - assertVisible: "Es tu planificación\\. Para cambiar una hora, toca el engranaje\\."
+      # La nota «Es tu planificación…» va al pie de la lista (17 hábitos): se baja hasta ella y luego se sube a la semana.
+      - scrollUntilVisible:
+          element: "Es tu planificación\\. Para cambiar una hora, toca el engranaje\\."
+          direction: DOWN
+          timeout: 40000
       - assertNotVisible: "Subir|Tomar foto|Ver la clase|Escuchar|Publicar|Marcar .*"
       - takeScreenshot: T09e-dia-que-viene
+      - scrollUntilVisible:
+          element: "${output.domingo}"
+          direction: UP
+          timeout: 40000
       - tapOn: "${output.domingo}"
       - extendedWaitUntil:
           visible: "Así quedó planificado\\. Se registra ese día\\."
