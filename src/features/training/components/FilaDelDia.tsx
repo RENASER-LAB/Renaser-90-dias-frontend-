@@ -87,7 +87,8 @@ export function FilaDelDia({
      `pasos` es null y la fila es exactamente la de siempre. */
   const pasos = usePasosDeLaFila(item);
   const conPasos = esHoy && (modo === 'hoy' || modo === 'atrasado') && !!pasos && abreLaHojaDeKilometros(pasos.vista);
-  const avance = conPasos && pasos?.vista.modo === 'avance' ? pasos.vista : null;
+  const vistaDeLosPasos = pasos?.vista ?? null;
+  const avance = conPasos && vistaDeLosPasos?.modo === 'avance' ? vistaDeLosPasos : null;
   // La etiqueta que oye el lector: la hora, qué es y qué pasa al tocarla.
   const etiqueta = [
     item.hora ?? 'Sin hora',

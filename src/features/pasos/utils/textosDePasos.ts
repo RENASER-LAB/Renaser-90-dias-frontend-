@@ -1,4 +1,4 @@
-import { formatoKm } from '../../habits/utils/registroConFoto';
+import { formatoKm } from '../../habits/utils/formatoKm';
 
 /**
  * Todo lo que la persona lee en los pasos (spec 037). Tuteo, tipo oración y pocas palabras (maqueta aprobada del 2026-11-02).

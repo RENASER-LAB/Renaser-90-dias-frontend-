@@ -1,4 +1,4 @@
-import { formatoKm } from '../../habits/utils/registroConFoto';
+import { formatoKm } from '../../habits/utils/formatoKm';
 
 /**
  * La meta diaria de km en «Hábitos del programa» (spec 037, D-310). Lógica pura: lo que escribe Administración, validado igual que

@@ -120,10 +120,9 @@ export function leerKilometros(texto: string): number | null {
   return km > 0 && km <= TOPE_KM_POR_DIA ? km : null;
 }
 
-/** "12,5", "7", "1234,05": coma decimal y sin ceros de más. */
-export function formatoKm(km: number): string {
-  return (Math.round(km * 100) / 100).toFixed(2).replace(/\.?0+$/, '').replace('.', ',');
-}
+/** "12,5", "7", "1234,05": coma decimal y sin ceros de más. Vive en `formatoKm.ts` (puro, sin red) y se reexporta acá. */
+export { formatoKm } from './formatoKm';
+import { formatoKm } from './formatoKm';
 
 /** El total que verá la persona si registra lo que escribió: lo previo más lo de hoy (si es válido). */
 export function totalConHoy(medicion: MedicionPedida, texto: string): number {

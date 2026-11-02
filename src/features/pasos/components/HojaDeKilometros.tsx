@@ -7,7 +7,7 @@ import { Presionable } from '../../../components/Presionable';
 import { HojaDesdeAbajo } from '../../../components/hojaDesdeAbajo/HojaDesdeAbajo';
 import { fuentes } from '../../../theme/fuentes';
 import { useTheme } from '../../../theme/ThemeContext';
-import { formatoKm } from '../../habits/utils/registroConFoto';
+import { formatoKm } from '../../habits/utils/formatoKm';
 import {
   kmConUnidad,
   TEXTOS_DE_PASOS,

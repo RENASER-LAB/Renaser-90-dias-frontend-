@@ -105,7 +105,7 @@ async function registrosDelDia(tipo: 'Steps' | 'Distance', desde: Date, hasta: D
       pageSize: REGISTROS_POR_PAGINA,
       ...(pageToken ? { pageToken } : {}),
     });
-    for (const registro of respuesta.records) registros.push(aRegistro((registro as { metadata?: Metadatos }).metadata));
+    for (const registro of respuesta.records) registros.push(aRegistro((registro as unknown as { metadata?: Metadatos }).metadata));
     pageToken = respuesta.pageToken;
     if (!pageToken) break;
   }
