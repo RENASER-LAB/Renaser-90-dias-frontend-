@@ -1,6 +1,7 @@
 # Administración edita los términos de la Escuela, mira la vista previa, guarda el borrador y publica sin pedir aceptar de nuevo (spec 027, historia 1). ESCRITO Y SIN CORRER.
 # cuenta: admin
-# Precondición (base local): la migración V148–V150 aplicada (la Escuela con su versión 1 publicada).
+# Precondición (base local): la migración V148–V150 aplicada (la Escuela con al menos una versión publicada; en la base local de hoy la vigente es la 2).
+# Cada corrida publica una versión más, sin pedir aceptar de nuevo.
 appId: com.renaser.app
 ---
 - runFlow: ../comun/ya-adentro.yaml
@@ -23,14 +24,21 @@ appId: com.renaser.app
 - extendedWaitUntil:
     visible: "Escuela Renaser"
     timeout: 30000
-- assertVisible: "Versión 1.*"
+- assertVisible: "Versión [0-9]+.*"
 - assertVisible: "Diplomado Renaser"
-- assertVisible: "Por revisar"
+# «Por revisar» es el Diplomado recién creado, sin versión publicada: en la base local de hoy ya tiene versiones, así que no siempre sale.
+- assertVisible:
+    text: "Por revisar"
+    optional: true
 - takeScreenshot: T01a-las-tres-formaciones
 - tapOn: "Escuela Renaser.*"
 - extendedWaitUntil:
-    visible: "Versión 1 · vigente"
+    visible: "Versión [0-9]+ · vigente"
     timeout: 20000
+# El número de la vigente cambia con cada corrida (la base local ya va por la 2): se lee y se espera la siguiente al publicar.
+- copyTextFrom:
+    text: "Versión [0-9]+ · vigente"
+- evalScript: ${output.siguiente = 'Versión ' + (parseInt(maestro.copiedText.replace(/[^0-9]/g, ''), 10) + 1) + ' · vigente'}
 - tapOn: "Editar"
 - extendedWaitUntil:
     visible: "Cláusula 1"
@@ -70,8 +78,8 @@ appId: com.renaser.app
     text: "Publicar"
     index: 1
 - extendedWaitUntil:
-    visible: "Versión 2 · vigente"
+    visible: "${output.siguiente}"
     timeout: 30000
 - assertVisible: "Historial"
-- assertVisible: "Versión 1.*"
+- assertVisible: "Versión [0-9]+.*"
 - takeScreenshot: T01e-historial
