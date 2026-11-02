@@ -8,6 +8,7 @@ import { Presionable } from '../../../components/Presionable';
 import { HojaDesdeAbajo } from '../../../components/hojaDesdeAbajo/HojaDesdeAbajo';
 import { useTheme } from '../../../theme/ThemeContext';
 import type { OfertaDeRepetirApi } from '../../habits/types/habits.types';
+import { tituloEnTipoOracion } from '../../habits/utils/tituloEnTipoOracion';
 import { fraseDeLaOferta, motivoDeExclusion, resumenCorto, resumenDeLaOferta } from '../utils/ofertaDeRepetir';
 
 /**
@@ -111,7 +112,7 @@ export function HojaDeRepetirSemana({
 
             {resumen.map(h => (
               <View key={h.habitId} style={[estilos.habito, { borderColor: c.border, backgroundColor: c.cardBg }]}>
-                <Text style={[t.body, { color: c.textStrong, fontFamily: fuentes.media, fontSize: 17 }]}>{h.titulo}</Text>
+                <Text style={[t.body, { color: c.textStrong, fontFamily: fuentes.media, fontSize: 17 }]}>{tituloEnTipoOracion(h.titulo)}</Text>
                 {h.dias.map(d => (
                   <View key={d.dia} style={estilos.dia} accessible accessibilityLabel={`${d.dia}: ${d.texto}${d.reemplaza ? ', reemplaza un cambio tuyo' : ''}`}>
                     <Text style={[t.small, estilos.nombreDelDia, { color: c.goldInk }]}>{d.dia}</Text>
@@ -129,7 +130,7 @@ export function HojaDeRepetirSemana({
                 <Text style={[t.body, { color: c.textStrong, fontFamily: fuentes.media }]}>Se quedan afuera</Text>
                 {oferta.excluded.map(x => (
                   <Text key={x.habitId} style={[t.small, { color: c.textSoft }]}>
-                    {x.title}: {motivoDeExclusion(x.reason)}
+                    {tituloEnTipoOracion(x.title)}: {motivoDeExclusion(x.reason)}
                   </Text>
                 ))}
               </View>

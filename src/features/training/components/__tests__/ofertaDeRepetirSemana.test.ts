@@ -236,6 +236,39 @@ describe('repetir reemplazando lo que la persona ya cambió (FR-007)', () => {
   });
 });
 
+describe('«Qué se repite» escribe los nombres en tipo oración (issue #94)', () => {
+  it('el hábito de la semana y los que se quedan afuera, no TODO en mayúsculas', async () => {
+    mockOferta.mockResolvedValue(oferta({
+      habits: [{
+        habitId: 'h1',
+        title: 'ESCRITURA LIBRE NOCTURNA',
+        days: [{ date: '2026-11-07', weekday: 'SATURDAY', active: true, triggerTime: '21:30:00', customTime: true }],
+      }],
+      excluded: [{ habitId: 'h9', title: 'AGUA TIBIA CON LIMÓN', reason: 'NOT_AVAILABLE' }],
+    }));
+    await montar();
+    await tocar('Ver qué se repite');
+    const todo = textos();
+    expect(todo).toContain('Escritura libre nocturna');
+    expect(todo).toContain('Agua tibia con limón:');
+    expect(todo).not.toContain('ESCRITURA LIBRE NOCTURNA');
+    expect(todo).not.toContain('AGUA TIBIA CON LIMÓN');
+  });
+
+  it('un nombre que la persona ya escribió con minúsculas se deja tal cual', async () => {
+    mockOferta.mockResolvedValue(oferta({
+      habits: [{
+        habitId: 'h1',
+        title: 'Mi caminata de la tarde',
+        days: [{ date: '2026-11-07', weekday: 'SATURDAY', active: true, triggerTime: '17:00:00', customTime: true }],
+      }],
+    }));
+    await montar();
+    await tocar('Ver qué se repite');
+    expect(textos()).toContain('Mi caminata de la tarde');
+  });
+});
+
 describe('«Ahora no»', () => {
   it('quita la tarjeta, no manda nada y al volver con la misma oferta no reaparece', async () => {
     mockOferta.mockResolvedValue(oferta());
