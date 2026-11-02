@@ -1,0 +1,15 @@
+# La Escuela queda como hoy (spec 035). ESCRITO Y SIN CORRER.
+# cuenta: aprendiz  (de la Escuela)
+# Precondición: backend con V159; nadie subió una imagen para la Escuela.
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "COMUNIDAD"
+- tapOn: "Tribu"
+- extendedWaitUntil:
+    visible: "Formación Renaser"
+    timeout: 30000
+- assertVisible: "Formación Renaser Global"
+- assertNotVisible: "Diplomado Renaser"
+- assertNotVisible: "Certificación Renaser"
+- takeScreenshot: I04a-tribu-de-la-escuela

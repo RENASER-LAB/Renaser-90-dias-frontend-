@@ -1,0 +1,22 @@
+# Una persona del Diplomado ve lo del Diplomado en el chat (spec 035). ESCRITO Y SIN CORRER.
+# cuenta: aprendiz  (del Diplomado, con su soporte ya creado y la bienvenida del Diplomado recibida)
+# Precondición: backend con V159 y BIENVENIDA_ACTIVA; la persona nació en el Diplomado.
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "COMUNIDAD"
+- tapOn: "Tribu"
+# La sección y la comunidad general llevan el nombre de su formación, nunca «Formación Renaser».
+- extendedWaitUntil:
+    visible: "Diplomado Renaser"
+    timeout: 30000
+- assertVisible: "Diplomado Renaser Global"
+- assertNotVisible: "Formación Renaser"
+- takeScreenshot: I03a-tribu-del-diplomado
+# Su soporte: la bienvenida la firma «Diplomado Renaser» y nombra al Diplomado.
+- tapOn: ".* – Diplomado Renaser"
+- extendedWaitUntil:
+    visible: ".*bienvenida oficial al Diplomado Renaser.*"
+    timeout: 30000
+- assertNotVisible: ".*Formación Renaser.*"
+- takeScreenshot: I03b-bienvenida-del-soporte

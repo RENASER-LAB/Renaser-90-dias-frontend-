@@ -1518,6 +1518,61 @@ el correo, junto a «Escribirle». El dueño respondió: «cambia la cabecera a 
 * **Hace falta un APK nuevo** (solo JavaScript).
 
 
+## Cambio por pedido del dueño — 2026-11-02 — identidad por formación: la bienvenida y la imagen de cada formación (spec 035)
+
+Textual: «procede con la spec; revisa siempre eso en todas las partes, no quiero errores en producción». Tras los nombres de los chats por
+formación (spec 024), quedaban dos huecos: la bienvenida automática era la de la Escuela para las tres formaciones, y la imagen de los chats
+(el fénix de la comunidad y la tarjeta de los grupos) era la misma. Backend: spec 035, V159, D-308 (`specs/035-identidad-por-formacion/`).
+Lo que cambia y nada más:
+* **Administración → Más opciones → Bienvenida** (`BienvenidaAdminScreen`): arriba, el control **«Escuela · Diplomado · Certificación»**
+  (`ControlDeFormacion`, el `ControlSegmentado` de la app: la píldora viaja 250 ms con su «tic»; sin otro movimiento). Todo lo de abajo
+  —la tarjeta con su vista previa, los tres mensajes, sus estados y «volver al original»— es de la formación elegida. Arranca en la
+  Escuela. Cambiar de formación pide la suya y **no deja a la vista la de la anterior** mientras llega (`useBienvenidaAdmin(formacion)`: una
+  respuesta tardía de otra formación se descarta); los borradores no se mezclan (cada pieza lleva `key` con la formación). Subtítulo de la
+  cabecera: «La tarjeta y los mensajes de cada formación».
+  * **El pedido** lleva `?formation=` solo para el Diplomado y la Certificación (`conFormacion`): para la Escuela sale exactamente como
+    siempre, así que la app nueva contra un backend anterior edita la Escuela sin notar nada.
+  * **Tolerante a un backend anterior** (`bienvenidaEsDe`): ese backend contesta SIEMPRE con la bienvenida de la Escuela y no manda `formation`.
+    Con el Diplomado o la Certificación elegidos y una respuesta sin `formation`, la pantalla no muestra ni deja editar nada y dice «Este
+    servidor todavía no tiene una bienvenida para cada formación. Cuando se actualice, la podrás cambiar acá.»: nunca se edita —ni se cree
+    editar— la de la Escuela bajo el nombre de otra.
+  * **Portada**: en el Diplomado y la Certificación, sin portada propia la línea dice «Usa la portada de la Escuela.» (`portada.heredada`); su
+    botón es «Volver a la portada de la Escuela» (con su confirmación y su aviso); en la Escuela, todo como antes.
+* **Administración → Formaciones → cada formación → «Imagen de la formación»** (`ImagenDeLaFormacion`, después de «Comunidad»): la imagen
+  que esa formación lleva en el chat, en su comunidad general y en sus grupos sin foto propia. Dos círculos de 72 («Comunidad» y «Grupos») dicen
+  cómo se ve hoy (con imagen, los dos la llevan; sin ella, cada uno lleva lo de siempre: el fénix y la tarjeta); una línea de estado («Usa la
+  imagen de siempre.», «Usa la imagen de la Escuela.», «Cambiada por … el …»); «Cambiar la imagen» (el selector cuadrado de la foto de perfil,
+  sin otro) que sube la candidata y muestra **«Así se vería en el chat»** con «Usar esta imagen» / «Elegir otra» / «Cancelar» —nada queda
+  vigente hasta «Usar»—; y «Volver a la imagen de siempre» (Escuela) o «Volver a la imagen de la Escuela» (las otras), con confirmación.
+  Lo guardado se dice con `ConfirmacionEnLinea` y una vibración de logro. Sin almacenamiento de verdad (local) el botón queda apagado y la
+  sección lo dice. **Contra un backend anterior (404) o sin permiso (403) la sección no se dibuja.**
+* **El chat** muestra esa imagen **según lo que manda el servidor**, con lo local de respaldo (mientras carga o si falla, y siempre que no haya
+  imagen): `photoPath` ahora también llega en la **comunidad general** y en un **grupo sin foto propia** cuando su formación tiene imagen.
+  `fotoDeLaConversacion('global', ruta)` es `foto-del-servidor` (con el fénix debajo, `AvatarDeChat`); el grupo conserva su tarjeta debajo.
+  La lista, la cabecera y la info lo toman sin más cambios.
+  > **Corregido 2026-11-02 (sobre D-206 y D-212).** «La comunidad es siempre el fénix» y «`tieneFotoPropia` = hay `fotoPath`» dejaron de ser
+  > ciertos. El fénix es lo de siempre; la imagen de la formación lo reemplaza si existe. Y como `fotoPath` ya no dice que la foto sea del grupo,
+  > el servidor manda `ownPhoto` (solo en grupos): «Volver a la foto de Renaser» y «Guardar foto» usan `grupoTieneFotoPropia` (con un backend
+  > anterior, sin `ownPhoto`, vale que `fotoPath` solo existe si es propia).
+* **El nombre de la formación en el chat**, sin cambiar diseño: la sección de chats de Tribu y la de «Compartir publicación» se rotulan con
+  `rotuloDeLaSeccionDeTribu` («Formación Renaser» en la Escuela y donde no se sabe la formación o se lee «Todas»; «Diplomado Renaser» y
+  «Certificación Renaser» en las otras, con el nombre que Administración les puso). Los mensajes del programa se firman con el nombre que manda
+  el servidor (`firmaDelProgramaDe`: solo se aceptan las tres firmas; la cuenta de staff que guardó el mensaje no es una firma).
+  > **Corregido 2026-11-02 (sobre 2026-09-27).** «Formación Renaser» como rótulo fijo de la sección de grupos y como firma única del programa
+  > pasó a ser el de la **Escuela**; las otras formaciones llevan el suyo.
+* **No cambian**: el diseño de Bienvenida, Formaciones y el chat, los tabs, los textos de las alarmas ni los cinco principales. Sin animaciones
+  nuevas, íconos ni dependencias.
+* **Supuestos para que el dueño revise** (están en la spec del backend): los textos del Diplomado y la Certificación arrancan con el original de
+  su formación (el de la Escuela con el nombre de la institución cambiado) y no copian lo que Administración haya editado de la Escuela; la
+  portada y la imagen sin la propia **siguen a la Escuela en vivo**; hay **una sola imagen por formación** para la comunidad y los grupos sin
+  foto propia.
+* **Pruebas:** Jest `identidadPorFormacion` (bienvenida por formación, `bienvenidaEsDe`, imagen, rótulo, firma, `grupoTieneFotoPropia`,
+  cableado), `imagenDeLaFormacionApi`, `bienvenidaApi` (rutas con formación), `fotosDelChat`. Maestro, escritos y sin correr:
+  `.maestro/identidad-por-formacion/` (01 a 04).
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire) y el backend con V159 antes: contra uno anterior se edita solo la
+  Escuela, la sección de imagen no aparece y el chat queda como estaba.
+
+
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
 Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel especializado en React Native, Expo y TypeScript. Al crear, refactorizar o modificar cualquier pantalla o componente, debes cumplir OBLIGATORIAMENTE con los siguientes estándares:
@@ -3169,6 +3224,8 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
         queda sola si la foto falla, sin reintentar en cada fila (`utils/fotoDelSoporte.ts`,
         `hooks/useFotoDelSoporte.ts`; *desde D-206 se llaman `utils/fotoConSesion.ts` y
         `hooks/useFotoConSesion.ts`, porque sirven cualquier ruta*).
+      > **Corregido 2026-11-02 (spec 035).** La comunidad es el fénix solo mientras su formación no tenga una imagen propia; con ella, la del
+      > servidor (`photoPath`) y el fénix debajo. Ver la entrada «identidad por formación», arriba.
       * **La comunidad vuelve al fénix y cada integrante de la info del grupo muestra su tarjeta con
         nombre** (decisiones del dueño del mismo día, D-206 del backend). Textual: «de la plantilla
         que te pasé los 2 png […] es para el grupo con el mentor y el tema de soporte […] y chat
@@ -3443,6 +3500,8 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     (S-9 de `docs/specs/RETROALIMENTACION_2026-09-26.md` del backend, E-257).** Sin datos
     (`habitosHoy` null) la tarjeta ya no dice «Al día»: no muestra cifra (`features/home/utils/cifrasDeHabitos.ts`).
     Nada más de `Hoy` cambia.
+  > **Corregido 2026-11-02 (spec 035).** La bienvenida de abajo es ahora **una por formación**: la pantalla suma el control «Escuela · Diplomado ·
+  > Certificación» y cada una tiene sus mensajes y su portada. Lo demás de esta entrada vale para la formación elegida. Ver «identidad por formación».
   * **Excepción autorizada por el dueño del producto — 2026-09-27 — Administración (estado de `Hoy`),
     «Bienvenida»** (pedido del dueño: que Administración y Alquimista cambien desde la app la portada
     de la tarjeta de bienvenida y los mensajes; backend D-210, `/api/v1/admin/bienvenida`). En «Más
