@@ -1877,6 +1877,39 @@ diseño nuevo ni dependencias:
 * **Para cuando se integren 036 y 037:** el día 0 («tu programa empieza mañana») y los km con pasos conectados (SER no pide foto y manda al «Registrar» de la fila) se
   programan al integrarlas; ver `specs/038-ser-al-dia/` del backend.
 
+## Cambio de infraestructura — 2026-11-02 — CI de seguridad y alertas de Dependabot del frontend
+
+Del barrido de seguridad del 02/11: el repositorio es público, tenía **27 alertas abiertas de Dependabot** (1 crítica, 13 altas, 9 medias y 4 bajas) y ningún
+chequeo de seguridad en el CI. Sin cambios de diseño, textos, tabs ni código de `src/`. Lo que cambia y nada más:
+* **Dependencias** (`package.json` y `package-lock.json`): `zod` `^4.5.4` → `^4.6.7` (directa, alta: agota memoria con arreglos grandes) y
+  `@playwright/test` `^1.49.1` → `^1.55.1` (desarrollo, alta: bajaba navegadores sin verificar). El lock sube además `node-forge` 1.4.0 → 1.4.2
+  (12 alertas), `shell-quote` 1.10.0 → 1.12.0 (la crítica), `brace-expansion`, `compression`, `source-map-js` y `@react-navigation/core`
+  7.21.13 → 7.24.0 (con eso sale `query-string` y su `decode-uri-component`, dos alertas más). Ninguna otra versión directa cambia. Ninguno de los
+  15 paquetes que cambian trae scripts de instalación; `zod@4.6.7` está publicado con procedencia (SLSA) desde GitHub Actions.
+* **Después de fusionar quedan 4 alertas abiertas, a propósito**: `uuid` 7.0.3 (#2), `deepmerge` (#17, sin versión corregida), `glob` 13.0.6 (#30) y `minimatch`
+  10.2.6 (#31). Las cuatro cuelgan de la herramienta de compilación de Expo y de Jest (`@expo/cli`, `@expo/config-plugins`, `xcode`,
+  `jest-config`), no entran en el paquete de la app, y arreglarlas exige saltos mayores (`glob` 14, `minimatch` 11, `uuid` 11) que las versiones
+  de Expo y Jest que usamos no aceptan; `npm audit fix --force` propone *bajar* Expo a la 51. Se vuelven a mirar al subir de SDK. Si
+  Dependabot mantiene abierta la de `zod` por la copia 3.25.76 que trae `@expo/cli`, es un falso positivo: el código vulnerable (`$ZodArray`) es
+  de la línea 4.
+* **`.github/workflows/seguridad.yml`** (nuevo, aparte de `ci.yml`): corre en cada PR, en `master` y **cada lunes** (una dependencia puede
+  volverse vulnerable sin que nadie toque el repo). Tres jobs: **gitleaks** (secretos en todo el historial, con `--redact` porque el registro
+  es público), **trivy** (dependencias de `package-lock.json`, incluidas las de desarrollo: frena con severidad ALTA o CRÍTICA que ya tenga
+  arreglo; lo medio y lo bajo solo se imprime) y **CodeQL** (JavaScript/TypeScript; no frena, sube a Security → Code scanning). Gitleaks y trivy se
+  bajan como binarios con versión y SHA-256 fijos en el workflow (ninguna acción de terceros); para subir de versión se cambian los dos valores
+  juntos.
+* **`.trivyignore.yaml`** (nuevo, vacío): las excepciones con motivo y fecha de vencimiento. Va pasado con `--ignorefile` porque la versión que
+  fijamos no lo busca sola.
+* **`.github/dependabot.yml`** (nuevo): PR semanal de menores y parches (los saltos mayores, aparte) para npm y para las acciones de los
+  workflows. **No toca lo que Expo fija por SDK** (`expo*`, `@expo/*`, `react`, `react-native*`, `@react-native/*`, Skia, Rive, `jest-expo`,
+  `typescript`…): se mueve junto, a mano, al subir de SDK.
+* **Comprobado sin `node_modules`**: el lock se regenera idéntico con `npm install --package-lock-only`; `trivy` da
+  14 altas/críticas con el lock anterior (sale con 1) y 0 con el nuevo (sale con 0); `gitleaks` limpia sobre 922 commits y falla ante un secreto
+  de prueba. **Falta** `npm ci`, `npm run typecheck` y `npm test -- --ci` con `node_modules` (zod 4.5 → 4.6 y `@react-navigation/core` 7.21 → 7.24 son
+  código de la app), y que el workflow corra una vez en GitHub.
+* **Hace falta un APK nuevo** para que `zod` y `@react-navigation/core` lleguen a los teléfonos (solo JavaScript: ni `app.json` ni código nativo; la
+  app no se actualiza por aire). Backend nuevo, ninguno.
+
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
 Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel especializado en React Native, Expo y TypeScript. Al crear, refactorizar o modificar cualquier pantalla o componente, debes cumplir OBLIGATORIAMENTE con los siguientes estándares:
