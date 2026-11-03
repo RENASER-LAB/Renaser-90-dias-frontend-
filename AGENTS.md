@@ -1932,6 +1932,23 @@ chequeo de seguridad en el CI. Sin cambios de diseño, textos, tabs ni código d
 * **Hace falta un APK nuevo** para que `zod` y `@react-navigation/core` lleguen a los teléfonos (solo JavaScript: ni `app.json` ni código nativo; la
   app no se actualiza por aire). Backend nuevo, ninguno.
 
+## Corrección — 2026-11-02 — Training dice cuándo empieza el programa de quien empieza mañana (issue #101)
+
+E2E final del 2026-11-02: a quien activó su programa y su Día 1 es mañana (fila con `programa_activado_en` hoy; spec 036), Training le mostraba
+un día cualquiera —«Hoy no tienes nada planificado.», la semana, un evento y la ayuda— con ~65 % de la pantalla en blanco, mientras Hoy y Plan decían
+«Tu programa empieza el martes 3 de noviembre». Causa: `useArranqueDelPrograma` da a quien empieza mañana `EN_CURSO` con la fecha (D-103: ya puede
+organizar), y Training solo avisaba a quien empieza pasado mañana o más tarde (`ESPERANDO_INICIO`). Lo que cambia y nada más:
+* **Una fila arriba, pegada a la cabecera de Training**, con la MISMA fila y el MISMO texto de Hoy y Plan: `FilaDelProgramaQueEmpieza`
+  (`FilaCompacta`, ícono `calendarRange`, sin chevron: no lleva a nada) con «Tu programa empieza el martes 3 de noviembre» —o «Tu programa empieza
+  pronto» si el servidor no mandó la fecha: no se inventa una—. El texto sale de `vistaDelProgramaQueEmpieza` (`programa/utils/filaDelPrograma`), la
+  única frase que usan Hoy, Plan (por `vistaDeLaFilaDelPrograma`), Training y Yo (issue #102). Quién la ve lo decide `programaQueEmpieza` (pura):
+  `inscrito`, día 0 y `EN_CURSO`. Con el programa en marcha, sin fila, mientras se comprueba, con el aviso de «Todavía no empezaste tu programa» o el de
+  «Tu programa arranca pronto» (pasado mañana o más), no se dibuja. Con el programa en otra formación tampoco.
+* **No cambia**: la lista del día, la semana, «Tus prácticas» (siguen habilitadas: quien empieza mañana organiza hoy, D-103), el aviso de quien empieza
+  pasado mañana, ni ningún pedido al servidor (la fila usa la lectura que Training ya hacía). Sin animación nueva.
+* **Pruebas:** `trainingDiceCuandoEmpieza.test.ts` (`programaQueEmpieza`, el texto compartido, la fila y que `TrainingScreen` la dibuja arriba de la lista).
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
+
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
 Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel especializado en React Native, Expo y TypeScript. Al crear, refactorizar o modificar cualquier pantalla o componente, debes cumplir OBLIGATORIAMENTE con los siguientes estándares:
