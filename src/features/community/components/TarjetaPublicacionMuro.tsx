@@ -12,6 +12,7 @@ import { space } from '../../../theme/tokens';
 import { useFuncionalidad } from '../../plataforma/estado/useFuncionalidad';
 import { CLAVES } from '../../plataforma/utils/clavesDeLaApp';
 import { RotuloDeFormacion } from '../../formaciones/components/RotuloDeFormacion';
+import { lineaDelAutor } from '../utils/lineaDelAutor';
 import type { FotoMuroNormalizada } from '../utils/normalizarImagen';
 import { PROPORCION_POR_DEFECTO } from '../utils/proporcionImagen';
 import { FotoMuro } from './FotoMuro';
@@ -117,9 +118,7 @@ function TarjetaPublicacionMuroBase({
             <AvatarPersona nombre={post.author} avatarUrl={post.avatarUrl} size={36} />
             <View>
               <Text style={[t.cardTitle, { color: c.textStrong }]}>{post.author}</Text>
-              <Text style={[t.small, { color: c.micro }]}>
-                {post.cell} · {post.timeAgo}
-              </Text>
+              <Text style={[t.small, { color: c.micro }]}>{lineaDelAutor(post.cell, post.timeAgo)}</Text>
             </View>
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
