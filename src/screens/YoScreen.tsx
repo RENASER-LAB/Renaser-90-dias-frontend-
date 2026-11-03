@@ -41,6 +41,8 @@ import { FilaDeAjuste, GrupoDeAjustes, LADO_BALDOSA } from '../features/yo/compo
 import { MetodoEnPaginas, type FaseDelMetodo } from '../features/yo/components/MetodoEnPaginas';
 import { PactoFirmado } from '../features/yo/components/PactoFirmado';
 import { TarjetaDeFase } from '../features/yo/components/TarjetaDeFase';
+import { evolucionEnYo } from '../features/yo/utils/evolucionEnYo';
+import { FilaDelProgramaQueEmpieza } from '../features/programa/components/FilaDelProgramaQueEmpieza';
 import { animalConfigurado } from '../features/yo/utils/animalConfigurado';
 import { faseEnCurso, fasesEnOrden } from '../features/home/utils/faseEnCurso';
 import { textoDelRecord } from '../features/home/utils/textoDelRecord';
@@ -458,7 +460,10 @@ export default function YoScreen() {
   const veMiRadar = veLaFilaDeMiRadar(lecturaDeMiRadar.lectura, diaDelPrograma);
   /* ¿Hay que preguntarle al servidor? Solo a quien podría no tener programa activado: sin fila (`puedeIniciarPrograma`) o con la fila sin
      Día 1. Al resto (aprendices, quien ya va por el programa) no se les pide nada antes del día 8. */
-  const diaUnoSinElegir = useDiaUnoPorElegir(resumen?.inscrito, diaDelPrograma, user?.id ?? null).porElegir;
+  const diaUno = useDiaUnoPorElegir(resumen?.inscrito, diaDelPrograma, user?.id ?? null);
+  const diaUnoSinElegir = diaUno.porElegir;
+  /* Issue #102: «Tu evolución» (fase y semáforo) solo con el programa en marcha; antes del Día 1, la fila «Tu programa empieza…»; sin programa, nada. */
+  const evolucion = evolucionEnYo({ resumen, esperandoInicio: diaUno.esperando, fechaInicio: diaUno.fechaInicio });
   const averiguarMiRadar = hayQueAveriguarMiRadar({ puedeIniciarPrograma: capacidades.puedeIniciarPrograma, diaUnoSinElegir });
   const { solicitar: solicitarMiRadar } = lecturaDeMiRadar;
   useEffect(() => {
@@ -872,6 +877,12 @@ export default function YoScreen() {
           {/* Tu evolución. Tipo oración, como Hoy (pedido del dueño del 2026-10-05): el rótulo, la
               fase y el día iban en versales espaciadas («TU EVOLUCIÓN», «EL CICLO ALQUÍMICO», «DÍA 15
               DE 90»), lo único de Yo que había quedado así después del rediseño. */}
+          {evolucion.tipo === 'empieza' ? (
+            /* Antes del Día 1 (issue #102): una sola fila con la fecha, la misma de Hoy y Plan. Sin fase, sin días restantes y sin semáforo. */
+            <FilaDelProgramaQueEmpieza fechaInicio={evolucion.fechaInicio} />
+          ) : null}
+          {/* Sin programa, o con la fila sin activar, no se dibuja nada (ni el rótulo): un bloque vacío deja igual su separación del scroll y ese era el hueco. */}
+          {evolucion.tipo === 'en-curso' && (faseActual || (resumen?.semaforo && esDisponible(CLAVES.semaforo))) ? (
           <View>
             <Text style={[t.small, styles.rotulo, { color: c.textSoft }]}>Tu evolución</Text>
             {/* La tarjeta de tu fase (diseño B elegido por el dueño, 2026-10-06): el animal, la fase y los
@@ -903,6 +914,7 @@ export default function YoScreen() {
               </View>
             ) : null}
           </View>
+          ) : null}
 
           {/* STATS REALES CALCULADOS POR EL BACKEND
               Eran tres cajas con borde y fondo, una dorada y dos grises sin motivo. Ahora son tres

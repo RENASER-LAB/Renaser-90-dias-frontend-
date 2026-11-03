@@ -1949,6 +1949,22 @@ organizar), y Training solo avisaba a quien empieza pasado mañana o más tarde 
 * **Pruebas:** `trainingDiceCuandoEmpieza.test.ts` (`programaQueEmpieza`, el texto compartido, la fila y que `TrainingScreen` la dibuja arriba de la lista).
 * **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
 
+## Corrección — 2026-11-02 — Yo: sin fase ni semáforo antes del Día 1 ni sin programa (issue #102)
+
+E2E final del 2026-11-02: a quien empieza mañana, Yo le decía «Fase 1 de 4 · Días 1–7 · Día 0 de 90 · Te quedan 6 días en esta fase» y «Tu semáforo ·
+Sin datos · 0 de 7 días con datos»; al personal sin programa, lo mismo. `/home` manda la fase y el semáforo también antes del Día 1 y sin fila, y Yo los
+dibujaba siempre que llegaran. Lo que cambia y nada más (`features/yo/utils/evolucionEnYo`, pura):
+* **Con el programa en marcha (día 1 o más):** «Tu evolución» —la tarjeta de fase y el semáforo— como siempre.
+* **Antes del Día 1 (activó su programa y espera):** en su lugar, UNA fila, «Tu programa empieza el martes 3 de noviembre» (o «pronto» sin fecha), la
+  misma de Hoy, Plan y Training (`FilaDelProgramaQueEmpieza`). Sin fase, sin días que quedan y sin semáforo.
+* **Sin programa** (`inscrito` falso: el personal sin fila) **o con la fila sin activar:** no se dibuja nada de «Tu evolución», ni siquiera el rótulo:
+  un bloque vacío deja igual su separación del scroll (`gapLg`) y ese era el hueco. Yo ya tiene lo que corresponde (la invitación o «Todavía no empezaste
+  tu programa», `EntradaAlProgramaPropio`). Mientras se comprueba cuál de los casos es, tampoco se dibuja nada (sin parpadeo). Si la tarjeta de fase y el
+  semáforo faltan por otro motivo (fase desconocida, semáforo apagado), el rótulo «Tu evolución» tampoco queda suelto.
+* **Sin pedidos nuevos:** Yo ya leía `/home` y `useDiaUnoPorElegir` (que antes solo usaba `porElegir`). No cambian Coherencia / Puntos / Racha, las filas ni Mi Radar.
+* **Pruebas:** `evolucionEnYo.test.ts` (los cuatro casos y que `YoScreen` condiciona la tarjeta, el semáforo y el rótulo).
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
+
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
 Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel especializado en React Native, Expo y TypeScript. Al crear, refactorizar o modificar cualquier pantalla o componente, debes cumplir OBLIGATORIAMENTE con los siguientes estándares:
