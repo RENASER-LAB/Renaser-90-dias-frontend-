@@ -71,7 +71,7 @@ const estilos = StyleSheet.create({
     flexShrink: 0,
     marginTop: SOBRA_ARRIBA_Y_ABAJO,
     marginBottom: SOBRA_ARRIBA_Y_ABAJO,
-    // El ícono de 20 queda a 12 del borde del área; con -8 su orilla queda a 4 de la orilla del campo de abajo.
-    marginRight: -8,
+    // Con -4, el círculo activo de 36 (BotonDeVoz) termina justo en la orilla del campo de abajo: con -8 quedaba 4 dp afuera y se recortaba (E2E 03/11).
+    marginRight: -4,
   },
 });
