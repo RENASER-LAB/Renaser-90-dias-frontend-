@@ -60,7 +60,8 @@ describe('Ajustes estilo iOS', () => {
      > Yo. Esa fila se quitó (pedido del dueño: abría lo mismo que «Mi onboarding» de Ajustes; ver
      > `unaSolaEntradaAlOnboarding.test.ts`). El ícono queda en `Icon.tsx`, sin uso. */
   it('cada fila con su ícono del inventario', () => {
-    for (const icono of ['user', 'idCard', 'listChecks', 'images', 'compass', 'bell', 'alarmClock', 'trash', 'logout', 'package', 'lifeBuoy']) {
+    // 03/11: «Información» se quitó (su campo pasó a «Editar perfil»), así que `idCard` ya no se dibuja en Yo.
+    for (const icono of ['user', 'listChecks', 'images', 'compass', 'bell', 'alarmClock', 'trash', 'logout', 'package', 'lifeBuoy']) {
       expect(yo).toContain(`icono="${icono}"`);
     }
     // «Lo que SER recuerda» con la cara de SER, no con el cerebro de «Mente». Corregido 2026-10-06: era el orbe

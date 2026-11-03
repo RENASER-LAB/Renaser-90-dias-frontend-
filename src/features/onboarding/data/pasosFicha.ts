@@ -137,7 +137,7 @@ export function validarPaso(
     case 'documento':
       return identidad.numeroDocumento.trim().length < 4 ? AVISOS.documento : null;
     case 'whatsapp':
-      return identidad.whatsapp.trim().length < 6 ? AVISOS.whatsapp : null;
+      return validarWhatsapp(identidad.whatsapp);
     case 'descanso': {
       const horas = parseFloat(salud.horasSueno);
       const valida = !isNaN(horas) && horas >= 0 && horas <= 24 && salud.horasSueno.trim() !== '';
@@ -151,6 +151,15 @@ export function validarPaso(
       // familia, trabajo, ubicación, expectativa y temor no tenían campos obligatorios.
       return null;
   }
+}
+
+/**
+ * La regla del WhatsApp, en un solo lugar: la usan el paso «WhatsApp principal» de la ficha y el campo «WhatsApp» de Editar perfil (Yo →
+ * Ajustes → Perfil), para que los dos pidan lo mismo. Vale el número completo, con su código de país («+51 987654321»); el largo máximo por país
+ * lo pone el propio campo (`PhoneCountryInput`, `maxLength`), y solo deja escribir dígitos.
+ */
+export function validarWhatsapp(valor: string): AvisoDePaso | null {
+  return valor.trim().length < 6 ? AVISOS.whatsapp : null;
 }
 
 function validarFechaDeNacimiento(valor: string, hoy: FechaPartida): AvisoDePaso | null {

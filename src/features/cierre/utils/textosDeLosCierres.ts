@@ -1,5 +1,5 @@
 import { diaCorto, rangoDeLaSemana } from '../../huecos/utils/textosDeHuecos';
-import { textoDelMotivo, textoDelPlan } from '../data/textosDelCierre';
+import { textoCortoDelMotivo, textoCortoDelPlan, textoDelMotivo, textoDelPlan } from '../data/textosDelCierre';
 import type { DiaDelCierre, MotivoQueSeRepite, ResumenDeLosCierres } from '../types/cierre.types';
 
 /**
@@ -23,9 +23,9 @@ export function lineaDelResumen(resumen: Pick<ResumenDeLosCierres, 'cerrados' | 
   return partes.join(' · ');
 }
 
-/** «No me alcanzó el tiempo · 4 veces». Un motivo que esta versión no conoce no se dibuja. */
+/** «Tiempo · 4 veces». Un motivo que esta versión no conoce no se dibuja. */
 export function lineaDeUnMotivo(motivo: MotivoQueSeRepite): string | null {
-  const texto = textoDelMotivo(motivo.motivo);
+  const texto = textoCortoDelMotivo(motivo.motivo);
   if (!texto) return null;
   return `${texto} · ${motivo.veces} ${motivo.veces === 1 ? 'vez' : 'veces'}`;
 }
@@ -50,10 +50,19 @@ export function encabezadoDelDia(dia: Pick<DiaDelCierre, 'fecha' | 'estado'>): s
   return estado ? `${diaCorto(dia.fecha)} · ${estado}` : diaCorto(dia.fecha);
 }
 
-/** «No me alcanzó el tiempo → Hacerla a otra hora»; si falta una de las dos mitades, la que se entiende. */
+/** «Tiempo → Otra hora»; si falta una de las dos mitades, la que se entiende. Es lo que se ve (los textos cortos de los chips). */
 export function respuestaEnPalabras(cierre: { motivo: string | null; manana: string | null }): string | null {
-  const motivo = textoDelMotivo(cierre.motivo);
-  const plan = textoDelPlan(cierre.manana);
+  const motivo = textoCortoDelMotivo(cierre.motivo);
+  const plan = textoCortoDelPlan(cierre.manana);
   if (motivo && plan) return `${motivo} → ${plan}`;
   return motivo ?? plan;
+}
+
+/**
+ * Lo mismo, con los textos completos de siempre, para el lector de pantalla: «No me alcanzó el tiempo, Hacerla a otra hora».
+ * Lo que se ve es corto y lleva íconos; lo que se oye dice la frase entera.
+ */
+export function respuestaParaElLector(cierre: { motivo: string | null; manana: string | null }): string | null {
+  const partes = [textoDelMotivo(cierre.motivo), textoDelPlan(cierre.manana)].filter((p): p is string => p !== null);
+  return partes.length > 0 ? partes.join(', ') : null;
 }

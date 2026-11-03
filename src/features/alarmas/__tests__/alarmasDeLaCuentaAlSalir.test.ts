@@ -76,6 +76,7 @@ import {
   PREFERENCIAS_DE_ACCIONES_POR_DEFECTO,
   programarRecordatorioDiario,
 } from '../../objetivos/notificaciones/recordatoriosDeAcciones';
+import { guardarBorrador as guardarBorradorDelRadar } from '../../radar/storage/borradorRadar';
 import { rearmarLoLocalDeLaCuenta } from '../alarmasDeLaCuenta';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -147,6 +148,24 @@ describe('las alarmas locales son de una cuenta (E-413)', () => {
 
     const quedan = (await AsyncStorage.getAllKeys()).filter(k => k.startsWith('renaser.alarmas.') && k !== 'renaser.alarmas.cuenta');
     expect(quedan).toEqual([]);
+  });
+
+  it('al cerrar sesión se borran los borradores del Código Renaser de todas las cuentas, y nada más (2026-11-03)', async () => {
+    const { sesion } = await montar();
+    await entrarComo(sesion, 'u-admin');
+    const respuestas = { whatAmIDoing: 'a medias', whatAmIThinking: '', whatAmIFeeling: '', whatAmIAvoiding: '' };
+    await guardarBorradorDelRadar('u-admin', new Date(2026, 10, 3, 11, 5), { respuestas, energia: 4 });
+    await guardarBorradorDelRadar('u-otra', new Date(2026, 10, 3, 9, 0), { respuestas, energia: null });
+    await AsyncStorage.setItem('renaser.otra.cosa', 'queda');
+    expect((await AsyncStorage.getAllKeys()).filter(k => k.startsWith('renaser.radar.borrador.'))).toHaveLength(2);
+
+    await act(async () => {
+      sesion().logout();
+      await new Promise(r => setTimeout(r, 0));
+    });
+
+    expect((await AsyncStorage.getAllKeys()).filter(k => k.startsWith('renaser.radar.borrador.'))).toEqual([]);
+    expect(await AsyncStorage.getItem('renaser.otra.cosa')).toBe('queda');
   });
 
   it('al entrar con otra cuenta sin haber cerrado sesión, se sueltan las de la anterior', async () => {

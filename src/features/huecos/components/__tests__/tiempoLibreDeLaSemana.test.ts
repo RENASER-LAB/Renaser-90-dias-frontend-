@@ -533,22 +533,22 @@ describe('TiempoLibreDeLaSemana: una semana cerrada', () => {
 });
 
 describe('TiempoLibreDeLaSemana: con la letra del sistema grande', () => {
-  /** Los dp de un minuto de la línea de tiempo con esa escala: 0,66 por la letra (hasta 1,6). */
+  /** Los dp de un minuto de la línea de tiempo con esa escala: 0,66 por la letra (hasta el tope global, 1,2). */
   const altoDeLaLinea = (r: ReactTestRenderer) => estiloDe(conId(r, 'linea-de-tiempo')[0]).height as number;
 
   it('la línea de tiempo crece con la letra: un bloque de 30 minutos siempre cabe una línea de texto', async () => {
     const { cargar } = cargarCon();
     conLetra(1);
     const normal = await dibujar(cargar);
-    conLetra(1.3);
+    conLetra(1.15);
     const grande = await dibujar(cargar);
 
     // 1020 minutos de ventana: el alto sigue a la letra, no es fijo.
     expect(altoDeLaLinea(grande)).toBeGreaterThan(altoDeLaLinea(normal));
-    expect(altoDeLaLinea(grande) - 20).toBe(Math.round(1020 * 0.66 * 1.3));
+    expect(altoDeLaLinea(grande) - 20).toBe(Math.round(1020 * 0.66 * 1.15));
 
     // Cada bloque con texto mide al menos la línea de ese texto (13 px × 1,2 × la letra): nada se corta.
-    for (const [r, escala] of [[normal, 1], [grande, 1.3]] as const) {
+    for (const [r, escala] of [[normal, 1], [grande, 1.15]] as const) {
       const linea = Math.ceil(13 * 1.2 * escala);
       for (const bloque of conId(r, 'bloque')) {
         const conTexto = bloque.findAll(n => (n.type as unknown) === 'Text').length > 0;
@@ -578,11 +578,11 @@ describe('TiempoLibreDeLaSemana: con la letra del sistema grande', () => {
     for (const h of horas) expect(h.props.numberOfLines).toBe(1);
   });
 
-  it('el tope de la letra es 1,6: una letra al 200 % no alarga el día más allá', async () => {
+  it('el tope de la letra es el global (1,2): una letra al 200 % no alarga el día más allá', async () => {
     const { cargar } = cargarCon();
     conLetra(2);
     const r = await dibujar(cargar);
-    expect(altoDeLaLinea(r) - 20).toBe(Math.round(1020 * 0.66 * 1.6));
+    expect(altoDeLaLinea(r) - 20).toBe(Math.round(1020 * 0.66 * 1.2));
   });
 });
 

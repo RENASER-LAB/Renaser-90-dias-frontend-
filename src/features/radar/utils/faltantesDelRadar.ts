@@ -24,9 +24,14 @@ export function faltantesDelRadar(
   return faltan;
 }
 
-/** «Falta: nivel de energía.» / «Faltan 2: ¿Qué siento?, nivel de energía.» — `null` si está completo. */
+/**
+ * «Falta: nivel de energía.» / «Faltan 2: ¿Qué estoy sintiendo?, nivel de energía.» — `null` si está completo.
+ * Los nombres de las preguntas son sus enunciados tal cual se leen en el formulario; si el último ya termina en «?» no se
+ * le suma el punto (sería «¿Qué estoy sintiendo?.»).
+ */
 export function textoDeLoQueFalta(faltan: { nombre: string }[]): string | null {
   if (faltan.length === 0) return null;
   const nombres = faltan.map(f => f.nombre).join(', ');
-  return faltan.length === 1 ? `Falta: ${nombres}.` : `Faltan ${faltan.length}: ${nombres}.`;
+  const cierre = nombres.endsWith('?') ? '' : '.';
+  return faltan.length === 1 ? `Falta: ${nombres}${cierre}` : `Faltan ${faltan.length}: ${nombres}${cierre}`;
 }

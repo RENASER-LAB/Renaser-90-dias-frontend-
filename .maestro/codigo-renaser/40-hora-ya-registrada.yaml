@@ -9,7 +9,7 @@ appId: com.renaser.app
 - extendedWaitUntil:
     visible: "TRAINING"
     timeout: 30000
-- assertNotVisible: "¿Dónde estás ahora mismo\\?"
+- assertNotVisible: "Estoy…"
 - scrollUntilVisible:
     element: ".*· Registrado"
     direction: DOWN

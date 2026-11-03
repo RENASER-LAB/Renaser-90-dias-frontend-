@@ -3027,7 +3027,7 @@ function ComunidadPorFormacion({
         {/* Spec 024: «Todas · Escuela · Diplomado · Certificación». Solo lo dibuja quien ve las tres formaciones (Administración,
             Alquimista, Soporte TI); para las demás cuentas no hay nada ni un hueco. Debajo de la fila de círculos, así al subir
             un poco (que deja a la vista solo esa fila) también queda a mano. Cambiar de formación arma la pestaña de nuevo. */}
-        <SelectorDeFormacionDeLaComunidad estilo={{ paddingHorizontal: horizontalPadding, marginTop: 12 }} />
+        <SelectorDeFormacionDeLaComunidad estilo={{ paddingHorizontal: horizontalPadding, marginTop: 8 }} />
       </View>
       )}
       </Reanimated.View>
@@ -3084,10 +3084,10 @@ function ComunidadPorFormacion({
                     <Text style={[t.body, { color: c.textStrong, fontFamily: fuentes.media }]}>
                       ¿Qué conquistaste hoy, {primerNombreUsuario}?
                     </Text>
-                    {/* Era 10 px: por debajo del mínimo de micro-etiqueta, y es la línea que
-                        explica qué pasa al tocar la barra. */}
+                    {/* Era 10 px: por debajo del mínimo de micro-etiqueta. Decía «Publicación sin límite de caracteres ›»; el dueño
+                        pidió (2026-11-03) una invitación en su lugar: «Queremos leerte y acompañarte». */}
                     <Text style={[t.small, { color: c.goldInk }]}>
-                      Publicación sin límite de caracteres ›
+                      Queremos leerte y acompañarte ›
                     </Text>
                   </View>
                 </View>

@@ -3,10 +3,12 @@ import React from 'react';
 import TestRenderer, { act, type ReactTestInstance, type ReactTestRenderer } from 'react-test-renderer';
 
 /**
- * La voz en el formulario del Código Renaser (spec 030): escuchar cada pregunta, dictar cada respuesta, lo que pasa si el
- * micrófono falla y cómo viaja «dictado». Los dos hooks de voz (el micrófono y la lectura) se reemplazan por dobles
- * controlables: lo que se prueba acá es el formulario, no el motor del teléfono (eso lo prueban `useDictado`,
- * `useDictadoDelRadar` y `useEscucharPregunta`).
+ * La voz en el formulario del Código Renaser (spec 030): dictar cada respuesta, lo que pasa si el micrófono falla y cómo viaja
+ * «dictado». El hook del micrófono se reemplaza por un doble controlable: lo que se prueba acá es el formulario, no el motor del
+ * teléfono (eso lo prueban `useDictado` y `useDictadoDelRadar`).
+ *
+ * Desde el 2026-11-03 «Escuchar» ya no existe (el dueño: «con solo leer ya basta») y el micrófono de «Dictar» es un ícono DENTRO del
+ * campo de cada respuesta (sin texto): se busca por su nombre accesible, y su estado activo se lee en `accessibilityState`.
  */
 
 jest.mock('../../../../theme/ThemeContext', () => {
@@ -36,7 +38,7 @@ jest.mock('../../storage/borradorRadar', () => ({
   limpiarBorradoresViejos: async () => undefined,
 }));
 
-/* El micrófono y la lectura, dobles que el formulario controla igual que a los verdaderos. */
+/* El micrófono, un doble que el formulario controla igual que al verdadero. */
 const mockDictado = {
   disponible: true,
   dictandoEn: null as string | null,
@@ -52,20 +54,17 @@ jest.mock('../../hooks/useDictadoDelRadar', () => ({
     return mockDictado;
   },
 }));
-const mockVoz = {
-  leyendo: null as string | null,
-  alternar: jest.fn((_campo: string) => undefined),
-  detener: jest.fn(),
-};
-jest.mock('../../hooks/useEscucharPregunta', () => ({ useEscucharPregunta: () => mockVoz }));
-
+import { Icon } from '../../../../components/Icon';
 import { Presionable } from '../../../../components/Presionable';
-import { SliderRating } from '../../../../components/SliderRating';
 import { MAXIMO_CARACTERES, PREGUNTAS_RADAR } from '../../config/configRadar';
 import type { CheckInRadarApi } from '../../types/radar.types';
 import { CodigoRenaserModal } from '../CodigoRenaserModal';
+import { EnergiaEnChips } from '../EnergiaEnChips';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+
+/** Las instancias de un componente dentro de un árbol (los tipos de `react-test-renderer` de este proyecto no traen `findAllByType`). */
+const porTipo = (raiz: ReactTestInstance, tipo: unknown): ReactTestInstance[] => raiz.findAll(n => (n.type as unknown) === tipo);
 
 const onEnviar = jest.fn(async (_c: CheckInRadarApi) => true);
 const onCerrar = jest.fn();
@@ -106,6 +105,11 @@ const botonPorNombre = (r: ReactTestRenderer, nombre: string) => {
   const [b] = botones(r).filter(n => n.props.accessibilityLabel === nombre);
   return b;
 };
+/** Los micrófonos de «Dictar», por su nombre accesible (son solo ícono: no tienen texto). */
+const microfonos = (r: ReactTestRenderer) =>
+  botones(r).filter(n => /^(Dictar|Parar de dictar)/.test(String(n.props.accessibilityLabel ?? '')));
+const iconoDe = (n: ReactTestInstance) => porTipo(n, Icon)[0]?.props.name as string | undefined;
+const [P_HACE, P_PIENSA, P_SIENTE] = PREGUNTAS_RADAR.map(p => p.titulo);
 const campos = (r: ReactTestRenderer) => r.root.findAll(n => (n.type as unknown) === 'TextInput');
 const valores = (r: ReactTestRenderer) => campos(r).map(c => c.props.value as string);
 
@@ -113,7 +117,7 @@ function escribir(r: ReactTestRenderer, indice: number, texto: string) {
   act(() => campos(r)[indice].props.onChangeText(texto));
 }
 function energia(r: ReactTestRenderer, valor: number) {
-  act(() => r.root.findAll((n: ReactTestInstance) => n.type === SliderRating)[0].props.onChange(valor));
+  act(() => porTipo(r.root, EnergiaEnChips)[0].props.onChange(valor));
 }
 async function registrar(r: ReactTestRenderer, etiqueta = 'Registrar') {
   const [boton] = r.root.findAll((n: ReactTestInstance) => n.props.accessibilityRole === 'button' && textoDe(n) === etiqueta);
@@ -140,91 +144,69 @@ beforeEach(() => {
   Object.assign(mockDictado, { disponible: true, dictandoEn: null, parcial: '', fallo: null });
   mockDictado.alternar.mockReset();
   mockDictado.detener.mockReset();
-  Object.assign(mockVoz, { leyendo: null });
-  mockVoz.alternar.mockReset();
-  mockVoz.detener.mockReset();
   mockPide.alDictar = null;
   for (const r of montadas.splice(0)) act(() => r.unmount());
 });
 
-describe('los botones de voz (User Story 1, 3 y 4)', () => {
-  it('cada una de las cuatro preguntas trae «Escuchar» y «Dictar», con el nombre de su pregunta para el lector de pantalla', () => {
+describe('el micrófono de «Dictar» (User Story 1, 3 y 4)', () => {
+  it('cada una de las cuatro preguntas trae un micrófono, con el nombre de su pregunta para el lector de pantalla; ya no hay «Escuchar»', () => {
     const r = montar();
-    for (const p of PREGUNTAS_RADAR) {
-      expect(botonPorNombre(r, `Escuchar la pregunta ${p.titulo}`)).toBeDefined();
-      expect(botonPorNombre(r, `Dictar la respuesta a ${p.titulo}`)).toBeDefined();
-    }
-    expect(botones(r).filter(n => ['Escuchar', 'Dictar'].includes(textoDe(n)))).toHaveLength(8);
+    for (const p of PREGUNTAS_RADAR) expect(botonPorNombre(r, `Dictar la respuesta a ${p.titulo}`)).toBeDefined();
+    expect(microfonos(r)).toHaveLength(4);
+    // Son solo ícono: ninguno dibuja la palabra «Dictar».
+    expect(microfonos(r).map(textoDe).join('')).toBe('');
+    expect(botones(r).filter(n => /Escuchar|Detener la lectura/.test(String(n.props.accessibilityLabel ?? '')))).toHaveLength(0);
+    expect(textoDe(r.root)).not.toMatch(/Escuchar/);
   });
 
-  it('los dos son botones, uno al lado del otro, y la energía sigue siendo el control de un toque (no se dicta)', () => {
+  it('la energía es el control de un toque (chips) y no se dicta', () => {
     const r = montar();
-    expect(r.root.findAll((n: ReactTestInstance) => n.type === SliderRating)).toHaveLength(1);
-    expect(botones(r).filter(n => /energía/i.test(String(n.props.accessibilityLabel ?? '')) && /dictar|escuchar/i.test(String(n.props.accessibilityLabel)))).toHaveLength(0);
+    expect(porTipo(r.root, EnergiaEnChips)).toHaveLength(1);
+    expect(botones(r).filter(n => /energía/i.test(String(n.props.accessibilityLabel ?? '')) && /dictar/i.test(String(n.props.accessibilityLabel)))).toHaveLength(0);
   });
 
-  it('sin reconocimiento de voz en el teléfono no hay «Dictar», pero «Escuchar» sí (la voz es una grabación)', () => {
+  it('sin reconocimiento de voz en el teléfono no hay micrófono y el formulario es el de escribir', () => {
     mockDictado.disponible = false;
     const r = montar();
-    expect(botones(r).filter(n => textoDe(n) === 'Dictar')).toHaveLength(0);
-    expect(botones(r).filter(n => textoDe(n) === 'Escuchar')).toHaveLength(4);
+    expect(microfonos(r)).toHaveLength(0);
+    expect(campos(r)).toHaveLength(4);
   });
 
-  it('tocar «Escuchar» cierra el micrófono antes de leer; tocar «Dictar» detiene la lectura antes de abrir el micrófono (FR-011)', () => {
+  it('tocar el micrófono de una pregunta abre el de ESA pregunta (una vibración por toque)', () => {
     const r = montar();
-    const orden: string[] = [];
-    mockDictado.detener.mockImplementation(() => void orden.push('cierra el micrófono'));
-    mockVoz.alternar.mockImplementation(() => void orden.push('lee la pregunta'));
-    mockVoz.detener.mockImplementation(() => void orden.push('detiene la lectura'));
-    mockDictado.alternar.mockImplementation(() => void orden.push('abre el micrófono'));
-
-    act(() => botonPorNombre(r, 'Escuchar la pregunta ¿Qué pienso?').props.onPress());
-    act(() => botonPorNombre(r, 'Dictar la respuesta a ¿Qué siento?').props.onPress());
-
-    expect(orden).toEqual(['cierra el micrófono', 'lee la pregunta', 'detiene la lectura', 'abre el micrófono']);
-    expect(mockVoz.alternar).toHaveBeenCalledWith('whatAmIThinking');
+    act(() => botonPorNombre(r, `Dictar la respuesta a ${P_SIENTE}`).props.onPress());
+    expect(mockDictado.alternar).toHaveBeenCalledTimes(1);
     expect(mockDictado.alternar).toHaveBeenCalledWith('whatAmIFeeling');
   });
 
-  it('el estado no depende solo del color: leyendo dice «Detener» y dictando dice «Parar», con su nombre para el lector', () => {
-    mockVoz.leyendo = 'whatAmIDoing';
+  it('el estado no depende solo del color: dictando se marca seleccionado y cambia su nombre para el lector', () => {
     mockDictado.dictandoEn = 'whatAmIFeeling';
     const r = montar();
 
-    const detener = botonPorNombre(r, 'Detener la lectura de la pregunta ¿Qué hago?');
-    const parar = botonPorNombre(r, 'Parar de dictar la respuesta a ¿Qué siento?');
-    expect(textoDe(detener)).toBe('Detener');
-    expect(textoDe(parar)).toBe('Parar');
-    expect(detener.props.accessibilityState).toMatchObject({ selected: true });
+    const parar = botonPorNombre(r, `Parar de dictar la respuesta a ${P_SIENTE}`);
     expect(parar.props.accessibilityState).toMatchObject({ selected: true });
-    expect(textoDe(botonPorNombre(r, 'Escuchar la pregunta ¿Qué pienso?'))).toBe('Escuchar');
+    expect(iconoDe(parar)).toBe('mic');
+    const reposo = botonPorNombre(r, `Dictar la respuesta a ${P_PIENSA}`);
+    expect(reposo.props.accessibilityState).toMatchObject({ selected: false });
+    // Las otras tres preguntas siguen en reposo.
+    expect(microfonos(r).filter(n => n.props.accessibilityState.selected)).toHaveLength(1);
+    expect(botonPorNombre(r, `Dictar la respuesta a ${P_HACE}`)).toBeDefined();
   });
 
-  it('mientras se dicta, una línea dice que el micrófono está abierto y cómo cerrarlo; fuera de eso no aparece', () => {
+  it('ya no hay una línea de «Te escucho» ni de «sube el volumen»: el campo dice «Te escucho…» y el micrófono se ve activo', () => {
     mockDictado.dictandoEn = 'whatAmIFeeling';
     const r = montar();
-    expect(textoDe(r.root)).toContain('Te escucho. Cuando termines, toca «Parar».');
-    expect(textoDe(r.root).match(/Cuando termines/g)).toHaveLength(1);
-    mockDictado.dictandoEn = null;
-    expect(textoDe(montar().root)).not.toContain('Cuando termines');
+    expect(textoDe(r.root)).not.toContain('Toca el micrófono para parar');
+    expect(textoDe(r.root)).not.toContain('sube el volumen');
+    expect(campos(r)[2].props.placeholder).toBe('Te escucho…');
   });
 
-  it('mientras suena una pregunta, una línea dice que se suba el volumen si no se oye', () => {
-    mockVoz.leyendo = 'whatAmIThinking';
-    const r = montar();
-    expect(textoDe(r.root)).toContain('Si no la oyes, sube el volumen de tu teléfono.');
-    mockVoz.leyendo = null;
-    const sinVoz = montar();
-    expect(textoDe(sinVoz.root)).not.toContain('sube el volumen');
-  });
-
-  it('el mismo formulario sirve a las cuatro entradas: obligatoria o no, trae los mismos botones', () => {
+  it('el mismo formulario sirve a las cuatro entradas: obligatoria o no, trae los mismos micrófonos', () => {
     const obligatoria = montar({ obligatorio: true });
     const opcional = montar({ obligatorio: false });
-    const nombres = (r: ReactTestRenderer) =>
-      botones(r).map(n => String(n.props.accessibilityLabel ?? '')).filter(n => /^(Escuchar|Dictar)/.test(n));
+    const nombres = (r: ReactTestRenderer) => microfonos(r).map(n => String(n.props.accessibilityLabel ?? ''));
     expect(nombres(opcional)).toEqual(nombres(obligatoria));
-    expect(nombres(obligatoria)).toHaveLength(8);
+    expect(nombres(obligatoria)).toHaveLength(4);
   });
 });
 
@@ -360,17 +342,6 @@ describe('dictar una respuesta (User Story 1)', () => {
     expect(mockDictado.detener).toHaveBeenCalled();
     expect(onEnviar).not.toHaveBeenCalled();
   });
-
-  it('al registrar se detiene la lectura de la pregunta', async () => {
-    const r = montar();
-    for (let i = 0; i < 4; i += 1) escribir(r, i, 'escrito');
-    energia(r, 5);
-    mockVoz.detener.mockReset();
-
-    await registrar(r);
-
-    expect(mockVoz.detener).toHaveBeenCalled();
-  });
 });
 
 describe('si la voz no se puede usar, se escribe y no se pierde nada (User Story 2)', () => {
@@ -413,10 +384,9 @@ describe('si la voz no se puede usar, se escribe y no se pierde nada (User Story
 });
 
 describe('al cerrarse el formulario', () => {
-  it('no queda ni el micrófono abierto ni una pregunta sonando', () => {
+  it('no queda el micrófono abierto', () => {
     const r = montar({ visible: true });
     mockDictado.detener.mockReset();
-    mockVoz.detener.mockReset();
 
     act(() => {
       r.update(
@@ -435,18 +405,20 @@ describe('al cerrarse el formulario', () => {
     });
 
     expect(mockDictado.detener).toHaveBeenCalled();
-    expect(mockVoz.detener).toHaveBeenCalled();
   });
 });
 
 describe('el borrador conserva lo dictado igual que lo escrito (escenario 7)', () => {
-  it('guarda qué respuestas se dictaron junto con el texto', () => {
+  it('guarda qué respuestas se dictaron junto con el texto', async () => {
     jest.useFakeTimers();
     try {
       const r = montar({ usuarioId: 'u1' });
+      await act(async () => {
+        await Promise.resolve();
+      });
       dictar('whatAmIFeeling', 'dictado');
       act(() => {
-        jest.advanceTimersByTime(1_100);
+        jest.advanceTimersByTime(500);
       });
 
       expect(mockGuardarBorrador).toHaveBeenLastCalledWith(

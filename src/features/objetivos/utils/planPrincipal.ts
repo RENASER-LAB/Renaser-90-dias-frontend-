@@ -65,15 +65,29 @@ const NBSP = '\u00A0';
  *
  * Las cifras llevan el separador de miles de la app (`formatearNumero`: «30 000», con espacio duro) y cada parte —«Meta 30 000 S/»—
  * va con espacios duros, así que si el renglón se parte (lo hace en un teléfono angosto) es entre partes, en el « · », y nunca a la
- * mitad de una cifra ni entre la cifra y su unidad (2026-10-31, E2E del rediseño: «Meta / 30000 S/»).
+ * mitad de una cifra ni entre la cifra y su unidad (2026-10-31, E2E del rediseño: «Meta / 30000 S/»). El único espacio que deja partir es
+ * el de ANTES del punto: «Inicio 8 000 · Actual 8 000» / «· Meta 12 000 S/», y no «… Actual 8 000 ·» / «Meta 12 000 S/» con el punto colgado
+ * (E2E del 03/11, issue #115).
  */
-export function lineaDelObjetivo(roca: Pick<RocaMaestraApi, 'lineaBase' | 'avance' | 'meta' | 'unidad'>): string | null {
+/**
+ * Las cifras del objetivo como piezas («Inicio 82», «Actual 81», «Meta 80 kg»). La tarjeta las dibuja como piezas que bajan enteras de renglón, sin «·»
+ * entre ellas: con un separador, al partirse el renglón el punto siempre quedaba colgado al final o al empezar el de abajo (E2E 03/11, issue #115, 3).
+ */
+export function partesDelObjetivo(roca: Pick<RocaMaestraApi, 'lineaBase' | 'avance' | 'meta' | 'unidad'>): string[] | null {
   if (roca.meta == null || roca.avance == null) return null;
-  const unidad = roca.unidad?.trim() ? `${NBSP}${roca.unidad.trim()}` : '';
+  const sufijo = roca.unidad?.trim() ?? '';
+  // Una unidad que empieza con «/» («/10», la escala de Relaciones) es parte de la cifra: «8/10», no «8 /10» (issue #115, 2).
+  const unidad = sufijo ? (sufijo.startsWith('/') ? sufijo : `${NBSP}${sufijo}`) : '';
   const partes: string[] = [];
   if (roca.lineaBase != null) partes.push(`Inicio${NBSP}${formatearNumero(roca.lineaBase)}`);
   partes.push(`Actual${NBSP}${formatearNumero(roca.avance)}`, `Meta${NBSP}${formatearNumero(roca.meta)}${unidad}`);
-  return partes.join(' · ');
+  return partes;
+}
+
+/** La misma línea en una sola frase, para el lector de pantalla y las pruebas: «Inicio 82 · Actual 81 · Meta 80 kg». */
+export function lineaDelObjetivo(roca: Pick<RocaMaestraApi, 'lineaBase' | 'avance' | 'meta' | 'unidad'>): string | null {
+  const partes = partesDelObjetivo(roca);
+  return partes ? partes.join(' · ') : null;
 }
 
 /** El color de la regla de Pareto: la VERDE va primero. Recibe la paleta porque el verde y el rojo cambian con el tema. */

@@ -18,7 +18,7 @@ appId: com.renaser.app
 # El formulario no es innegociable: se cierra y la hora sigue abierta.
 - tapOn: "Registrar ahora"
 - extendedWaitUntil:
-    visible: "¿Dónde estás ahora mismo\\?"
+    visible: "Estoy…"
     timeout: 15000
 - assertNotVisible: ".*Innegociable.*"
 - assertVisible: "Puedes cerrarlo; tu borrador queda guardado en este teléfono\\."
@@ -30,7 +30,7 @@ appId: com.renaser.app
 # Ahora sí, se registra.
 - tapOn: "Registrar ahora"
 - extendedWaitUntil:
-    visible: "¿Dónde estás ahora mismo\\?"
+    visible: "Estoy…"
     timeout: 15000
 - runFlow: ../comun/llenar-formulario-radar.yaml
 - extendedWaitUntil:

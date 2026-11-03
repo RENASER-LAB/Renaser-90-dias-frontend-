@@ -33,7 +33,6 @@ import {
   type TipoDeAlarma,
 } from '../sonidoDeAlarma';
 import { CANAL_DE_MENSAJES } from '../../chat/avisos/canalDeMensajes';
-import { ARCHIVOS_DE_VOZ_DEL_RADAR } from '../../radar/config/vozDelRadar';
 import { leerMp3 } from './leerMp3';
 
 const RAIZ = path.resolve(__dirname, '../../../..');
@@ -124,10 +123,9 @@ describe('los ocho sonidos, en dos grupos', () => {
 describe('los archivos que van en el APK', () => {
   const enAppJson = sonidosDeAppJson();
   const enCarpeta = fs.readdirSync(CARPETA).sort();
-  /* Los de las alarmas, el del canal de mensajes del chat (D-221, 2026-09-29) y, desde la spec 030 (2026-10-31), las cuatro
-     voces con que el Código Renaser lee sus preguntas: no son de un canal, se reproducen dentro de la app, pero el dueño pidió
-     que vayan también en `sounds` de `app.json` y esta prueba las vigila igual que a las demás. */
-  const NOMBRADOS = [...ARCHIVOS_DE_SONIDO, CANAL_DE_MENSAJES.sonido, ...ARCHIVOS_DE_VOZ_DEL_RADAR];
+  /* Los de las alarmas y el del canal de mensajes del chat (D-221, 2026-09-29). (Las cuatro voces con que el Código Renaser leía sus
+     preguntas, de la spec 030, se quitaron el 2026-11-03: «con solo leer ya basta».) */
+  const NOMBRADOS = [...ARCHIVOS_DE_SONIDO, CANAL_DE_MENSAJES.sonido];
 
   it('cada archivo que el código puede nombrar está en assets/sonidos y en `sounds` de app.json', () => {
     for (const archivo of NOMBRADOS) {

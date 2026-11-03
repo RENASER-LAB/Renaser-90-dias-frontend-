@@ -1,52 +1,36 @@
-# 41 — Código Renaser con la voz (spec 030): abrir el formulario, ESCUCHAR una pregunta, tocar el micrófono y seguir pudiendo escribir.
+# 41 — Código Renaser con la voz (spec 030, rehecho el 2026-11-03): abrir el formulario, tocar el micrófono DENTRO del campo y seguir pudiendo escribir.
 # cuenta: aprendiz (días 1 a 7, entre las 08:00 y las 19:59, con la hora en curso SIN registrar: el formulario es el obligatorio)
 #
-# ESCRITO PERO NO CORRIDO: este flujo se redactó en un trabajo que no usó el emulador (la máquina se compartía con otras
-# sesiones). Corrido por primera vez, ajustar los textos que no coincidan. Con APK NUEVO (los cuatro MP3 de las preguntas van
-# dentro del APK) y el backend con V132.
+# ESCRITO PERO NO CORRIDO. Desde el 2026-11-03 «Escuchar» ya no existe (el dueño: «con solo leer ya basta»): ni el parlante, ni los MP3, ni la
+# línea del volumen. Queda «Dictar»: el micrófono vive dentro del campo de cada respuesta, abajo a la derecha. Con el backend de la V132.
 #
-# Qué mira, y qué NO puede mirar un flujo de Maestro: que cada pregunta tenga «Escuchar» y «Dictar», que «Escuchar» pase a «Detener»
-# con la línea del volumen y vuelva al tocarlo, que abrir el micrófono detenga la lectura, y que el formulario siga siendo el
-# obligatorio y se pueda llenar escribiendo aunque el micrófono falle (en el emulador sin servicio de voz casi siempre falla, y es
-# justo el escenario 2 de la spec). Lo que se oye (la voz Dora) y lo que se entiende (el dictado) se comprueba a mano en un teléfono.
+# Qué mira, y qué NO puede mirar un flujo de Maestro: que cada pregunta tenga su micrófono (solo si el teléfono tiene reconocimiento de
+# voz; el emulador de Google, sí), que no haya «Escuchar» ni «Completa las preguntas cada hora…», que el micrófono pase a «Parar» (o diga
+# por qué falló) y que el formulario siga siendo el obligatorio y se pueda llenar escribiendo aunque el micrófono falle (en el
+# emulador sin servicio de voz casi siempre falla, y es justo el escenario 2 de la spec). Lo que se entiende (el dictado) se comprueba
+# a mano en un teléfono. El formulario se reconoce por el gris «Estoy…» del primer campo.
 appId: com.renaser.app
 ---
 - runFlow: ../comun/despejar-capas.yaml
 # El formulario se abre solo pasados los minutos de cortesía; si todavía no, se abre desde su mitad de Hoy.
 - runFlow:
     when:
-      notVisible: "¿Dónde estás ahora mismo\\?"
+      notVisible: "Estoy…"
     commands:
       - tapOn: ".*Innegociable.*"
 - extendedWaitUntil:
-    visible: "¿Dónde estás ahora mismo\\?"
+    visible: "Estoy…"
     timeout: 20000
 - runFlow: ../comun/cerrar-aviso-dev.yaml
 
-# Las cuatro preguntas traen «Escuchar»; «Dictar» solo si el teléfono tiene reconocimiento de voz (el emulador de Google, sí).
-- assertVisible: "Escuchar la pregunta ¿Qué hago\\?"
-- assertVisible: "Escuchar la pregunta ¿Qué pienso\\?"
-- assertVisible: "Escuchar la pregunta ¿Qué siento\\?"
-- assertVisible: "Dictar la respuesta a ¿Qué hago\\?"
-- takeScreenshot: 41a-botones-de-voz
+# «Escuchar» ya no existe; «Dictar» (solo con reconocimiento de voz en el teléfono) vive dentro del campo.
+- assertNotVisible: "Escuchar la pregunta.*"
+- assertNotVisible: "Completa las preguntas cada hora.*"
+- assertVisible: "Dictar la respuesta a ¿Dónde estoy y qué estoy haciendo ahora\\?"
+- assertVisible: "Dictar la respuesta a ¿Qué estoy pensando\\?"
+- takeScreenshot: 41a-microfono-dentro-del-campo
 
-# Escuchar: el botón pasa a «Detener», aparece la línea del volumen y al volver a tocar se detiene.
-- tapOn: "Escuchar la pregunta ¿Qué pienso\\?"
-- extendedWaitUntil:
-    visible: "Detener la lectura de la pregunta ¿Qué pienso\\?"
-    timeout: 5000
-- assertVisible: "Si no la oyes, sube el volumen de tu teléfono\\."
-- takeScreenshot: 41b-escuchando-la-pregunta
-- tapOn: "Detener la lectura de la pregunta ¿Qué pienso\\?"
-- assertNotVisible: "Si no la oyes, sube el volumen de tu teléfono\\."
-- assertVisible: "Escuchar la pregunta ¿Qué pienso\\?"
-
-# Abrir el micrófono detiene la lectura (FR-011): la voz de la app no la capta el micrófono.
-- tapOn: "Escuchar la pregunta ¿Qué hago\\?"
-- extendedWaitUntil:
-    visible: "Detener la lectura de la pregunta ¿Qué hago\\?"
-    timeout: 5000
-- tapOn: "Dictar la respuesta a ¿Qué siento\\?"
+- tapOn: "Dictar la respuesta a ¿Qué estoy sintiendo\\?"
 # La primera vez Android pide el permiso del micrófono.
 - runFlow:
     when:
@@ -58,22 +42,25 @@ appId: com.renaser.app
       visible: "Mientras la app está en uso"
     commands:
       - tapOn: "Mientras la app está en uso"
-- assertNotVisible: "Detener la lectura de la pregunta ¿Qué hago\\?"
 # Con servicio de voz queda escuchando («Parar»); sin servicio, sin red o sin permiso, una línea lo dice. Las dos son correctas.
+# `optional`: con la build de desarrollo cada toque de Maestro tarda ~12 s, y el dictado sin voz se corta solo a los ~8 s sin decir nada
+# (medido el 2026-11-03: «Te escucho…» 8 s y vuelve a «Dictar»). Cuando Maestro mira, ya puede haber terminado. Lo que importa de este paso
+# está en lo que sigue: el formulario obligatorio sigue entero y se puede llenar escribiendo.
 - extendedWaitUntil:
-    visible: "Parar de dictar la respuesta a ¿Qué siento\\?|Para dictar necesito permiso.*|No hay conexión para reconocer tu voz.*|Tu teléfono no tiene el reconocimiento de voz.*|El reconocimiento de voz está ocupado.*|No pude entender el audio.*"
-    timeout: 15000
-- takeScreenshot: 41c-dictando-o-aviso
+    visible: "Parar de dictar la respuesta a ¿Qué estoy sintiendo\\?|Para dictar necesito permiso.*|No hay conexión para reconocer tu voz.*|Tu teléfono no tiene el reconocimiento de voz.*|El reconocimiento de voz está ocupado.*|No pude entender el audio.*"
+    timeout: 5000
+    optional: true
+- takeScreenshot: 41b-dictando-o-aviso
 
 # Pase lo que pase con la voz, el formulario sigue siendo el obligatorio y se puede llenar escribiendo.
 - runFlow:
     when:
-      visible: "Parar de dictar la respuesta a ¿Qué siento\\?"
+      visible: "Parar de dictar la respuesta a ¿Qué estoy sintiendo\\?"
     commands:
-      - tapOn: "Parar de dictar la respuesta a ¿Qué siento\\?"
+      - tapOn: "Parar de dictar la respuesta a ¿Qué estoy sintiendo\\?"
 - assertNotVisible: "Cerrar"
 - assertVisible: "Registrar"
 - tapOn: "Estoy…"
 - inputText: "a"
 - assertVisible: "a"
-- takeScreenshot: 41d-se-puede-escribir
+- takeScreenshot: 41c-se-puede-escribir

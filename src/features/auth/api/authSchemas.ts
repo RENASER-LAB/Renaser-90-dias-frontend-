@@ -23,7 +23,6 @@ export const usuarioApiSchema = z
     status: z.string(),
     fullName: z.string().nullable(),
     avatarUrl: z.string().nullable(),
-    bio: z.string().nullable().optional(),
     department: z.string().nullable().optional(),
     /** Spec 002, fase 2: aditivo y tolerante (un backend anterior no lo manda). */
     rolPersonalizado: z.object({ id: z.string().nullish(), nombre: z.string().nullish() }).passthrough().nullish(),

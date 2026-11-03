@@ -699,6 +699,8 @@ días 1 a 7 y mitad del Radar) y en **Yo → Mi Radar**. Lo que cambia y nada m�
   movimiento propio salvo el hundimiento de `Presionable`, un «tic» de `tacto.seleccion()` por toque). Es el mismo formulario
   (`CodigoRenaserModal`) en las cuatro entradas —la pantalla obligatoria, Hoy, Mi Radar y el aviso del teléfono—, así que se ve y funciona
   igual en todas. Las cuatro preguntas, las horas, la obligatoriedad, el borrador, un registro por hora y el 409 **no cambian**.
+  > **Corregido 2026-11-03 (pedido del dueño).** «Escuchar» y «Dictar» ya no son botones de 48 con ícono y palabra en su propia fila: son dos **íconos sutiles en el renglón
+  > del enunciado** (`BotonDeVoz` de solo ícono, 44 de área táctil), el enunciado perdió su línea de ayuda y el micrófono activo es dorado y respira. Ver la entrada del 2026-11-03.
 * **Dictar** reutiliza `useDictado` (el reconocimiento de voz del teléfono, el mismo del chat de SER; español `es-419`; el audio no se
   guarda ni se sube). Lo dictado se **suma** al final del campo, se ve mientras se habla, queda **editable** y se corta en los 2 000
   caracteres de siempre. **Nada se registra solo:** solo «Registrar»; con el micrófono abierto ese botón dice «Terminar de dictar» y
@@ -706,7 +708,7 @@ días 1 a 7 y mitad del Radar) y en **Yo → Mi Radar**. Lo que cambia y nada m�
   entonces abre el segundo (`useDictadoDelRadar`). Sin reconocimiento de voz en el teléfono no hay «Dictar» y el formulario es el de hoy.
   Si falla (sin permiso, sin red, sin motor en español, ocupado) una línea bajo esa pregunta lo dice —«… escribe tu respuesta»— y lo
   escrito y lo dictado antes no se tocan.
-* **Escuchar** lee el enunciado y su ayuda con la voz Dora de las alarmas, **cuatro MP3 grabados** (`assets/sonidos/voz_radar_que_*.mp3`,
+* **Escuchar** (los MP3 de la spec 030 dicen el enunciado de entonces y su ayuda; ver el 2026-11-03) lee el enunciado y su ayuda con la voz Dora de las alarmas, **cuatro MP3 grabados** (`assets/sonidos/voz_radar_que_*.mp3`,
   generados con `scripts/sonidos/generar-sonidos.sh voces`, que ahora también lee `radar/vocesDelRadar.json`; sin campanita; Whisper los
   entendió sin errores), desde el paquete de la app, **sin red**. Una voz a la vez; se detiene al terminar, al tocar de nuevo, **antes** de
   abrir el micrófono, al registrar y al cerrar el formulario. El reproductor (`expo-audio`) nace al primer toque. **Límite aceptado:** el
@@ -749,6 +751,8 @@ decisiones en `Renaser-90-dias-backend/specs/033-cierre-del-dia-en-plan/`; D-298
   cada acción pendiente lleva **el ícono de su eje** (`iconoDelEje`; el servidor no manda el eje en el cierre, así que sale de las acciones de hoy
   que Plan ya lee con `GET /rocks/today`, por id: `cierre/utils/ejeDeLasAcciones`; la que no figura lleva el ícono neutro `target`, nunca un eje
   inventado) y el enlace de la pantalla final dice **«Ver mañana en Plan»**.
+  > **Corregido 2026-11-03.** Las opciones de «¿Qué pasó?» y «¿Qué harás mañana?» ya no son chips de texto largo: llevan un ícono y un texto corto («Tiempo», «Otra hora»). Los códigos
+  > al servidor no cambian. Ver «Cierra tu día con chips de ícono».
 * **«Ver mañana en Plan» solo mueve** (decisión 033-2 A): lleva el scroll hasta «Acciones que mueven la meta», que ya muestra lo que viene (hoy,
   mañana y los próximos días). Sin automatismos ni atajos nuevos. **Se ofrece todos los días, también el domingo** (Plan muestra lo que viene), pero
   solo si Plan muestra acciones, o sea con el Mapa activo (`puedeVerManana`). Espera a que la hoja se vaya antes de mover el scroll.
@@ -1426,6 +1430,11 @@ cambia de forma** (sus seis secciones, sus diseños y textos) y para el aprendiz
 * **«Todas»**: cada fila (publicación, testimonio, evento, curso, chat, entrada del ranking) lleva un rótulo chico con el nombre de su formación
   (`RotuloDeFormacion`, solo texto con borde, no se toca) y el ranking se agrupa por formación, cada una con su podio y su tabla
   (`ranking/components/RankingPorFormacion`, `agruparPorFormacion`: las posiciones son las que manda el servidor, dentro de cada formación; no se recalcula nada).
+  > **Corregido 2026-11-03 (el dueño, viendo el Muro en «Todas»: «¿qué necesidad de agregar Escuela? Quita eso: arriba, como administrador, puedo
+  > clasificar por tipo; se ve feo»).** La **tarjeta de la publicación del Muro** (`TarjetaPublicacionMuro`) ya no lleva el rótulo de formación, para
+  > ningún rol. El selector «Todas · Escuela · Diplomado · Certificación» de arriba se queda tal cual y sigue filtrando. Los demás rótulos
+  > (testimonios, eventos, cursos, chats y las «Publicaciones ocultas» de Administración) no cambian. Sigue llegando `formacion` en la publicación;
+  > solo se dejó de dibujar. Ver la corrección del 2026-11-03 en la entrada de moderación del Muro.
 * **Crear exige elegir**: publicar en el Muro y crear un evento con «Todas» no envían nada y dicen «Elige una formación arriba para publicar.» / «…para
   crear.» (`AvisoDeFormacionPorElegir`, una línea en el lugar de la acción, no un diálogo); con una elegida viaja `formation` en el cuerpo. El servidor igual
   responde 400 si faltara. Nada se crea «para todas» ni «sin formación».
@@ -2109,6 +2118,222 @@ calendario, mal para un INSTANTE—, así que el día era el de UTC. Lo que camb
 * **Pruebas:** `fechaDeLaAceptacionEnLima.test.ts` (con el instante de las 21:30 de Lima y el reloj fijado a esa hora: los límites 18:59, 19:00, 23:59:59 y 00:00, desfase y cruces de mes y año, la fecha
   de calendario que no se corre, la ficha dibujada y la cohorte). Jest corre con `TZ = America/Lima`.
 * **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
+
+## Cambio por pedido del dueño — 2026-11-03 — Código Renaser compacto: sin párrafos, con los íconos de voz en el renglón y el borrador al escribir
+
+> **Corregido el mismo día (opción C del dueño).** «Escuchar» se quitó y el 🎤 pasó DENTRO del campo; el campo crece, la energía son chips y el pie del obligatorio se quitó. Ver la entrada «Código Renaser, opción C», justo debajo. Lo de los íconos en el renglón del enunciado, las voces pregrabadas y la `SliderRating` de esta entrada ya no rige.
+
+Textual, con capturas: «Allí en el código Renaser hay mucho texto y se extendió demasiado. En qué hago es: ¿Dónde estoy y qué estoy haciendo ahora? / ¿Qué
+estoy pensando? / ¿Qué estoy sintiendo? / ¿Qué estoy evitando? / ¿Cuál es mi nivel de energía? Y esos botones de escuchar, dictar deben de aparecer allí de manera
+sutil» y «el de dictar o el ícono de audio dentro del label, y que se guarde gradualmente». Es el mismo formulario (`CodigoRenaserModal`) de las cuatro entradas
+—la pantalla obligatoria de los días 1 a 7, Hoy, Mi Radar y el aviso—. Solo JavaScript y solo la forma; lo que se envía no cambia. Lo que cambia y nada más:
+* **Cabecera:** solo «Código Renaser · 11:00» (con «· Innegociable» cuando no se puede cerrar, como antes) y la ✕ si se puede cerrar (ahora con 44 de área
+  táctil). **Se quitaron** el título grande «¿Dónde estás ahora mismo?» y el párrafo «Responde con lo que hay… Este registro es el de las… y se cierra a las…».
+* **Las cinco preguntas, sin línea de ayuda debajo** (`PREGUNTAS_RADAR` ya no tiene `ayuda`; `PreguntaDelRadar`): «¿Dónde estoy y qué estoy haciendo ahora?»,
+  «¿Qué estoy pensando?», «¿Qué estoy sintiendo?», «¿Qué estoy evitando?» y «¿Cuál es mi nivel de energía?» (`PREGUNTA_ENERGIA`, la misma `SliderRating` del 1 al 10 con
+  la prop nueva `variante="pregunta"`: el rótulo es un enunciado más, 16 semibold, y el valor va a su altura; los demás usos de `SliderRating` no cambian). Enunciado a 16,
+  campo de mínimo 56 (era 76) y menos aire entre preguntas (14). Los marcadores en gris dentro del campo («Estoy…», «Estoy pensando en…», «Siento…», «Estoy evitando…») siguen.
+  `faltantesDelRadar` usa los enunciados nuevos («Falta: ¿Qué estoy evitando?» / «Faltan 2: ¿Qué estoy sintiendo?, nivel de energía.»; sin punto detrás de un «?»).
+* **Escuchar y Dictar son dos íconos, en el renglón del enunciado, a la derecha** (`VozDeLaPregunta` + `BotonDeVoz`, ya sin texto): el parlante (`volume`) y el micrófono
+  (`mic`), de 20, en el gris secundario, sin fondo ni borde en reposo y con 44 × 44 de área táctil. El par se acuesta con márgenes negativos (−11 arriba y abajo) para no
+  agrandar el renglón y, si el enunciado ocupa dos líneas, queda arriba a la derecha a la altura de la primera (el enunciado cede ancho: `flexShrink`). Los nombres accesibles
+  son los de siempre («Escuchar la pregunta …», «Detener la lectura de la pregunta …», «Dictar la respuesta a …», «Parar de dictar la respuesta a …»), con el enunciado nuevo.
+  **Activo se nota sin depender solo del color:** un círculo de 36 con lavado dorado y borde fino (`goldInk`), el ícono dorado, `accessibilityState.selected`, y el parlante
+  pasa a `pause`. **El micrófono abierto respira** (opacidad del círculo 1 ↔ 0,45, 650 ms cada mitad, `Easing.inOut`, solo `opacity` en el hilo de la interfaz); con «reducir
+  movimiento» queda solo el color. Las líneas «Te escucho. Toca el micrófono para parar.» (antes aludía al botón «Parar», que ya no tiene texto) y «Si no la oyes, sube el volumen
+  de tu teléfono.» y el aviso de si el micrófono falla **solo existen mientras pasa**; en reposo no hay nada. La energía no se dicta ni se escucha. El micrófono ya no es rojo: es dorado.
+* **El borrador se guarda al escribir** (`hooks/useBorradorDelRadar`, sobre `storage/borradorRadar`, que ya existía): las cuatro respuestas, qué respuestas se dictaron y la energía
+  se escriben en el teléfono **400 ms después de la última tecla** (era 1 s; una sola escritura al terminar de teclear), con la clave `renaser.radar.borrador.<cuenta>|<AAAA-MM-DD>|<HH>`
+  —por cuenta y por hora—. Reaparece tal cual al cerrar y reabrir el formulario o la app **en la misma hora**; el de otra hora no se lee y se barre; el de otra cuenta tampoco. Detalles
+  que se arreglaron: (1) **no se escribe hasta terminar de leer** el borrador al abrir (un formulario en blanco no puede pisarlo) y lo que la persona ya escribió manda sobre un borrador
+  que llegue tarde; (2) **al cerrar el formulario o desmontarse, lo que esperaba su turno se escribe en el acto** (antes los últimos segundos de teclado se perdían); (3) lo que ya
+  está en el teléfono no se vuelve a escribir; (4) **registrar con éxito lo borra** y el cierre del formulario no lo vuelve a escribir (`descartar`). **«Cerrar sesión» borra todos
+  los borradores del Código Renaser** (`borrarTodosLosBorradores`, desde `AuthContext.logout`); la sesión que vence sola, no (ahí el borrador existe para que la persona vuelva a
+  entrar y lo encuentre). Una línea chica «Guardado» (check de 16 + 12 px, `IndicadorDeGuardado`, en la cabecera) aparece 150 ms, se queda 1,4 s y se apaga cada vez que un borrador con
+  algo quedó escrito; no mueve nada de lugar, no recibe toques y el lector de pantalla la ignora.
+* **Las voces pregrabadas dicen el texto de antes.** `vocesDelRadar.json` ya trae el enunciado nuevo (solo el enunciado, sin ayuda) para cuando se regeneren, pero **los cuatro MP3 de
+  `assets/sonidos/voz_radar_*.mp3` siguen diciendo «¿Qué hago? Lo que estás haciendo en este momento, sin adornos.» y sus tres hermanas** (no se generaron audios nuevos: no se pidió).
+  Para ponerlos al día: `scripts/sonidos/generar-sonidos.sh voces`, y un APK nuevo. Ojo: `vozDelRadar.test.ts` exige entre 2 y 5 segundos por archivo; los enunciados nuevos son más
+  cortos y esa cota baja puede necesitar un ajuste al regenerar.
+* **No cambian**: `POST /api/v1/radar` (los mismos cinco campos y `dictado` solo si es cierto), el 409, las reglas de obligatorio de los días 1 a 7 y de Mi Radar, la validación,
+  los horarios, el pie («Completa las preguntas cada hora…» / «Puedes cerrarlo…»), el botón fijo «Registrar» / «Terminar de dictar», la hoja «Ya lo registraste» de Hoy (que lee
+  los mismos enunciados, ahora los nuevos), ni los demás tabs.
+* **Pruebas:** `codigoRenaserCompacto.test.ts` (sin título, párrafo ni ayuda; los cinco enunciados; los íconos en el renglón con sus nombres accesibles, 20 de ícono y 44 de área;
+  activo), `borradorDelCodigoRenaser.test.ts` (400 ms, una sola escritura, la energía, cerrar sin perder nada, reabrir en la misma hora, otra hora, otra cuenta, lectura tardía,
+  registrar borra, cerrar sesión), `useBorradorDelRadar` por esas mismas pruebas, y ajustadas `codigoRenaserConVoz`, `codigoRenaserModal`, `faltantesDelRadar`, `vozDelRadar`,
+  `tarjetaHabitoYRadar` y `alarmasDeLaCuentaAlSalir`. Sin emulador en esta corrida: el aspecto y el pulso del micrófono se confirman en pantalla.
+  Maestro (escritos, **no corridos**): los flujos que reconocían el formulario por su título «¿Dónde estás ahora mismo?» ahora lo reconocen por el ícono «Escuchar la pregunta ¿Dónde estoy y qué
+  estoy haciendo ahora?» (el enunciado solo también está en la hoja «Ya lo registraste»), `41-dictar-y-escuchar` usa los enunciados nuevos y `llenar-formulario-radar` busca «¿Cuál es mi nivel de energía?».
+## Cambio por pedido del dueño — 2026-11-03 — Código Renaser, opción C: sin «Escuchar», con «Dictar» dentro del campo, campo que crece y energía en chips
+
+Pedido del dueño, después de comparar una maqueta (https://claude.ai/artifact/FrrSUh8mqxFLMDgjvksCDp, artboard «C · Dictar dentro del campo»): quita «Escuchar» («con solo leer ya basta»),
+el micrófono va dentro del campo «como en un buscador», más espacio para escribir («capaz escriben bastante»), la energía en chips y fuera el texto del pie. **Corrige la entrada de arriba
+(«Código Renaser compacto»)**: donde ella dice que Escuchar y Dictar son dos íconos en el renglón del enunciado, que las voces pregrabadas dicen el texto de antes, que la energía es
+una `SliderRating` o que el pie del formulario obligatorio dice «Completa las preguntas cada hora…», léase lo de abajo. Es el mismo formulario (`CodigoRenaserModal`) de las cuatro
+entradas. Solo JavaScript y solo la forma; lo que se envía no cambia. Lo que cambia y nada más:
+* **Se quitó «Escuchar» en todas las preguntas, y todo lo que solo servía para eso:** `VozDeLaPregunta`, el hook `useEscucharPregunta`, `config/vozDelRadar.ts`, `vocesDelRadar.json`, los cuatro
+  `assets/sonidos/voz_radar_que_*.mp3` (los dos que se habían regenerado el mismo día) y sus cuatro entradas en `sounds` de `app.json` (**por eso `app.json` cambió: hace falta un APK nuevo**),
+  la parte del radar de `scripts/sonidos/tabla_de_voces.py` y `generar_voces.py` (`archivos_del_radar`, `sin_campanita`) y sus pruebas (`useEscucharPregunta`, `vozDelRadar`; `sonidosElegibles`
+  ya no nombra las voces del radar). Se verificó con `grep` que nada más los usaba. Ya no existe la línea «Si no la oyes, sube el volumen de tu teléfono.», ni el parlante, ni la pausa.
+* **La pregunta queda sola en su renglón, y el 🎤 «Dictar» va DENTRO del campo** (`PreguntaDelRadar` + `BotonDeDictar`, que reemplaza a `BotonDeVoz`), a la derecha y **anclado abajo**
+  (`position: absolute`, `right: 4`, `bottom: 4`) para no moverse cuando el campo crece: área de 44, ícono de 20, gris en reposo. **Activo** (dictando): círculo dorado suave de 36 (lavado
+  dorado y borde fino `goldInk`) con el ícono dorado y el pulso de opacidad de antes (1 ↔ 0,45, 650 ms cada mitad); con «reducir movimiento», solo el color. Además la caja toma el borde
+  dorado. Sin reconocimiento de voz en el teléfono no hay micrófono y el texto usa el margen normal. Los nombres accesibles son los de siempre («Dictar la respuesta a …» / «Parar de
+  dictar la respuesta a …»). La línea «Te escucho. Toca el micrófono para parar.» ya no existe: queda el «Te escucho…» gris dentro del campo vacío, el micrófono activo y el botón de
+  abajo, que dice «Terminar de dictar». El aviso rojo si el micrófono falla sigue, bajo la pregunta.
+* **El campo es multilínea y crece solo** (16 / 22): arranca en ~2 líneas (`ALTO_MINIMO_DEL_CAMPO` = 72, era 56) y crece con el texto hasta 5 líneas (`ALTO_MAXIMO_DEL_CAMPO` = 130); de ahí en
+  adelante se desplaza por dentro, sin que la pantalla gane un segundo scroll. La caja (`View` con borde, fondo y radio 12) lleva el borde; el `TextInput` de adentro no. El texto deja 52 de
+  margen a la derecha (`MARGEN_DEL_TEXTO_ANTE_EL_MICROFONO`) para no pasar por debajo del micrófono.
+* **Lo dictado se escribe EN el campo mientras se habla.** Ya era así (el reconocedor da resultados parciales y el campo muestra `textoMientrasDicta(escrito, parcial)` en la misma caja; el texto
+  queda en el campo, editable, al cerrar el micrófono); no hubo que cambiar de dónde sale. Lo que se sumó: el campo crece con eso y **el cursor queda al final** (`selection` controlado desde que
+  se abre el micrófono hasta que la persona toca el campo; con ese `selection` un campo ya lleno se desplaza para mostrar lo último dictado). Mientras se dicta el campo no se puede teclear
+  (`editable={false}`). **Límite sin comprobar:** que Android desplace de verdad un campo no editable hasta el cursor, pasadas las 5 líneas, se confirma en el teléfono (este trabajo no usó el emulador).
+* **Energía en chips del 1 al 10** (`EnergiaEnChips`, en lugar de `SliderRating` en este formulario; `SliderRating` vuelve a ser el de siempre y sigue en el onboarding): diez chips en fila,
+  44 de alto, borde fino y radio 10; el elegido en dorado suave (lavado dorado, borde dorado, número en negrita); debajo, «En reserva» y «A tope» a 13, sin números. Sin elegir, ningún chip
+  está marcado (`null` no es un número). Cada chip no lleva etiqueta propia (se oye «5, seleccionado») y el grupo se llama como la pregunta. Con diez chips en 324 dp cada uno mide ~29 de
+  ancho (la maqueta lo dibuja igual); `hitSlop` suma 1 por lado.
+* **Sin el texto del pie en el formulario obligatorio:** se quitó «Completa las preguntas cada hora. Durante los primeros 7 días.», y «Registrar» queda fijo abajo, solo. Los formularios que
+  se pueden cerrar siguen con su línea («Puedes cerrarlo; vuelve a ofrecerse la hora que viene.» y, en Mi Radar y en Hoy, «Puedes cerrarlo; tu borrador queda guardado en este teléfono.»):
+  el pedido nombró solo la del obligatorio; quitar también esas es borrar `textoDelPie` y la constante `TEXTO_DEL_PIE_DE_MI_RADAR`.
+* **No cambian**: el borrador (400 ms, por cuenta y por hora, «Guardado»), `POST /api/v1/radar` ni `dictado: true`, las preguntas, `faltantesDelRadar`, el 409, la obligatoriedad, la cabecera, ni la
+  hoja «Ya lo registraste».
+* **Maestro (escritos, no corridos):** el formulario se reconoce ahora por el gris «Estoy…» del primer campo (antes por el ícono «Escuchar…», que ya no existe); `41-dictar-y-escuchar` quedó con el
+  micrófono dentro del campo y sin los pasos de Escuchar. `llenar-formulario-radar.yaml` sigue valiendo (toca «5» y busca «¿Cuál es mi nivel de energía?»).
+* **Pruebas:** `codigoRenaserCompacto.test.ts` (reescrita: sin Escuchar ni pie, el micrófono dentro de la caja y anclado abajo a la derecha, el margen del texto, el campo multilínea 72–130, lo dictado
+  entrando en el campo, el cursor al final, los diez chips, «En reserva / A tope» a 13), `codigoRenaserConVoz.test.ts` (el micrófono), `borradorDelCodigoRenaser.test.ts` y `codigoRenaserModal.test.ts` (ajustadas).
+  Se borraron `useEscucharPregunta.test.ts` y `vozDelRadar.test.ts`.
+* **Hace falta un APK nuevo** (`app.json` cambió: ya no lista los cuatro MP3 de las preguntas). Sin backend nuevo.
+
+## Cambio por pedido del dueño — 2026-11-03 — textos más compactos en Eventos y Hoy, y un tope a la letra del sistema
+
+Textual, con capturas de un teléfono real: «Redúcele el tamaño de texto, es muy grande» (Comunidad → Eventos) e «igual aquí es muy grande» (Hoy → la tarjeta de acciones,
+en «Hoy no tienes acciones agendadas»). Solo JavaScript y solo tamaños (más dos textos que el dueño pidió cambiar al final, abajo): ningún flujo ni dato cambia. Lo que cambia y nada más:
+* **Causa de fondo: la letra del sistema no tenía tope.** React Native aplica el tamaño de letra del sistema (Android llega al 200 %) a todo `Text` y `TextInput`, y solo unos
+  pocos lugares pedían su propio `maxFontSizeMultiplier` (los chips de días de Planificar, la rueda de «Otra»). En el teléfono del dueño todo crecía sin límite. Ahora hay un
+  **tope global de 1,2** (`theme/topeDeLetra.ts`, `TOPE_DE_LETRA`): con la letra del sistema al 130 %, 150 % o 200 % la app crece como mucho un 20 %; al 100 % o al 110 % nada cambia.
+  La accesibilidad se respeta (la letra sigue agrandándose hasta ahí) pero nada se desborda. **Cómo se aplica, en un solo lugar:** `aplicarTopeDeLetra()` envuelve `Text` y
+  `TextInput` en la propia exportación de `react-native` y lo llama `theme/topeDeLetraGlobal`, lo PRIMERO que carga `index.ts` (antes que `expo` y `App`, para que lo que guarda `Text`
+  al cargar —p. ej. `Animated.createAnimatedComponent(TextInput)`— ya lo reciba con el tope). Se eligió esto y no `App.tsx` ni un componente `Texto`: en React Native 0.86 con React 19
+  `Text.defaultProps` ya no se lee, y cambiar los cientos de `import { Text } from 'react-native'` por un componente propio no cubría lo que ya existe. Los envoltorios solo suman la
+  prop (`ref`, `style`, `onPress` y `TextInput.State` pasan tal cual). **Lo que cada lugar pide gana:** un `maxFontSizeMultiplier` propio o `allowFontScaling={false}` se comportan como
+  antes. **En web no se hace nada** (`react-native-web` no usa la prop). Las pruebas de Jest no lo aplican (usan el `Text` de siempre).
+* **No choca con lo que ya usaba `fontScale`.** Las cuentas de espacio que seguían a `fontScale` pasan por `escalaDeLetra(fontScale)` (entre 1 y el tope), para no reservar sitio que la
+  letra ya no puede ocupar: la columna de la hora de Training (`FilaDelDia`, antes hasta 1,5), la línea de tiempo del tiempo libre (`LineaDeTiempoDelDia`, antes hasta 1,6) y la tarjeta
+  de fase de Yo (`TarjetaDeFase`, antes sin tope). El apilado de las mitades de «Hábitos de hoy» y el Radar (`fontScale > 1,15`) no cambia: con el tope sigue valiendo para toda letra
+  de 1,16 en adelante. `medidasDeLaTarjetaDeFase` sigue siendo una función pura de `fontScale`; el tope se pone en quien la llama.
+* **Comunidad → Eventos, la cabecera** (`SeccionEventos`, `CalendarioDelMes`, `SelectorDeVista`): «Mi agenda» y «Crear evento» son botones de **44** de alto con la etiqueta a **15** y
+  **siempre en un renglón** (`BotonPrincipal` / `BotonSecundario` suman la opción `compacto`: la etiqueta se achica hasta el 85 % antes de bajar de renglón, así «Crear evento» nunca va
+  en dos; sin la opción los botones de `Legible` siguen en 52 y 17); «Calendario / Tarjetas» y «Solo a los que voy» a 44 con letra de 15; el mes del calendario a **20** (el año a 14) y
+  «Hoy ‹ ›» a 44; el selector de formación de Comunidad («Todas · Escuela · Diplomado · Certificación», solo Administración, Alquimista y Soporte TI) con **letra de 14**
+  (`ControlSegmentado` suma `compacto`: segmentos de 40 con 2 de `hitSlop`, o sea 44 de área táctil; los demás controles segmentados no cambian); menos aire entre filas (10, era 16; 8 gap
+  entre los dos botones). La prueba de letra legible de mentoría y administración (`letraLegibleEnMentoriaYAdministracion`) acepta, marcada a mano como `/* compacto */`, la etiqueta de 15
+  del botón compacto: es una decisión del dueño y solo vale para botones de 44 con la etiqueta en un renglón.
+* **Hoy → la tarjeta de acciones** (`TarjetaAccionDeHoy`; vale para sus cuatro contenidos, que comparten esqueleto): el rótulo («Hoy» o la hora) a **13**, el título a **16 semibold**
+  (`fuentes.seminegrita`, era 18 negrita), «Meta: …» a 15, el botón dorado de **44** con la letra a **15** (`GoldButton` suma `compacto`; el dorado de siempre sigue en 52 y 16) y menos
+  relleno (14, era 17). No cambian las filas compactas «Define tu objetivo de 90 días en Plan» / «Confirma tus objetivos» (`FilaCompacta`).
+* **Dos textos que el dueño cambió después, con sus propias palabras** (commit aparte):
+  * **Eventos → Calendario, la leyenda bajo el mes.** Decía «Hay evento» (cortado en un teléfono angosto) y «Vas». El dueño: «El lenguaje se fue, hay que ponerle allí, por ejemplo,
+    Actividad programada / Confirmé asistencia». Ahora dice **«Actividad programada»** (el punto dorado) y **«Confirmé asistencia»** (el punto verde), a 14. Las dos piezas (punto + palabra)
+    envuelven (`flexWrap`): si no caben en un renglón la segunda baja a otro, y ninguna se corta (sin `numberOfLines`). Lo que oye el lector de pantalla en cada día usa las mismas palabras:
+    «Jueves 5 de noviembre, 1 actividad programada» / «2 actividades programadas» / «sin actividad programada», y «, confirmaste asistencia» con el punto verde (antes «evento(s)» y «, vas»).
+    La etiqueta «Vas» / «No vas» de las tarjetas del día, y «Toca un día con punto para ver sus eventos», no se tocaron: no se pidió.
+  * **Muro, la barra de crear publicación.** Bajo «¿Qué conquistaste hoy, <nombre>?» decía «Publicación sin límite de caracteres ›»; ahora dice **«Queremos leerte y acompañarte ›»**
+    (`ComunidadScreen`). El placeholder del compositor («…sin límite de caracteres…») no se tocó.
+* **No cambian**: los flujos, las pestañas, el calendario (celdas, puntos, día elegido), las tarjetas de eventos ni el resto de Hoy.
+* **Pruebas:** `theme/__tests__/topeDeLetra.test.ts' (el tope, que lo propio gana, `TextInput.State`, idempotente, web, `index.ts` lo carga antes que la app),
+  `eventos/components/__tests__/eventosCompacto.test.ts`, `leyendaDelCalendario.test.ts` (la leyenda, lo que oye el lector de pantalla y el texto de la barra del Muro), `home/components/__tests__/tarjetaAccionDeHoy.test.ts` (ajustada) y `tiempoLibreDeLaSemana.test.ts` (el tope de la línea de tiempo
+  pasó de 1,6 a 1,2). Sin emulador en esta corrida: el aspecto, y que un teléfono con la letra al 200 % quede en 1,2, se confirman en pantalla.
+## Cambio por pedido del dueño — 2026-11-03 — Yo → Ajustes → Perfil: sin biografía, sin la fila «Información» y con el WhatsApp de la ficha
+
+Textual: «En perfil, en Yo, configuración, quitas biografía, y en editar perfil jalas los datos del número de WhatsApp que puso; agregas ese campo más.» Solo la app: **sin backend
+nuevo**. Lo que cambia y nada más:
+* **Se quita la «Biografía somática»** de Yo → Ajustes → Perfil → «Información» (ya no se pide, ni se muestra, ni se manda). El campo `bio` salió del usuario de la app (`User`, `UsuarioApi`, el esquema y el mapper), de `actualizarMiPerfil` y de la sesión de
+  «ver como». **La columna del servidor no se toca** (`PATCH /users/me` ignora un `bio` que no llega: `null` significa «no cambiar»): lo que la persona escribió antes sigue guardado, solo que
+  nadie lo pide ya.
+* **Se quita la fila «Información»** de Ajustes → Perfil (decisión posterior del dueño, el mismo día): con la biografía fuera solo le quedaba el departamento, así que **«Departamento o área»
+  pasó a «Editar perfil»**, debajo del WhatsApp, con el mismo campo y el mismo «Guardar cambios» (el mismo `department` de `PATCH /users/me`; un departamento vacío sigue sin borrar el guardado,
+  como antes). Ajustes → Perfil queda con una sola fila, «Editar perfil», que dice «Nombre, foto, WhatsApp y departamento». Se borró la sub-vista `info_perfil` (su pantalla, su título en
+  `navegacionDeYo`, su botón «Guardar información» y el aviso «Información guardada»); el atrás del sistema sigue subiendo un nivel: Editar perfil → Ajustes → Yo. El ícono `idCard` ya no se
+  dibuja en Yo (queda en `Icon.tsx`: lo usan «Ver ficha» del chat y la ficha del líder).
+* **«Editar perfil» suma el campo «WhatsApp»**, debajo del correo y ya lleno con el número que la persona puso en su ficha («WhatsApp principal»), con **el mismo control de la ficha**
+  (`PhoneCountryInput`: la píldora del país que abre la hoja desde abajo con buscador, y el número solo con dígitos, con el largo máximo del país). El rótulo es el de los otros campos de la
+  pantalla (15, medio). Mientras se lee, el lugar queda ocupado por una caja del mismo alto (52) que dice «Cargando…» (el selector de país parte del número que recibe, así que el campo no puede
+  nacer vacío y cambiar después); si no se pudo leer, «No pudimos cargar tu WhatsApp.» con «Reintentar» (el resto del perfil se guarda igual y el número no se toca). Sin animación nueva.
+* **De dónde sale y a dónde va: la misma respuesta de la ficha, sin duplicar el dato.** El número es la respuesta `whatsapp` de la Ficha Inicial (`respuestas_onboarding`, guardada como
+  `"+51 987654321"`). Perfil la lee con `GET /onboarding/answers?flow=ficha_inicial` y la escribe con `POST /onboarding/answers` (upsert por persona y pregunta; el `id` de la pregunta sale del
+  catálogo del servidor, nunca escrito a mano). Es la que lee la Caja Renaser (`FichaDeEnvio.CLAVE_CELULAR`: el «Celular» de los datos de envío en Administración → Caja Renaser), y cualquier otra lectura de
+  la ficha, así que lo que se guarda en Perfil es lo que ven Administración y el acompañamiento (hoy ninguna otra pantalla de la app muestra el WhatsApp). No se usa `usuarios.telefono`: la columna
+  existe pero el servidor no la mapea ni la lee en ningún lado. El pedido a `/users/me` no lleva teléfono.
+* **Validación: la de la ficha.** La regla del paso «WhatsApp principal» (`validarWhatsapp`, en `pasosFicha`) la usan la ficha y Perfil, y el control solo deja escribir dígitos hasta el largo del
+  país. **Vaciarlo no se guarda**: si ya había un número y el campo queda sin dígitos, o el número no cumple la regla, «Guardar cambios» muestra el aviso de la ficha («WhatsApp requerido»), marca
+  el campo y **no guarda nada** (ni el nombre). Quien nunca tuvo uno (personal que no pasó por la ficha) y lo deja vacío no tiene qué guardar: su nombre o su foto no se le traban por eso.
+  Un número que no cambió no se vuelve a mandar.
+* **Cuándo se lee y cuándo se guarda** (`useWhatsappDelPerfil`): al abrir «Editar perfil», una vez por visita; una relectura no pisa lo que la persona ya escribió, una lectura vieja no pisa a
+  una nueva y otra cuenta no hereda nada de la anterior. «Guardar cambios» guarda primero el perfil de siempre y después el número (`guardarElPerfil`); si el perfil se guardó y el número no,
+  un diálogo lo dice («Tu nombre y tu foto sí se guardaron…») y al reintentar se vuelve a mandar todo (los dos pedidos son upsert).
+* **Límite aceptado:** el servidor no valida el formato del WhatsApp (tampoco lo hacía para la ficha): la regla vive en la app. Si Soporte TI apaga la función `onboarding`, el campo avisa que no
+  pudo cargar (las rutas de la ficha están bajo esa función).
+* **Pruebas:** `whatsappDelPerfil` (de dónde sale, vaciarlo, la regla de la ficha), `guardarElPerfil`, `useWhatsappDelPerfil` (prellenado, relecturas, error, guardar), `campoWhatsappDelPerfil`
+  (el control de la ficha prellenado, los tres estados) y `perfilConWhatsappSinBiografia` (ni `bio` en pantallas ni en pedidos; el campo en «Editar perfil», revisado antes de guardar).
+  `navegacionDeYo`, `redisenoDeYo`, `barraDePestanasIconos` y `textosVerdaderosDeYo` se ajustaron (sin «Información»; el departamento en Editar perfil). Sin Maestro nuevo: no se probó en el emulador.
+## Cambio por pedido del dueño — 2026-11-03 — Cierra tu día con chips de ícono
+
+Pedido del dueño con una referencia visual: «¿Qué pasó?» con el subtítulo «Selecciona lo que más haya influido.» y una fila de chips con un ícono de línea y
+un texto corto («Tiempo», «Imprevisto», «Lo evité»); el elegido, con el fondo y el borde dorados. **Solo cambia lo que se ve: los códigos que viajan al servidor
+(`SIN_TIEMPO`, `OTRA_HORA`…), las reglas de la hoja, el 409 y todo lo demás de la spec 017 y la 033 quedan igual. Sin backend nuevo.** Lo que cambia y nada más:
+* **Las opciones de «¿Qué pasó?»** (`cierre/data/textosDelCierre`, un solo lugar): Tiempo (`clock`) = «No me alcanzó el tiempo», Imprevisto (`alertTriangle`) = «Surgió otra
+  cosa», Energía (`batteryLow`) = «Me faltó energía» y Lo evité (`ban`) = «Lo dejé para después». **«¿Qué harás mañana?»**: Otra hora (`calendarClock`) = «Hacerla a otra hora»,
+  Más corta (`minimize2`) = «Hacerla más corta», Pedir ayuda (`handHelping`) y Dejarla (`x`). Cada una tiene `valor` (el código, sin cambio), `texto` (el de siempre, completo),
+  `corto` (lo que se ve) e `icono`. «¿Qué pasó?» lleva su subtítulo (`SUBTITULO_DEL_MOTIVO`); «¿Qué harás mañana?» no (el dueño no lo pidió: no se inventó texto).
+* **El chip** (`ChipDelCierre`): caja de 48 de alto o más, esquinas de 12, borde de 1 y fila de ícono (20) y texto (16, `fuentes.media`) con 8 de por medio. Elegido: fondo `goldWash`,
+  borde `gold` y el ícono en `goldInk`; sin elegir: `cardBg`, borde `border` y el ícono en `textSoft`. **El mismo borde y el mismo peso de letra elegido o no**, para que elegir
+  no ensanche el chip ni corra a los de al lado. Se acomodan en filas que envuelven (`flexWrap`). **Sin animación nueva** (se tocan mucho): `Presionable` y `tacto.seleccion()`.
+  La pregunta pasó a `t.cardTitle` de 19 (no hay serif: el display de Inter es solo de `t.hero` y `t.screenTitle`).
+* **El lector de pantalla dice el texto de siempre:** el chip lleva `accessibilityLabel` con la frase completa («No me alcanzó el tiempo») y `accessibilityState.selected`, así que
+  oye «No me alcanzó el tiempo, seleccionado». El texto largo ya no se dibuja: solo se oye. El grupo conserva su nombre («¿Qué pasó? Revisar las facturas»).
+* **Seis íconos nuevos** en `Icon.tsx` (formas de Lucide, ISC, caja de 24 y `s24`): `alertTriangle`, `batteryLow`, `calendarClock`, `minimize2`, `handHelping` y `x`. `x` es la equis
+  del trazo común: `close` lleva el énfasis de 1,3 veces y junto a los demás íconos del chip se vería más gruesa. `clock` y `ban` ya existían.
+* **Las fichas del mentor, el líder y Administración** («Cierres del día», `CierresDelDia`): lo que dijo de cada pendiente se ve «Tiempo → Otra hora» con los mismos textos
+  cortos y el ícono de cada chip delante de cada mitad, a 16 y en el gris del texto (`RespuestaConIconos`, solo lectura; si no cabe, se parte entre las dos mitades). El lector oye los textos completos
+  («No me alcanzó el tiempo, Hacerla a otra hora», `respuestaParaElLector`). Un valor que esta versión no conoce no se dibuja, ni él ni su ícono. **«Lo que más se repite»** solo
+  cambia el texto: «Tiempo · 4 veces».
+* **Lo mismo vale en Plan** («Tus cierres de la semana», lo que la persona dijo de un día anterior): `respuestaEnPalabras` es una sola función y ahora dice «Tiempo → Otra hora»,
+  para que la persona lea lo que eligió con las mismas palabras. Si el dueño lo quiere con el texto largo ahí, es devolver esa función a `textoDelMotivo` / `textoDelPlan` en
+  `utils/textosDeLosCierres`. «Día cerrado» y «Mañana: «…» a otra hora» no cambian.
+* **No cambian**: los códigos del contrato, la nota, «Guardar mi cierre» y lo que dice que falta, la pantalla final, el cambio de día, ni los demás tabs. Sin dependencias nuevas ni código nativo.
+* **Pruebas:** Jest `hojaDelCierre` (las ocho opciones con su ícono, su texto corto y su etiqueta larga; el subtítulo; el grupo que envuelve; 48 de alto y esquinas de 12; el elegido dorado
+  y el borde igual; lo que oye el lector; `tacto.seleccion()` una vez por toque; los ocho códigos al servidor sin cambio), `textosDeLosCierres`, `cierresDelDia` (los íconos y lo que oye el
+  lector), `semanaDelCierre`, `cierreEnPlan` y `grosorDeIconos` (los seis íconos nuevos). El flujo de Maestro `.maestro/cierre-en-plan/01` sigue tocando los chips por su
+  nombre completo (el del lector de pantalla) y suma el subtítulo; sin correr.
+* **No comprobado en el emulador** (esta corrida no tuvo): cómo se acomodan los cuatro chips por fila a 360 dp y con la letra del sistema grande, y el aspecto del elegido en claro y oscuro.
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
+## Corrección — 2026-11-03 — números y textos que no cuadraban en Plan, Training, Cierra tu día, Eventos y el Muro (issue #115)
+
+E2E del 03/11 con la cuenta de las formaciones (3 objetivos, la semana y 21 acciones). Solo JavaScript, sin backend, sin diseño nuevo ni pantallas nuevas. Un commit por punto. Lo que cambia y nada más:
+* **Plan → «Tu 80/20», vistas Semana y Mes: se dice el universo.** El servidor cuenta lo planificado **hasta hoy** (spec 031: lo de un día que no llegó no cuenta; se informa aparte como `porVenir`), y
+  «Esta semana» de Plan cuenta **de hoy a fin de semana**; son dos universos distintos por diseño y no se unificaron (el servidor no lo permite sin castigar lo que viene como «no cumplido»).
+  Con el periodo en curso la línea dice **«0 de 6 acciones cumplidas hasta hoy · 0 %»** y la de lo que viene, **«15 acciones más están agendadas para los días que vienen: la semana suma 21.»** (6 + 15, que es lo que
+  Plan muestra de la semana; «el mes suma» en Mes). Un periodo cerrado cuenta entero y no dice «hasta hoy». Vale también para las fichas de quien acompaña (`lineaDeAvance(c, hastaHoy)`, `lineaDeLasPorVenir`).
+* **`lineaDelObjetivo`:** una unidad que empieza con «/» va pegada a la cifra: **«Meta 8/10»**, no «Meta 8 /10». Y **el «·» ya no queda colgado al final del renglón**: cada separador va pegado al par que
+  sigue con espacio duro (`·`+NBSP), así que el renglón solo se parte ANTES del punto, que abre el de abajo («Inicio 8 000 · Actual 8 000» / «· Meta 12 000 S/»).
+* **Cierra tu día, franja de la semana (`CierresAnterioresDeLaSemana`):** hoy salía atenuado al 45 % (la regla de «no se puede tocar» de los días por venir) y se leía como desactivado, con ayer más fuerte. Ahora
+  **hoy va pleno, con el número en negrita y un punto debajo**; los días pasados, normales; los que vienen y los anteriores al Día 1, apagados. El nombre para el lector de pantalla no cambia.
+* **Training, hoja de evidencia de una acción:** decía «Vida y negocio · Innegociable» para una acción de Cuerpo. «Vida y negocio» es solo el cajón técnico de Training; cada acción lleva ahora su **eje**
+  (`HabitItem.eje`) y la línea dice «Cuerpo · Innegociable» / «Negocio y dinero · …» / «Relaciones · …» (`contextoDeLaEvidencia`). Un hábito sigue diciendo su dimensión.
+* **Training, «N de M hechos · X pts»:** el resumen suma `puntosOtorgados` de cada hecho, y para una acción es el que el servidor guarda en ella (`GET /rocks/today`): **eso ya se sumaba** una vez releída la lista
+  (lo fija `accionesDeLosObjetivosEnTraining.test.ts`). El hueco real era el instante entre confirmar el cierre y la relectura: la lista reflejaba «hecho» **sin los puntos** y el resumen se quedaba en 0 hasta que
+  llegaba lo verdadero. Ahora `reflejarCierreConfirmado` pone los puntos que el servidor respondió al cerrar (`conElCierreConfirmado`; nunca un número calculado en la app). **Ojo, sin confirmar en pantalla:** si
+  el servidor paga 0 por una acción fuera de plazo (`EscalaPuntosRoca`: pasada la hora fin + 10 min de gracia + 3 h de extensión paga 0), «0 pts» es lo correcto; el E2E hizo la acción de las 07:00 a las 13:55.
+* **Eventos → Calendario:** el día elegido (que no es hoy) se dibujaba como un cuadrado de esquinas casi vivas en Android (solo `backgroundColor` + `borderRadius`); el de hoy, con borde, sí salía redondo. El círculo
+  de 40 recorta (`overflow: 'hidden'`) y el elegido lleva un borde del mismo color.
+* **Muro, tarjeta:** la línea bajo el nombre empezaba con un «·» suelto («· Hace 1 minuto»): el separador solo aparece si hay algo antes (`lineaDelAutor`). Y **con la letra grande**: (a) «Me gusta», «Comentar» y
+  «Compartir» ya no se cortan —sin `numberOfLines`, con `flexShrink`—; con la letra del sistema por encima de 1,15 (el umbral de Hoy) o si una etiqueta se parte en dos líneas (`onTextLayout`), la fila pasa a **solo
+  íconos**, cada uno con su nombre y un área de 48 (un «Me gusta» dado se distingue también por el fondo dorado); (b) **«Ver más...» lo decide la tarjeta por las líneas reales** (`TextoDeLaPublicacion`): un `Text`
+  invisible, del mismo ancho y letra y sin tope de líneas, mide una vez y se desmonta; el visible lleva su `numberOfLines={3}` aparte. Mientras no se mide se parte de la regla de antes (más de 120 caracteres) para que
+  el botón no aparezca de golpe; los textos de 36 caracteres o menos ni se miden. Las pruebas que dibujan la tarjeta fijan `fontScale` (Jest, sin mock, lo da en 2).
+* **No cambian:** el servidor, los puntos, la regla de Pareto, los textos del análisis de SER, ninguna pantalla ni tab. **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire).
+* **Pruebas:** `textosDelOchentaVeinte`, `hojaOchentaVeinte`, `planPrincipal`, `cierreEnPlan`, `contextoDeLaEvidencia`, `accionesDeLosObjetivosEnTraining`, `diaElegidoDelCalendario`, `lineaDelAutorEnElMuro` y
+  `muroConLetraGrande`. **Sin emulador en esta corrida:** el aspecto en pantalla (el punto de hoy, el círculo del calendario, los íconos del Muro con letra grande) se confirma con capturas.
 
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
@@ -5370,6 +5595,17 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       aprendiz —**ni el autor de la publicación**— lo ven; y a quien no puede ni se le hace el pedido de capacidades
       (`useCapacidades({ activo })`, parámetro nuevo y opcional: sin él, el hook es el de siempre). Una publicación que todavía se
       está subiendo (`pendiente`) no lo lleva. Sin animación nueva: `Presionable`.
+      > **Corregido 2026-11-03 (el dueño: «ya no está como antes»; captura de Administración con el filtro «Todas»).** El «…» **sí seguía en el código**
+      > y `puedeModerar` seguía llegando a la tarjeta (`ComunidadScreen` → `usePuedeModerarElMuro`); no lo quitó la fusión de las formaciones. Lo sacaba
+      > de la pantalla **la cabecera**: la caja del autor (foto + nombre) no tenía tope y medía lo que midiera el nombre en una línea. Con un nombre
+      > largo («Lisette Pierina Camones Aparicio») empujaba la insignia «Día 1» y, detrás de ella, el «…» —el último de la fila— **fuera de la tarjeta y de
+      > la pantalla**. Ahora (`TarjetaPublicacionMuro`, estilos `cabecera`, `autor`, `autorTextos`, `insigniaYModerar`): el autor ocupa lo que sobra
+      > (`flex: 1`, `minWidth: 0`), el nombre va en hasta **dos líneas** (`numberOfLines={2}`, «…» si aun así no cabe) y «grupo · hace cuánto» en una; la
+      > insignia del día y el «…» van en una mitad que **no se achica** (`flexShrink: 0`), con 8 de aire entre las dos mitades. El «…» sigue arriba a la
+      > derecha, junto a la insignia, de 48 de área táctil y solo para ADMIN y ALCHEMIST (rol + `canAdminister`, sin cambios). Un nombre corto se ve igual
+      > que antes. Prueba: `tarjetaDelMuroCabecera.test.ts` (sin chip de formación, el nombre cede, la insignia y el «…» comparten la mitad que no cede, y el
+      > «…» de punta a punta para ADMIN, ALCHEMIST y quienes no lo ven). **Sin emulador en esta corrida**: falta confirmarlo en pantalla. **Hace falta un
+      > APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
     * **La hoja del «…»** (`HojaDeModeracionDelMuro`, sobre `HojaDesdeAbajo`; una sola para todo el Muro): «Ocultar publicación»,
       con «Deja de verse en el Muro. Puedes devolverla desde Administración.», y «Eliminar para siempre», en rojo. Eliminar pide
       confirmación con el `Alert` de `components/Alerta` y su botón destructivo: «¿Eliminar esta publicación para siempre?

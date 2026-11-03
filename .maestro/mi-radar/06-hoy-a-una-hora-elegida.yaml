@@ -3,17 +3,17 @@
 appId: com.renaser.app
 ---
 - runFlow: ../comun/ya-adentro.yaml
-- assertNotVisible: "¿Dónde estás ahora mismo\\?"
+- assertNotVisible: "Estoy…"
 - assertNotVisible: "Código Renaser.*"
 - assertNotVisible: "Responder el Código Renaser de esta hora"
 - takeScreenshot: 06a-hoy
 - scroll
 - assertNotVisible: "Código Renaser.*"
-- assertNotVisible: "¿Dónde estás ahora mismo\\?"
+- assertNotVisible: "Estoy…"
 - scroll
 - assertNotVisible: "Código Renaser.*"
 - takeScreenshot: 06b-hoy-abajo
 # Tras unos segundos, el formulario sigue sin abrirse (antes del día 8 aparecía solo).
 - waitForAnimationToEnd:
     timeout: 5000
-- assertNotVisible: "¿Dónde estás ahora mismo\\?"
+- assertNotVisible: "Estoy…"

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, jest } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import React from 'react';
 import { ScrollView } from 'react-native';
 import TestRenderer, { act, type ReactTestInstance, type ReactTestRenderer } from 'react-test-renderer';
@@ -34,8 +34,8 @@ jest.mock('../../storage/borradorRadar', () => ({
   limpiarBorradoresViejos: async () => undefined,
 }));
 
-import { SliderRating } from '../../../../components/SliderRating';
 import { CodigoRenaserModal } from '../CodigoRenaserModal';
+import { EnergiaEnChips } from '../EnergiaEnChips';
 import type { CheckInRadarApi } from '../../types/radar.types';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -44,6 +44,12 @@ const onEnviar = jest.fn(async (_c: CheckInRadarApi) => true);
 const slot = { hora: 14, etiqueta: '14:00', cierraA: '15:00' } as never;
 
 const onCerrar = jest.fn();
+
+const montadas: ReactTestRenderer[] = [];
+// Al terminar cada prueba se desmonta: la lectura del borrador que quedara en vuelo ya no escribe en un árbol muerto.
+afterEach(() => {
+  for (const r of montadas.splice(0)) act(() => r.unmount());
+});
 
 function montar(extra: { usuarioId?: string | null } = {}): ReactTestRenderer {
   let r!: ReactTestRenderer;
@@ -63,6 +69,7 @@ function montar(extra: { usuarioId?: string | null } = {}): ReactTestRenderer {
       }),
     );
   });
+  montadas.push(r);
   return r;
 }
 
@@ -114,7 +121,7 @@ describe('Código Renaser: «Registrar» con algo sin responder', () => {
     const r = montar();
     escribirLasCuatro(r);
     act(() => {
-      r.root.findAll((n: ReactTestInstance) => n.type === SliderRating)[0].props.onChange(7);
+      r.root.findAll((n: ReactTestInstance) => n.type === EnergiaEnChips)[0].props.onChange(7);
     });
 
     await tocarRegistrar(r);
@@ -138,7 +145,7 @@ describe('Código Renaser: lo que pasa al volver de enviar', () => {
   function llenar(r: ReactTestRenderer) {
     escribirLasCuatro(r);
     act(() => {
-      r.root.findAll((n: ReactTestInstance) => n.type === SliderRating)[0].props.onChange(7);
+      r.root.findAll((n: ReactTestInstance) => n.type === EnergiaEnChips)[0].props.onChange(7);
     });
   }
 

@@ -112,11 +112,33 @@ function plural(n: number, uno: string, varios: string): string {
   return n === 1 ? uno : varios;
 }
 
-/** `9 de 12 acciones cumplidas · 75 %`; `null` si no hay acciones planificadas (nunca «0 de 0»). */
-export function lineaDeAvance(c: Pick<CifrasDelOchentaVeinte, 'planificadas' | 'cumplidas' | 'porcentajeCumplidas'>): string | null {
+/**
+ * `9 de 12 acciones cumplidas · 75 %`; `null` si no hay acciones planificadas (nunca «0 de 0»).
+ *
+ * Con `hastaHoy` (el periodo todavía no cierra) dice el universo: `0 de 6 acciones cumplidas hasta hoy · 0 %`. El servidor cuenta «hasta
+ * hoy» (spec 031: lo planificado para un día que no llegó no cuenta; se informa aparte como `porVenir`), mientras que «Esta semana» de Plan
+ * cuenta de hoy a fin de semana: sin decirlo, «0 de 6» bajo «Semana 3 · Del 2 al 8 de noviembre» se lee como la semana entera.
+ */
+export function lineaDeAvance(
+  c: Pick<CifrasDelOchentaVeinte, 'planificadas' | 'cumplidas' | 'porcentajeCumplidas'>,
+  hastaHoy = false,
+): string | null {
   if (c.planificadas <= 0) return null;
-  const base = `${c.cumplidas} de ${c.planificadas} ${plural(c.planificadas, 'acción cumplida', 'acciones cumplidas')}`;
+  const base = `${c.cumplidas} de ${c.planificadas} ${plural(c.planificadas, 'acción cumplida', 'acciones cumplidas')}${hastaHoy ? ' hasta hoy' : ''}`;
   return c.porcentajeCumplidas !== null ? `${base} · ${c.porcentajeCumplidas} %` : base;
+}
+
+/**
+ * Lo agendado para los días que vienen, y cuánto suma el periodo entero: `15 acciones más están agendadas para los días que vienen: la semana
+ * suma 21.` Lo que cuenta arriba es «hasta hoy» y esto es el resto, así que las dos cifras cierran con lo que Plan muestra de la semana.
+ * `null` sin acciones por venir.
+ */
+export function lineaDeLasPorVenir(c: Pick<CifrasDelOchentaVeinte, 'planificadas' | 'porVenir'>, tipo: TipoDePeriodo): string | null {
+  if (c.porVenir <= 0) return null;
+  const suma = `${tipo === 'MES' ? 'el mes' : 'la semana'} suma ${c.planificadas + c.porVenir}`;
+  return c.porVenir === 1
+    ? `1 acción más está agendada para los días que vienen: ${suma}.`
+    : `${c.porVenir} acciones más están agendadas para los días que vienen: ${suma}.`;
 }
 
 /** Regla de las verdes: `Acciones verdes: 3 de 5 cumplidas · el 55 % del impacto que cumpliste vino de ellas`. */

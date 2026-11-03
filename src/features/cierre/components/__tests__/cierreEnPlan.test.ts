@@ -16,6 +16,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import React from 'react';
+import { StyleSheet } from 'react-native';
 import TestRenderer, { act, type ReactTestInstance, type ReactTestRenderer } from 'react-test-renderer';
 
 jest.mock('../../../../theme/ThemeContext', () => {
@@ -78,6 +79,8 @@ jest.mock('../../../../components/hojaDesdeAbajo/HojaDesdeAbajo', () => ({
 }));
 
 import { ApiError } from '../../../../services/http/apiClient';
+import { fuentes } from '../../../../theme/fuentes';
+import { light } from '../../../../theme/tokens';
 import { CierreEnPlan } from '../CierreEnPlan';
 import type { EjeObjetivo } from '../../../objetivos/types/objetivos.types';
 
@@ -350,8 +353,8 @@ describe('la hoja y el cierre', () => {
     mockRespuestas.set(`PUT /api/v1/rocks/day-closure`, new ApiError(409, 'Ese día ya cerró y no se puede cerrar tarde.'));
     await montar({}, lima(JUEVES, '22:10'));
     await pulsar(tarjeta()!);
-    await tocarTexto('No me alcanzó el tiempo');
-    await tocarTexto('Hacerla a otra hora');
+    await tocarTexto('Tiempo');
+    await tocarTexto('Otra hora');
     mockPedidos.length = 0;
     await tocarTexto('Guardar mi cierre');
     expect(mockAlert).toHaveBeenCalledTimes(1);
@@ -388,12 +391,38 @@ describe('un día anterior', () => {
     expect(hay('Toca un día que ya pasó para ver cómo quedó. Un día que terminó no se puede cerrar.')).toBe(true);
   });
 
+  it('issue #115 (4): hoy es lo más visible de la fila (pleno, en negrita y con un punto); los pasados van normales y los que vienen, apagados', async () => {
+    await montar({}, lima(JUEVES, '10:00'));
+    const estilo = (e: unknown) => (StyleSheet.flatten(e as never) ?? {}) as Record<string, unknown>;
+    const pastilla = (rotulo: string) =>
+      raiz!.root.findAll(n => n.props.accessibilityRole === 'radio' && n.props.contenedorStyle !== undefined && String(n.props.accessibilityLabel).startsWith(rotulo))[0];
+    const numero = (p: ReactTestInstance) => estilo(p.findAll(x => x.type === 'Text')[1].props.style);
+    const puntos = (p: ReactTestInstance) => p.findAll(x => x.type === 'View' && estilo(x.props.style).width === 5 && estilo(x.props.style).height === 5);
+
+    const hoy = pastilla('Jueves 29, hoy');
+    expect(estilo(hoy.props.contenedorStyle).opacity).toBe(1); // antes salía a 0,45, «como desactivado»
+    expect(numero(hoy)).toMatchObject({ fontFamily: fuentes.negrita, color: light.textStrong });
+    expect(puntos(hoy)).toHaveLength(1);
+
+    const ayer = pastilla('Miércoles 28');
+    expect(estilo(ayer.props.contenedorStyle).opacity).toBe(1);
+    expect(numero(ayer)).toMatchObject({ fontFamily: fuentes.media, color: light.textStrong });
+    expect(puntos(ayer)).toHaveLength(0);
+
+    for (const rotulo of ['Viernes 30', 'Sábado 31', 'Domingo 1']) {
+      const futuro = pastilla(rotulo);
+      expect(estilo(futuro.props.contenedorStyle).opacity).toBeLessThan(1);
+      expect(numero(futuro).color).toBe(light.textSoft);
+      expect(puntos(futuro)).toHaveLength(0);
+    }
+  });
+
   it('tocar el miércoles lee SU cierre una vez y dice «Cerrado a las 22:00» con lo que respondió; el martes dice «Sin cerrar»', async () => {
     await montar({}, lima(JUEVES, '10:00'));
     await pulsar(diaDeLaSemana('Miércoles 28'));
     expect(pedidosDelCierre().map(p => p.ruta)).toEqual([`/api/v1/rocks/day-closure?date=${JUEVES}`, '/api/v1/rocks/day-closure?date=2026-10-28']);
     expect(textos()).toContain('Miércoles 28 · Cerrado a las 22:00');
-    expect(textos()).toContain('«Revisar las facturas»: No me alcanzó el tiempo → Hacerla a otra hora');
+    expect(textos()).toContain('«Revisar las facturas»: Tiempo → Otra hora');
     expect(textos()).toContain('Tu nota: Un buen día');
 
     await pulsar(diaDeLaSemana('Martes 27'));
@@ -457,8 +486,8 @@ describe('un día anterior', () => {
 const VIERNES = '2026-10-30';
 const cuerposDelPut = () => mockPedidos.filter(p => p.metodo === 'PUT').map(p => p.cuerpo as { fecha: string; acciones: Array<{ id: string }> });
 const guardarElCierre = async () => {
-  await tocarTexto('No me alcanzó el tiempo');
-  await tocarTexto('Hacerla a otra hora');
+  await tocarTexto('Tiempo');
+  await tocarTexto('Otra hora');
   await tocarTexto('Guardar mi cierre');
 };
 const CERRADO_CON = (fecha: string, extra: object = {}) =>
@@ -564,7 +593,7 @@ describe('caso 3 · cierra temprano (06:00) y después cumple algo más ese mism
     mockRespuestas.set('PUT /api/v1/rocks/day-closure', () => CERRADO_CON(JUEVES, { acciones: [{ ...PENDIENTE, cierre: { motivo: 'SIN_ENERGIA', manana: 'DEJARLA', nota: null } }] }));
     await montar({}, lima(JUEVES, '06:00'));
     await pulsar(tarjeta()!);
-    await tocarTexto('Me faltó energía');
+    await tocarTexto('Energía');
     await tocarTexto('Dejarla');
     await tocarTexto('Guardar mi cierre');
     expect(cuerposDelPut()).toHaveLength(1);

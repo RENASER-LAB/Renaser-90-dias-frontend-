@@ -238,6 +238,8 @@ export function useTraining(activa = true) {
       id: roca.id,
       tieneTrackHoy: true,
       dimension: 'VIDA Y NEGOCIO',
+      // El eje real de la acción (Cuerpo, Negocio, Relaciones): la hoja de evidencia lo dice en lugar de «Vida y negocio».
+      eje: roca.eje,
       title: roca.titulo,
       time: roca.horaInicio ? roca.horaInicio.slice(0, 5) : '',
       tag: roca.esDelegable ? 'Delegable' : 'Innegociable',

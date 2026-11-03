@@ -7,6 +7,7 @@ import { Icon, TAMANO_ICONO } from '../../../components/Icon';
 import { Presionable } from '../../../components/Presionable';
 import { useTheme } from '../../../theme/ThemeContext';
 import { CURVA_SALIDA, DURACION_MS } from '../../../theme/movimiento';
+import { escalaDeLetra } from '../../../theme/topeDeLetra';
 import { tacto } from '../../../utils/tacto';
 import { CheckDelHabito } from '../../habits/celebracion/CheckDelHabito';
 import { TituloQueSeTacha } from '../../habits/celebracion/TarjetaQueCelebra';
@@ -75,9 +76,9 @@ export function FilaDelDia({
 }) {
   const { c, t } = useTheme();
   // La hora a ancho fijo mantiene las filas alineadas, pero con la letra grande del sistema «14:30» se partía en «14:3 / 0»:
-  // el ancho crece con la escala de la letra (hasta 1,5) y la hora nunca baja de renglón.
+  // el ancho crece con la escala de la letra (hasta el tope global de 1,2: `TOPE_DE_LETRA`) y la hora nunca baja de renglón.
   const { fontScale } = useWindowDimensions();
-  const anchoDeLaHora = Math.round(ANCHO_DE_LA_HORA * Math.min(Math.max(fontScale, 1), 1.5));
+  const anchoDeLaHora = Math.round(ANCHO_DE_LA_HORA * escalaDeLetra(fontScale));
   const control = controlDeLaFila(item, modo, esHoy);
   const sub = subtituloDeLaFila(item, modo, marca, ahoraMs);
   const registroId = item.habit?.id ?? item.clave;

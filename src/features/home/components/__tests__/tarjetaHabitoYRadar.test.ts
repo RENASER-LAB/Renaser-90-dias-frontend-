@@ -239,7 +239,7 @@ describe('la mitad del Radar, días 1 a 7', () => {
     // Se lee lo respondido: así los días 1 a 7 también leen el historial, solo ahora.
     expect(mockArgs[mockArgs.length - 1].hojaAbierta).toBe(true);
     const t = textos();
-    for (const esperado of ['Registrado a las 13:06 · energía 7 de 10', '¿Qué hago?', 'Revisando propuestas', '¿Qué evito?', 'Llamar a un cliente', 'Una vez por hora: ya no se puede cambiar. El siguiente a las 14:00.']) {
+    for (const esperado of ['Registrado a las 13:06 · energía 7 de 10', '¿Dónde estoy y qué estoy haciendo ahora?', 'Revisando propuestas', '¿Qué estoy evitando?', 'Llamar a un cliente', 'Una vez por hora: ya no se puede cambiar. El siguiente a las 14:00.']) {
       expect(t).toContain(esperado);
     }
     expect(raiz!.root.findAll(x => x.props.accessibilityLabel === 'Entendido' && typeof x.props.onPress === 'function').length).toBeGreaterThan(0);

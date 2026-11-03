@@ -15,6 +15,10 @@ import * as path from 'path';
  *    pisar su `fontSize` en el mismo arreglo de estilos;
  * 3. `MicroLabel` (10.5 px en versalitas): acá los títulos van con `TituloDeSeccion`.
  *
+ * **Otra excepción, también marcada a mano (2026-11-03):** la etiqueta del botón `compacto` de `Legible` (la de Eventos, que el
+ * dueño pidió de 15 px: «Redúcele el tamaño de texto, es muy grande») lleva `/* compacto *\/` pegado al número y se acepta desde 15.
+ * Solo vale para un botón de 44 de alto con la etiqueta en un renglón; el cuerpo de lectura sigue en 16.
+ *
  * Si falla, el mensaje dice archivo, línea y qué encontró.
  */
 
@@ -24,6 +28,7 @@ const ARCHIVOS_SUELTOS = ['components/Legible.tsx'];
 
 const MINIMO = 16;
 const MINIMO_METADATO = 14;
+const MINIMO_COMPACTO = 15;
 const TOKENS_CHICOS = ['micro', 'small', 'sectionTitle', 'sectionSub', 'tab', 'body'];
 
 function archivosTsx(carpeta: string): string[] {
@@ -53,9 +58,10 @@ export function problemasDe(ruta: string, texto: string): string[] {
   for (const m of texto.matchAll(reFont)) {
     const expresion = m[1];
     const esMetadato = /\/\*\s*metadato\s*\*\//.test(expresion);
+    const esCompacto = /\/\*\s*compacto\s*\*\//.test(expresion);
     for (const numero of expresion.replace(/\/\*[\s\S]*?\*\//g, '').match(/\d+(\.\d+)?/g) ?? []) {
       const valor = Number(numero);
-      const minimo = esMetadato ? MINIMO_METADATO : MINIMO;
+      const minimo = esMetadato ? MINIMO_METADATO : esCompacto ? MINIMO_COMPACTO : MINIMO;
       if (valor < minimo) {
         problemas.push(`${nombre}:${lineaDe(texto, m.index ?? 0)} — fontSize ${valor} (mínimo ${minimo})`);
       }
@@ -97,7 +103,7 @@ describe('letra legible en mentoría y administración (A-1)', () => {
     expect(archivos.length).toBeGreaterThan(20);
   });
 
-  it('no hay letra de menos de 16 px (salvo metadatos marcados, de 14 o más)', () => {
+  it('no hay letra de menos de 16 px (salvo metadatos marcados, de 14 o más, y el botón compacto, de 15)', () => {
     const problemas = archivos.flatMap(a => problemasDe(a, fs.readFileSync(a, 'utf8')));
     expect(problemas).toEqual([]);
   });
@@ -111,6 +117,8 @@ describe('letra legible en mentoría y administración (A-1)', () => {
     expect(problemasDe(r, "{ fontSize: grande ? 20 : 12 }")).toHaveLength(1);
     expect(problemasDe(r, '{ fontSize: 12 /* metadato */ }')).toHaveLength(1);
     expect(problemasDe(r, '{ fontSize: 14 /* metadato */ }')).toHaveLength(0);
+    expect(problemasDe(r, '{ fontSize: 15 /* compacto */ }')).toHaveLength(0);
+    expect(problemasDe(r, '{ fontSize: 14 /* compacto */ }')).toHaveLength(1);
     expect(problemasDe(r, "<Text style={[t.body, { color: c.text, fontSize: 16 }]} />")).toHaveLength(0);
     expect(problemasDe(r, "<Text style={[t.micro, { fontSize: 14 /* metadato */ }]} />")).toHaveLength(0);
     expect(problemasDe(r, "<TextInput style={[{ fontSize: 16 }, t.body]} />")).toHaveLength(1);
