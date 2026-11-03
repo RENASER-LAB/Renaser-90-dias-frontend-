@@ -1428,6 +1428,11 @@ cambia de forma** (sus seis secciones, sus diseños y textos) y para el aprendiz
 * **«Todas»**: cada fila (publicación, testimonio, evento, curso, chat, entrada del ranking) lleva un rótulo chico con el nombre de su formación
   (`RotuloDeFormacion`, solo texto con borde, no se toca) y el ranking se agrupa por formación, cada una con su podio y su tabla
   (`ranking/components/RankingPorFormacion`, `agruparPorFormacion`: las posiciones son las que manda el servidor, dentro de cada formación; no se recalcula nada).
+  > **Corregido 2026-11-03 (el dueño, viendo el Muro en «Todas»: «¿qué necesidad de agregar Escuela? Quita eso: arriba, como administrador, puedo
+  > clasificar por tipo; se ve feo»).** La **tarjeta de la publicación del Muro** (`TarjetaPublicacionMuro`) ya no lleva el rótulo de formación, para
+  > ningún rol. El selector «Todas · Escuela · Diplomado · Certificación» de arriba se queda tal cual y sigue filtrando. Los demás rótulos
+  > (testimonios, eventos, cursos, chats y las «Publicaciones ocultas» de Administración) no cambian. Sigue llegando `formacion` en la publicación;
+  > solo se dejó de dibujar. Ver la corrección del 2026-11-03 en la entrada de moderación del Muro.
 * **Crear exige elegir**: publicar en el Muro y crear un evento con «Todas» no envían nada y dicen «Elige una formación arriba para publicar.» / «…para
   crear.» (`AvisoDeFormacionPorElegir`, una línea en el lugar de la acción, no un diálogo); con una elegida viaja `formation` en el cuerpo. El servidor igual
   responde 400 si faltara. Nada se crea «para todas» ni «sin formación».
@@ -5456,6 +5461,17 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       aprendiz —**ni el autor de la publicación**— lo ven; y a quien no puede ni se le hace el pedido de capacidades
       (`useCapacidades({ activo })`, parámetro nuevo y opcional: sin él, el hook es el de siempre). Una publicación que todavía se
       está subiendo (`pendiente`) no lo lleva. Sin animación nueva: `Presionable`.
+      > **Corregido 2026-11-03 (el dueño: «ya no está como antes»; captura de Administración con el filtro «Todas»).** El «…» **sí seguía en el código**
+      > y `puedeModerar` seguía llegando a la tarjeta (`ComunidadScreen` → `usePuedeModerarElMuro`); no lo quitó la fusión de las formaciones. Lo sacaba
+      > de la pantalla **la cabecera**: la caja del autor (foto + nombre) no tenía tope y medía lo que midiera el nombre en una línea. Con un nombre
+      > largo («Lisette Pierina Camones Aparicio») empujaba la insignia «Día 1» y, detrás de ella, el «…» —el último de la fila— **fuera de la tarjeta y de
+      > la pantalla**. Ahora (`TarjetaPublicacionMuro`, estilos `cabecera`, `autor`, `autorTextos`, `insigniaYModerar`): el autor ocupa lo que sobra
+      > (`flex: 1`, `minWidth: 0`), el nombre va en hasta **dos líneas** (`numberOfLines={2}`, «…» si aun así no cabe) y «grupo · hace cuánto» en una; la
+      > insignia del día y el «…» van en una mitad que **no se achica** (`flexShrink: 0`), con 8 de aire entre las dos mitades. El «…» sigue arriba a la
+      > derecha, junto a la insignia, de 48 de área táctil y solo para ADMIN y ALCHEMIST (rol + `canAdminister`, sin cambios). Un nombre corto se ve igual
+      > que antes. Prueba: `tarjetaDelMuroCabecera.test.ts` (sin chip de formación, el nombre cede, la insignia y el «…» comparten la mitad que no cede, y el
+      > «…» de punta a punta para ADMIN, ALCHEMIST y quienes no lo ven). **Sin emulador en esta corrida**: falta confirmarlo en pantalla. **Hace falta un
+      > APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
     * **La hoja del «…»** (`HojaDeModeracionDelMuro`, sobre `HojaDesdeAbajo`; una sola para todo el Muro): «Ocultar publicación»,
       con «Deja de verse en el Muro. Puedes devolverla desde Administración.», y «Eliminar para siempre», en rojo. Eliminar pide
       confirmación con el `Alert` de `components/Alerta` y su botón destructivo: «¿Eliminar esta publicación para siempre?
