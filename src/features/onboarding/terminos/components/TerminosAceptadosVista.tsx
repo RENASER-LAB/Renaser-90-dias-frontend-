@@ -23,8 +23,8 @@ const PROPORCION_DEL_LIENZO = 5 / 2;
  *
  * Sin firma (no quedó guardada, el archivo ya no está o la imagen no carga) se ve igual, sin ese recuadro.
  *
- * Spec 039: y lo que se le mostró en «Mi aceptación» cuando firmó —el programa, el inicio y el fin— y si firmó su cronograma de pagos con los términos. Lo aceptado
- * antes de esa spec no lo guardó y no dice nada de eso.
+ * Spec 039: y lo que se le mostró en «Mi aceptación» cuando firmó —el programa, el inicio y el fin—. Lo aceptado antes de esa spec no lo guardó y no dice nada de
+ * eso. El cronograma de pagos no se firma con los términos (decisión 2026-11-02 pagos fuera de términos).
  */
 export function TerminosAceptadosVista({ aceptados }: { aceptados: TerminosAceptadosApi }) {
   const { c, t } = useTheme();
@@ -42,9 +42,7 @@ export function TerminosAceptadosVista({ aceptados }: { aceptados: TerminosAcept
     <View style={{ gap: 14 }}>
       <View
         accessible
-        accessibilityLabel={`${titulo}. ${fecha ? `Aceptada el ${fecha}.` : 'Aceptada.'}${mostrado?.programa ? ` ${mostrado.programa}.` : ''}${mostrado?.periodo ? ` ${mostrado.periodo}.` : ''}${
-          mostrado?.cronogramaFirmado ? ' Firmaste tu cronograma de pagos con los términos.' : ''
-        }${firma ? ' Con tu firma.' : ''}`}
+        accessibilityLabel={`${titulo}. ${fecha ? `Aceptada el ${fecha}.` : 'Aceptada.'}${mostrado?.programa ? ` ${mostrado.programa}.` : ''}${mostrado?.periodo ? ` ${mostrado.periodo}.` : ''}${firma ? ' Con tu firma.' : ''}`}
         style={[estilos.caja, { borderColor: c.border, backgroundColor: c.cardBg }]}
       >
         <View style={estilos.fila}>
@@ -56,7 +54,6 @@ export function TerminosAceptadosVista({ aceptados }: { aceptados: TerminosAcept
             <Text style={[t.body, { color: c.textSoft }]}>{fecha ? `Aceptada el ${fecha}` : 'Aceptada'}</Text>
             {mostrado?.programa ? <Text style={[t.body, { color: c.textSoft }]}>{mostrado.programa}</Text> : null}
             {mostrado?.periodo ? <Text style={[t.body, { color: c.textSoft }]}>{mostrado.periodo}</Text> : null}
-            {mostrado?.cronogramaFirmado ? <Text style={[t.body, { color: c.textSoft }]}>Firmaste tu cronograma de pagos con los términos.</Text> : null}
           </View>
         </View>
         {firma ? (

@@ -1,13 +1,13 @@
 # Acuerdo de transformación (spec 039)
 
-Flujos de Maestro del **texto nuevo de los términos** (23 cláusulas del dueño), de **«Mi aceptación»** y del **cronograma de pagos que se firma al entrar**. **Escritos y sin
+Flujos de Maestro del **texto nuevo de los términos** (23 cláusulas del dueño), de **«Mi aceptación»** y del **cronograma de pagos, que ya NO se firma con los términos** (decisión del dueño del 2026-11-02: los pagos son asíncronos, los llena Administración después y se ven en Yo → «Mi ingreso»). **Escritos y sin
 correr**: piden el backend con la spec 039 (V162) y las specs 027, 032 y 036, un emulador libre y cuentas sembradas en la base **local** (nunca producción). Cada archivo dice
 arriba su precondición y su cuenta (`# cuenta: aprendiz`).
 
 | Flujo | Cuenta | Qué prueba |
 |---|---|---|
 | `01-sin-cronograma-lee-mi-aceptacion-y-firma` | aprendiz | el texto con «Formación RENASER», «Mi aceptación» con las dos frases y los cinco datos, sin sección de cronograma, firma de siempre y «Tu programa empieza mañana» |
-| `02-con-cronograma-lo-firma-en-el-mismo-acto` | aprendiz | «Mi cronograma de pagos» debajo de «Mi aceptación», la frase de la cláusula 19 (sin su casilla no avanza) y «Mi ingreso» ya confirmado |
+| `02-con-cronograma-la-firma-no-lo-muestra` | aprendiz | aunque tenga cuotas, la firma no muestra «Mi cronograma de pagos» ni pide su casilla; con la de los términos y la firma basta, y «Mi ingreso» lo sigue pidiendo confirmar |
 | `03-volver-a-aceptar-sin-cronograma` | aprendiz | «Actualizamos nuestros términos» con «Mi aceptación» con las fechas reales, sin la sección del cronograma; «Mi ingreso» lo sigue pidiendo |
 | `04-el-programa-del-diplomado` | aprendiz | «Diplomado RENASER · 3 meses» / «· 1 año» y su fin |
 

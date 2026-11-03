@@ -1,5 +1,5 @@
 /**
- * Spec 039 (Acuerdo de transformación): «Mi aceptación» y el cronograma que se firma, sin pantalla. Lo que el servidor manda se lee tolerante, las líneas salen en el
+ * Spec 039 (Acuerdo de transformación): «Mi aceptación», sin pantalla. El cronograma de pagos ya no se firma con los términos (decisión 2026-11-02 pagos fuera de términos). Lo que el servidor manda se lee tolerante, las líneas salen en el
  * orden del dueño y nada se calcula aquí (las fechas ya vienen resueltas).
  */
 import { describe, expect, it } from '@jest/globals';
@@ -8,7 +8,6 @@ import { terminosAceptadosSchema, terminosDeMiFormacionSchema } from '../api/ter
 import {
   FRASE_DE_LA_DECISION,
   FRASE_DE_LA_DECLARACION,
-  FRASE_DEL_CRONOGRAMA,
   leerAcuerdo,
   lineasDeMiAceptacion,
   resumenDeLoAceptado,
@@ -30,23 +29,22 @@ function acuerdoDe(extra: Record<string, unknown> = {}) {
       startDate: '2026-11-03',
       endDate: '2027-01-31',
       started: false,
-      schedule: null,
       ...extra,
     },
   });
   return leerAcuerdo(lectura.agreement);
 }
 
+// decisión 2026-11-02 pagos fuera de términos
 describe('las frases del dueño', () => {
   it('son las que pidió, tal cual', () => {
     expect(FRASE_DE_LA_DECISION).toBe('He decidido formar parte de RENASER, consciente de mi compromiso con este proceso de transformación.');
     expect(FRASE_DE_LA_DECLARACION).toBe('Declaro que he leído, comprendido y aceptado los términos y condiciones del programa al que ingreso.');
-    expect(FRASE_DEL_CRONOGRAMA).toBe('Acepto el cronograma de pagos registrado en NASER y me comprometo a cumplirlo.');
   });
 });
 
 describe('leer «Mi aceptación» del servidor', () => {
-  it('sin cronograma: el nombre, el programa, las fechas y ningún cronograma', () => {
+  it('el nombre, el programa y las fechas; nada de cronograma', () => {
     const acuerdo = acuerdoDe();
     expect(acuerdo).toEqual({
       participante: 'Ana María Pérez Soto',
@@ -54,40 +52,26 @@ describe('leer «Mi aceptación» del servidor', () => {
       inicio: '2026-11-03',
       fin: '2027-01-31',
       empezado: false,
-      cronograma: null,
     });
   });
 
-  it('con cronograma: la moneda, las cuotas leídas como en «Mi ingreso» y la huella', () => {
+  // decisión 2026-11-02 pagos fuera de términos
+  it('un servidor que todavía mande `schedule` (la 039 de antes): la app lo ignora y «Mi aceptación» sale igual, sin cronograma', () => {
     const acuerdo = acuerdoDe({
       schedule: {
         currency: 'PEN',
-        installments: [
-          { id: 'c-1', dueDate: '2026-11-15', amount: 500, status: 'PENDING' },
-          { id: 'c-2', dueDate: '2026-12-15', amount: '500.50', status: 'PENDING' },
-        ],
+        installments: [{ id: 'c-1', dueDate: '2026-11-15', amount: 500, status: 'PENDING' }],
         fingerprint: 'huella-1',
       },
     });
-    expect(acuerdo?.cronograma?.moneda).toBe('PEN');
-    expect(acuerdo?.cronograma?.huella).toBe('huella-1');
-    expect(acuerdo?.cronograma?.cuotas).toEqual([
-      expect.objectContaining({ id: 'c-1', venceEl: '2026-11-15', monto: 500, pagada: false }),
-      expect.objectContaining({ id: 'c-2', venceEl: '2026-12-15', monto: 500.5, pagada: false }),
-    ]);
-  });
-
-  it('una cuota que no se entiende se pierde ella; sin ninguna cuota, o sin huella, no hay cronograma que firmar', () => {
-    const conUnaRota = acuerdoDe({ schedule: { currency: 'PEN', installments: [{ dueDate: '2026-11-15' }, { id: 'c-2', dueDate: '2026-12-15', amount: 100 }], fingerprint: 'h' } });
-    expect(conUnaRota?.cronograma?.cuotas).toHaveLength(1);
-
-    expect(acuerdoDe({ schedule: { currency: 'PEN', installments: [], fingerprint: 'h' } })?.cronograma).toBeNull();
-    expect(acuerdoDe({ schedule: { currency: 'PEN', installments: [{ id: 'c-1', dueDate: '2026-11-15', amount: 1 }] } })?.cronograma).toBeNull();
-  });
-
-  it('una moneda que la app no conoce no tumba el cronograma: las cuotas se leen sin símbolo', () => {
-    const acuerdo = acuerdoDe({ schedule: { currency: 'EUR', installments: [{ id: 'c-1', dueDate: '2026-11-15', amount: 10 }], fingerprint: 'h' } });
-    expect(acuerdo?.cronograma?.moneda).toBeNull();
+    expect(acuerdo).toEqual({
+      participante: 'Ana María Pérez Soto',
+      programa: 'Formación RENASER · 90 días',
+      inicio: '2026-11-03',
+      fin: '2027-01-31',
+      empezado: false,
+    });
+    expect(acuerdo).not.toHaveProperty('cronograma');
   });
 
   it('un servidor anterior (sin «agreement») o sin programa: no hay bloque que dibujar', () => {
@@ -138,7 +122,8 @@ describe('las líneas de «Mi aceptación»', () => {
 describe('releer lo que acepté', () => {
   const base = { version: VERSION, acceptedAt: '2026-11-02T20:00:00Z' };
 
-  it('dice el programa, el periodo y si firmó el cronograma', () => {
+  // decisión 2026-11-02 pagos fuera de términos
+  it('dice el programa y el periodo; un `scheduleSigned` viejo del servidor no dice nada', () => {
     const aceptados = terminosAceptadosSchema.parse({
       ...base,
       agreement: { program: 'Formación RENASER · 90 días', startDate: '2026-11-03', endDate: '2027-01-31', scheduleSigned: true },
@@ -146,21 +131,19 @@ describe('releer lo que acepté', () => {
     expect(resumenDeLoAceptado(aceptados.agreement)).toEqual({
       programa: 'Formación RENASER · 90 días',
       periodo: 'Del 3 de noviembre de 2026 al 31 de enero de 2027',
-      cronogramaFirmado: true,
     });
   });
 
   it('lo aceptado antes de la spec 039 no dice nada de eso', () => {
     expect(resumenDeLoAceptado(terminosAceptadosSchema.parse(base).agreement)).toBeNull();
     expect(resumenDeLoAceptado(null)).toBeNull();
-    expect(resumenDeLoAceptado({ program: null, startDate: null, endDate: null, scheduleSigned: false })).toBeNull();
+    expect(resumenDeLoAceptado({ program: null, startDate: null, endDate: null })).toBeNull();
   });
 
   it('el personal sin fechas: solo el programa', () => {
-    expect(resumenDeLoAceptado({ program: 'Formación RENASER', startDate: null, endDate: null, scheduleSigned: false })).toEqual({
+    expect(resumenDeLoAceptado({ program: 'Formación RENASER', startDate: null, endDate: null })).toEqual({
       programa: 'Formación RENASER',
       periodo: null,
-      cronogramaFirmado: false,
     });
   });
 });

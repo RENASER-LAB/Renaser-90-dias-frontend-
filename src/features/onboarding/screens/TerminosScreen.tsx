@@ -8,9 +8,8 @@ import { tacto } from '../../../utils/tacto';
 import { usePersistenciaOnboarding } from '../hooks/usePersistenciaOnboarding';
 import { ContenidoDeLosTerminos } from '../terminos/components/ContenidoDeLosTerminos';
 import { MiAceptacion } from '../terminos/components/MiAceptacion';
-import { MiCronogramaDePagos } from '../terminos/components/MiCronogramaDePagos';
 import { useMisTerminos } from '../terminos/hooks/useMisTerminos';
-import { leerAcuerdo, MENSAJE_DE_CRONOGRAMA_FALTA, TITULO_DE_CRONOGRAMA_FALTA } from '../terminos/utils/miAceptacion';
+import { leerAcuerdo } from '../terminos/utils/miAceptacion';
 import { avisoDeSellar, useSellarTerminos } from '../terminos/hooks/useSellarTerminos';
 import { borradorDesde, TERMINOS_DE_LA_APP } from '../terminos/utils/borradorDeTerminos';
 import {
@@ -43,11 +42,9 @@ export function TerminosScreen({
   const { terminos, cargada, recargar } = useMisTerminos();
   const contenido = terminos?.version ? borradorDesde(terminos.version) : TERMINOS_DE_LA_APP;
   const versionId = terminos?.version?.id ?? null;
-  /* Spec 039: «Mi aceptación» (nombre, programa y fechas) lo llena el servidor; con un servidor anterior no llega y no se dibuja. Si la persona entra con cronograma
-     (spec 032), llega también para firmarlo aquí, debajo de «Mi aceptación». */
+  /* Spec 039: «Mi aceptación» (nombre, programa y fechas) lo llena el servidor; con un servidor anterior no llega y no se dibuja. El cronograma de pagos NO va aquí
+     (decisión 2026-11-02 pagos fuera de términos): es asíncrono, lo llena Administración después y la persona lo ve en Yo → «Mi ingreso». */
   const acuerdo = useMemo(() => leerAcuerdo(terminos?.agreement), [terminos]);
-  const cronograma = acuerdo?.cronograma ?? null;
-  const huellaDelCronograma = cronograma?.huella ?? null;
   // Ref al lienzo para poder capturarlo como PNG al confirmar (ver SignatureCanvas.capturarComoPngBase64).
   const signatureRef = useRef<SignatureCanvasHandle>(null);
 
@@ -56,12 +53,6 @@ export function TerminosScreen({
   const [hasSigned, setHasSigned] = useState<boolean>(Boolean(savedSignature?.data && savedSignature.data.trim().length > 0));
   const [showError, setShowError] = useState(false);
   const [guardando, setGuardando] = useState(false);
-  const [cronogramaAceptado, setCronogramaAceptado] = useState(false);
-
-  /* Si Administración cambió el cronograma mientras leía (la lectura se repite tras el 409), lo que había marcado era de otro: se vuelve a pedir. */
-  useEffect(() => {
-    setCronogramaAceptado(false);
-  }, [huellaDelCronograma]);
 
   useEffect(() => {
     if (savedSignature && savedSignature.data && savedSignature.data.trim().length > 0) {
@@ -89,12 +80,6 @@ export function TerminosScreen({
       );
       return;
     }
-    if (cronograma && !cronogramaAceptado) {
-      setShowError(true);
-      tacto.error();
-      Alert.alert(TITULO_DE_CRONOGRAMA_FALTA, MENSAJE_DE_CRONOGRAMA_FALTA);
-      return;
-    }
     if (!hasSigned) {
       setShowError(true);
       tacto.error();
@@ -120,9 +105,8 @@ export function TerminosScreen({
         capturarFirma: async () => signatureRef.current?.capturarComoPngBase64(),
         trazos: signature?.data ?? null,
         versionId,
-        /* Spec 039: lo que vio —el inicio de su programa— y el cronograma que firmó: si ya no son los de ahora, el servidor responde 409 y no registra nada. */
+        /* Spec 039: lo que vio —el inicio de su programa—: si ya no es el de ahora, el servidor responde 409 y no registra nada. */
         inicioVisto: acuerdo?.inicio ?? null,
-        huellaDelCronograma: cronograma && cronogramaAceptado ? cronograma.huella : null,
       });
       if (resultado.tipo !== 'ok') {
         if (resultado.tipo === 'cambiaron') await recargar();
@@ -174,19 +158,8 @@ export function TerminosScreen({
       <View style={styles.cuerpo}>
         <ContenidoDeLosTerminos introduccion={contenido.introduccion} clausulas={contenido.clausulas} />
 
-        {/* Spec 039: «Mi aceptación» al final de los términos, antes de firmar, y —solo si entra con cronograma— «Mi cronograma de pagos» debajo. */}
+        {/* Spec 039: «Mi aceptación» al final de los términos, antes de firmar. Nunca el cronograma de pagos (decisión 2026-11-02 pagos fuera de términos). */}
         {acuerdo ? <MiAceptacion acuerdo={acuerdo} /> : null}
-        {cronograma ? (
-          <MiCronogramaDePagos
-            cronograma={cronograma}
-            aceptado={cronogramaAceptado}
-            alCambiar={marcado => {
-              setCronogramaAceptado(marcado);
-              if (marcado && showError) setShowError(false);
-            }}
-            error={showError}
-          />
-        ) : null}
 
         {/* Signature Box */}
         <View style={[styles.signatureCard, { backgroundColor: c.cardBg, borderColor: c.border }]}>

@@ -5,13 +5,14 @@ import TestRenderer, { act, type ReactTestRenderer } from 'react-test-renderer';
 /**
  * Spec 039 (Acuerdo de transformación): las pantallas de Términos en sus tres casos.
  *  1. Sin cronograma (el de siempre): «Mi aceptación» con los datos reales, firma y casilla; el pedido lleva el inicio que vio y ninguna huella.
- *  2. Con cronograma: debajo de «Mi aceptación» sale «Mi cronograma de pagos» con la frase de la cláusula 19; sin esa casilla no avanza; con ella, el pedido lleva la huella.
+ *  2. Con cronograma (decisión 2026-11-02 pagos fuera de términos): la firma NO muestra ni exige el cronograma —los pagos son asíncronos, los llena Administración
+ *     después y se ven en «Mi ingreso»—, aunque la persona ya tenga cuotas y aunque un servidor que todavía lo mande traiga `schedule`.
  *  3. Volver a aceptar (quien ya estaba dentro): «Mi aceptación» con su programa y fechas reales y NUNCA el cronograma.
  */
 
 const mockAlerta = jest.fn<(titulo: string, mensaje?: string) => void>();
 const mockFirma = jest.fn<(props: { onSignatureChange: (valida: boolean, datos: { type: string; data: string }) => void }) => void>();
-const mockAceptarTerminos = jest.fn<(versionId: string | null, acuerdo?: { inicioVisto?: string | null; huellaDelCronograma?: string | null }) => Promise<unknown>>();
+const mockAceptarTerminos = jest.fn<(versionId: string | null, acuerdo?: { inicioVisto?: string | null }) => Promise<unknown>>();
 let mockTerminos: unknown = null;
 const mockRecargar = jest.fn(async () => null);
 
@@ -44,7 +45,7 @@ jest.mock('../../hooks/usePersistenciaOnboarding', () => ({
     guardarCapitulo: async () => ({ pendientes: 0 }),
     guardarFirma: async () => ({ ok: true }),
     aceptarHito: async () => undefined,
-    aceptarTerminos: (versionId: string | null, acuerdo?: { inicioVisto?: string | null; huellaDelCronograma?: string | null }) => mockAceptarTerminos(versionId, acuerdo),
+    aceptarTerminos: (versionId: string | null, acuerdo?: { inicioVisto?: string | null }) => mockAceptarTerminos(versionId, acuerdo),
     avanzarEstado: async () => undefined,
   }),
 }));
@@ -56,7 +57,7 @@ import { fechaEnPalabrasDePago, aIso, hoyDelTelefono } from '../../../pagos/util
 import { TerminosScreen } from '../../screens/TerminosScreen';
 import { terminosDeMiFormacionSchema, type TerminosDeMiFormacionApi } from '../api/terminosSchemas';
 import { TerminosActualizadosScreen } from '../screens/TerminosActualizadosScreen';
-import { FRASE_DE_LA_DECISION, FRASE_DE_LA_DECLARACION, FRASE_DEL_CRONOGRAMA } from '../utils/miAceptacion';
+import { FRASE_DE_LA_DECISION, FRASE_DE_LA_DECLARACION } from '../utils/miAceptacion';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -71,6 +72,9 @@ const VERSION = {
   checkboxText: 'He leído y acepto los Términos y Condiciones',
   asksNewAcceptance: true,
 };
+/** La casilla que la 039 le ponía a la firma antes de que el dueño sacara los pagos de los términos (2026-11-02): ya no existe en ninguna pantalla. */
+const FRASE_DEL_CRONOGRAMA = 'Acepto el cronograma de pagos registrado en NASER y me comprometo a cumplirlo.';
+/** Lo que mandaba el servidor de la 039 en `agreement.schedule`: la app lo ignora aunque llegue. */
 const CRONOGRAMA = {
   currency: 'PEN',
   installments: [
@@ -160,6 +164,7 @@ afterEach(() => {
   mockTerminos = null;
 });
 
+// decisión 2026-11-02 pagos fuera de términos
 describe('sin cronograma: la firma de siempre, con «Mi aceptación»', () => {
   beforeEach(() => {
     mockTerminos = terminos('FIRST_TIME', SIN_CRONOGRAMA);
@@ -198,7 +203,7 @@ describe('sin cronograma: la firma de siempre, con «Mi aceptación»', () => {
     await continuar(raiz);
 
     expect(mockAlerta).not.toHaveBeenCalled();
-    expect(mockAceptarTerminos).toHaveBeenCalledWith('version-2', { inicioVisto: '2026-11-03', huellaDelCronograma: null });
+    expect(mockAceptarTerminos).toHaveBeenCalledWith('version-2', { inicioVisto: '2026-11-03' });
     expect(onAccept).toHaveBeenCalledTimes(1);
   });
 
@@ -216,71 +221,58 @@ describe('sin cronograma: la firma de siempre, con «Mi aceptación»', () => {
   });
 });
 
-describe('con cronograma: se firma en el mismo acto', () => {
+// decisión 2026-11-02 pagos fuera de términos
+describe('con cronograma: la firma NO lo muestra ni lo exige', () => {
   beforeEach(() => {
+    // La persona tiene cuotas y hasta un servidor que todavía manda `schedule`: la pantalla de los términos no lo dibuja.
     mockTerminos = terminos('FIRST_TIME', { ...SIN_CRONOGRAMA, schedule: CRONOGRAMA });
   });
 
-  it('debajo de «Mi aceptación» sale «Mi cronograma de pagos» con la moneda, una fila por cuota y la frase de la cláusula 19', () => {
+  it('aunque tenga cuotas, no sale «Mi cronograma de pagos», ni sus cuotas, ni la casilla del cronograma; «Mi aceptación» se queda igual', () => {
     raiz = montarOnboarding();
     const texto = textoDe(raiz);
 
-    expect(texto).toContain('Mi cronograma de pagos');
-    expect(texto).toContain('Soles (S/)');
-    expect(texto).toContain('15 nov');
-    expect(texto).toContain('15 dic');
-    expect(texto).toContain('S/ 500');
-    expect(texto).toContain('Pendiente');
-    expect(texto.toLowerCase().indexOf('mi aceptación')).toBeLessThan(texto.indexOf('Mi cronograma de pagos'));
-    expect(casilla(raiz, FRASE_DEL_CRONOGRAMA)).toBeDefined();
+    expect(texto).not.toContain('Mi cronograma de pagos');
+    expect(texto).not.toContain('Soles (S/)');
+    expect(texto).not.toContain('15 nov');
+    expect(texto).not.toContain('S/ 500');
+    expect(texto).not.toContain('Pendiente');
+    expect(casilla(raiz, FRASE_DEL_CRONOGRAMA)).toBeUndefined();
+    // «Mi aceptación» (la que llena el servidor) no cambia.
+    expect(texto.toLowerCase()).toContain('mi aceptación');
+    expect(texto).toContain('Ana María Pérez Soto');
+    expect(texto).toContain('Formación RENASER · 90 días');
+    expect(texto).toContain('3 de noviembre de 2026');
+    expect(texto).toContain('31 de enero de 2027');
   });
 
-  it('sin marcar la casilla del cronograma no avanza y dice qué falta; no se manda nada', async () => {
+  it('con solo la casilla de los términos y la firma avanza: no pide ninguna casilla de cronograma y no manda ninguna huella', async () => {
     raiz = montarOnboarding();
-    act(() => casilla(raiz!, 'He leído y acepto los Términos y Condiciones').props.onToggle(true));
-    firmar();
-
-    await continuar(raiz);
-
-    expect(mockAlerta).toHaveBeenCalledWith('Cronograma por aceptar', 'Marca que aceptas el cronograma de pagos para continuar.');
-    expect(mockAceptarTerminos).not.toHaveBeenCalled();
-    expect(onAccept).not.toHaveBeenCalled();
-    expect(textoDe(raiz)).toContain('Marca esta casilla para continuar.');
-  });
-
-  it('con la casilla del cronograma, la casilla de los términos y la firma: el pedido lleva la huella del cronograma que vio', async () => {
-    raiz = montarOnboarding();
-    act(() => casilla(raiz!, FRASE_DEL_CRONOGRAMA).props.onToggle(true));
     act(() => casilla(raiz!, 'He leído y acepto los Términos y Condiciones').props.onToggle(true));
     firmar();
 
     await continuar(raiz);
 
     expect(mockAlerta).not.toHaveBeenCalled();
-    expect(mockAceptarTerminos).toHaveBeenCalledWith('version-2', { inicioVisto: '2026-11-03', huellaDelCronograma: 'huella-1' });
+    expect(mockAceptarTerminos).toHaveBeenCalledWith('version-2', { inicioVisto: '2026-11-03' });
     expect(onAccept).toHaveBeenCalledTimes(1);
   });
 
-  it('Administración cambió el cronograma mientras leía (409): se relee, se avisa y no queda nada marcado', async () => {
-    mockAceptarTerminos.mockResolvedValue({ ok: false, cambiaron: true, mensaje: 'Tu cronograma cambió mientras leías: revísalo de nuevo.' });
+  it('un 409 por otra causa (cambió la fecha de inicio) sigue releyendo y avisando; ya no existe el aviso del cronograma cambiado', async () => {
+    mockAceptarTerminos.mockResolvedValue({ ok: false, cambiaron: true, mensaje: 'Pasó la medianoche y tus fechas cambiaron: léelas de nuevo.' });
     raiz = montarOnboarding();
-    act(() => casilla(raiz!, FRASE_DEL_CRONOGRAMA).props.onToggle(true));
     act(() => casilla(raiz!, 'He leído y acepto los Términos y Condiciones').props.onToggle(true));
     firmar();
 
     await continuar(raiz);
 
     expect(mockRecargar).toHaveBeenCalledTimes(1);
-    expect(mockAlerta).toHaveBeenCalledWith('Algo cambió mientras leías', 'Tu cronograma cambió mientras leías: revísalo de nuevo.');
+    expect(mockAlerta).toHaveBeenCalledWith('Algo cambió mientras leías', 'Pasó la medianoche y tus fechas cambiaron: léelas de nuevo.');
     expect(onAccept).not.toHaveBeenCalled();
-
-    // El cronograma nuevo llega con otra huella: lo marcado antes era de otro y se vuelve a pedir.
-    mockTerminos = terminos('FIRST_TIME', { ...SIN_CRONOGRAMA, schedule: { ...CRONOGRAMA, fingerprint: 'huella-2' } });
-    act(() => raiz!.update(React.createElement(TerminosScreen, { onAccept, onBack: () => undefined })));
-    expect(casilla(raiz, FRASE_DEL_CRONOGRAMA).props.checked).toBe(false);
   });
 });
 
+// decisión 2026-11-02 pagos fuera de términos
 describe('volver a aceptar: quien ya estaba dentro', () => {
   beforeEach(() => {
     // Aunque tuviera un cronograma, el servidor no lo manda aquí (se le pide en «Mi ingreso»); y si llegara, esta pantalla no lo dibuja.
@@ -317,7 +309,7 @@ describe('volver a aceptar: quien ya estaba dentro', () => {
     await continuar(raiz);
 
     expect(mockAlerta).not.toHaveBeenCalled();
-    expect(mockAceptarTerminos).toHaveBeenCalledWith('version-2', { inicioVisto: '2026-10-26', huellaDelCronograma: null });
+    expect(mockAceptarTerminos).toHaveBeenCalledWith('version-2', { inicioVisto: '2026-10-26' });
     expect(onAccept).toHaveBeenCalledTimes(1);
   });
 });
