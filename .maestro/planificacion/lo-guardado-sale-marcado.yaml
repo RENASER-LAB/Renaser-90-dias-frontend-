@@ -62,15 +62,16 @@ env:
     timeout: 15000
 - assertNotVisible: ".*cambiado solo esta semana.*"
 # Limpieza: la semana vuelve al plan de siempre y el hábito vuelve a abrir en «Siempre».
-# Al pasar de «Siempre» a «Por semana» el editor muestra la PRIMERA semana (la en curso), no la que tiene el cambio: se pasa a la siguiente, donde se guardó.
+# Al pasar de «Siempre» a «Por semana» el editor abre en la primera semana editable QUE TENGA un cambio guardado (issue #106), o sea donde se guardó:
+# «Volver al plan de siempre…» se ve sin tocar las flechas.
 - tapOn: "El cambio vale solo para la semana que elijas"
-- extendedWaitUntil:
-    visible: "Semana del .* al .*"
-    timeout: 15000
-- tapOn: "Semana siguiente"
 - extendedWaitUntil:
     visible: "Volver al plan de siempre los .*"
     timeout: 20000
+- assertVisible:
+    text: "Semana anterior"
+    enabled: true
+- assertVisible: ".*cambiado solo esta semana.*"
 - tapOn: "Volver al plan de siempre los .*"
 - extendedWaitUntil:
     notVisible: "Volver al plan de siempre los .*"

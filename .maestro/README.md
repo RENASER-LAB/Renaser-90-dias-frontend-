@@ -127,7 +127,7 @@ Corrida contra la base local `renaser_e2e_final` (resultados en `~/Imágenes/e2e
 |---|---|---|
 | `empieza-manana/03` | esperaba en Plan la fila de Hoy; a quien tiene la fila sin activar, Plan le dibuja «Tu plan empieza con tu programa» + «Empezar mañana» (`PlanSinPrograma`) | espera ese texto |
 | `acuerdo-de-transformacion/03` | esperaba «Formación RENASER · 90 días» y solo servía con la Escuela | comprueba el patrón `PROGRAMA` (se puede fijar con `-e`) |
-| `planificacion/lo-guardado-sale-marcado` | al pasar de «Siempre» a «Por semana» el editor muestra la primera semana, no la del cambio | en la limpieza pasa a «Semana siguiente» antes de buscar «Volver al plan de siempre…» |
+| `planificacion/lo-guardado-sale-marcado` | al pasar de «Siempre» a «Por semana» el editor abría en la primera semana y no en la del cambio guardado (era un bug de la app, issue #106) | ya no toca las flechas: espera «Volver al plan de siempre…» al volver a «Por semana» |
 | `comunidad-por-formacion/04` | la sección del Diplomado quedaba debajo de la pantalla (el podio de la Escuela es alto) | `scrollUntilVisible` hasta ella |
 | `comunidad-por-formacion/01` | «Tu posición» exacto; la tarjeta dice «Tu posición (nombre)» | «Tu posición.*» |
 | `semaforo-podio/31` | en «Todas» el botón dice «Elige una formación arriba para descargar el podio.» (spec 024) | elige la Escuela antes de descargar |

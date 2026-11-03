@@ -753,7 +753,11 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
       setDiasEnEdicion([]);
       return;
     }
-    const primera = semanasDelEditor[0] ?? lunesInicial;
+    /* Issue #106: «Por semana» abre en la primera semana editable QUE TENGA un cambio guardado de este hábito, para que lo guardado salga marcado (como al abrir
+       el hábito, issue #95); sin ninguno, en la primera semana editable. Antes abría siempre en la primera y, al pasar de «Siempre» a «Por semana», el cambio
+       guardado en otra semana no se veía. */
+    const conCambios = primeraSemanaConCambiosPropios(preferencias.get(habitoEnEdicion.habitoId)?.dateOverrides, semanasDelEditor, hoyDelEditor);
+    const primera = conCambios ?? semanasDelEditor[0] ?? lunesInicial;
     setAlcance('semana');
     setSemanaVista(primera);
     semanaPedidaRef.current = primera;

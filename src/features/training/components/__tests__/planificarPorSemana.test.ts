@@ -469,6 +469,66 @@ describe('lo guardado por semana sale marcado (issue #95)', () => {
   });
 });
 
+describe('«Por semana» abre en la semana con el cambio guardado (issue #106)', () => {
+  it('al pasar de «Siempre» a «Por semana» vuelve a la semana del cambio, no a la primera', async () => {
+    mockPreferencias.mockResolvedValue([preferencia({ dateOverrides: [fechaPropia('2026-11-21')] })]);
+    raiz = await montar();
+    await abrir(raiz);
+    expect(selector(raiz).props.rotulo).toBe('Semana del 16 al 22 nov');
+    await alcance(raiz, 'siempre');
+    expect(raiz.root.findAll(n => n.type === SelectorDeSemana)).toHaveLength(0);
+    await alcance(raiz, 'semana');
+    expect(control(raiz)[0].props.valor).toBe('semana');
+    expect(selector(raiz).props.rotulo).toBe('Semana del 16 al 22 nov');
+    expect(selector(raiz).props.puedeAnterior).toBe(true);
+    expect(mockSemana).toHaveBeenLastCalledWith('h-jugo', '2026-11-16');
+  });
+
+  it('con varios cambios guardados abre en el primero que se puede editar', async () => {
+    mockPreferencias.mockResolvedValue([preferencia({ dateOverrides: [fechaPropia('2026-11-21'), fechaPropia('2026-11-10')] })]);
+    raiz = await montar();
+    await abrir(raiz);
+    await alcance(raiz, 'siempre');
+    await alcance(raiz, 'semana');
+    expect(selector(raiz).props.rotulo).toBe('Semana del 9 al 15 nov');
+    expect(mockSemana).toHaveBeenLastCalledWith('h-jugo', '2026-11-09');
+  });
+
+  it('un cambio de hoy o de un día que ya pasó no cuenta: abre en la primera semana, como siempre', async () => {
+    mockPreferencias.mockResolvedValue([preferencia({ dateOverrides: [fechaPropia('2026-11-04')] })]);
+    raiz = await montar();
+    await abrir(raiz);
+    expect(control(raiz)[0].props.valor).toBe('siempre');
+    await alcance(raiz, 'semana');
+    expect(selector(raiz).props.rotulo).toBe('Semana del 2 al 8 nov');
+    expect(mockSemana).toHaveBeenLastCalledWith('h-jugo', '2026-11-02');
+  });
+
+  it('sin ningún cambio guardado abre en la primera semana editable, como hoy', async () => {
+    raiz = await montar();
+    await abrir(raiz);
+    await alcance(raiz, 'semana');
+    expect(selector(raiz).props.rotulo).toBe('Semana del 2 al 8 nov');
+    expect(mockSemana).toHaveBeenLastCalledWith('h-jugo', '2026-11-02');
+  });
+
+  it('lo que se acaba de guardar en esta misma sesión también cuenta: «Siempre» y de vuelta, y sale marcado', async () => {
+    raiz = await montar();
+    await abrir(raiz);
+    await alcance(raiz, 'semana');
+    await irA(raiz, 'siguiente');
+    // El servidor, tras guardar, ya trae esa fecha con fila propia (`dateOverrides`) y la semana con el día cambiado.
+    mockPreferencias.mockResolvedValue([preferencia({ dateOverrides: [fechaPropia('2026-11-14')] })]);
+    mockSemana.mockImplementation(async (_h, lunes) => semanaDe(lunes, { SATURDAY: { customDate: true, customTime: true, triggerTime: '21:30:00' } }));
+    await act(async () => { mockRueda.mock.lastCall![0].onCambiar(21, 30); });
+    await guardar(raiz);
+    await alcance(raiz, 'siempre');
+    await alcance(raiz, 'semana');
+    expect(selector(raiz).props.rotulo).toBe('Semana del 9 al 15 nov');
+    expect(filaDeDias().marcaDelDia!('SÁB')).toEqual({ largo: 'Cambiado solo esta semana' });
+  });
+});
+
 describe('menos texto: ya no hay párrafos de ayuda', () => {
   it('«Siempre» no lleva «Toca un día para darle su propia hora…» ni «Solo sáb, todas las semanas…»', async () => {
     raiz = await montar();

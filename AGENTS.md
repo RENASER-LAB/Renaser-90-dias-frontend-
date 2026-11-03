@@ -2066,6 +2066,19 @@ los quita. Fallaban tres cosas, todas en `renasia/utils/propuestas` (ahora con l
 * **Pruebas:** `respaldosDelBackend.test.ts` (con los textos reales de `B4-SER-respuestas.txt`: ritual, kilómetros, última comida, dos seguidos, en medio, tildes, Hoy y
   Training, y el historial repetido), `respaldosEnElChat.test.ts` (el hook: llegada con dos respaldos seguidos y relectura del historial) y `propuestas.test.ts`.
 
+## Corrección — 2026-11-02 — Training → Planificar: «Por semana» abre en la semana con el cambio guardado, también al volver de «Siempre» (issue #106)
+
+El dueño pidió que lo guardado por semana «salga marcado» (issue #95). Al abrir un hábito ya abría en «Por semana», en la semana con el cambio; pero al pasar de «Siempre»
+a «Por semana» con el editor abierto (`cambiarAlcance`) abría SIEMPRE en la primera semana, y si el cambio estaba en otra el punto no se veía. Hallado en el E2E del
+02/11 con `planificacion/lo-guardado-sale-marcado`. Lo que cambia y nada más:
+* **Regla única** (al abrir el hábito y al pasar de «Siempre» a «Por semana»): «Por semana» abre en **la primera semana editable que tenga un cambio guardado** de ese hábito
+  (`primeraSemanaConCambiosPropios`: las fechas con fila propia de `dateOverrides`, sin contar hoy ni lo pasado); **si no hay ninguna, en la primera editable**, como siempre.
+* **Cuenta lo guardado en la misma sesión:** tras guardar, el editor relee las preferencias, así que «Siempre» y de vuelta ya abre en esa semana.
+* **No cambia** el resto del editor, lo que se guarda ni ningún pedido al servidor (la semana se lee con la misma lectura de siempre).
+* **Pruebas:** `planificarPorSemana.test.ts` («Por semana» abre en la semana con el cambio guardado): vuelve a la semana del cambio, con varios cambios abre en el primero editable,
+  un cambio de hoy o pasado no cuenta, sin cambios abre en la primera, y lo recién guardado también cuenta. Maestro `planificacion/lo-guardado-sale-marcado` ajustado a la regla.
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
+
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
 Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel especializado en React Native, Expo y TypeScript. Al crear, refactorizar o modificar cualquier pantalla o componente, debes cumplir OBLIGATORIAMENTE con los siguientes estándares:
