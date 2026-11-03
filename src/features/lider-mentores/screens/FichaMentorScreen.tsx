@@ -4,6 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { BotonPrincipal, BotonSecundario, TituloDeSeccion } from '../../../components/Legible';
 import { useTheme } from '../../../theme/ThemeContext';
+import { FilaDeLista, ListaDeFilas } from '../../paneles-de-rol/components/FilaDeLista';
 import { CantidadesPorColor } from '../../semaforo/components/CantidadesPorColor';
 import { CargandoLectura, FalloDeLectura } from '../../semaforo/components/EstadoDeLectura';
 import { obtenerFicha } from '../api/liderMentoresApi';
@@ -31,28 +32,52 @@ const TIPOS: TipoObservacion[] = ['RECONOCIMIENTO', 'SUGERENCIA', 'ALERTA'];
  *
  * Una acción principal, «Escribirle» (abre el chat directo, no manda nada solo); las tres de
  * observación debajo, con borde.
+ *
+ * **D-318 (2026-11-03, pedido del dueño: «¿de los mentores puede ver qué hábitos hace o no, como con los aprendices?»):** si el
+ * mentor o la guía lleva su propio programa y ya lo activó (`haceSuPrograma`, que dice el servidor), arriba va una fila
+ * «Sus días y evidencias ›» que abre sus 7 días (`PersonaDelLiderScreen`, la misma de un aprendiz). Si no lo hace, o el servidor es
+ * anterior y no lo dice, la fila no se dibuja.
  */
 export function FichaMentorScreen({
   mentorId,
   aviso,
   onVolver,
   onObservar,
+  onAbrirDias,
+  enSegundoPlano = false,
 }: {
   mentorId: string;
   /** Lo que pasó con la última observación guardada, para decirlo al volver. */
   aviso: string | null;
   onVolver: () => void;
   onObservar: (tipo: TipoObservacion, nombre: string) => void;
+  /** Abre sus días y evidencias; recibe lo que ya se sabe de él para tenerlo a la vista antes de que llegue su semana. */
+  onAbrirDias?: (mentor: { userId: string; nombre: string; avatarUrl: string | null }) => void;
+  /** La ficha sigue montada, oculta, bajo los días del mentor: no atiende el retroceso del sistema (lo atiende la de arriba). */
+  enSegundoPlano?: boolean;
 }) {
   const pedir = useCallback(() => obtenerFicha(mentorId), [mentorId]);
   const lectura = useLecturaDelLider(pedir, `${mentorId}|${aviso ?? ''}`);
   const ficha = lectura.datos;
 
   return (
-    <MarcoDelLider titulo={ficha?.mentor.fullName ?? 'Mentor'} onVolver={onVolver}>
+    <MarcoDelLider titulo={ficha?.mentor.fullName ?? 'Mentor'} onVolver={onVolver} atrasActivo={!enSegundoPlano}>
       {aviso ? <Linea fuerte>{aviso}</Linea> : null}
       {ficha ? (
-        <Ficha ficha={ficha} onObservar={tipo => onObservar(tipo, ficha.mentor.fullName)} />
+        <Ficha
+          ficha={ficha}
+          onObservar={tipo => onObservar(tipo, ficha.mentor.fullName)}
+          onAbrirDias={
+            ficha.haceSuPrograma === true && onAbrirDias
+              ? () =>
+                  onAbrirDias({
+                    userId: ficha.mentor.userId,
+                    nombre: ficha.mentor.fullName,
+                    avatarUrl: ficha.mentor.avatarUrl ?? null,
+                  })
+              : undefined
+          }
+        />
       ) : lectura.fallo ? (
         <FalloDeLectura fallo={lectura.fallo} detalle={lectura.detalle} que="la ficha del mentor" onReintentar={lectura.recargar} />
       ) : (
@@ -62,7 +87,16 @@ export function FichaMentorScreen({
   );
 }
 
-function Ficha({ ficha, onObservar }: { ficha: FichaApi; onObservar: (tipo: TipoObservacion) => void }) {
+function Ficha({
+  ficha,
+  onObservar,
+  onAbrirDias,
+}: {
+  ficha: FichaApi;
+  onObservar: (tipo: TipoObservacion) => void;
+  /** Ausente = el mentor no hace su programa (o el servidor no lo dice): no hay fila. */
+  onAbrirDias?: () => void;
+}) {
   const { c } = useTheme();
   const mentor = ficha.mentor;
   const pendientes = pendientesEnPalabras(mentor);
@@ -78,6 +112,17 @@ function Ficha({ ficha, onObservar }: { ficha: FichaApi; onObservar: (tipo: Tipo
     <>
       <Linea>{subtitulo(ficha)}</Linea>
       {!ficha.accountActive ? <Linea fuerte>Su cuenta está suspendida.</Linea> : null}
+
+      {onAbrirDias ? (
+        <ListaDeFilas>
+          <FilaDeLista
+            titulo="Sus días y evidencias"
+            onPress={onAbrirDias}
+            etiquetaAccesible={`Sus días y evidencias. Abre los siete días de ${mentor.fullName} con sus hábitos y lo que subió.`}
+            primera
+          />
+        </ListaDeFilas>
+      ) : null}
 
       <View style={estilos.seccion}>
         <TituloDeSeccion detalle={gruposEnPalabras(mentor)}>Sus grupos</TituloDeSeccion>

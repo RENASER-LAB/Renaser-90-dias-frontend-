@@ -17,10 +17,17 @@ import { useOcultarBarraAlDesplazar } from '../../../navigation/barraAlDesplazar
 export function MarcoDelLider({
   titulo,
   onVolver,
+  atrasActivo = true,
   children,
 }: {
   titulo: string;
   onVolver: () => void;
+  /**
+   * Si el retroceso del sistema lo atiende este marco. Se apaga cuando la pantalla sigue montada, oculta, mientras se mira otra
+   * encima (la ficha del mentor bajo los días del mentor): sin eso, al volver a dibujarse volvería a registrar su retroceso por
+   * encima del de la pantalla de arriba. Apagado, la flecha de la barra sigue funcionando.
+   */
+  atrasActivo?: boolean;
   children: React.ReactNode;
 }) {
   const barraAlDesplazar = useOcultarBarraAlDesplazar();
@@ -30,7 +37,7 @@ export function MarcoDelLider({
   useSystemBackHandler(() => {
     onVolver();
     return true;
-  });
+  }, atrasActivo);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>

@@ -2335,6 +2335,40 @@ E2E del 03/11 con la cuenta de las formaciones (3 objetivos, la semana y 21 acci
 * **Pruebas:** `textosDelOchentaVeinte`, `hojaOchentaVeinte`, `planPrincipal`, `cierreEnPlan`, `contextoDeLaEvidencia`, `accionesDeLosObjetivosEnTraining`, `diaElegidoDelCalendario`, `lineaDelAutorEnElMuro` y
   `muroConLetraGrande`. **Sin emulador en esta corrida:** el aspecto en pantalla (el punto de hoy, el círculo del calendario, los íconos del Muro con letra grande) se confirma con capturas.
 
+## Cambio por pedido del dueño — 2026-11-03 — el líder ve los días de sus mentores (D-318, backend #74)
+
+Textual: «¿De los mentores puede ver qué hábitos hace o no, como con los aprendices? … Sí, procede.» Hasta hoy el líder de mentores (y
+Administración y Alquimista) veía de un **aprendiz** sus 7 días con cada hábito, su evidencia y lo que escribió (`PersonaDelLiderScreen`), y de
+un **mentor** solo sus grupos, consultas, evaluación y observaciones. Lo que cambia y nada más (solo JavaScript; el servidor lo decide, la app no
+calcula nada):
+* **La ficha del mentor** (`FichaMentorScreen`, «Mis mentores» → un mentor) suma arriba, bajo el subtítulo, **una fila «Sus días y evidencias ›»**
+  (`FilaDeLista` de 56, igual que las de «Mis mentores»): **solo si el servidor dice `haceSuPrograma`** en `GET /leadership/mentors/{id}` (el mentor
+  o la guía lleva su programa y ya lo activó). Con `false`, `null`, sin el campo (un servidor anterior) o con la cuenta suspendida, la fila no se
+  dibuja y la ficha queda como estaba (`fichaSchema.haceSuPrograma`, opcional).
+* **Al tocarla** se abre `PersonaDelLiderScreen` con `grupoId = null` y `desdeTodos`: la semana, el Radar, el tiempo libre, los cierres, el 80/20 y
+  el diagnóstico se piden por **`/leadership/people/{id}/…`**, la puerta sin grupo que ya usaba «Todos los aprendices». Es la misma pantalla de un
+  aprendiz: «¿Programó?», «¿Subió evidencias?», los 7 días con sus hábitos hechos y pendientes, sus evidencias, lo que escribió, sus acciones y las
+  flechas de semana. Cambia solo el encabezado: en lugar del grupo dice **«Su propio programa»**, y debajo «Mentor · No se mide en el semáforo» con
+  su % (el mentor **no cuenta para el semáforo** de ningún grupo; el servidor lo manda con `color: NO_SE_MIDE`). Ese encabezado ahora no dibuja el
+  renglón del grupo si no hay nada que decir (nada de líneas vacías).
+* **Sin «Avisar a su mentor»** (prop nueva `avisarAlMentor`, por defecto `true`: él es el mentor). «Escribirle» sí. Un 404 al abrir sus días (dejó su
+  programa entre la ficha y el toque) dice «Sus días ya no están disponibles para ver.».
+* **El atrás del sistema y la flecha suben un nivel:** sus días → ficha del mentor → padrón. La ficha queda montada, oculta (`display: none`), bajo
+  los días, como la lista de «Todos los aprendices» bajo la persona: al volver conserva su lugar y no se relee. Para eso `MarcoDelLider` suma la prop
+  `atrasActivo` (por defecto `true`): la ficha oculta apaga su retroceso para que no vuelva a registrarse por encima del de los días al redibujarse.
+  `LiderMentoresScreen` suma la vista `dias` y conserva al ir y volver el aviso de la última observación guardada.
+* **La lista de un grupo no cambia:** el mentor o la guía de ese grupo sigue saliendo con «No se mide en el semáforo» y su %, sin barras de colores.
+  **Tocarlo abre sus 7 días de verdad** por la ruta del grupo (`/groups/{g}/people/{p}/week`), con el mismo armado que un aprendiz. Por eso la línea de
+  la semana («N cumplidos · N sin cumplir · N pendientes») ya no se esconde para quien «no se mide» cuando la semana trae días (con un servidor
+  anterior que los mandara vacíos, sigue sin dibujarse: ceros que parecerían incumplimiento).
+* **No cambian:** los demás papeles ni pantallas del líder, Administración, los cinco tabs, el semáforo del grupo, los permisos (los decide el
+  servidor: un MENTOR nunca ve los días de otro, 403) ni ningún texto fuera de los dichos. Sin dependencias, animaciones ni código nativo.
+* **Pruebas:** Jest `diasDelMentor` (la fila solo con `haceSuPrograma`, 56 de alto, lo que entrega al tocarla, la semana por la puerta sin grupo y
+  sus lecturas hermanas, los días y su resumen, sin «Avisar a su mentor» aunque el servidor mandara un mentor, el 404, el atrás un nivel por vez sin
+  releer la ficha, el contrato) y `delGrupoALaPersona` (el mentor del grupo abre sus días por la ruta del grupo); `tsc` limpio.
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire) **y el backend con D-318 antes**: contra uno anterior la ficha no
+  trae `haceSuPrograma` y la fila no se dibuja; todo queda como estaba.
+
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
 Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel especializado en React Native, Expo y TypeScript. Al crear, refactorizar o modificar cualquier pantalla o componente, debes cumplir OBLIGATORIAMENTE con los siguientes estándares:

@@ -106,6 +106,11 @@ export const fichaSchema = z
     timezone: z.string(),
     cutoffAt: z.string(),
     recentObservations: z.array(observacionSchema),
+    /**
+     * D-318 (2026-11-03): el mentor o la guía lleva su propio programa y ya lo activó, así que el líder le puede abrir sus días y
+     * evidencias. Opcional: un servidor anterior no lo manda y la fila «Sus días y evidencias» no se dibuja.
+     */
+    haceSuPrograma: z.boolean().nullish(),
   })
   .passthrough();
 
