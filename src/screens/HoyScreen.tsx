@@ -32,6 +32,7 @@ import { useCategoriasDeHabito } from '../features/habits/categorias/hooks/useCa
 import { useProgramaEnOtraFormacion } from '../features/formaciones/hooks/useProgramaEnOtraFormacion';
 import { sinHabitosEnLaFormacion } from '../features/home/utils/sinHabitosEnLaFormacion';
 import { useHabitoDelMomento } from '../features/habits/hooks/useHabitoDelMomento';
+import { TarjetaDeRedireccion } from '../features/home/components/TarjetaDeRedireccion';
 import { TarjetaHabitoYRadar } from '../features/home/components/TarjetaHabitoYRadar';
 import { dibujarLaTarjetaDeHabitos } from '../features/home/utils/dibujarLaTarjetaDeHabitos';
 import { useUltimaPublicacionMuro } from '../features/community/hooks/useUltimaPublicacionMuro';
@@ -86,7 +87,7 @@ export default function HoyScreen() {
   /* El hábito de ESTA hora para la primera tarjeta. Vive acá y no dentro de la tarjeta porque
      `useFocusEffect` tiene que correr con la pantalla montada, y porque el pull-to-refresh de
      Hoy también lo recarga. */
-  const { habito: habitoAhora, recargar: recargarHabitoAhora, registrosLeidos, registrosDeHoy } = useHabitoDelMomento();
+  const { habito: habitoAhora, recargar: recargarHabitoAhora, registrosLeidos, registrosDeHoy, claseDiaria } = useHabitoDelMomento();
   /* Spec 023: «Hábitos de hoy» es de la formación de la persona. Sin hábitos en su formación no se dibuja, y quien tiene su programa
      propio en OTRA formación que la activa ve una línea que lo dice en lugar de la tarjeta. */
   const categorias = useCategoriasDeHabito();
@@ -485,6 +486,19 @@ export default function HoyScreen() {
             inscrito={resumen?.inscrito}
             onAbrirMiRadar={() => (navigation as any).navigate('Yo', { abrirMiRadar: true })}
           />
+          )}
+
+          {/* «Clase diaria» (pedido del dueño, 2026-11-03): antes de la última evidencia, del tamaño de «Próximo evento»; solo redirige a la clase
+              de hoy en Training (`abrirHabitoId`, el mismo camino del aviso del teléfono). Sale de la lectura de hábitos que Hoy ya hace. */}
+          {claseDiaria && (
+            <TarjetaDeRedireccion
+              rotulo="Clase diaria"
+              icono="bookOpen"
+              titulo={claseDiaria.titulo}
+              linea={claseDiaria.linea}
+              accessibilityLabel={`Clase diaria: ${claseDiaria.titulo}, ${claseDiaria.linea}. Abrir`}
+              onPress={() => (navigation as any).navigate('Training', { abrirHabitoId: claseDiaria.habitoId })}
+            />
           )}
 
           {/* Última evidencia real del Muro: se omiten publicaciones de texto sin evidencia.
