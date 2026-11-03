@@ -27,8 +27,6 @@ export function useSellarTerminos() {
       versionId: string | null;
       /** Spec 039: el inicio de su programa que vio en «Mi aceptación» (`AAAA-MM-DD`); `null` si no había. */
       inicioVisto?: string | null;
-      /** Spec 039: la huella del cronograma que vio y aceptó al firmar; `null` si no firmó ninguno. */
-      huellaDelCronograma?: string | null;
     }): Promise<ResultadoDeSellar> => {
       const respuesta = await guardarCapitulo(mapearTerminos(true));
       if (respuesta.pendientes > 0) return { tipo: 'respuesta' };
@@ -36,7 +34,7 @@ export function useSellarTerminos() {
       if (!png || !datos.trazos) return { tipo: 'firma-no-capturada' };
       const firma = await guardarFirma({ flow: 'terminos', questionKey: PREGUNTA_FIRMA_TERMINOS.clave, pngBase64: png, trazosOriginales: datos.trazos });
       if (!firma.ok) return { tipo: 'firma' };
-      const constancia = await aceptarTerminos(datos.versionId, { inicioVisto: datos.inicioVisto ?? null, huellaDelCronograma: datos.huellaDelCronograma ?? null });
+      const constancia = await aceptarTerminos(datos.versionId, { inicioVisto: datos.inicioVisto ?? null });
       if (!constancia.ok) return constancia.cambiaron ? { tipo: 'cambiaron', mensaje: constancia.mensaje } : { tipo: 'constancia' };
       return { tipo: 'ok' };
     },
@@ -46,7 +44,7 @@ export function useSellarTerminos() {
 
 /**
  * Lo que cambió mientras leía, con las palabras del servidor cuando son las suyas (spec 039): «Los términos cambiaron mientras leías…», «Pasó la medianoche y tus
- * fechas cambiaron…» o «Tu cronograma cambió mientras leías…». Un texto que no habla de un cambio no se muestra tal cual: se usa el de siempre.
+ * fechas cambiaron…». Un texto que no habla de un cambio no se muestra tal cual: se usa el de siempre.
  */
 export function mensajeDeLoQueCambio(mensajeDelServidor: string | undefined): string {
   const texto = mensajeDelServidor?.trim() ?? '';

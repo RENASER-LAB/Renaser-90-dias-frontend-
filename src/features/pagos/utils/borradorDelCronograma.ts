@@ -40,14 +40,27 @@ export function leerFilas(filas: readonly FilaDeCuota[]): MontoDeFila[] {
   return filas.map(fila => ({ fila, fechaIso: ddMmAaaaAIso(fila.fecha), monto: montoDeTexto(fila.monto) }));
 }
 
+/**
+ * Cómo se valida el borrador. `permiteSinCuotas` (decisión 2026-11-02 pagos fuera de términos): el cronograma es asíncrono, así que al aceptar a alguien «Con cronograma»
+ * las cuotas son opcionales —solo la moneda es obligatoria— y Administración las registra después desde su ficha. Con eso prendido, una fila sin nada escrito no
+ * cuenta (se ignora); una a medias —fecha sin monto, o al revés— sigue siendo un error. Apagado (lo de siempre), hace falta al menos una cuota.
+ */
+export type OpcionesDelBorrador = { permiteSinCuotas?: boolean };
+
+/** Las filas que cuentan: con `permiteSinCuotas`, sin las que no tienen nada escrito. */
+function filasQueCuentan(pago: BorradorDePago, opciones?: OpcionesDelBorrador): FilaDeCuota[] {
+  return opciones?.permiteSinCuotas ? sinFilasVacias(pago.filas) : pago.filas;
+}
+
 /** Lo que falta o está mal del cronograma, en una frase; `null` si se puede mandar. Solo mira «con cronograma». */
-export function problemaDelBorrador(pago: BorradorDePago): string | null {
+export function problemaDelBorrador(pago: BorradorDePago, opciones?: OpcionesDelBorrador): string | null {
   if (pago.modo === null) return 'Elige cómo paga: sin cronograma o con cronograma.';
   if (pago.modo === 'sin') return null;
   if (pago.moneda === null) return 'Elige la moneda del cronograma.';
-  if (pago.filas.length === 0) return 'Agrega al menos una cuota.';
-  if (pago.filas.length > MAXIMO_DE_CUOTAS) return `Un cronograma lleva hasta ${MAXIMO_DE_CUOTAS} cuotas.`;
-  const filas = leerFilas(pago.filas);
+  const cuentan = filasQueCuentan(pago, opciones);
+  if (cuentan.length === 0) return opciones?.permiteSinCuotas ? null : 'Agrega al menos una cuota.';
+  if (cuentan.length > MAXIMO_DE_CUOTAS) return `Un cronograma lleva hasta ${MAXIMO_DE_CUOTAS} cuotas.`;
+  const filas = leerFilas(cuentan);
   if (filas.some(f => f.fechaIso === null)) return 'Cada cuota necesita su fecha.';
   if (filas.some(f => f.monto === null)) return 'Cada cuota necesita un monto mayor que cero, con hasta dos decimales.';
   return null;
@@ -63,12 +76,12 @@ export type PagoParaElPedido =
   | { mode: 'NONE' }
   | { mode: 'SCHEDULE'; currency: Moneda; installments: Array<{ dueDate: string; amount: number }> };
 
-export function paraElPedido(pago: BorradorDePago): PagoParaElPedido | null {
-  if (problemaDelBorrador(pago) !== null) return null;
+export function paraElPedido(pago: BorradorDePago, opciones?: OpcionesDelBorrador): PagoParaElPedido | null {
+  if (problemaDelBorrador(pago, opciones) !== null) return null;
   if (pago.modo === 'sin') return { mode: 'NONE' };
   const moneda = pago.moneda;
   if (moneda === null) return null;
-  const cuotas = leerFilas(pago.filas).flatMap(f => (f.fechaIso !== null && f.monto !== null ? [{ dueDate: f.fechaIso, amount: f.monto }] : []));
+  const cuotas = leerFilas(filasQueCuentan(pago, opciones)).flatMap(f => (f.fechaIso !== null && f.monto !== null ? [{ dueDate: f.fechaIso, amount: f.monto }] : []));
   return { mode: 'SCHEDULE', currency: moneda, installments: cuotas };
 }
 

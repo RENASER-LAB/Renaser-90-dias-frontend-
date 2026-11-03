@@ -24,16 +24,8 @@ export const versionDeTerminosSchema = z
   .passthrough();
 
 /**
- * El cronograma de pagos que se firma junto con los términos (spec 039): moneda, cuotas con la forma de «Mi ingreso» (`dueDate`, `amount`, `status`; cada una se lee
- * con `leerCuota`, y una que no se entiende se pierde ELLA) y la huella que la app devuelve al firmar. Sin huella no hay nada que firmar: el cronograma se pierde.
- */
-export const cronogramaDelAcuerdoSchema = z
-  .object({ currency: z.string().nullish(), installments: z.array(z.unknown()).catch([]), fingerprint: z.string().min(1) })
-  .passthrough();
-
-/**
  * «Mi aceptación» del Acuerdo de transformación (spec 039), llena por el servidor: el nombre completo, el programa y las fechas (nulas si no hay un programa que
- * prometer). `schedule` solo viene en el primer ingreso de quien tiene un cronograma por firmar.
+ * prometer). Nunca trae el cronograma de pagos: no va en los términos (decisión 2026-11-02 pagos fuera de términos).
  */
 export const acuerdoSchema = z
   .object({
@@ -42,13 +34,12 @@ export const acuerdoSchema = z
     startDate: z.string().nullish(),
     endDate: z.string().nullish(),
     started: z.boolean().catch(false),
-    schedule: cronogramaDelAcuerdoSchema.nullish().catch(null),
   })
   .passthrough();
 
 /** Lo que se le mostró en «Mi aceptación» cuando aceptó (spec 039); ausente en lo aceptado antes. */
 export const acuerdoAceptadoSchema = z
-  .object({ program: z.string().nullish(), startDate: z.string().nullish(), endDate: z.string().nullish(), scheduleSigned: z.boolean().catch(false) })
+  .object({ program: z.string().nullish(), startDate: z.string().nullish(), endDate: z.string().nullish() })
   .passthrough();
 
 export const terminosDeMiFormacionSchema = z
@@ -113,7 +104,6 @@ export const constanciaSchema = z
     program: z.string().nullish(),
     startDate: z.string().nullish(),
     endDate: z.string().nullish(),
-    scheduleSigned: z.boolean().catch(false),
   })
   .passthrough();
 

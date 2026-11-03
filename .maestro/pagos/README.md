@@ -15,6 +15,8 @@ producción). Cada archivo dice arriba su precondición y su cuenta (`# cuenta: 
 | `07-sin-pago-anotado-no-hay-fila` | aprendiz | quien no tiene nada anotado no ve «Mi ingreso» y Yo queda como siempre |
 | `08-recordatorios-de-pago` | aprendiz | Yo → Alarmas → «Recordatorios de pago» y la fila «Recordatorios de pago ›» de «Mi ingreso» (el mismo control) |
 | `09-el-recordatorio-suena-y-abre-mi-ingreso` | aprendiz | PROBAR LOS RECORDATORIOS: una cuota que vence hoy, la hora del aviso en el próximo múltiplo de 5 minutos, y tocar la alarma abre «Mi ingreso» |
+| `10-aceptar-con-cronograma-sin-cuotas` | admin | «Con cronograma» solo con la moneda: ya no pide cuotas (decisión 2026-11-02, los pagos son asíncronos) y la frase dice «… y con cronograma» |
+| `11-mi-ingreso-con-cronograma-sin-cuotas` | aprendiz | «Tu cronograma de pagos aparecerá aquí cuando Administración lo registre.»: tarjeta corta, sin lista ni confirmación, y la fila de Yo dice «Aún no hay cuotas registradas» |
 
 `comun-abrir-mi-ingreso.yaml` solo lo incluyen los demás flujos. Se corre de a uno: `.maestro/correr.sh .maestro/pagos/<flujo>.yaml`.
 
@@ -25,6 +27,7 @@ La forma más rápida de sembrar es por la API con la sesión de Administración
 - **Con cronograma** (`05`, `08`, `09`): `{ "mode": "SCHEDULE", "currency": "USD", "installments": [ {"dueDate": "<hace un mes>", "amount": 1000}, {"dueDate": "<hoy>", "amount": 1000}, {"dueDate": "<en un mes>", "amount": 1000} ] }`
   y marcar la primera «PAID» (`PUT …/cuotas/{id}/estado` con `{"status": "PAID"}`). El `09` necesita una cuota que **venza hoy**.
 - **Sin cronograma** (`06`): `{ "mode": "NONE" }`.
+- **Con cronograma y sin cuotas** (`11`): `{ "mode": "SCHEDULE", "currency": "PEN", "installments": [] }`.
 - **Sin nada anotado** (`04`, `07`): cuentas que se aceptaron sin `payment` o que nunca se tocaron.
 
 ## Lo que no se puede probar con Maestro

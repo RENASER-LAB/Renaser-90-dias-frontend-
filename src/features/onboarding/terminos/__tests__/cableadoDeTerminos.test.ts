@@ -17,20 +17,23 @@ describe('los términos editables están conectados', () => {
     expect(navegador).toContain('<MainTabs key={llaveDeLasVistas(user?.id, formacion)} />');
   });
 
+  // decisión 2026-11-02 pagos fuera de términos
   it('la pantalla de Términos del onboarding usa el texto del servidor, con el de la app de respaldo, y manda la versión que leyó', () => {
     const pantalla = fuente('src/features/onboarding/screens/TerminosScreen.tsx');
     expect(pantalla).toContain('useMisTerminos()');
     expect(pantalla).toContain('TERMINOS_DE_LA_APP');
     expect(pantalla).toContain('versionId');
     expect(pantalla).toContain('<ContenidoDeLosTerminos');
-    // Spec 039: «Mi aceptación» y, solo con cronograma, «Mi cronograma de pagos»; el pedido lleva el inicio visto y la huella.
+    // Spec 039: «Mi aceptación»; el pedido lleva el inicio visto. Nunca el cronograma de pagos (decisión 2026-11-02 pagos fuera de términos).
     expect(pantalla).toContain('<MiAceptacion acuerdo={acuerdo} />');
-    expect(pantalla).toContain('<MiCronogramaDePagos');
     expect(pantalla).toContain('inicioVisto: acuerdo?.inicio ?? null');
-    expect(pantalla).toContain('huellaDelCronograma: cronograma && cronogramaAceptado ? cronograma.huella : null');
+    expect(pantalla).not.toContain('MiCronogramaDePagos');
+    expect(pantalla).not.toContain('huellaDelCronograma');
+    expect(pantalla).not.toContain('cronogramaAceptado');
     expect(fuente('src/features/onboarding/terminos/hooks/useSellarTerminos.ts')).toContain('aceptarTerminos(datos.versionId,');
   });
 
+  // decisión 2026-11-02 pagos fuera de términos
   it('quien vuelve a aceptar (spec 039) ve «Mi aceptación» y NUNCA el cronograma: no manda ninguna huella', () => {
     const pantalla = fuente('src/features/onboarding/terminos/screens/TerminosActualizadosScreen.tsx');
     expect(pantalla).toContain('<MiAceptacion acuerdo={acuerdo} />');

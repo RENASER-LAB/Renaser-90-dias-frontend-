@@ -1,6 +1,6 @@
 /**
  * Spec 039 (Acuerdo de transformación): lo que se le mostró a la persona en «Mi aceptación» cuando aceptó queda a la vista — en Yo → Mi onboarding → Términos y condiciones
- * (ella) y en la constancia de su ficha (Administración) —: el programa, el inicio, el fin y si firmó su cronograma de pagos con los términos. Lo aceptado antes de esa spec
+ * (ella) y en la constancia de su ficha (Administración) —: el programa, el inicio, el fin (el cronograma de pagos ya no se firma con los términos: decisión 2026-11-02 pagos fuera de términos). Lo aceptado antes de esa spec
  * no lo guardó y se ve igual que siempre.
  */
 import { afterEach, describe, expect, it, jest } from '@jest/globals';
@@ -49,8 +49,9 @@ afterEach(() => {
   mockLeerConstancia.mockReset();
 });
 
+// decisión 2026-11-02 pagos fuera de términos
 describe('releer lo que acepté', () => {
-  it('con lo que se le mostró: el programa, el periodo y que firmó su cronograma', () => {
+  it('con lo que se le mostró: el programa y el periodo; aunque un servidor de antes diga `scheduleSigned`, no se dice nada del cronograma', () => {
     const aceptados = terminosAceptadosSchema.parse({
       version: VERSION,
       acceptedAt: '2026-11-02T20:00:00Z',
@@ -62,10 +63,10 @@ describe('releer lo que acepté', () => {
     const dichos = textos(raiz!);
     expect(dichos).toContain('Formación RENASER · 90 días');
     expect(dichos).toContain('Del 3 de noviembre de 2026 al 31 de enero de 2027');
-    expect(dichos).toContain('Firmaste tu cronograma de pagos con los términos.');
+    expect(dichos.join(' ')).not.toContain('cronograma');
   });
 
-  it('sin cronograma firmado no lo dice; y lo aceptado antes de la spec 039 se ve como siempre', () => {
+  it('con `scheduleSigned: false` tampoco lo dice; y lo aceptado antes de la spec 039 se ve como siempre', () => {
     const sinCronograma = terminosAceptadosSchema.parse({
       version: VERSION,
       acceptedAt: '2026-11-02T20:00:00Z',
@@ -89,6 +90,7 @@ describe('releer lo que acepté', () => {
   });
 });
 
+// decisión 2026-11-02 pagos fuera de términos
 describe('la constancia en la ficha de la persona (Administración)', () => {
   const montar = async (lista: unknown[]) => {
     mockLeerConstancia.mockResolvedValue(lista);
@@ -97,7 +99,7 @@ describe('la constancia en la ficha de la persona (Administración)', () => {
     });
   };
 
-  it('dice qué aceptó, el programa y las fechas que firmó y que firmó el cronograma', async () => {
+  it('dice qué aceptó, el programa y las fechas que firmó; no dice nada del cronograma aunque un servidor de antes mande `scheduleSigned`', async () => {
     await montar([
       {
         formation: 'ESCUELA',
@@ -114,11 +116,11 @@ describe('la constancia en la ficha de la persona (Administración)', () => {
     expect(dichos.some(t => t.includes('versión 2'))).toBe(true);
     expect(dichos).toContain('Programa: Formación RENASER · 90 días');
     expect(dichos).toContain('Del 3 de noviembre de 2026 al 31 de enero de 2027');
-    expect(dichos).toContain('Firmó su cronograma de pagos con los términos.');
+    expect(dichos.join(' ')).not.toContain('cronograma');
   });
 
   it('una aceptación de antes de la spec 039 solo dice qué versión aceptó', async () => {
-    await montar([{ formation: 'ESCUELA', number: 1, acceptedAt: '2026-09-01T15:00:00Z', signatureUrl: null, scheduleSigned: false }]);
+    await montar([{ formation: 'ESCUELA', number: 1, acceptedAt: '2026-09-01T15:00:00Z', signatureUrl: null }]);
     const dichos = textos(raiz!).join(' ');
     expect(dichos).toContain('versión 1');
     expect(dichos).not.toContain('Programa:');

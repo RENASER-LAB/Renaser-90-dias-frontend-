@@ -4,6 +4,7 @@ import type { MiIngreso, PagosDeLaPersona } from '../api/pagosSchemas';
 import {
   AVISO_DE_CAMBIO,
   detalleDeLaFila,
+  DETALLE_SIN_CUOTAS,
   hayAlgoQueMostrar,
   hayCuotasPendientes,
   loQueFaltaParaConfirmar,
@@ -99,6 +100,30 @@ describe('confirmar', () => {
     expect(loQueFaltaParaConfirmar(true, '   ')).toBe('Escribe tu nombre.');
     expect(loQueFaltaParaConfirmar(true, 'a'.repeat(121))).toMatch(/120/);
     expect(loQueFaltaParaConfirmar(true, ' Beto ')).toBeNull();
+  });
+});
+
+// decisión 2026-11-02 pagos fuera de términos
+describe('con cronograma pero sin cuotas todavía: lo registra Administración después', () => {
+  it('la vista es una tarjeta corta: dice que aparecerá cuando Administración lo registre; no hay lista, ni casilla de confirmar', () => {
+    const vista = vistaDelPago(conCronograma([], SIN_CONFIRMAR), HOY);
+    expect(vista).toEqual({
+      tipo: 'sin-cuotas',
+      titulo: 'Tu cronograma de pagos',
+      detalle: 'Tu cronograma de pagos aparecerá aquí cuando Administración lo registre.',
+    });
+    expect(DETALLE_SIN_CUOTAS).toBe('Tu cronograma de pagos aparecerá aquí cuando Administración lo registre.');
+  });
+
+  it('en cuanto Administración registra una cuota, es el cronograma de siempre', () => {
+    expect(vistaDelPago(conCronograma([cuota('a', '2026-11-15', false)], SIN_CONFIRMAR), HOY).tipo).toBe('cronograma');
+  });
+
+  it('la fila de Yo no dice «Todas tus cuotas figuran pagadas» (no hay ninguna) ni habla de pendientes; y no hay nada que recordar', () => {
+    const sinCuotas = conCronograma([], SIN_CONFIRMAR);
+    expect(detalleDeLaFila({ pasos: [], pagos: sinCuotas })).toBe('Aún no hay cuotas registradas');
+    expect(hayAlgoQueMostrar({ pasos: [], pagos: sinCuotas })).toBe(true);
+    expect(hayCuotasPendientes(sinCuotas)).toBe(false);
   });
 });
 

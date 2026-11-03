@@ -137,7 +137,7 @@ export function usePersistenciaOnboarding() {
       await onboardingApi.aceptarHito('TERMINOS', versionId, acuerdo);
       return { ok: true };
     } catch (error) {
-      /* Spec 039: el 409 trae qué cambió —los términos, la fecha de inicio (pasó la medianoche) o el cronograma—, y se dice con las palabras del servidor. */
+      /* Spec 039: el 409 trae qué cambió —los términos o la fecha de inicio (pasó la medianoche)—, y se dice con las palabras del servidor. */
       if (error instanceof ApiError && error.esConflicto) return { ok: false, cambiaron: true, mensaje: error.message };
       return { ok: false, cambiaron: false };
     }

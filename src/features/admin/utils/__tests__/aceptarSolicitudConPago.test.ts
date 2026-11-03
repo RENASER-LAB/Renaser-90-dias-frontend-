@@ -73,12 +73,18 @@ describe('de dónde parte el pago', () => {
   });
 });
 
+// decisión 2026-11-02 pagos fuera de términos
 describe('qué falta del cronograma', () => {
-  it('con cronograma, la moneda y al menos una cuota completa', () => {
+  it('con cronograma pide la moneda; las cuotas son opcionales (Administración las registra después), pero una a medias no pasa', () => {
     const b = alElegirPago(borradorInicial(OPCIONES), { modo: 'con', moneda: null, filas: [] });
     expect(loQueFalta(b, 'una', OPCIONES)).toBe('Elige la moneda del cronograma.');
-    expect(loQueFalta(alElegirPago(b, { ...b.pago, moneda: 'PEN' }), 'una', OPCIONES)).toBe('Agrega al menos una cuota.');
+    // Sin ninguna cuota se puede aceptar: ya no dice «Agrega al menos una cuota.».
+    expect(loQueFalta(alElegirPago(b, { ...b.pago, moneda: 'PEN' }), 'una', OPCIONES)).toBeNull();
+    // Una fila que se agregó y no se llenó no cuenta como cuota.
+    expect(loQueFalta(conFilas(b, 'PEN', [['', '']]), 'una', OPCIONES)).toBeNull();
+    // A medias sí es un error: lo escrito tiene que estar completo.
     expect(loQueFalta(conFilas(b, 'PEN', [['', '10']]), 'una', OPCIONES)).toBe('Cada cuota necesita su fecha.');
+    expect(loQueFalta(conFilas(b, 'PEN', [['15/11/2026', '']]), 'una', OPCIONES)).toMatch(/monto mayor que cero/);
     expect(loQueFalta(conFilas(b, 'PEN', [['15/11/2026', '10']]), 'una', OPCIONES)).toBeNull();
   });
 
@@ -106,6 +112,22 @@ describe('lo que se manda', () => {
     const aprendiz = conFilas(borradorInicial(OPCIONES), 'USD', [['15/11/2026', '1000'], ['15/12/2026', '1000']]);
     expect(pagoParaElPedido(aprendiz, 'TRAINEE', OPCIONES)).toEqual(cuerpo);
     expect(pagoParaElPedido(aprendiz, 'MENTOR', OPCIONES)).toEqual(cuerpo);
+  });
+
+  // decisión 2026-11-02 pagos fuera de términos
+  it('«Con cronograma» sin cuotas manda SCHEDULE con la moneda y ninguna cuota (también para el personal); una fila sin llenar no se manda', () => {
+    const cuerpo = { mode: 'SCHEDULE', currency: 'PEN', installments: [] };
+    const sinCuotas = conFilas(borradorInicial(OPCIONES), 'PEN', []);
+    expect(pagoParaElPedido(sinCuotas, 'TRAINEE', OPCIONES)).toEqual(cuerpo);
+    expect(pagoParaElPedido(sinCuotas, 'MENTOR', OPCIONES)).toEqual(cuerpo);
+    expect(pagoParaElPedido(conFilas(borradorInicial(OPCIONES), 'PEN', [['', '']]), 'TRAINEE', OPCIONES)).toEqual(cuerpo);
+    expect(eleccionParaElPedido(sinCuotas, OPCIONES, 'TRAINEE')?.pago).toEqual(cuerpo);
+    // y si escribió una cuota, esa sí viaja, sin las filas vacías
+    expect(pagoParaElPedido(conFilas(borradorInicial(OPCIONES), 'PEN', [['', ''], ['15/11/2026', '300']]), 'TRAINEE', OPCIONES)).toEqual({
+      mode: 'SCHEDULE',
+      currency: 'PEN',
+      installments: [{ dueDate: '2026-11-15', amount: 300 }],
+    });
   });
 
   it('sin elegir, o con el cronograma a medias, no se manda nada', () => {

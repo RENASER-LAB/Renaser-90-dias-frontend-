@@ -24,9 +24,9 @@ import { explicacionDeLaAceptacion, titularDeLaAceptacion } from '../utils/pendi
  * Es la misma pantalla de siempre en lo que importa —las cláusulas numeradas, la casilla, el lienzo de la firma— con otro titular. El atrás del sistema cierra la
  * sesión, que es la única salida: nunca deja pasar a la app sin aceptar.
  *
- * Spec 039 (Acuerdo de transformación): trae «Mi aceptación» con el programa y las fechas REALES de la persona (ya empezó), antes de la firma. **Nunca** lleva la
- * sección «Mi cronograma de pagos», aunque tenga uno: el cronograma se firma solo al entrar a la app (el onboarding); a quien ya estaba dentro se le pide en «Mi
- * ingreso» (spec 032). Por eso el servidor tampoco lo manda aquí y esta pantalla no manda ninguna huella.
+ * Spec 039 (Acuerdo de transformación): trae «Mi aceptación» con el programa y las fechas REALES de la persona (ya empezó), antes de la firma. **Nunca** lleva el
+ * cronograma de pagos, tenga uno o no (decisión 2026-11-02 pagos fuera de términos): los pagos son asíncronos, los llena Administración después y la persona los
+ * ve en Yo → «Mi ingreso» (spec 032). Esta pantalla no manda ninguna huella.
  */
 export function TerminosActualizadosScreen({
   terminos,

@@ -12,7 +12,7 @@ import { resumenDeLoAceptado } from '../utils/miAceptacion';
 /**
  * La constancia de los términos en la ficha de una persona (spec 027, FR-019): qué versión aceptó, de qué formación, cuándo y con qué firma. Si nunca aceptó
  * dice «Todavía no aceptó los términos». Si el servidor no lo ofrece (un backend anterior) no se dibuja nada. Spec 039: y lo que se le mostró en «Mi aceptación» cuando
- * firmó —el programa y las fechas— y si firmó su cronograma de pagos con los términos (nada de eso en lo aceptado antes).
+ * firmó —el programa y las fechas— (nada de eso en lo aceptado antes). El cronograma de pagos no se firma con los términos (decisión 2026-11-02 pagos fuera de términos).
  */
 export function ConstanciaDeTerminos({ personaId }: { personaId: string }) {
   const { c, t } = useTheme();
@@ -36,7 +36,7 @@ export function ConstanciaDeTerminos({ personaId }: { personaId: string }) {
         <Text style={[t.body, { color: c.textSoft, fontSize: 16 }]}>Todavía no aceptó los términos.</Text>
       ) : (
         constancias.map((item, i) => {
-          const mostrado = resumenDeLoAceptado({ program: item.program, startDate: item.startDate, endDate: item.endDate, scheduleSigned: item.scheduleSigned });
+          const mostrado = resumenDeLoAceptado({ program: item.program, startDate: item.startDate, endDate: item.endDate });
           return (
             <View key={`${item.formation}-${item.number}-${i}`} style={{ gap: 6 }}>
               <Text style={[t.body, { color: c.textStrong, fontSize: 16, lineHeight: 23 }]}>
@@ -44,7 +44,6 @@ export function ConstanciaDeTerminos({ personaId }: { personaId: string }) {
               </Text>
               {mostrado?.programa ? <Text style={[t.body, { color: c.textSoft, fontSize: 15 }]}>{`Programa: ${mostrado.programa}`}</Text> : null}
               {mostrado?.periodo ? <Text style={[t.body, { color: c.textSoft, fontSize: 15 }]}>{mostrado.periodo}</Text> : null}
-              {mostrado?.cronogramaFirmado ? <Text style={[t.body, { color: c.textSoft, fontSize: 15 }]}>Firmó su cronograma de pagos con los términos.</Text> : null}
               {item.signatureUrl ? (
                 <BotonSecundario etiqueta="Ver su firma" onPress={() => void Linking.openURL(item.signatureUrl as string)} />
               ) : null}

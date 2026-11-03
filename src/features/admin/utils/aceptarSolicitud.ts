@@ -5,6 +5,7 @@ import {
   cantidadDeCuotasEnPalabras,
   paraElPedido,
   pagoInicial,
+  sinFilasVacias,
   problemaDelBorrador,
   totalDelBorrador,
   type BorradorDePago,
@@ -177,6 +178,9 @@ export function etiquetaDeLaDuracion(formacion: Formacion | undefined, dias: num
   return delServidor && delServidor.trim() ? delServidor : etiquetaDeDuracion(dias);
 }
 
+/** Al aceptar, el cronograma es asíncrono: «Con cronograma» vale sin cuotas (decisión 2026-11-02 pagos fuera de términos). */
+const CRONOGRAMA_ASINCRONO = { permiteSinCuotas: true } as const;
+
 /** Lo que falta para poder aceptar, en una frase para el pie de la hoja; `null` si ya se puede. */
 export function loQueFalta(borrador: BorradorDeAceptacion, modo: ModoDeFormacion, opciones: OpcionesDeAceptacionApi | null): string | null {
   if (!opciones) return null;
@@ -186,8 +190,9 @@ export function loQueFalta(borrador: BorradorDeAceptacion, modo: ModoDeFormacion
   if (duracionesParaElegir(borrador, modo, opciones).length > 0 && borrador.duracionDias === null) {
     return 'Elige la duración del programa.';
   }
-  // Spec 032: solo si este servidor anota el pago. Un aprendiz tiene que elegir cómo paga; con cronograma, que esté completo.
-  if (opciones.paymentScheduleAvailable) return problemaDelBorrador(borrador.pago);
+  // Spec 032: solo si este servidor anota el pago. Un aprendiz tiene que elegir cómo paga; con cronograma, la moneda y las cuotas que haya escrito completas. Las
+  // cuotas son opcionales al aceptar (decisión 2026-11-02 pagos fuera de términos): Administración las registra después desde la ficha de la persona.
+  if (opciones.paymentScheduleAvailable) return problemaDelBorrador(borrador.pago, CRONOGRAMA_ASINCRONO);
   return null;
 }
 
@@ -202,7 +207,7 @@ export function pagoParaElPedido(
 ): PagoParaElPedido | null {
   if (!opciones?.paymentScheduleAvailable) return null;
   if (borrador.pago.modo === 'sin' && esPersonalElRol(rolBase)) return null;
-  return paraElPedido(borrador.pago);
+  return paraElPedido(borrador.pago, CRONOGRAMA_ASINCRONO);
 }
 
 /** El cuerpo del pedido. Sin opciones del servidor no se manda nada de formación (ver `leerOpcionesDeAceptacion`). */
@@ -226,16 +231,19 @@ export function valorDelPago(borrador: BorradorDeAceptacion): string {
   const pago = borrador.pago;
   if (pago.modo === null) return 'Sin elegir';
   if (pago.modo === 'sin') return 'Sin cronograma';
-  if (pago.filas.length === 0) return 'Con cronograma';
+  /* Una fila sin nada escrito no es una cuota (las cuotas son opcionales al aceptar). */
+  const cuotas = sinFilasVacias(pago.filas);
+  if (cuotas.length === 0) return 'Con cronograma';
   const total = totalDelBorrador(pago);
   const monto = pago.moneda && total > 0 ? ` · ${montoConMoneda(total, pago.moneda)}` : '';
-  return `Con cronograma · ${cantidadDeCuotasEnPalabras(pago.filas.length)}${monto}`;
+  return `Con cronograma · ${cantidadDeCuotasEnPalabras(cuotas.length)}${monto}`;
 }
 
 /** La parte de la frase del resumen que habla del pago: « y con cronograma de 3 cuotas», « y pagó completo» o nada (todavía sin elegir; el personal sin cronograma). */
 function fraseDelPago(borrador: BorradorDeAceptacion, rol: OpcionDeRol, opciones: OpcionesDeAceptacionApi): string {
   if (!opciones.paymentScheduleAvailable) return '';
-  const { modo, filas } = borrador.pago;
+  const { modo } = borrador.pago;
+  const filas = sinFilasVacias(borrador.pago.filas);
   if (modo === 'con') return filas.length > 0 ? ` y con cronograma de ${cantidadDeCuotasEnPalabras(filas.length)}` : ' y con cronograma';
   if (modo === 'sin' && !esPersonalElRol(rol.rolBase)) return ' y pagó completo';
   return '';
