@@ -21,7 +21,8 @@ export type IconName =
   | 'bellOff'
   | 'chartNoAxesColumn'
   | 'ellipsis'
-  | 'wallet';
+  | 'wallet'
+  | 'alertTriangle' | 'batteryLow' | 'calendarClock' | 'minimize2' | 'handHelping' | 'x';
 
 /**
  * Grosor del trazo, en píxeles REALES de pantalla, a cualquier tamaño (decisión del dueño,
@@ -991,6 +992,61 @@ export function Icon({ name, size = 20, color, strokeWidth }: Props) {
         <Svg width={size} height={size} viewBox="0 0 24 24">
           <Path {...s24} d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1" />
           <Path {...s24} d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4" />
+        </Svg>
+      );
+    /* «Cierra tu día» con chips de ícono (2026-11-03): los íconos de «¿Qué pasó?» (`clock`, `alertTriangle`, `batteryLow`, `ban`) y de
+       «¿Qué harás mañana?» (`calendarClock`, `minimize2`, `handHelping`, `x`). Formas de Lucide (ISC: `triangle-alert`, `battery-low`,
+       `calendar-clock`, `minimize-2`, `hand-helping`, `x`), caja de 24 y trazo `s24`. `x` es la equis del trazo común: `close` lleva
+       el énfasis de 1,3 veces y a 20 px junto a otros íconos del chip se vería más gruesa. */
+    case 'alertTriangle':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Path {...s24} d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" />
+          <Path {...s24} d="M12 9v4" />
+          <Path {...s24} d="M12 17h.01" />
+        </Svg>
+      );
+    case 'batteryLow':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Rect {...s24} x={2} y={6} width={16} height={12} rx={2} />
+          <Path {...s24} d="M22 14v-4" />
+          <Path {...s24} d="M6 10v4" />
+        </Svg>
+      );
+    case 'calendarClock':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Path {...s24} d="M16 14v2.2l1.6 1" />
+          <Path {...s24} d="M16 2v4" />
+          <Path {...s24} d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5" />
+          <Path {...s24} d="M3 10h5" />
+          <Path {...s24} d="M8 2v4" />
+          <Circle {...s24} cx={16} cy={16} r={6} />
+        </Svg>
+      );
+    case 'minimize2':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Path {...s24} d="m14 10 7-7" />
+          <Path {...s24} d="M20 10h-6V4" />
+          <Path {...s24} d="m3 21 7-7" />
+          <Path {...s24} d="M4 14h6v6" />
+        </Svg>
+      );
+    case 'handHelping':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Path {...s24} d="M11 12h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 14" />
+          <Path {...s24} d="m7 18 1.6-1.4c.4-.4.8-.6 1.4-.6h4c1.1 0 2.1-.4 2.8-1.2l4.6-4.4a2 2 0 0 0-2.75-2.91l-4.2 3.9" />
+          <Path {...s24} d="m2 13 6 6" />
+        </Svg>
+      );
+    case 'x':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Path {...s24} d="M18 6 6 18" />
+          <Path {...s24} d="m6 6 12 12" />
         </Svg>
       );
     case 'chevron':

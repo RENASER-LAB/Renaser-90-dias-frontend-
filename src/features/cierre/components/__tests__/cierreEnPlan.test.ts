@@ -350,8 +350,8 @@ describe('la hoja y el cierre', () => {
     mockRespuestas.set(`PUT /api/v1/rocks/day-closure`, new ApiError(409, 'Ese día ya cerró y no se puede cerrar tarde.'));
     await montar({}, lima(JUEVES, '22:10'));
     await pulsar(tarjeta()!);
-    await tocarTexto('No me alcanzó el tiempo');
-    await tocarTexto('Hacerla a otra hora');
+    await tocarTexto('Tiempo');
+    await tocarTexto('Otra hora');
     mockPedidos.length = 0;
     await tocarTexto('Guardar mi cierre');
     expect(mockAlert).toHaveBeenCalledTimes(1);
@@ -393,7 +393,7 @@ describe('un día anterior', () => {
     await pulsar(diaDeLaSemana('Miércoles 28'));
     expect(pedidosDelCierre().map(p => p.ruta)).toEqual([`/api/v1/rocks/day-closure?date=${JUEVES}`, '/api/v1/rocks/day-closure?date=2026-10-28']);
     expect(textos()).toContain('Miércoles 28 · Cerrado a las 22:00');
-    expect(textos()).toContain('«Revisar las facturas»: No me alcanzó el tiempo → Hacerla a otra hora');
+    expect(textos()).toContain('«Revisar las facturas»: Tiempo → Otra hora');
     expect(textos()).toContain('Tu nota: Un buen día');
 
     await pulsar(diaDeLaSemana('Martes 27'));
@@ -457,8 +457,8 @@ describe('un día anterior', () => {
 const VIERNES = '2026-10-30';
 const cuerposDelPut = () => mockPedidos.filter(p => p.metodo === 'PUT').map(p => p.cuerpo as { fecha: string; acciones: Array<{ id: string }> });
 const guardarElCierre = async () => {
-  await tocarTexto('No me alcanzó el tiempo');
-  await tocarTexto('Hacerla a otra hora');
+  await tocarTexto('Tiempo');
+  await tocarTexto('Otra hora');
   await tocarTexto('Guardar mi cierre');
 };
 const CERRADO_CON = (fecha: string, extra: object = {}) =>
@@ -564,7 +564,7 @@ describe('caso 3 · cierra temprano (06:00) y después cumple algo más ese mism
     mockRespuestas.set('PUT /api/v1/rocks/day-closure', () => CERRADO_CON(JUEVES, { acciones: [{ ...PENDIENTE, cierre: { motivo: 'SIN_ENERGIA', manana: 'DEJARLA', nota: null } }] }));
     await montar({}, lima(JUEVES, '06:00'));
     await pulsar(tarjeta()!);
-    await tocarTexto('Me faltó energía');
+    await tocarTexto('Energía');
     await tocarTexto('Dejarla');
     await tocarTexto('Guardar mi cierre');
     expect(cuerposDelPut()).toHaveLength(1);

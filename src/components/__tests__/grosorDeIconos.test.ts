@@ -55,6 +55,7 @@ const DE_LINEA: IconName[] = [
   'ellipsis', // caja de 24, el «…» de moderación del Muro (2026-10-31)
   'bellOff', // caja de 24, el chip de un día sin aviso en Planificar (spec 008, 2026-10-20)
   'chartNoAxesColumn', // caja de 24, «Tu 80/20» de Plan (2026-10-31)
+  'alertTriangle', 'batteryLow', 'calendarClock', 'minimize2', 'handHelping', 'x', // caja de 24, los chips de «Cierra tu día» (2026-11-03)
   'chevron', 'arrow', 'filter', 'volume',
 ];
 
@@ -123,6 +124,14 @@ describe('Icon.tsx: cada caja con su trazo', () => {
   it('los íconos nuevos de Yo están, en su bloque y en el tipo', () => {
     expect(fuente).toMatch(/\/\* Yo \*\//);
     for (const nombre of ['lifeBuoy', 'alarmClock', 'settings', 'images', 'listChecks', 'compass', 'package', 'signature']) {
+      expect(fuente).toContain(`case '${nombre}':`);
+      expect(fuente).toMatch(new RegExp(`\\| '${nombre}'`));
+    }
+  });
+
+  it('los íconos de los chips de «Cierra tu día» (2026-11-03) están, en su bloque y en el tipo', () => {
+    expect(fuente).toMatch(/«Cierra tu día» con chips de ícono \(2026-11-03\)/);
+    for (const nombre of ['alertTriangle', 'batteryLow', 'calendarClock', 'minimize2', 'handHelping', 'x']) {
       expect(fuente).toContain(`case '${nombre}':`);
       expect(fuente).toMatch(new RegExp(`\\| '${nombre}'`));
     }

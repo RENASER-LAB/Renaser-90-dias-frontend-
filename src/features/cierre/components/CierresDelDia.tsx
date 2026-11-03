@@ -16,8 +16,8 @@ import {
   lineaDeUnMotivo,
   lineaDelResumen,
   rangoDeLaSemana,
-  respuestaEnPalabras,
 } from '../utils/textosDeLosCierres';
+import { RespuestaConIconos } from './RespuestaConIconos';
 
 /**
  * Lo que dice el lector de pantalla de cada flecha. Distintas a las del tiempo libre y a las del semáforo de la ficha:
@@ -176,13 +176,12 @@ function DiaDeCierre({ dia, primero }: { dia: DiaDelCierre; primero: boolean }) 
 
 function Pendiente({ accion }: { accion: AccionDelCierre }) {
   const { c, t } = useTheme();
-  const respuesta = accion.cierre ? respuestaEnPalabras(accion.cierre) : null;
   return (
     <View style={estilos.pendiente}>
       <Text style={[t.body, { color: c.text, fontSize: 16, lineHeight: 22, fontFamily: fuentes.media }]}>
         «{accion.titulo}» quedó pendiente
       </Text>
-      {respuesta ? <Text style={[t.body, { color: c.textStrong, fontSize: 16, lineHeight: 22 }]}>{respuesta}</Text> : null}
+      {accion.cierre ? <RespuestaConIconos cierre={accion.cierre} /> : null}
       {accion.cierre?.nota ? (
         <Text style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 22 }]}>«{accion.cierre.nota}»</Text>
       ) : null}

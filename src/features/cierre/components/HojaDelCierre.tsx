@@ -18,6 +18,7 @@ import {
   PLANES_DE_MANANA,
   PREGUNTA_DE_MANANA,
   PREGUNTA_DEL_MOTIVO,
+  SUBTITULO_DEL_MOTIVO,
   planEnFrase,
 } from '../data/textosDelCierre';
 import { iconoDelEje } from '../../objetivos/utils/iconoDelEje';
@@ -60,6 +61,9 @@ export function textoDeLaSemana(cumplidas: number, planificadas: number): string
  *   en Plan» (todos los días, también el domingo: Plan muestra lo que viene; spec 033, decisión del dueño del 2026-10-31).
  * - **Cada acción pendiente lleva el ícono de su eje** (spec 033): el eje lo pone quien monta la hoja (`ejeDe`, sale de las
  *   acciones de hoy de Plan, porque `GET /rocks/day-closure` no lo trae). Sin él, el ícono neutro: nunca se inventa un eje.
+ *
+ * - **Las opciones son chips con ícono y texto corto** (2026-11-03: «Tiempo», «Otra hora»; `ChipDelCierre`, `data/textosDelCierre`);
+ *   los códigos que viajan al servidor y lo que oye el lector de pantalla («No me alcanzó el tiempo, seleccionado») no cambian.
  *
  * Movimiento (`emil-design-eng`, `animate-expo`): lo único que se mueve es ese fundido al guardar (`DURACION_MS.paso`,
  * ease-out, solo `opacity`); con «reducir movimiento» aparece al instante. Los chips no se animan.
@@ -328,24 +332,33 @@ function TarjetaPendiente({
       </View>
       <Text style={[t.small, { color: c.textSoft, fontVariant: ['tabular-nums'] }]}>{cuando}</Text>
 
-      <Text style={[t.body, estilos.pregunta, { color: c.textStrong }]}>{PREGUNTA_DEL_MOTIVO}</Text>
+      <View style={estilos.encabezadoDeLaPregunta}>
+        <Text style={[t.cardTitle, estilos.pregunta, { color: c.textStrong }]}>{PREGUNTA_DEL_MOTIVO}</Text>
+        <Text style={[t.body, { color: c.textSoft }]}>{SUBTITULO_DEL_MOTIVO}</Text>
+      </View>
       <View style={estilos.chips} accessibilityRole="radiogroup" accessibilityLabel={`${PREGUNTA_DEL_MOTIVO} ${accion.titulo}`}>
         {MOTIVOS.map(m => (
           <ChipDelCierre
             key={m.valor}
             etiqueta={m.texto}
+            texto={m.corto}
+            icono={m.icono}
             elegido={respuesta?.motivo === m.valor}
             onPress={() => hoja.elegirMotivo(accion.id, m.valor)}
           />
         ))}
       </View>
 
-      <Text style={[t.body, estilos.pregunta, { color: c.textStrong }]}>{PREGUNTA_DE_MANANA}</Text>
+      <View style={estilos.encabezadoDeLaPregunta}>
+        <Text style={[t.cardTitle, estilos.pregunta, { color: c.textStrong }]}>{PREGUNTA_DE_MANANA}</Text>
+      </View>
       <View style={estilos.chips} accessibilityRole="radiogroup" accessibilityLabel={`${PREGUNTA_DE_MANANA} ${accion.titulo}`}>
         {PLANES_DE_MANANA.map(p => (
           <ChipDelCierre
             key={p.valor}
             etiqueta={p.texto}
+            texto={p.corto}
+            icono={p.icono}
             elegido={respuesta?.manana === p.valor}
             onPress={() => hoja.elegirManana(accion.id, p.valor)}
           />
@@ -406,8 +419,9 @@ const estilos = StyleSheet.create({
   lineaCumplida: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 48, paddingHorizontal: 12, borderRadius: 12 },
   tarjeta: { gap: 6, padding: 14, borderWidth: 1, borderRadius: 16 },
   cabeceraDeLaAccion: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  pregunta: { marginTop: 10, fontFamily: fuentes.negrita, fontSize: 16 },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  encabezadoDeLaPregunta: { marginTop: 14, gap: 2 },
+  pregunta: { fontSize: 19, lineHeight: 26 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
   campo: {
     marginTop: 12,
     minHeight: 72,

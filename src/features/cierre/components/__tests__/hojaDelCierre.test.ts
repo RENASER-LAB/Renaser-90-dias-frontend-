@@ -5,6 +5,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import React from 'react';
+import { StyleSheet } from 'react-native';
 import TestRenderer, { act, type ReactTestInstance, type ReactTestRenderer } from 'react-test-renderer';
 
 jest.mock('../../../../theme/ThemeContext', () => {
@@ -17,8 +18,9 @@ jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));
 const mockLogro = jest.fn();
+const mockSeleccion = jest.fn();
 jest.mock('../../../../utils/tacto', () => ({
-  tacto: { seleccion: () => undefined, error: () => undefined, logro: () => mockLogro() },
+  tacto: { seleccion: () => mockSeleccion(), error: () => undefined, logro: () => mockLogro() },
 }));
 const mockAlert = jest.fn();
 jest.mock('../../../../components/Alerta', () => ({ Alert: { alert: (...args: unknown[]) => mockAlert(...args) } }));
@@ -51,7 +53,9 @@ jest.mock('../../../../components/hojaDesdeAbajo/HojaDesdeAbajo', () => ({
   },
 }));
 
+import { Icon } from '../../../../components/Icon';
 import { ApiError } from '../../../../services/http/apiClient';
+import { light as colores } from '../../../../theme/tokens';
 import { HojaDelCierre, TEXTO_DE_DIA_CERRADO_TARDE } from '../HojaDelCierre';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -126,7 +130,7 @@ const chipsElegidos = () =>
 
 beforeEach(() => {
   mockPedidos.length = 0;
-  [alLeer, alGuardar, alSalirPorDiaCerrado, onCerrar, onVerManana, mockAlert, mockLogro].forEach(m => m.mockClear());
+  [alLeer, alGuardar, alSalirPorDiaCerrado, onCerrar, onVerManana, mockAlert, mockLogro, mockSeleccion].forEach(m => m.mockClear());
   mockRespuesta = (_r, metodo) => (metodo === 'PUT' ? dia({ estado: 'CERRADO', cerradoEn: '2026-10-29T03:02:00Z', acciones: [CUMPLIDA, { ...PENDIENTE, cierre: { motivo: 'SIN_TIEMPO', manana: 'OTRA_HORA', nota: null } }] }) : dia());
 });
 afterEach(() => {
@@ -143,7 +147,7 @@ describe('el formulario', () => {
     expect(hay('Era a las 20:30 · quedó pendiente')).toBe(true);
     expect(hay('¿Qué pasó?')).toBe(true);
     expect(hay('¿Qué harás mañana?')).toBe(true);
-    for (const chip of ['No me alcanzó el tiempo', 'Surgió otra cosa', 'Me faltó energía', 'Lo dejé para después', 'Hacerla a otra hora', 'Hacerla más corta', 'Pedir ayuda', 'Dejarla']) {
+    for (const chip of ['Tiempo', 'Imprevisto', 'Energía', 'Lo evité', 'Otra hora', 'Más corta', 'Pedir ayuda', 'Dejarla']) {
       expect(hay(chip)).toBe(true);
     }
     // Lo cumplido llega marcado, sin preguntas: solo UNA tarjeta de preguntas.
@@ -173,9 +177,9 @@ describe('el formulario', () => {
     await montar();
     expect(apagado(tocableCon('Guardar mi cierre'))).toBe(true);
     expect(textos()).toContain('Elige qué pasó y qué harás mañana con «Revisar las facturas».');
-    await elegir('No me alcanzó el tiempo');
+    await elegir('Tiempo');
     expect(apagado(tocableCon('Guardar mi cierre'))).toBe(true);
-    await elegir('Hacerla a otra hora');
+    await elegir('Otra hora');
     expect(apagado(tocableCon('Guardar mi cierre'))).toBe(false);
     expect(hay('Elige qué pasó')).toBe(false);
     expect(chipsElegidos()).toEqual(['No me alcanzó el tiempo', 'Hacerla a otra hora']);
@@ -183,8 +187,8 @@ describe('el formulario', () => {
 
   it('elegir otro chip cambia el elegido (uno por pregunta)', async () => {
     await montar();
-    await elegir('No me alcanzó el tiempo');
-    await elegir('Me faltó energía');
+    await elegir('Tiempo');
+    await elegir('Energía');
     expect(chipsElegidos()).toEqual(['Me faltó energía']);
   });
 
@@ -196,10 +200,120 @@ describe('el formulario', () => {
   });
 });
 
+describe('los chips con ícono (2026-11-03, «Cierra tu día con chips de ícono»)', () => {
+  /** El chip entero (el tocable de más afuera) con ese texto completo de siempre. */
+  const chipCon = (etiqueta: string) =>
+    raiz!.root.findAll(n => n.props.accessibilityRole === 'radio' && n.props.accessibilityLabel === etiqueta && typeof n.props.onPress === 'function')[0];
+  const iconoDe = (chip: ReactTestInstance) => chip.findAll(n => n.type === Icon).map(n => n.props)[0];
+  const textoDe = (chip: ReactTestInstance) => textosDe(chip.findAll(() => true))[0];
+  /** La caja que dibuja el borde y el fondo del chip (`Presionable` la pone adentro del tocable). */
+  const cajaDe = (chip: ReactTestInstance) =>
+    chip.findAll(n => n.props.style && StyleSheet.flatten(n.props.style)?.borderRadius === 12).map(n => StyleSheet.flatten(n.props.style))[0];
+
+  const OPCIONES: Array<[string, string, string]> = [
+    // [lo que oye el lector (el texto de siempre), lo que se ve, el ícono]
+    ['No me alcanzó el tiempo', 'Tiempo', 'clock'],
+    ['Surgió otra cosa', 'Imprevisto', 'alertTriangle'],
+    ['Me faltó energía', 'Energía', 'batteryLow'],
+    ['Lo dejé para después', 'Lo evité', 'ban'],
+    ['Hacerla a otra hora', 'Otra hora', 'calendarClock'],
+    ['Hacerla más corta', 'Más corta', 'minimize2'],
+    ['Pedir ayuda', 'Pedir ayuda', 'handHelping'],
+    ['Dejarla', 'Dejarla', 'x'],
+  ];
+
+  it('las ocho opciones: texto corto a la vista, ícono de 20 y el texto de siempre para el lector', async () => {
+    await montar();
+    for (const [largo, corto, icono] of OPCIONES) {
+      const chip = chipCon(largo);
+      expect({ largo, hay: chip !== undefined }).toEqual({ largo, hay: true });
+      expect({ largo, texto: textoDe(chip) }).toEqual({ largo, texto: corto });
+      expect({ largo, icono: iconoDe(chip)?.name, size: iconoDe(chip)?.size }).toEqual({ largo, icono, size: 20 });
+      expect(chip.props.accessibilityRole).toBe('radio');
+    }
+    // El texto largo ya no se dibuja: solo lo oye el lector.
+    for (const [largo, corto] of OPCIONES) if (largo !== corto) expect(hay(largo)).toBe(false);
+  });
+
+  it('«¿Qué pasó?» lleva su subtítulo «Selecciona lo que más haya influido.»; «¿Qué harás mañana?», no', async () => {
+    await montar();
+    expect(textos().filter(t => t === 'Selecciona lo que más haya influido.')).toHaveLength(1);
+    const orden = textos();
+    expect(orden.indexOf('¿Qué pasó?')).toBeLessThan(orden.indexOf('Selecciona lo que más haya influido.'));
+    expect(orden.indexOf('Selecciona lo que más haya influido.')).toBeLessThan(orden.indexOf('Tiempo'));
+    expect(orden.indexOf('¿Qué harás mañana?')).toBeGreaterThan(orden.indexOf('Lo evité'));
+  });
+
+  it('cada pregunta es un grupo de opciones que envuelve, con el nombre de siempre', async () => {
+    await montar();
+    const grupos = raiz!.root.findAll(n => n.props.accessibilityRole === 'radiogroup' && n.type === 'View');
+    expect(grupos.map(g => g.props.accessibilityLabel)).toEqual(['¿Qué pasó? Revisar las facturas', '¿Qué harás mañana? Revisar las facturas']);
+    for (const g of grupos) expect(StyleSheet.flatten(g.props.style).flexWrap).toBe('wrap');
+  });
+
+  it('cada chip mide 48 o más, con esquinas de 12 y borde fino del tema; el elegido se dibuja dorado', async () => {
+    await montar();
+    const sinElegir = cajaDe(chipCon('No me alcanzó el tiempo'));
+    expect(sinElegir).toMatchObject({ minHeight: 48, borderRadius: 12, borderWidth: 1, borderColor: colores.border, backgroundColor: colores.cardBg });
+    expect(iconoDe(chipCon('No me alcanzó el tiempo')).color).toBe(colores.textSoft);
+
+    await elegir('Tiempo');
+    const elegido = cajaDe(chipCon('No me alcanzó el tiempo'));
+    // Mismo borde (1) elegido o no: elegir no ensancha el chip ni corre a los de al lado.
+    expect(elegido).toMatchObject({ minHeight: 48, borderRadius: 12, borderWidth: 1, borderColor: colores.gold, backgroundColor: colores.goldWash });
+    expect(iconoDe(chipCon('No me alcanzó el tiempo')).color).toBe(colores.goldInk);
+    // El de al lado sigue sin elegir.
+    expect(cajaDe(chipCon('Surgió otra cosa'))).toMatchObject({ borderColor: colores.border, backgroundColor: colores.cardBg });
+  });
+
+  it('el lector oye el texto largo y el estado: «No me alcanzó el tiempo, seleccionado»', async () => {
+    await montar();
+    expect(chipCon('No me alcanzó el tiempo').props.accessibilityState).toEqual({ selected: false });
+    await elegir('Tiempo');
+    const chip = chipCon('No me alcanzó el tiempo');
+    expect(chip.props.accessibilityLabel).toBe('No me alcanzó el tiempo');
+    expect(chip.props.accessibilityState).toEqual({ selected: true });
+    expect(chipsElegidos()).toEqual(['No me alcanzó el tiempo']);
+  });
+
+  it('tocar un chip vibra con `tacto.seleccion()` una vez y manda el código de siempre al servidor', async () => {
+    await montar();
+    await elegir('Imprevisto');
+    expect(mockSeleccion).toHaveBeenCalledTimes(1);
+    await elegir('Más corta');
+    expect(mockSeleccion).toHaveBeenCalledTimes(2);
+    await guardar();
+    const put = mockPedidos.find(p => p.metodo === 'PUT');
+    expect(put?.cuerpo).toEqual({ fecha: HOY, acciones: [{ id: 'a-2', motivo: 'SURGIO_OTRA_COSA', manana: 'MAS_CORTA' }] });
+  });
+
+  it('los cuatro motivos y los cuatro planes viajan con su código (los del contrato), sin cambios', async () => {
+    const pares: Array<[string, string, string, string]> = [
+      ['Tiempo', 'Otra hora', 'SIN_TIEMPO', 'OTRA_HORA'],
+      ['Imprevisto', 'Más corta', 'SURGIO_OTRA_COSA', 'MAS_CORTA'],
+      ['Energía', 'Pedir ayuda', 'SIN_ENERGIA', 'PEDIR_AYUDA'],
+      ['Lo evité', 'Dejarla', 'PARA_DESPUES', 'DEJARLA'],
+    ];
+    for (const [motivo, plan, codigoMotivo, codigoPlan] of pares) {
+      mockPedidos.length = 0;
+      await montar();
+      await elegir(motivo);
+      await elegir(plan);
+      await guardar();
+      expect(mockPedidos.find(p => p.metodo === 'PUT')?.cuerpo).toEqual({
+        fecha: HOY,
+        acciones: [{ id: 'a-2', motivo: codigoMotivo, manana: codigoPlan }],
+      });
+      act(() => raiz!.unmount());
+      raiz = null;
+    }
+  });
+});
+
 describe('al guardar', () => {
   const responder = async () => {
-    await elegir('No me alcanzó el tiempo');
-    await elegir('Hacerla a otra hora');
+    await elegir('Tiempo');
+    await elegir('Otra hora');
   };
 
   it('envía UN PUT, queda «Día cerrado» con lo de mañana, y vibra una vez', async () => {
@@ -318,7 +432,7 @@ describe('un día sin acciones, con todo cumplido, o ya cerrado', () => {
     const nota = raiz!.root.findAll(n => n.props.multiline === true && typeof n.props.onChangeText === 'function')[0];
     expect(nota.props.value).toBe('Se alargó');
     expect(apagado(tocableCon('Guardar mi cierre'))).toBe(false);
-    await elegir('Lo dejé para después');
+    await elegir('Lo evité');
     await elegir('Dejarla');
     await guardar();
     expect(mockPedidos.find(p => p.metodo === 'PUT')?.cuerpo).toEqual({
@@ -414,8 +528,8 @@ describe('solo se pregunta por lo que ya llegó a su hora', () => {
     expect(hay('todavía no llega')).toBe(false);
     expect(apagado(tocableCon('Guardar mi cierre'))).toBe(true);
     expect(hay('Elige qué pasó y qué harás mañana con «Revisar las facturas».')).toBe(true);
-    await elegir('No me alcanzó el tiempo');
-    await elegir('Hacerla a otra hora');
+    await elegir('Tiempo');
+    await elegir('Otra hora');
     expect(apagado(tocableCon('Guardar mi cierre'))).toBe(false);
     await guardar();
     const cuerpo = mockPedidos.find(p => p.metodo === 'PUT')?.cuerpo as { acciones: Array<{ id: string; motivo: string; manana: string }> };
@@ -461,8 +575,8 @@ describe('solo se pregunta por lo que ya llegó a su hora', () => {
       return dia({ acciones: [CUMPLIDA, pasada, yaLlegoLaHora ? A_LAS_NUEVE_DE_LA_NOCHE : A_LAS_SEIS] });
     };
     await montar();
-    await elegir('No me alcanzó el tiempo');
-    await elegir('Hacerla a otra hora');
+    await elegir('Tiempo');
+    await elegir('Otra hora');
     expect(apagado(tocableCon('Guardar mi cierre'))).toBe(false);
 
     yaLlegoLaHora = true; // pasan las 20:30 con la hoja abierta

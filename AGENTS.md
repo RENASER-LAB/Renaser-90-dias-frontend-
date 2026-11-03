@@ -749,6 +749,8 @@ decisiones en `Renaser-90-dias-backend/specs/033-cierre-del-dia-en-plan/`; D-298
   cada acción pendiente lleva **el ícono de su eje** (`iconoDelEje`; el servidor no manda el eje en el cierre, así que sale de las acciones de hoy
   que Plan ya lee con `GET /rocks/today`, por id: `cierre/utils/ejeDeLasAcciones`; la que no figura lleva el ícono neutro `target`, nunca un eje
   inventado) y el enlace de la pantalla final dice **«Ver mañana en Plan»**.
+  > **Corregido 2026-11-03.** Las opciones de «¿Qué pasó?» y «¿Qué harás mañana?» ya no son chips de texto largo: llevan un ícono y un texto corto («Tiempo», «Otra hora»). Los códigos
+  > al servidor no cambian. Ver «Cierra tu día con chips de ícono».
 * **«Ver mañana en Plan» solo mueve** (decisión 033-2 A): lleva el scroll hasta «Acciones que mueven la meta», que ya muestra lo que viene (hoy,
   mañana y los próximos días). Sin automatismos ni atajos nuevos. **Se ofrece todos los días, también el domingo** (Plan muestra lo que viene), pero
   solo si Plan muestra acciones, o sea con el Mapa activo (`puedeVerManana`). Espera a que la hoja se vaya antes de mover el scroll.
@@ -2108,6 +2110,38 @@ calendario, mal para un INSTANTE—, así que el día era el de UTC. Lo que camb
   La bienvenida de Administración (`bienvenida.ts`) lee el instante en una zona fija de Lima a propósito.
 * **Pruebas:** `fechaDeLaAceptacionEnLima.test.ts` (con el instante de las 21:30 de Lima y el reloj fijado a esa hora: los límites 18:59, 19:00, 23:59:59 y 00:00, desfase y cruces de mes y año, la fecha
   de calendario que no se corre, la ficha dibujada y la cohorte). Jest corre con `TZ = America/Lima`.
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
+
+## Cambio por pedido del dueño — 2026-11-03 — Cierra tu día con chips de ícono
+
+Pedido del dueño con una referencia visual: «¿Qué pasó?» con el subtítulo «Selecciona lo que más haya influido.» y una fila de chips con un ícono de línea y
+un texto corto («Tiempo», «Imprevisto», «Lo evité»); el elegido, con el fondo y el borde dorados. **Solo cambia lo que se ve: los códigos que viajan al servidor
+(`SIN_TIEMPO`, `OTRA_HORA`…), las reglas de la hoja, el 409 y todo lo demás de la spec 017 y la 033 quedan igual. Sin backend nuevo.** Lo que cambia y nada más:
+* **Las opciones de «¿Qué pasó?»** (`cierre/data/textosDelCierre`, un solo lugar): Tiempo (`clock`) = «No me alcanzó el tiempo», Imprevisto (`alertTriangle`) = «Surgió otra
+  cosa», Energía (`batteryLow`) = «Me faltó energía» y Lo evité (`ban`) = «Lo dejé para después». **«¿Qué harás mañana?»**: Otra hora (`calendarClock`) = «Hacerla a otra hora»,
+  Más corta (`minimize2`) = «Hacerla más corta», Pedir ayuda (`handHelping`) y Dejarla (`x`). Cada una tiene `valor` (el código, sin cambio), `texto` (el de siempre, completo),
+  `corto` (lo que se ve) e `icono`. «¿Qué pasó?» lleva su subtítulo (`SUBTITULO_DEL_MOTIVO`); «¿Qué harás mañana?» no (el dueño no lo pidió: no se inventó texto).
+* **El chip** (`ChipDelCierre`): caja de 48 de alto o más, esquinas de 12, borde de 1 y fila de ícono (20) y texto (16, `fuentes.media`) con 8 de por medio. Elegido: fondo `goldWash`,
+  borde `gold` y el ícono en `goldInk`; sin elegir: `cardBg`, borde `border` y el ícono en `textSoft`. **El mismo borde y el mismo peso de letra elegido o no**, para que elegir
+  no ensanche el chip ni corra a los de al lado. Se acomodan en filas que envuelven (`flexWrap`). **Sin animación nueva** (se tocan mucho): `Presionable` y `tacto.seleccion()`.
+  La pregunta pasó a `t.cardTitle` de 19 (no hay serif: el display de Inter es solo de `t.hero` y `t.screenTitle`).
+* **El lector de pantalla dice el texto de siempre:** el chip lleva `accessibilityLabel` con la frase completa («No me alcanzó el tiempo») y `accessibilityState.selected`, así que
+  oye «No me alcanzó el tiempo, seleccionado». El texto largo ya no se dibuja: solo se oye. El grupo conserva su nombre («¿Qué pasó? Revisar las facturas»).
+* **Seis íconos nuevos** en `Icon.tsx` (formas de Lucide, ISC, caja de 24 y `s24`): `alertTriangle`, `batteryLow`, `calendarClock`, `minimize2`, `handHelping` y `x`. `x` es la equis
+  del trazo común: `close` lleva el énfasis de 1,3 veces y junto a los demás íconos del chip se vería más gruesa. `clock` y `ban` ya existían.
+* **Las fichas del mentor, el líder y Administración** («Cierres del día», `CierresDelDia`): lo que dijo de cada pendiente se ve «Tiempo → Otra hora» con los mismos textos
+  cortos y el ícono de cada chip delante de cada mitad, a 16 y en el gris del texto (`RespuestaConIconos`, solo lectura; si no cabe, se parte entre las dos mitades). El lector oye los textos completos
+  («No me alcanzó el tiempo, Hacerla a otra hora», `respuestaParaElLector`). Un valor que esta versión no conoce no se dibuja, ni él ni su ícono. **«Lo que más se repite»** solo
+  cambia el texto: «Tiempo · 4 veces».
+* **Lo mismo vale en Plan** («Tus cierres de la semana», lo que la persona dijo de un día anterior): `respuestaEnPalabras` es una sola función y ahora dice «Tiempo → Otra hora»,
+  para que la persona lea lo que eligió con las mismas palabras. Si el dueño lo quiere con el texto largo ahí, es devolver esa función a `textoDelMotivo` / `textoDelPlan` en
+  `utils/textosDeLosCierres`. «Día cerrado» y «Mañana: «…» a otra hora» no cambian.
+* **No cambian**: los códigos del contrato, la nota, «Guardar mi cierre» y lo que dice que falta, la pantalla final, el cambio de día, ni los demás tabs. Sin dependencias nuevas ni código nativo.
+* **Pruebas:** Jest `hojaDelCierre` (las ocho opciones con su ícono, su texto corto y su etiqueta larga; el subtítulo; el grupo que envuelve; 48 de alto y esquinas de 12; el elegido dorado
+  y el borde igual; lo que oye el lector; `tacto.seleccion()` una vez por toque; los ocho códigos al servidor sin cambio), `textosDeLosCierres`, `cierresDelDia` (los íconos y lo que oye el
+  lector), `semanaDelCierre`, `cierreEnPlan` y `grosorDeIconos` (los seis íconos nuevos). El flujo de Maestro `.maestro/cierre-en-plan/01` sigue tocando los chips por su
+  nombre completo (el del lector de pantalla) y suma el subtítulo; sin correr.
+* **No comprobado en el emulador** (esta corrida no tuvo): cómo se acomodan los cuatro chips por fila a 360 dp y con la letra del sistema grande, y el aspecto del elegido en claro y oscuro.
 * **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
 
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
