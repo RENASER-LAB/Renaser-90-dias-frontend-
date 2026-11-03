@@ -242,7 +242,6 @@ export const usuarioStaffSchema = z
     status: z.string(),
     fullName: z.string().nullish(),
     avatarUrl: z.string().nullish(),
-    bio: z.string().nullish(),
     department: z.string().nullish(),
     rolPersonalizado: rolPersonalizadoDeLaPersonaSchema,
   })

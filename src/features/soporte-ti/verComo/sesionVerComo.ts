@@ -35,7 +35,6 @@ const guardadoSchema = z
         role: z.string(),
         status: z.string(),
         avatarUrl: z.string().nullable(),
-        bio: z.string().nullish(),
         department: z.string().nullish(),
       })
       .passthrough(),
@@ -80,7 +79,7 @@ export async function recuperarVerComo(): Promise<VerComoGuardado | null> {
       tokenDePrueba: d.tokenDePrueba,
       etiqueta: d.etiqueta,
       venceEn: d.venceEn ?? null,
-      usuarioSoporte: { ...d.usuarioSoporte, bio: d.usuarioSoporte.bio ?? null, department: d.usuarioSoporte.department ?? null },
+      usuarioSoporte: { ...d.usuarioSoporte, department: d.usuarioSoporte.department ?? null },
     };
   } catch {
     return null;

@@ -89,6 +89,11 @@ const P_SIGNATURE: PreguntaCatalogo = { clave: 'signature', tipo: 'FIRMA' };
  * fuera de los builders `mapear*` de este archivo (esos arman un valor ya conocido de forma
  * síncrona; una firma primero hay que subirla a S3).
  */
+/**
+ * El «WhatsApp principal» de la Ficha Inicial. Editar perfil (Yo → Ajustes → Perfil) lo lee y lo escribe aquí mismo, con la misma pregunta: el
+ * número vive en UN solo lugar (la respuesta de la ficha), que es el que leen la Caja Renaser y la ficha de la persona.
+ */
+export const PREGUNTA_WHATSAPP = { clave: P_WHATSAPP.clave, tipo: P_WHATSAPP.tipo } as const;
 export const PREGUNTA_FIRMA_TERMINOS = { clave: P_TERMS_SIGNATURE.clave } as const;
 export const PREGUNTA_FIRMA_PACTO = { clave: P_SIGNATURE.clave } as const;
 

@@ -57,7 +57,6 @@ export async function miPerfil(): Promise<UsuarioApi> {
 export type DatosActualizarPerfil = {
   fullName: string;
   avatarUrl?: string | null;
-  bio?: string | null;
   department?: string | null;
 };
 
@@ -68,7 +67,6 @@ export async function actualizarMiPerfil(datos: DatosActualizarPerfil): Promise<
     body: {
       fullName: datos.fullName.trim(),
       avatarUrl: datos.avatarUrl ?? null,
-      bio: datos.bio?.trim() || null,
       department: datos.department?.trim() || null,
     },
   });

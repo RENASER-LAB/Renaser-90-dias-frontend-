@@ -77,7 +77,6 @@ describe('el usuario de la sesión', () => {
     status: 'ACTIVE',
     fullName: 'Ana Pérez',
     avatarUrl: null,
-    bio: null,
     department: null,
   };
 

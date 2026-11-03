@@ -2110,6 +2110,37 @@ calendario, mal para un INSTANTE—, así que el día era el de UTC. Lo que camb
   de calendario que no se corre, la ficha dibujada y la cohorte). Jest corre con `TZ = America/Lima`.
 * **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
 
+## Cambio por pedido del dueño — 2026-11-03 — Yo → Ajustes → Perfil: sin biografía y con el WhatsApp de la ficha
+
+Textual: «En perfil, en Yo, configuración, quitas biografía, y en editar perfil jalas los datos del número de WhatsApp que puso; agregas ese campo más.» Solo la app: **sin backend
+nuevo**. Lo que cambia y nada más:
+* **Se quita la «Biografía somática»** de Yo → Ajustes → Perfil → «Información» (ya no se pide, ni se muestra, ni se manda). «Información» queda con «Departamento o área» y su fila dice
+  «Departamento o área» (decía «Biografía y departamento»). El campo `bio` salió del usuario de la app (`User`, `UsuarioApi`, el esquema y el mapper), de `actualizarMiPerfil` y de la sesión de
+  «ver como». **La columna del servidor no se toca** (`PATCH /users/me` ignora un `bio` que no llega: `null` significa «no cambiar»): lo que la persona escribió antes sigue guardado, solo que
+  nadie lo pide ya.
+* **«Editar perfil» suma el campo «WhatsApp»**, debajo del correo y ya lleno con el número que la persona puso en su ficha («WhatsApp principal»), con **el mismo control de la ficha**
+  (`PhoneCountryInput`: la píldora del país que abre la hoja desde abajo con buscador, y el número solo con dígitos, con el largo máximo del país). El rótulo es el de los otros campos de la
+  pantalla (15, medio). Mientras se lee, el lugar queda ocupado por una caja del mismo alto (52) que dice «Cargando…» (el selector de país parte del número que recibe, así que el campo no puede
+  nacer vacío y cambiar después); si no se pudo leer, «No pudimos cargar tu WhatsApp.» con «Reintentar» (el resto del perfil se guarda igual y el número no se toca). Sin animación nueva.
+* **De dónde sale y a dónde va: la misma respuesta de la ficha, sin duplicar el dato.** El número es la respuesta `whatsapp` de la Ficha Inicial (`respuestas_onboarding`, guardada como
+  `"+51 987654321"`). Perfil la lee con `GET /onboarding/answers?flow=ficha_inicial` y la escribe con `POST /onboarding/answers` (upsert por persona y pregunta; el `id` de la pregunta sale del
+  catálogo del servidor, nunca escrito a mano). Es la que lee la Caja Renaser (`FichaDeEnvio.CLAVE_CELULAR`: el «Celular» de los datos de envío en Administración → Caja Renaser), y cualquier otra lectura de
+  la ficha, así que lo que se guarda en Perfil es lo que ven Administración y el acompañamiento (hoy ninguna otra pantalla de la app muestra el WhatsApp). No se usa `usuarios.telefono`: la columna
+  existe pero el servidor no la mapea ni la lee en ningún lado. El pedido a `/users/me` no lleva teléfono.
+* **Validación: la de la ficha.** La regla del paso «WhatsApp principal» (`validarWhatsapp`, en `pasosFicha`) la usan la ficha y Perfil, y el control solo deja escribir dígitos hasta el largo del
+  país. **Vaciarlo no se guarda**: si ya había un número y el campo queda sin dígitos, o el número no cumple la regla, «Guardar cambios» muestra el aviso de la ficha («WhatsApp requerido»), marca
+  el campo y **no guarda nada** (ni el nombre). Quien nunca tuvo uno (personal que no pasó por la ficha) y lo deja vacío no tiene qué guardar: su nombre o su foto no se le traban por eso.
+  Un número que no cambió no se vuelve a mandar.
+* **Cuándo se lee y cuándo se guarda** (`useWhatsappDelPerfil`): al abrir «Editar perfil», una vez por visita; una relectura no pisa lo que la persona ya escribió, una lectura vieja no pisa a
+  una nueva y otra cuenta no hereda nada de la anterior. «Guardar cambios» guarda primero el perfil de siempre y después el número (`guardarElPerfil`); si el perfil se guardó y el número no,
+  un diálogo lo dice («Tu nombre y tu foto sí se guardaron…») y al reintentar se vuelve a mandar todo (los dos pedidos son upsert).
+* **Límite aceptado:** el servidor no valida el formato del WhatsApp (tampoco lo hacía para la ficha): la regla vive en la app. Si Soporte TI apaga la función `onboarding`, el campo avisa que no
+  pudo cargar (las rutas de la ficha están bajo esa función).
+* **Pruebas:** `whatsappDelPerfil` (de dónde sale, vaciarlo, la regla de la ficha), `guardarElPerfil`, `useWhatsappDelPerfil` (prellenado, relecturas, error, guardar), `campoWhatsappDelPerfil`
+  (el control de la ficha prellenado, los tres estados) y `perfilConWhatsappSinBiografia` (ni `bio` en pantallas ni en pedidos; el campo en «Editar perfil», revisado antes de guardar).
+  `textosVerdaderosDeYo` se ajustó. Sin Maestro nuevo: no se probó en el emulador.
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
+
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
 Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel especializado en React Native, Expo y TypeScript. Al crear, refactorizar o modificar cualquier pantalla o componente, debes cumplir OBLIGATORIAMENTE con los siguientes estándares:

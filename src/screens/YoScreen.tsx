@@ -48,6 +48,9 @@ import { animalConfigurado } from '../features/yo/utils/animalConfigurado';
 import { faseEnCurso, fasesEnOrden } from '../features/home/utils/faseEnCurso';
 import { textoDelRecord } from '../features/home/utils/textoDelRecord';
 import { useAnimalesDeFase } from '../features/yo/hooks/useAnimalesDeFase';
+import { useWhatsappDelPerfil } from '../features/yo/hooks/useWhatsappDelPerfil';
+import { CampoWhatsappDelPerfil } from '../features/yo/components/CampoWhatsappDelPerfil';
+import { guardarElPerfil } from '../features/yo/utils/guardarElPerfil';
 import { ANIMAL_DE_FASE } from '../features/yo/data/animalesDeFase';
 import { useCelebracionDelDia } from '../features/fenix/hooks/useCelebracionDelDia';
 import {
@@ -587,7 +590,6 @@ export default function YoScreen() {
   const [profileName, setProfileName] = useState(user?.name ?? '');
   const [profileEmail, setProfileEmail] = useState(user?.email ?? '');
   const [profileDepartment, setProfileDepartment] = useState(user?.department ?? '');
-  const [profileBio, setProfileBio] = useState(user?.bio ?? '');
   const [profileAvatar, setProfileAvatar] = useState<string | null>(user?.avatarUrl ?? null);
   const [guardandoPerfil, setGuardandoPerfil] = useState(false);
   const [subiendoAvatar, setSubiendoAvatar] = useState(false);
@@ -596,9 +598,12 @@ export default function YoScreen() {
     setProfileName(user?.name ?? '');
     setProfileEmail(user?.email ?? '');
     setProfileDepartment(user?.department ?? '');
-    setProfileBio(user?.bio ?? '');
     setProfileAvatar(user?.avatarUrl ?? null);
-  }, [user?.avatarUrl, user?.bio, user?.department, user?.email, user?.name]);
+  }, [user?.avatarUrl, user?.department, user?.email, user?.name]);
+
+  /* El WhatsApp de Editar perfil es el «WhatsApp principal» de la ficha de la persona (misma respuesta, ver `whatsappDelPerfil`): se lee al abrir esa
+     vista y se guarda junto con el resto del perfil. */
+  const whatsapp = useWhatsappDelPerfil(activeView === 'editar_perfil', user?.id);
 
   useEffect(() => {
     void refrescarPerfil().catch(() => undefined);
@@ -1177,7 +1182,7 @@ export default function YoScreen() {
               <FilaDeAjuste
                 icono="idCard"
                 titulo="Información"
-                detalle="Biografía y departamento"
+                detalle="Departamento o área"
                 onPress={() => setActiveView('info_perfil')}
               />
             </GrupoDeAjustes>
@@ -1859,6 +1864,16 @@ export default function YoScreen() {
               />
             </View>
 
+            {/* El número que la persona puso en su ficha («WhatsApp principal»), con el mismo selector de país de la ficha. */}
+            <CampoWhatsappDelPerfil
+              lectura={whatsapp.lectura}
+              valor={whatsapp.valor}
+              version={whatsapp.version}
+              error={whatsapp.error}
+              onCambiar={whatsapp.cambiar}
+              onReintentar={() => void whatsapp.reintentar()}
+            />
+
           </View>
 
           <GoldButton
@@ -1871,14 +1886,28 @@ export default function YoScreen() {
                 Alert.alert('Falta tu nombre', 'Escribe tu nombre completo para guardar el perfil.');
                 return;
               }
+              /* El WhatsApp se revisa ANTES de guardar nada: vaciarlo no se guarda (en la ficha es obligatorio) y un número que no cumple la regla
+                 de la ficha tampoco; así no queda el nombre guardado y el número rechazado a medias. */
+              const decisionWhatsapp = whatsapp.decidir();
+              if (decisionWhatsapp.tipo === 'rechazar') {
+                whatsapp.marcarError(decisionWhatsapp.aviso.mensaje);
+                Alert.alert(decisionWhatsapp.aviso.titulo, decisionWhatsapp.aviso.mensaje);
+                return;
+              }
               setGuardandoPerfil(true);
               try {
-                await actualizarPerfil({
-                  fullName: profileName,
-                  avatarUrl: profileAvatar,
-                  bio: profileBio,
-                  department: profileDepartment,
+                const resultado = await guardarElPerfil({
+                  decision: decisionWhatsapp,
+                  guardarPerfil: () => actualizarPerfil({ fullName: profileName, avatarUrl: profileAvatar, department: profileDepartment }),
+                  guardarWhatsapp: whatsapp.guardar,
                 });
+                if (resultado === 'whatsapp-fallo') {
+                  Alert.alert(
+                    'No se pudo guardar tu WhatsApp',
+                    'Tu nombre y tu foto sí se guardaron. Revisa tu conexión y vuelve a tocar «Guardar cambios».',
+                  );
+                  return;
+                }
                 // Era un diálogo «Perfil guardado»: ahora una línea en Ajustes, que se va sola.
                 confirmar('Perfil guardado.', 'hub');
                 setActiveView('hub');
@@ -1914,16 +1943,6 @@ export default function YoScreen() {
         >
           <View style={{ gap: space.gap }}>
             <View style={{ gap: 6 }}>
-              <Text style={[t.small, styles.rotuloCampo, { color: c.textStrong }]}>Biografía somática</Text>
-              <TextInput
-                value={profileBio}
-                onChangeText={setProfileBio}
-                multiline
-                style={[styles.modalInputText, { minHeight: 70, borderColor: c.border, backgroundColor: c.cardBg, color: c.text }]}
-              />
-            </View>
-
-            <View style={{ gap: 6 }}>
               <Text style={[t.small, styles.rotuloCampo, { color: c.textStrong }]}>Departamento o área</Text>
               <TextInput
                 value={profileDepartment}
@@ -1945,7 +1964,6 @@ export default function YoScreen() {
                 await actualizarPerfil({
                   fullName: profileName,
                   avatarUrl: profileAvatar,
-                  bio: profileBio,
                   department: profileDepartment,
                 });
                 confirmar('Información guardada.', 'hub');
