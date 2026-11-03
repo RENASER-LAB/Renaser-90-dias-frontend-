@@ -215,9 +215,9 @@ export const DATOS_INICIALES_CUESTIONARIO_PROFUNDO: CuestionarioProfundoData = {
  * son exactamente las dos que las capturas muestran SIN asterisco.
  */
 export const CAMPOS_OBLIGATORIOS: Readonly<
-  Record<number, readonly { campo: keyof CuestionarioProfundoData; aviso: string }[]>
+  Record<number, readonly { campo: keyof CuestionarioProfundoData; aviso: string | ((plazo: string) => string) }[]>
 > = {
-  1: [{ campo: 'objetivoSmartCuerpo', aviso: 'Escribe tu objetivo SMART de Cuerpo a 90 días.' }],
+  1: [{ campo: 'objetivoSmartCuerpo', aviso: plazo => `Escribe tu objetivo SMART de Cuerpo a ${plazo}.` }],
   2: [
     { campo: 'criticoInterno', aviso: 'Escribe qué te dice tu crítico interno cuando fallas.' },
     { campo: 'creenciaLimitante', aviso: 'Escribe tu creencia limitante #1.' },
@@ -231,15 +231,15 @@ export const CAMPOS_OBLIGATORIOS: Readonly<
     { campo: 'mereceDinero', aviso: 'Mueve la barra para marcar cuánto sientes que mereces ganar.' },
   ],
   4: [
-    { campo: 'metaFacturacion', aviso: 'Escribe tu meta de facturación a 90 días (USD).' },
+    { campo: 'metaFacturacion', aviso: plazo => `Escribe tu meta de facturación a ${plazo} (USD).` },
     { campo: 'productoEstrella', aviso: 'Describe tu producto o servicio estrella.' },
     { campo: 'clienteIdeal', aviso: 'Describe tu cliente ideal.' },
     { campo: 'enemigoPublico', aviso: 'Escribe tu Enemigo Público #1 del negocio.' },
-    { campo: 'objetivoSmartNegocio', aviso: 'Escribe tu objetivo SMART de Negocio a 90 días.' },
+    { campo: 'objetivoSmartNegocio', aviso: plazo => `Escribe tu objetivo SMART de Negocio a ${plazo}.` },
   ],
   5: [
     { campo: 'unaSolaCosa', aviso: 'Escribe esa única cosa que haría de esta formación un éxito.' },
-    { campo: 'bautizoProceso', aviso: 'Ponle nombre a tu reto personal de 90 días.' },
+    { campo: 'bautizoProceso', aviso: plazo => `Ponle nombre a tu reto personal de ${plazo}.` },
   ],
   6: [
     { campo: 'actividadDrena', aviso: 'Escribe qué actividad te drena más energía hoy.' },
@@ -259,6 +259,11 @@ export const CAMPOS_OBLIGATORIOS: Readonly<
     { campo: 'nivelAnsiedad', aviso: 'Mueve la barra para marcar tu nivel de ansiedad diaria.' },
   ],
 };
+
+/** El aviso de un campo obligatorio con el plazo del programa de la persona («90 días», «3 meses», «1 año») donde lo nombra (issue #103). */
+export function textoDelAviso(aviso: string | ((plazo: string) => string), plazo: string): string {
+  return typeof aviso === 'function' ? aviso(plazo) : aviso;
+}
 
 /**
  * La meta de facturación es la única pregunta NUMERO de los 8 bloques: si no se puede parsear,

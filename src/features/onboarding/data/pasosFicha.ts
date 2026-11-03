@@ -1,5 +1,6 @@
 import { FichaInicialData } from '../types/onboarding.types';
 import { esMayorDeEdad, hoyEnLima, partirFecha, type FechaPartida } from '../../../components/fechaEnRuedas/logicaDeFecha';
+import { alPlazo, plazoConArticulo } from '../../formaciones/utils/plazoEnFrases';
 import { PLAZO_POR_DEFECTO } from '../../objetivos/utils/nombreDelObjetivo';
 import { CHAPTERS_CONFIG } from './chaptersConfig';
 
@@ -48,20 +49,6 @@ export interface PasoFicha {
    * de la persona («90 días», «3 meses», «1 año»; issue #103): la ficha es de cada formación, no siempre de 90 días. Se lee con `bajadaDelPaso`.
    */
   bajada?: string | ((plazo: string) => string);
-}
-
-/**
- * El plazo del programa con su artículo, para frases como «durante los 90 días» / «durante los 3 meses» / «durante el año» (issue #103, identidad por
- * formación: la Ficha Inicial decía «90 días» a quien está en un Diplomado de 3 meses o de 1 año). `plazo` es el de `plazoDelObjetivo`. Con 90 días
- * las frases son EXACTAMENTE las de siempre.
- */
-export function plazoConArticulo(plazo: string): string {
-  return plazo === '1 año' ? 'el año' : `los ${plazo}`;
-}
-
-/** «a los 90 días», «a los 3 meses», «al año»: la contracción de «a el». */
-export function alPlazo(plazo: string): string {
-  return plazo === '1 año' ? 'al año' : `a los ${plazo}`;
 }
 
 /** La línea de contexto de un paso, con el plazo de SU programa donde lo nombra. */

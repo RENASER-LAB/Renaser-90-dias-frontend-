@@ -19,8 +19,7 @@ import {
   validarPaso,
   bajadaDelPaso,
 } from '../data/pasosFicha';
-import { useFormacionDeLaSesion } from '../../formaciones/context/FormacionContext';
-import { plazoDelObjetivo } from '../../objetivos/utils/nombreDelObjetivo';
+import { usePlazoDeLaSesion } from '../../formaciones/hooks/usePlazoDeLaSesion';
 import { usePersistenciaOnboarding } from '../hooks/usePersistenciaOnboarding';
 import * as onboardingApi from '../api/onboardingApi';
 import { almacenamientoLocal } from '../../../services/storage/almacenamientoLocal';
@@ -100,8 +99,7 @@ export function FichaInicialScreen({
   const { guardarCapitulo, avanzarEstado } = usePersistenciaOnboarding();
   /* Issue #103: lo que la ficha dice del plazo («durante los 90 días», «me comprometo a los 3 meses») es el de la formación de la persona, la misma que
      nombra «Tu programa empieza mañana» (`lineaDelPlazo`). Sin formación conocida vale la de siempre, 90 días. */
-  const { formacion } = useFormacionDeLaSesion();
-  const plazo = plazoDelObjetivo(formacion?.duracionDias, formacion?.activa?.codigo);
+  const { plazo } = usePlazoDeLaSesion();
 
   /** El paso que se ve (índice global 0..11) y hacia dónde se llegó, para que entre del lado correcto. */
   const [navegacion, setNavegacion] = useState<{ indice: number; direccion: DireccionDePaso }>({

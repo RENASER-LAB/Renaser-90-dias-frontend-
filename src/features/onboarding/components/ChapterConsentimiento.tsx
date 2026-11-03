@@ -7,7 +7,7 @@ import { Icon } from '../../../components/Icon';
 import { Presionable } from '../../../components/Presionable';
 import { tacto } from '../../../utils/tacto';
 import { PLAZO_POR_DEFECTO } from '../../objetivos/utils/nombreDelObjetivo';
-import { alPlazo } from '../data/pasosFicha';
+import { alPlazo } from '../../formaciones/utils/plazoEnFrases';
 
 interface ChapterConsentimientoProps {
   data: FichaConsentimientoData;

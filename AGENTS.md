@@ -1978,10 +1978,23 @@ Identidad por formación en todo: la Ficha Inicial estándar —la que ve quien 
   (un servidor anterior, o todavía sin leer) vale el de siempre, 90 días (`PLAZO_POR_DEFECTO`). `validarPaso`, `validarCapitulo` y `ChapterConsentimiento` suman un
   parámetro opcional `plazo`; `PasoFicha.bajada` puede ser una función del plazo (`bajadaDelPaso`).
 * **No cambia** lo que se guarda (`compromiso90Dias` sigue siendo la clave del contrato con el servidor), las preguntas, ni los demás avisos.
-* **Quedan con «90 días» a propósito (no eran de este pedido, a decidir con el dueño):** el subtítulo de capítulo que la ficha no dibuja (`chaptersConfig`), la
-  invitación «Hacer mi programa de 90 días» del personal, la bienvenida («90 días de compromiso…»), el aviso «Pacto sellado. Tu compromiso de 90 días está activo.»,
-  la tarjeta del podio sin nombre de formación, y las pantallas sin uso del cuestionario profundo.
-* **Pruebas:** `fichaPorFormacion.test.ts` (los tres plazos en los tres textos, la frase de siempre con 90 días y el cableado de `FichaInicialScreen`).
+* **Barrido de todo `features/onboarding/` (ampliación, mismo día).** El E2E lo confirmó en pantalla con un Diplomado de 1 año, y quedaban más «90 días». Un
+  solo mecanismo para todo: `usePlazoDeLaSesion` (`formaciones/hooks`; `{ plazo, duracionDias }` de la formación de la sesión) y las frases de
+  `formaciones/utils/plazoEnFrases` (`plazoConArticulo`, `alPlazo`, `losProximos`, `diaDeLaEtapa`). Con 90 días cada texto es el de siempre. Ahora también dicen el
+  plazo de SU formación: el subtítulo del capítulo 3 (`chaptersConfig.subtitle`, `subtituloDelCapitulo`), «Ratifico mi compromiso con los 90 días de Renaser» y su
+  «Día 90» (`ChapterCompromiso`), los campos de Cuerpo y Negocio y sus ejemplos (`ChapterCuerpo`, `ChapterNegocio`: «A 3 MESES», «al Día 365»), los avisos y campos del
+  cuestionario profundo (`bloquesCuestionarioProfundo`, `textoDelAviso`, `CuestionarioProfundoScreen`), «LOS PRÓXIMOS 90 DÍAS», «90 días de compromiso…» y las etapas
+  «DÍA 01 / 30 / 60 / 90» de la bienvenida (con 365 días: 01, 122, 243 y 365, la misma proporción de las fases; `BienvenidaScreen`), «Activaste tu protocolo innegociable de
+  90 días» (`GongVictoriaScreen`) y el último compromiso del Pacto (`pactoData`).
+  **Ojo, qué se ve de verdad:** la Ficha Inicial estándar y «Tu programa empieza mañana» son las pantallas vivas. `BienvenidaScreen`, `GongVictoriaScreen`, el cuestionario
+  profundo (`CuestionarioProfundoScreen` y sus `Chapter…`) y `pactoData` **no están montados hoy** (nadie los importa): se corrigieron para que, si vuelven, no digan 90 a
+  nadie. `usePlazoDeLaSesion` no pide nada: lee el contexto de la formación que ya está en la sesión.
+* **Fuera de `onboarding/`, sin tocar (a decidir con el dueño):** «Hacer mi programa de 90 días» (`InvitacionProgramaPropio`, el personal sin programa), «Pacto sellado. Tu
+  compromiso de 90 días está activo.» (`YoScreen`), «De él nacen tus objetivos de 90 días.» (`diagnostico/utils/textosDelDiagnostico`), los avisos «Primero define tus
+  tres objetivos de 90 días.» y «No pudimos cargar tu objetivo de 90 días.» (`objetivos/hooks`) y el respaldo «Renaser · 90 días» de la imagen del podio.
+* **Pruebas:** `fichaPorFormacion.test.ts` (los tres plazos en los tres textos, la frase de siempre con 90 días y el cableado de `FichaInicialScreen`),
+  `plazoEnElOnboarding.test.ts` (las frases, cada pantalla con 90 días, 3 meses y 1 año, y un barrido que falla si el código de `onboarding/` vuelve a escribir «90 días»
+  o «Día 90» a mano) y `usePlazoDeLaSesion.test.ts`.
 * **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
 
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)

@@ -27,7 +27,8 @@ jest.mock('../../../../utils/tacto', () => ({
 import { plazoDelObjetivo } from '../../../objetivos/utils/nombreDelObjetivo';
 import { ChapterConsentimiento } from '../../components/ChapterConsentimiento';
 import { INITIAL_FICHA_DATA } from '../chaptersConfig';
-import { PASOS_FICHA, alPlazo, bajadaDelPaso, plazoConArticulo, validarCapitulo, validarPaso } from '../pasosFicha';
+import { alPlazo, plazoConArticulo } from '../../../formaciones/utils/plazoEnFrases';
+import { PASOS_FICHA, bajadaDelPaso, validarCapitulo, validarPaso } from '../pasosFicha';
 import type { FichaInicialData } from '../../types/onboarding.types';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -146,8 +147,7 @@ describe('FichaInicialScreen', () => {
   const codigo = fs.readFileSync(path.resolve(__dirname, '../../screens/FichaInicialScreen.tsx'), 'utf8');
 
   it('toma el plazo de la formación de la sesión y lo pasa a la validación, a la ayuda del paso y a la casilla', () => {
-    expect(codigo).toContain('useFormacionDeLaSesion()');
-    expect(codigo).toContain('plazoDelObjetivo(formacion?.duracionDias, formacion?.activa?.codigo)');
+    expect(codigo).toContain('usePlazoDeLaSesion()');
     expect(codigo).toContain('validarPaso(paso.id, formData, undefined, plazo)');
     expect(codigo).toContain('validarCapitulo(capitulo, formData, undefined, plazo)');
     expect(codigo).toContain('bajadaDelPaso(paso, plazo)');

@@ -2,6 +2,7 @@ import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { FichaNegocioData } from '../types/onboarding.types';
 import { FormField } from '../../../components/FormField';
+import { usePlazoDeLaSesion } from '../../formaciones/hooks/usePlazoDeLaSesion';
 
 interface ChapterNegocioProps {
   data: FichaNegocioData;
@@ -9,6 +10,8 @@ interface ChapterNegocioProps {
 }
 
 export function ChapterNegocio({ data, onChange }: ChapterNegocioProps) {
+  /* Issue #103: el plazo y el último día son los del programa de la persona, no siempre 90. */
+  const { plazo, duracionDias } = usePlazoDeLaSesion();
   const updateField = (key: keyof FichaNegocioData, value: string) => {
     onChange({ ...data, [key]: value });
   };
@@ -16,7 +19,7 @@ export function ChapterNegocio({ data, onChange }: ChapterNegocioProps) {
   return (
     <View style={styles.container}>
       <FormField
-        label="META DE FACTURACIÓN A 90 DÍAS (USD)"
+        label={`META DE FACTURACIÓN A ${plazo.toUpperCase()} (USD)`}
         helperText="Número específico, no rango"
         value={data.metaFacturacion}
         onChangeText={val => updateField('metaFacturacion', val)}
@@ -56,11 +59,11 @@ export function ChapterNegocio({ data, onChange }: ChapterNegocioProps) {
       />
 
       <FormField
-        label="OBJETIVO SMART DE NEGOCIO A 90 DÍAS"
+        label={`OBJETIVO SMART DE NEGOCIO A ${plazo.toUpperCase()}`}
         helperText="Qué, cuánto y para cuándo"
         value={data.smartNegocio}
         onChangeText={val => updateField('smartNegocio', val)}
-        placeholder='Ej. "Facturar $30,000 USD cerrando 10 clientes de alto valor al Día 90"'
+        placeholder={`Ej. "Facturar $30,000 USD cerrando 10 clientes de alto valor al Día ${duracionDias}"`}
         multiline
         numberOfLines={3}
       />

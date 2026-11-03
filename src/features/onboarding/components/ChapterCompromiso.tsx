@@ -4,6 +4,8 @@ import { FichaCompromisoData } from '../types/onboarding.types';
 import { FormField } from '../../../components/FormField';
 import { Checkbox } from '../../../components/Checkbox';
 import { SignatureCanvas } from '../../../components/SignatureCanvas';
+import { usePlazoDeLaSesion } from '../../formaciones/hooks/usePlazoDeLaSesion';
+import { plazoConArticulo } from '../../formaciones/utils/plazoEnFrases';
 
 interface ChapterCompromisoProps {
   data: FichaCompromisoData;
@@ -11,6 +13,8 @@ interface ChapterCompromisoProps {
 }
 
 export function ChapterCompromiso({ data, onChange }: ChapterCompromisoProps) {
+  /* Issue #103: el plazo y el último día son los del programa de la persona, no siempre 90. */
+  const { plazo, duracionDias } = usePlazoDeLaSesion();
   const updateField = (key: keyof FichaCompromisoData, value: string | boolean) => {
     onChange({ ...data, [key]: value });
   };
@@ -30,7 +34,7 @@ export function ChapterCompromiso({ data, onChange }: ChapterCompromisoProps) {
         label="LA RAZÓN PRINCIPAL DE TU COMPROMISO"
         value={data.razonPrincipal}
         onChangeText={val => updateField('razonPrincipal', val)}
-        placeholder="La razón no negociable por la que llegarás al Día 90..."
+        placeholder={`La razón no negociable por la que llegarás al Día ${duracionDias}...`}
         multiline
         numberOfLines={3}
       />
@@ -66,7 +70,7 @@ export function ChapterCompromiso({ data, onChange }: ChapterCompromisoProps) {
       <Checkbox
         checked={data.compromisoFirmado}
         onToggle={checked => updateField('compromisoFirmado', checked)}
-        title="Ratifico mi compromiso con los 90 días de Renaser"
+        title={`Ratifico mi compromiso con ${plazoConArticulo(plazo)} de Renaser`}
         subtitle="Entiendo que la transformación requiere disciplina diaria y evidencias reales."
       />
     </View>
