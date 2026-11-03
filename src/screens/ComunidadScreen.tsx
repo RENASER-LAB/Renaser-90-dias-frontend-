@@ -3027,7 +3027,7 @@ function ComunidadPorFormacion({
         {/* Spec 024: «Todas · Escuela · Diplomado · Certificación». Solo lo dibuja quien ve las tres formaciones (Administración,
             Alquimista, Soporte TI); para las demás cuentas no hay nada ni un hueco. Debajo de la fila de círculos, así al subir
             un poco (que deja a la vista solo esa fila) también queda a mano. Cambiar de formación arma la pestaña de nuevo. */}
-        <SelectorDeFormacionDeLaComunidad estilo={{ paddingHorizontal: horizontalPadding, marginTop: 12 }} />
+        <SelectorDeFormacionDeLaComunidad estilo={{ paddingHorizontal: horizontalPadding, marginTop: 8 }} />
       </View>
       )}
       </Reanimated.View>

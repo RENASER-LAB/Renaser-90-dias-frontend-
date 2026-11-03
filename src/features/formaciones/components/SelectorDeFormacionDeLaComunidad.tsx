@@ -6,8 +6,8 @@ import { useFormacionDeLaComunidad } from '../hooks/useFormacionDeLaComunidad';
 import { eleccionDelControl, valorDelControl } from '../utils/opcionesDeLaComunidad';
 
 /**
- * El selector de formación de la Comunidad (spec 024): «Todas · Escuela · Diplomado · Certificación», una fila de 52 de alto (el
- * `ControlSegmentado` de la app, con el texto que se achica antes de cortarse) arriba de Comunidad.
+ * El selector de formación de la Comunidad (spec 024): «Todas · Escuela · Diplomado · Certificación», una fila de 48 de alto (el
+ * `ControlSegmentado` de la app en su forma `compacto`: letra de 14, con el texto que se achica antes de cortarse) arriba de Comunidad.
  *
  * **Solo lo dibuja quien ve las tres formaciones** (Administración, Alquimista y Soporte TI). Para todas las demás cuentas no devuelve
  * nada —ni un hueco—: la Comunidad queda exactamente igual y no aparece la palabra «formación» (FR-050). Cambiar de opción es
@@ -28,6 +28,7 @@ export function SelectorDeFormacionDeLaComunidad({ estilo }: { estilo?: React.Co
         rol="radio"
         accessibilityLabel="Formación"
         achicarTexto
+        compacto
       />
     </View>
   );

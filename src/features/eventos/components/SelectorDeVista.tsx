@@ -5,7 +5,6 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Icon, type IconName } from '../../../components/Icon';
 import { useTheme } from '../../../theme/ThemeContext';
 import type { VistaDeEventos } from '../utils/vistaPreferida';
-import { LETRA } from './piezas';
 
 const OPCIONES: { vista: VistaDeEventos; etiqueta: string; icono: IconName }[] = [
   { vista: 'calendario', etiqueta: 'Calendario', icono: 'calendar' },
@@ -15,7 +14,7 @@ const OPCIONES: { vista: VistaDeEventos; etiqueta: string; icono: IconName }[] =
 
 /**
  * «Calendario» | «Tarjetas»: las dos formas de ver los eventos que pidió el dueño el 2026-09-26.
- * Dos botones de 52 px a lo ancho; el elegido va relleno en dorado, como las medallas de Comunidad.
+ * Dos botones de 44 px a lo ancho (2026-11-03: eran de 52, con la letra a 17); el elegido va relleno en dorado, como las medallas de Comunidad.
  */
 export function SelectorDeVista({ vista, onCambiar }: { vista: VistaDeEventos; onCambiar: (v: VistaDeEventos) => void }) {
   const { c, space } = useTheme();
@@ -40,8 +39,10 @@ export function SelectorDeVista({ vista, onCambiar }: { vista: VistaDeEventos; o
               },
             ]}
           >
-            <Icon name={op.icono} size={20} color={elegida ? c.onGold : c.goldInk} strokeWidth={1.4} />
-            <Text style={[estilos.texto, { color: elegida ? c.onGold : c.textStrong }]}>{op.etiqueta}</Text>
+            <Icon name={op.icono} size={16} color={elegida ? c.onGold : c.goldInk} strokeWidth={1.4} />
+            <Text style={[estilos.texto, { color: elegida ? c.onGold : c.textStrong }]} numberOfLines={1}>
+              {op.etiqueta}
+            </Text>
           </Pressable>
         );
       })}
@@ -53,12 +54,12 @@ const estilos = StyleSheet.create({
   fila: { flexDirection: 'row', gap: 10 },
   opcion: {
     flex: 1,
-    minHeight: 52,
+    minHeight: 44,
     borderWidth: 1.5,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
   },
-  texto: { fontFamily: fuentes.media, fontSize: LETRA.titulo - 1 },
+  texto: { fontFamily: fuentes.media, fontSize: 15 },
 });

@@ -66,7 +66,7 @@ export function CalendarioDelMes({
   const delDia = diaElegido ? porDia[diaElegido] ?? [] : [];
 
   return (
-    <View style={{ gap: 14 }}>
+    <View style={{ gap: 10 }}>
       <View style={estilos.cabecera}>
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text
@@ -80,9 +80,9 @@ export function CalendarioDelMes({
           </Text>
           <Text style={[estilos.anio, { color: c.textSoft }]}>{mes.anio}</Text>
         </View>
-        <BotonSecundario etiqueta="Hoy" onPress={onHoy} estilo={estilos.botonHoy} accessibilityLabel="Ir a hoy" />
-        <BotonSecundario etiqueta="‹" onPress={() => onCambiarMes(-1)} estilo={estilos.flecha} accessibilityLabel="Mes anterior" />
-        <BotonSecundario etiqueta="›" onPress={() => onCambiarMes(1)} estilo={estilos.flecha} accessibilityLabel="Mes siguiente" />
+        <BotonSecundario etiqueta="Hoy" compacto onPress={onHoy} estilo={estilos.botonHoy} accessibilityLabel="Ir a hoy" />
+        <BotonSecundario etiqueta="‹" compacto onPress={() => onCambiarMes(-1)} estilo={estilos.flecha} accessibilityLabel="Mes anterior" />
+        <BotonSecundario etiqueta="›" compacto onPress={() => onCambiarMes(1)} estilo={estilos.flecha} accessibilityLabel="Mes siguiente" />
       </View>
 
       <View style={[estilos.grilla, { borderColor: c.border, backgroundColor: c.cardBg, borderRadius: space.radius }]}>
@@ -233,10 +233,11 @@ function TarjetaDelDia({ oc, zona, onPress }: { oc: Ocurrencia; zona: string; on
 
 const estilos = StyleSheet.create({
   cabecera: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  mes: { fontFamily: fuentes.display, fontSize: 24, letterSpacing: -0.4, lineHeight: 29 },
-  anio: { fontFamily: fuentes.media, fontSize: LETRA.cuerpo },
-  botonHoy: { minWidth: 64, paddingHorizontal: 12 },
-  flecha: { width: 48, paddingHorizontal: 0 },
+  /* El mes a 20 (era 24) y el año a 14 (era 16): 2026-11-03, «Redúcele el tamaño de texto, es muy grande». */
+  mes: { fontFamily: fuentes.display, fontSize: 20, letterSpacing: -0.3, lineHeight: 24 },
+  anio: { fontFamily: fuentes.media, fontSize: 14, lineHeight: 18 },
+  botonHoy: { minWidth: 60, paddingHorizontal: 12 },
+  flecha: { width: 44, paddingHorizontal: 0 },
   grilla: { borderWidth: 1, paddingVertical: 8, paddingHorizontal: 4 },
   semana: { flexDirection: 'row' },
   inicial: { flex: 1, textAlign: 'center', fontFamily: fuentes.negrita, fontSize: LETRA.cuerpo, paddingVertical: 6 },

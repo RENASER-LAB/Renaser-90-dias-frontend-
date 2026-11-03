@@ -47,7 +47,7 @@ import { CalendarioDelMes } from './CalendarioDelMes';
 import { DetalleDelEvento } from './DetalleDelEvento';
 import { FormularioDelEvento } from './FormularioDelEvento';
 import { MiAgenda } from './MiAgenda';
-import { LETRA, Parrafo } from './piezas';
+import { Parrafo } from './piezas';
 import { SelectorDeVista } from './SelectorDeVista';
 import { TarjetasDeEventos } from './TarjetasDeEventos';
 import { useOcultarBarraAlDesplazar } from '../../../navigation/barraAlDesplazar/BarraInferior';
@@ -457,12 +457,14 @@ export function SeccionEventos({
 
   const proximas = proximasParaTarjetas(soloVoy ? soloLasQueVas(ocurrencias) : ocurrencias, Date.now());
 
+  /* Compacto (2026-11-03, el dueño: «Redúcele el tamaño de texto, es muy grande»): menos aire entre las filas de la cabecera. */
   return envolver(
-    <View style={{ gap: 16 }}>
+    <View style={{ gap: 10 }}>
       <View style={estilos.acciones}>
         <BotonSecundario
           etiqueta="Mi agenda"
           icono="calendar"
+          compacto
           estilo={estilos.accion}
           onPress={() => setVista({ nombre: 'agenda' })}
         />
@@ -470,6 +472,7 @@ export function SeccionEventos({
           <BotonPrincipal
             etiqueta="Crear evento"
             icono="plus"
+            compacto
             estilo={estilos.accion}
             onPress={() => {
               if (hayQueElegirParaCrear) {
@@ -505,7 +508,7 @@ export function SeccionEventos({
           onAbrir={abrir}
         />
       ) : (
-        <View style={{ gap: 14 }}>
+        <View style={{ gap: 12 }}>
           {cargando && ocurrencias.length === 0 ? <Parrafo>Buscando eventos…</Parrafo> : null}
           {fallo && ocurrencias.length > 0 ? (
             <Parrafo tono="peligro">No se pudo actualizar la lista; esto es lo último que llegó. Desliza hacia abajo para reintentar.</Parrafo>
@@ -534,7 +537,7 @@ export function SeccionEventos({
   );
 }
 
-/** «Solo a los que voy»: una casilla de 48 px, en palabras. Filtra el calendario y las tarjetas. */
+/** «Solo a los que voy»: una casilla de 44 px, en palabras. Filtra el calendario y las tarjetas. */
 function SoloLosQueVoy({ activo, onCambiar }: { activo: boolean; onCambiar: (v: boolean) => void }) {
   const { c } = useTheme();
   return (
@@ -560,9 +563,9 @@ function SoloLosQueVoy({ activo, onCambiar }: { activo: boolean; onCambiar: (v: 
 }
 
 const estilos = StyleSheet.create({
-  acciones: { flexDirection: 'row', gap: 10 },
+  acciones: { flexDirection: 'row', gap: 8 },
   accion: { flex: 1, paddingHorizontal: 10 },
-  casilla: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 48, alignSelf: 'flex-start' },
-  cuadro: { width: 26, height: 26, borderRadius: 7, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
-  casillaTexto: { fontFamily: fuentes.media, fontSize: LETRA.cuerpo + 1 },
+  casilla: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 44, alignSelf: 'flex-start' },
+  cuadro: { width: 22, height: 22, borderRadius: 6, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
+  casillaTexto: { fontFamily: fuentes.media, fontSize: 15 },
 });
