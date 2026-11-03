@@ -64,6 +64,7 @@ import {
 import { useProgramaPersonal } from '../features/mentor/hooks/useProgramaPersonal';
 import { FilaDelProgramaQueEmpieza } from '../features/programa/components/FilaDelProgramaQueEmpieza';
 import { programaQueEmpieza } from '../features/programa/utils/programaQueEmpieza';
+import { useDiaInicialDeTraining } from '../features/training/hooks/useDiaInicialDeTraining';
 import { BotonElegirDiaUno } from '../features/programa/components/BotonElegirDiaUno';
 import { InvitacionProgramaPropio } from '../features/programa/components/InvitacionProgramaPropio';
 import { AvisoConsultaDiaUno } from '../features/programa/components/AvisoConsultaDiaUno';
@@ -920,6 +921,14 @@ export default function TrainingScreen() {
       registroConFoto.cerrar();
     }
   }, [hoyIso, registroConFoto]);
+  /* Issue #107: en el Día 0 (el programa empieza mañana) Training abre en MAÑANA, con la vista de un día que viene (lo planificado, sin botones), no en la
+     lista vacía de hoy con media pantalla en blanco. Una sola vez por día: si la persona toca hoy, se queda en hoy. */
+  useDiaInicialDeTraining({
+    hoyIso,
+    fechaDeInicio: programaQueEmpiezaPronto?.fechaInicio,
+    hayDiaElegido: diaElegido !== null,
+    alElegir: alElegirDia,
+  });
   /**
    * Los pasos del teléfono para «Kilómetros diarios» (spec 037, D-310). Solo en HOY y con Training a la vista: en un día anterior
    * no se lee ni se registra nada. Al registrar, el servidor ya cerró el hábito: se refleja el cierre (como los demás) y se

@@ -2079,6 +2079,21 @@ a «Por semana» con el editor abierto (`cambiarAlcance`) abría SIEMPRE en la p
   un cambio de hoy o pasado no cuenta, sin cambios abre en la primera, y lo recién guardado también cuenta. Maestro `planificacion/lo-guardado-sale-marcado` ajustado a la regla.
 * **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
 
+## Corrección — 2026-11-02 — Training abre en MAÑANA en el Día 0 (issue #107)
+
+E2E final del 2026-11-02: a quien su programa empieza mañana, Training le abría en HOY, con la lista vacía («Hoy no tienes nada planificado.») y media pantalla en blanco, aunque ya
+tenía lo planificado para mañana. El #101 puso arriba la fila «Tu programa empieza el …»; esto hace que además abra donde hay algo que ver. Lo que cambia y nada más:
+* **En el Día 0, Training abre en mañana**, con la vista de un día que viene que ya existía (lo planificado de ese día, sin botones ni toques; las horas y las acciones se piden
+  al abrir, una vez por semana y cuenta, como al tocar cualquier día que viene). Arriba sigue la fila «Tu programa empieza el …» y la persona puede tocar hoy cuando quiera.
+* **Cuándo:** solo si el Día 1 es EXACTAMENTE mañana (`diaInicialDeTraining`, pura: la fecha de inicio que ya lee `programaQueEmpieza`). Sin fecha («Tu programa empieza pronto»),
+  con el programa ya en marcha o empezando hoy o pasado mañana, abre en hoy como siempre. **El domingo se queda en hoy:** Training muestra la semana que se VIVE (de lunes a
+  domingo) y mañana ya es de otra, que no se ve.
+* **Una sola vez por día** (`useDiaInicialDeTraining`): si la persona toca hoy, no se la vuelve a llevar a mañana; al pasar la medianoche se decide de nuevo. Si eligió otro día antes
+  de que llegara la fecha de inicio, tampoco se le cambia.
+* **No cambia** la fila, la lista de hoy, «Tus prácticas» (siguen habilitadas, D-103) ni ningún pedido nuevo al servidor.
+* **Pruebas:** `useDiaInicialDeTraining.test.ts` (la función pura, el hook y el cableado de `TrainingScreen`).
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
+
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
 Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel especializado en React Native, Expo y TypeScript. Al crear, refactorizar o modificar cualquier pantalla o componente, debes cumplir OBLIGATORIAMENTE con los siguientes estándares:
