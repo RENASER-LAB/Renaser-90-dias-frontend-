@@ -127,6 +127,53 @@ describe('con cronograma (la maqueta)', () => {
   });
 });
 
+// decisión 2026-11-02 pagos fuera de términos
+describe('con cronograma pero sin cuotas todavía (lo registra Administración después)', () => {
+  const sinCuotas = (): MiIngreso => ({
+    pasos: [{ clave: 'ACUERDO', hecho: true }, { clave: 'PAGOS', hecho: false }],
+    pagos: { modo: 'CON_CRONOGRAMA', moneda: 'PEN', cuotas: [], confirmacion: SIN_CONFIRMAR },
+  });
+
+  it('dice algo corto en una tarjeta y nada más: sin lista de cuotas, sin casilla ni «Confirmar cronograma», sin «Tus fechas de pago»', () => {
+    const r = montar(sinCuotas());
+    const texto = textos(r);
+
+    expect(texto).toContain('Tu cronograma de pagos');
+    expect(texto).toContain('Tu cronograma de pagos aparecerá aquí cuando Administración lo registre.');
+    expect(texto).not.toContain('Tus fechas de pago');
+    expect(texto).not.toContain('Revisé mis fechas y montos.');
+    expect(texto).not.toContain('Pendiente');
+    expect(campoDelNombre(r)).toBeUndefined();
+    expect(boton(r, 'Confirmar cronograma')).toBeUndefined();
+    // los pasos de arriba siguen: Pagos aún no está hecho
+    expect(r.root.findAll(n => n.props.accessibilityLabel === 'Pagos, en curso')).not.toHaveLength(0);
+  });
+
+  it('no queda un hueco en blanco: la tarjeta tiene su ícono y su título (un encabezado) además de la frase', () => {
+    const r = montar(sinCuotas());
+    const encabezados = r.root.findAll(n => n.props.accessibilityRole === 'header' && (n.type as unknown) === 'Text');
+    expect(encabezados.map(n => React.Children.toArray(n.props.children).join(''))).toContain('Tu cronograma de pagos');
+  });
+
+  it('cuando Administración registra una cuota, la misma pantalla pasa a ser el cronograma de siempre, con su confirmación', () => {
+    const r = montar(sinCuotas());
+    act(() => {
+      r.update(
+        React.createElement(MiIngresoScreen, {
+          userId: 'u1',
+          ingreso: conCronograma(SIN_CONFIRMAR),
+          onVolver,
+          onConfirmar,
+          onReintentar: () => undefined,
+        }),
+      );
+    });
+    expect(textos(r)).toContain('Tus fechas de pago');
+    expect(textos(r)).toContain('Revisé mis fechas y montos.');
+    expect(textos(r)).not.toContain('aparecerá aquí');
+  });
+});
+
 describe('confirmar (una sola vez, sin bloquear nada)', () => {
   it('sin la casilla o sin el nombre no manda nada: dice qué falta y vibra con el error', async () => {
     const r = montar(conCronograma(SIN_CONFIRMAR));

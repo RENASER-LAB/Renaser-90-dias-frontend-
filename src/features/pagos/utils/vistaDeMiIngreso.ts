@@ -17,6 +17,13 @@ export const TITULO_DEL_CRONOGRAMA = 'Tus fechas de pago';
 export const DETALLE_DEL_CRONOGRAMA = 'Revisa el cronograma acordado.';
 export const TEXTO_DE_LA_CASILLA = 'Revisé mis fechas y montos.';
 export const AVISO_DE_CAMBIO = 'Tu cronograma cambió. Revísalo y confírmalo de nuevo.';
+/**
+ * Decisión del dueño del 2026-11-02 (pagos fuera de términos): el cronograma es asíncrono. Quien entró «con cronograma» y todavía no tiene cuotas (Administración las
+ * registra después, desde su ficha) lee esto: una tarjeta corta en lugar de una lista vacía y de una confirmación que no tiene nada que confirmar.
+ */
+export const TITULO_SIN_CUOTAS = 'Tu cronograma de pagos';
+export const DETALLE_SIN_CUOTAS = 'Tu cronograma de pagos aparecerá aquí cuando Administración lo registre.';
+export const DETALLE_DE_LA_FILA_SIN_CUOTAS = 'Aún no hay cuotas registradas';
 
 export type EstadoDelPaso = 'hecho' | 'actual' | 'pendiente';
 
@@ -64,6 +71,7 @@ export function cuotaVisible(cuota: CuotaDePago, moneda: string | null, hoy: Fec
 
 export type VistaDelPago =
   | { tipo: 'completo'; titulo: string; detalle: string }
+  | { tipo: 'sin-cuotas'; titulo: string; detalle: string }
   | {
       tipo: 'cronograma';
       titulo: string;
@@ -84,6 +92,8 @@ export function textoDeLaConfirmacion(confirmadaEn: string | null, nombre: strin
 
 export function vistaDelPago(pagos: PagosDeLaPersona, hoy: FechaDePago): VistaDelPago {
   if (pagos.modo === 'SIN_CRONOGRAMA') return { tipo: 'completo', titulo: TITULO_DE_PAGO_COMPLETO, detalle: DETALLE_DE_PAGO_COMPLETO };
+  /* «Con cronograma» pero Administración todavía no registró ninguna cuota: nada que listar ni que confirmar. */
+  if (pagos.cuotas.length === 0) return { tipo: 'sin-cuotas', titulo: TITULO_SIN_CUOTAS, detalle: DETALLE_SIN_CUOTAS };
   const { confirmacion } = pagos;
   return {
     tipo: 'cronograma',
@@ -121,6 +131,7 @@ export function detalleDeLaFila(ingreso: MiIngreso): string {
   const pagos = ingreso.pagos;
   if (!pagos) return '';
   if (pagos.modo === 'SIN_CRONOGRAMA') return TITULO_DE_PAGO_COMPLETO;
+  if (pagos.cuotas.length === 0) return DETALLE_DE_LA_FILA_SIN_CUOTAS;
   const pendientes = pagos.cuotas.filter(c => !c.pagada).length;
   if (pendientes === 0) return 'Todas tus cuotas figuran pagadas';
   return pendientes === 1 ? '1 cuota pendiente' : `${pendientes} cuotas pendientes`;

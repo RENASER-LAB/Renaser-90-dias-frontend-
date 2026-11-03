@@ -49,6 +49,34 @@ describe('qué falta para poder mandarlo', () => {
   });
 });
 
+// decisión 2026-11-02 pagos fuera de términos
+describe('cuotas opcionales (permiteSinCuotas): el cronograma es asíncrono', () => {
+  const opciones = { permiteSinCuotas: true } as const;
+
+  it('con la moneda y sin cuotas se puede mandar; sin moneda no, y lo de siempre (sin la opción) sigue pidiendo una cuota', () => {
+    expect(problemaDelBorrador(conCronograma('PEN', []), opciones)).toBeNull();
+    expect(problemaDelBorrador(conCronograma(null, []), opciones)).toBe('Elige la moneda del cronograma.');
+    expect(problemaDelBorrador(conCronograma('PEN', []))).toBe('Agrega al menos una cuota.');
+  });
+
+  it('una fila sin nada escrito no cuenta, pero una a medias sigue siendo un error', () => {
+    expect(problemaDelBorrador(conCronograma('PEN', [fila('', ''), fila('  ', ' ')]), opciones)).toBeNull();
+    expect(problemaDelBorrador(conCronograma('PEN', [fila('', ''), fila('15/11/2026', '')]), opciones)).toMatch(/monto mayor que cero/);
+    expect(problemaDelBorrador(conCronograma('PEN', [fila('', '100')]), opciones)).toBe('Cada cuota necesita su fecha.');
+  });
+
+  it('el cuerpo: SCHEDULE con la moneda y ninguna cuota, o solo las que se escribieron', () => {
+    expect(paraElPedido(conCronograma('USD', []), opciones)).toEqual({ mode: 'SCHEDULE', currency: 'USD', installments: [] });
+    expect(paraElPedido(conCronograma('USD', [fila('', ''), fila('15/11/2026', '250')]), opciones)).toEqual({
+      mode: 'SCHEDULE',
+      currency: 'USD',
+      installments: [{ dueDate: '2026-11-15', amount: 250 }],
+    });
+    // sin la opción, la lista vacía sigue sin mandarse (la ficha, para quien ya tiene cuotas)
+    expect(paraElPedido(conCronograma('USD', []))).toBeNull();
+  });
+});
+
 describe('el cuerpo del pedido', () => {
   it('«sin cronograma» manda NONE; «con cronograma», la moneda y las cuotas con su fecha ISO y su monto', () => {
     expect(paraElPedido({ modo: 'sin', moneda: null, filas: [] })).toEqual({ mode: 'NONE' });

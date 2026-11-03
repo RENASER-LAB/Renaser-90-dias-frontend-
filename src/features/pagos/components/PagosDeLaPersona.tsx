@@ -27,6 +27,9 @@ type Hoja = { tipo: 'cronograma' } | { tipo: 'cuota'; cuota: CuotaDePago | null 
  * cualquier otro rol y entonces no se dibuja). Ver su cronograma, marcar cada cuota «Pagado» o devolverla a «Pendiente» —queda quién y cuándo—, agregar,
  * editar y quitar cuotas pendientes, y asignar un cronograma (o «Sin cronograma») a quien ya estaba dentro sin ninguno. **Nada se recalcula solo.**
  *
+ * El cronograma es asíncrono (decisión 2026-11-02 pagos fuera de términos): se acepta a alguien «Con cronograma» sin cuotas y esta sección es donde se registran
+ * después —«Armar las cuotas» con el atajo mensual, o «Agregar una cuota»—. Mientras no haya cuotas, la persona ve en «Mi ingreso» que aparecerán cuando se registren.
+ *
  * - Una cuota pagada no se edita ni se quita (el servidor lo hace cumplir con 409): la ficha no ofrece esos botones; para corregirla, «Volver a pendiente».
  * - Con cuotas pagadas tampoco se ofrece reemplazar el cronograma entero ni pasar a «sin cronograma» (409 en el servidor).
  * - Marcar es de un toque, sin confirmación (se deshace con otro toque); lo que borra —una cuota, el cronograma— sí pregunta.
@@ -67,6 +70,8 @@ export function PagosDeLaPersona({
 
   const { pagos } = lectura.datos;
   const conPagadas = pagos?.modo === 'CON_CRONOGRAMA' && pagos.cuotas.some(cuota => cuota.pagada);
+  /* Con cronograma pero sin una sola cuota: falta registrarlas (la persona ve que aparecerán). */
+  const sinCuotas = pagos?.modo === 'CON_CRONOGRAMA' && pagos.cuotas.length === 0;
 
   /** Hace un pedido que devuelve el pago entero; un error se dice con las palabras del servidor. */
   const hacer = async (pedido: () => Promise<PagosEnLaFicha>, hecho: string) => {
@@ -125,6 +130,11 @@ export function PagosDeLaPersona({
       {pagos?.modo === 'CON_CRONOGRAMA' ? (
         <>
           <Text style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 23 }]}>{lineaDeLaConfirmacion(pagos)}</Text>
+          {sinCuotas ? (
+            <Text style={[t.body, { color: c.textStrong, fontSize: 16, lineHeight: 23 }]}>
+              Todavía no hay cuotas. La persona verá que aparecerán cuando las registres.
+            </Text>
+          ) : null}
           <View style={{ gap: 10 }}>
             {pagos.cuotas.map(cuota => {
               const visible = cuotaVisible(cuota, pagos.moneda, hoy);
@@ -175,10 +185,13 @@ export function PagosDeLaPersona({
               );
             })}
           </View>
+          {sinCuotas ? <BotonPrincipal etiqueta="Armar las cuotas" icono="calendar" onPress={() => setHoja({ tipo: 'cronograma' })} deshabilitado={ocupado} /> : null}
           <BotonSecundario etiqueta="Agregar una cuota" icono="plus" onPress={() => setHoja({ tipo: 'cuota', cuota: null })} deshabilitado={ocupado} />
           {!conPagadas ? (
             <>
-              <BotonSecundario etiqueta="Reemplazar el cronograma" icono="calendar" onPress={() => setHoja({ tipo: 'cronograma' })} deshabilitado={ocupado} />
+              {sinCuotas ? null : (
+                <BotonSecundario etiqueta="Reemplazar el cronograma" icono="calendar" onPress={() => setHoja({ tipo: 'cronograma' })} deshabilitado={ocupado} />
+              )}
               <BotonPeligro etiqueta="Marcar sin cronograma" onPress={() => void marcarSinCronograma()} deshabilitado={ocupado} />
             </>
           ) : (
@@ -193,6 +206,8 @@ export function PagosDeLaPersona({
         visible={hoja?.tipo === 'cronograma'}
         nombre={nombre}
         inicial={pagos?.modo === 'CON_CRONOGRAMA' ? borradorDeUnCronograma(pagos.moneda, pagos.cuotas) : { ...pagoInicial(true), modo: 'con' }}
+        /* Quien todavía no tiene cuotas (sin pago anotado, «sin cronograma» o «con cronograma» vacío) puede guardar el cronograma sin ellas; quien las tiene, no. */
+        permiteSinCuotas={!(pagos?.modo === 'CON_CRONOGRAMA' && pagos.cuotas.length > 0)}
         alCerrar={() => setHoja(null)}
         alGuardar={guardarCronograma}
       />
@@ -226,6 +241,8 @@ function Titulo() {
 function lineaDeLaConfirmacion(pagos: Extract<Pagos, { modo: 'CON_CRONOGRAMA' }>): string {
   const moneda = pagos.moneda === 'USD' ? 'dólares (US$)' : pagos.moneda === 'PEN' ? 'soles (S/)' : null;
   const inicio = moneda ? `Con cronograma en ${moneda}. ` : 'Con cronograma. ';
+  /* Sin cuotas no hay nada que confirmar todavía: decir «Todavía no lo confirmó» sería pedirle algo a la persona que no puede hacer. */
+  if (pagos.cuotas.length === 0) return `${inicio}Sin cuotas registradas.`;
   const { confirmacion } = pagos;
   if (confirmacion.estado === 'CONFIRMADA') return `${inicio}${textoDeLaConfirmacion(confirmacion.confirmadaEn, confirmacion.nombre).replace('Confirmaste tu', 'Confirmó su')}`;
   if (confirmacion.estado === 'DESACTUALIZADA') return `${inicio}Confirmó antes, pero el cronograma cambió: tiene que confirmarlo de nuevo.`;

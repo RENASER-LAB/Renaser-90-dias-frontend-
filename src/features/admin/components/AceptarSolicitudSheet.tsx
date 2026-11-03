@@ -261,7 +261,8 @@ export function AceptarSolicitudSheet({
           </BloqueDeAceptacion>
         ) : null}
 
-        {/* Spec 032 (decisión del dueño del 2026-11-01): cómo paga. El aprendiz tiene que elegirlo; el personal viene con «Sin cronograma», que no anota nada. */}
+        {/* Spec 032 (decisión del dueño del 2026-11-01): cómo paga. El aprendiz tiene que elegirlo; el personal viene con «Sin cronograma», que no anota nada. Las cuotas
+            son opcionales al aceptar (decisión 2026-11-02 pagos fuera de términos): Administración las registra después en la ficha de la persona → Pagos. */}
         {opciones?.paymentScheduleAvailable ? (
           <BloqueDeAceptacion
             numero={4}
@@ -280,7 +281,7 @@ export function AceptarSolicitudSheet({
             />
             <OpcionDeFicha
               etiqueta="Con cronograma"
-              ayuda="Armas las cuotas con su fecha y su monto."
+              ayuda="Eliges la moneda; las cuotas las puedes registrar ahora o después, en su ficha."
               marcada={borrador.pago.modo === 'con'}
               deshabilitada={bloqueado}
               onElegir={() => setBorrador(b => alElegirPago(b, { ...b.pago, modo: 'con' }))}

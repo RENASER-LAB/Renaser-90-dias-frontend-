@@ -17,6 +17,7 @@ export function HojaDelCronograma({
   visible,
   nombre,
   inicial,
+  permiteSinCuotas = false,
   alCerrar,
   alGuardar,
 }: {
@@ -24,6 +25,8 @@ export function HojaDelCronograma({
   nombre: string;
   /** Con lo que ya tenía (reemplazar) o vacío (asignar). */
   inicial: BorradorDePago;
+  /** Quien todavía no tiene cuotas puede guardar «Con cronograma» sin ellas (el cronograma es asíncrono); quien ya las tiene, no. */
+  permiteSinCuotas?: boolean;
   alCerrar: () => void;
   /** Hace el pedido; si falla, lanza con el motivo. */
   alGuardar: (pago: PagoParaElPedido) => Promise<void>;
@@ -43,10 +46,11 @@ export function HojaDelCronograma({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
-  const falta = problemaDelBorrador(borrador);
+  const opciones = { permiteSinCuotas };
+  const falta = problemaDelBorrador(borrador, opciones);
 
   const guardar = async () => {
-    const pedido = paraElPedido(borrador);
+    const pedido = paraElPedido(borrador, opciones);
     if (!pedido || enCurso.current) return;
     enCurso.current = true;
     setGuardando(true);

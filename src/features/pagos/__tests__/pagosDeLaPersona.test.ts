@@ -162,6 +162,73 @@ describe('sin nada anotado (quien ya estaba dentro)', () => {
   });
 });
 
+// decisión 2026-11-02 pagos fuera de términos
+describe('con cronograma pero sin cuotas todavía (el cronograma es asíncrono: aquí se llenan después)', () => {
+  const sinCuotas = () => mockApi.leer.mockResolvedValue(ficha(conCronograma([])));
+
+  it('dice que todavía no hay cuotas (sin pedirle nada a la persona) y ofrece «Armar las cuotas» y «Agregar una cuota»', async () => {
+    sinCuotas();
+    const r = await montar();
+    const texto = textos(r);
+
+    expect(texto).toContain('Con cronograma en dólares (US$). Sin cuotas registradas.');
+    expect(texto).toContain('Todavía no hay cuotas.');
+    expect(texto).not.toContain('Todavía no lo confirmó');
+    expect(botones(r, 'Armar las cuotas')).toHaveLength(1);
+    expect(botones(r, 'Agregar una cuota')).toHaveLength(1);
+    // armar las cuotas ES reemplazar el cronograma vacío: no se ofrecen las dos cosas a la vez
+    expect(botones(r, 'Reemplazar el cronograma')).toHaveLength(0);
+    expect(botones(r, 'Marcar sin cronograma')).toHaveLength(1);
+  });
+
+  it('«Armar las cuotas» abre la hoja del cronograma con la moneda ya puesta, y deja guardar el cronograma completo con PUT', async () => {
+    sinCuotas();
+    const pedido = { mode: 'SCHEDULE', currency: 'USD', installments: [{ dueDate: '2026-11-15', amount: 500 }, { dueDate: '2026-12-15', amount: 500 }] };
+    mockApi.asignar.mockResolvedValue(ficha(conCronograma([cuota('a', '2026-11-15', false, { amount: 500 }), cuota('b', '2026-12-15', false, { amount: 500 })])));
+    const r = await montar();
+
+    act(() => botones(r, 'Armar las cuotas')[0].props.onPress());
+    expect(mockHojas.cronograma?.visible).toBe(true);
+    expect((mockHojas.cronograma as unknown as { inicial: { moneda: string } }).inicial.moneda).toBe('USD');
+    await act(async () => mockHojas.cronograma?.alGuardar(pedido as never));
+
+    expect(mockApi.asignar).toHaveBeenCalledWith('p1', pedido);
+    expect(textos(r)).toContain('Pendiente');
+    expect(textos(r)).not.toContain('Sin cuotas registradas');
+  });
+
+  it('«Agregar una cuota» registra la primera cuota por su ruta de siempre', async () => {
+    sinCuotas();
+    mockApi.agregar.mockResolvedValue(ficha(conCronograma([cuota('n', '2026-12-15', false)])));
+    const r = await montar();
+
+    act(() => botones(r, 'Agregar una cuota')[0].props.onPress());
+    await act(async () => mockHojas.cuota?.alGuardar({ dueDate: '2026-12-15', amount: 1000 } as never));
+
+    expect(mockApi.agregar).toHaveBeenCalledWith('p1', { dueDate: '2026-12-15', amount: 1000 });
+    expect(alCambiar).toHaveBeenCalledWith('Listo: agregaste una cuota.');
+    expect(textos(r)).toContain('15 dic');
+    expect(botones(r, 'Armar las cuotas')).toHaveLength(0);
+  });
+
+  it('la hoja del cronograma deja guardar sin cuotas a quien aún no las tiene (sin pago anotado, sin cronograma o vacío) y no a quien ya las tiene', async () => {
+    sinCuotas();
+    let r = await montar();
+    act(() => botones(r, 'Armar las cuotas')[0].props.onPress());
+    expect((mockHojas.cronograma as unknown as { permiteSinCuotas: boolean }).permiteSinCuotas).toBe(true);
+    act(() => r.unmount());
+
+    mockApi.leer.mockResolvedValue(ficha(null));
+    r = await montar();
+    expect((mockHojas.cronograma as unknown as { permiteSinCuotas: boolean }).permiteSinCuotas).toBe(true);
+    act(() => r.unmount());
+
+    mockApi.leer.mockResolvedValue(ficha(conCronograma([cuota('a', '2026-11-15', false)])));
+    r = await montar();
+    expect((mockHojas.cronograma as unknown as { permiteSinCuotas: boolean }).permiteSinCuotas).toBe(false);
+  });
+});
+
 describe('con cronograma', () => {
   const cargada = (...cuotas: unknown[]) => mockApi.leer.mockResolvedValue(ficha(conCronograma(cuotas)));
 

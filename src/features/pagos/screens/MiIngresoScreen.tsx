@@ -27,6 +27,8 @@ import { pasosVisibles, vistaDelPago } from '../utils/vistaDeMiIngreso';
  * el pago.
  *
  * - **Sin cronograma**: «Tu pago fue cancelado» (texto del dueño: en el Perú, pagado por completo).
+ * - **Con cronograma pero sin cuotas todavía** (decisión 2026-11-02: el cronograma es asíncrono, lo registra Administración después): una tarjeta corta —«Tu
+ *   cronograma de pagos aparecerá aquí cuando Administración lo registre.»— y nada más: ni lista vacía, ni casilla de confirmar, ni recordatorios.
  * - **Con cronograma**: «Tus fechas de pago · Revisa el cronograma acordado.», una fila por cuota (fecha, monto con su moneda, «✓ Pagado» o «Pendiente»), los
  *   recordatorios de pago y, UNA sola vez, la casilla «Revisé mis fechas y montos.», «Tu nombre» y «Confirmar cronograma». Si Administración cambia las
  *   cuotas, se vuelve a pedir. **Nunca bloquea nada**: no pagar ni no confirmar no cambia ninguna otra pantalla.
@@ -100,6 +102,21 @@ export function MiIngresoScreen({
               <View style={[estilos.pagoCompleto, { backgroundColor: c.successWash, borderColor: c.success }]}>
                 <View style={[estilos.medallonDeExito, { backgroundColor: c.cardBg, borderColor: c.success }]}>
                   <Icon name="check" size={TAMANO_ICONO.grande} color={c.success} />
+                </View>
+                <View style={{ flex: 1, gap: 4 }}>
+                  <Text accessibilityRole="header" style={[t.cardTitle, estilos.tituloDelPagoCompleto, { color: c.textStrong }]}>
+                    {vista.titulo}
+                  </Text>
+                  <Text style={[t.body, { color: c.textSoft, fontSize: 17, lineHeight: 24 }]}>{vista.detalle}</Text>
+                </View>
+              </View>
+            ) : null}
+
+            {vista?.tipo === 'sin-cuotas' ? (
+              /* Una tarjeta con cuerpo, como la del pago completo (#90): nunca un título suelto con el resto de la pantalla en blanco. */
+              <View style={[estilos.pagoCompleto, { backgroundColor: c.cardBg, borderColor: c.border }]}>
+                <View style={[estilos.medallonDeExito, { backgroundColor: c.goldWash, borderColor: c.borderStrong }]}>
+                  <Icon name="calendar" size={TAMANO_ICONO.grande} color={c.goldInk} />
                 </View>
                 <View style={{ flex: 1, gap: 4 }}>
                   <Text accessibilityRole="header" style={[t.cardTitle, estilos.tituloDelPagoCompleto, { color: c.textStrong }]}>
