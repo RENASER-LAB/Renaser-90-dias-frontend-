@@ -58,7 +58,7 @@ export function HabitosDelAlumno({ grupoId, alumnoId }: { grupoId: string | null
         ) : habitos ? (
           <>
             <Text style={[t.body, { color: c.text, fontSize: 16, fontFamily: fuentes.media }]}>
-              {habitos.programDay > 0 ? `Día ${habitos.programDay} de 90` : 'Todavía no arrancó su programa'}
+              {habitos.programDay > 0 ? `Día ${habitos.programDay}` : 'Todavía no arrancó su programa'}
             </Text>
             {/* De quién es el reloj con el que se leen las horas de abajo. Sin esto, un mentor
                 en otro huso no tiene forma de saber que "07:00" no son sus siete. */}

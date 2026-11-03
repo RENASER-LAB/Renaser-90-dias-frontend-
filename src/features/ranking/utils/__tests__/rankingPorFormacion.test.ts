@@ -83,7 +83,9 @@ describe('la imagen del podio lleva la formación que se mira', () => {
     act(() => {
       raiz!.update(React.createElement(TarjetaDelPodioParaCompartir, { podio: podioParaCompartir(filas, 'general', '2026-10-19', HOY) }));
     });
-    expect(textos()).toContain('Renaser · 90 días');
+    // Issue #104: sin nombre de formación el respaldo es neutral; «Renaser · 90 días» sería falso para un Diplomado.
+    expect(textos()).toContain('Renaser');
+    expect(textos()).not.toContain('Renaser · 90 días');
     act(() => raiz?.unmount());
   });
 });

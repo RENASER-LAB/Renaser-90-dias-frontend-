@@ -71,7 +71,9 @@ describe('lo que dice', () => {
     const t = textos(r);
     expect(t).toContain('Ranking general');
     expect(t).toContain('19 de octubre de 2026');
-    expect(t).toContain('Renaser · 90 días');
+    // Issue #104: sin nombre de formación el respaldo es neutral, no «Renaser · 90 días» (un Diplomado no es de 90 días).
+    expect(t).toContain('Renaser');
+    expect(t.join(' ')).not.toMatch(/90/);
     expect(t).toContain('Participante número 1');
     expect(t).toContain('Participante número 2');
     expect(t).toContain('Participante número 3');

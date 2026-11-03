@@ -1989,12 +1989,33 @@ Identidad por formación en todo: la Ficha Inicial estándar —la que ve quien 
   **Ojo, qué se ve de verdad:** la Ficha Inicial estándar y «Tu programa empieza mañana» son las pantallas vivas. `BienvenidaScreen`, `GongVictoriaScreen`, el cuestionario
   profundo (`CuestionarioProfundoScreen` y sus `Chapter…`) y `pactoData` **no están montados hoy** (nadie los importa): se corrigieron para que, si vuelven, no digan 90 a
   nadie. `usePlazoDeLaSesion` no pide nada: lee el contexto de la formación que ya está en la sesión.
-* **Fuera de `onboarding/`, sin tocar (a decidir con el dueño):** «Hacer mi programa de 90 días» (`InvitacionProgramaPropio`, el personal sin programa), «Pacto sellado. Tu
-  compromiso de 90 días está activo.» (`YoScreen`), «De él nacen tus objetivos de 90 días.» (`diagnostico/utils/textosDelDiagnostico`), los avisos «Primero define tus
-  tres objetivos de 90 días.» y «No pudimos cargar tu objetivo de 90 días.» (`objetivos/hooks`) y el respaldo «Renaser · 90 días» de la imagen del podio.
+* **Fuera de `onboarding/`:** los demás «90 días» de la app se corrigieron en el issue #104 (entrada de abajo).
 * **Pruebas:** `fichaPorFormacion.test.ts` (los tres plazos en los tres textos, la frase de siempre con 90 días y el cableado de `FichaInicialScreen`),
   `plazoEnElOnboarding.test.ts` (las frases, cada pantalla con 90 días, 3 meses y 1 año, y un barrido que falla si el código de `onboarding/` vuelve a escribir «90 días»
   o «Día 90» a mano) y `usePlazoDeLaSesion.test.ts`.
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
+
+## Corrección — 2026-11-02 — ningún «90 días» escrito a mano en lo que ve la persona (issue #104)
+
+Decisión del dueño: «ningún «90 días» para el Diplomado ni la Certificación». Completa lo de #103 en todo `src/`. El plazo se dice con el de la formación de la
+persona (`usePlazoDeLaSesion`: «90 días» en la Escuela y la Certificación, «3 meses» o «1 año» en el Diplomado), o con un texto neutro donde no hay sesión.
+Con 90 días cada frase es la de siempre. Lo que cambia y nada más:
+* **Con el plazo de la formación:** la invitación del personal sin programa («Hacer mi programa de 3 meses», `InvitacionProgramaPropio`), el aviso de la clase diaria
+  («Todavía no arrancaste tus 3 meses / tu año», `ClaseDiariaModal`, `tuPlazo`), el Pacto de Yo (la cláusula 10 «Llegar al Día 365…» y «Pacto sellado. Tu compromiso de
+  1 año está activo.»), la tarjeta «Completa tu diagnóstico» («De él nacen tus objetivos de 3 meses.», `lineaDeLaTarjetaPendiente`), los avisos «No pudimos cargar
+  tu objetivo de …» y «Primero define tus tres objetivos de …» (`useRocasMaestras`, `useRocasSemanales`: el plazo va en una referencia, así que leer la formación tarde no
+  vuelve a pedir los objetivos) y «Tu semáforo se mide cuando tienes el programa de … activado» (`SemaforoScreen`).
+* **Neutro donde no hay sesión de esa persona:** la imagen del podio sin nombre de formación dice «Renaser» (antes «Renaser · 90 días»; con formación dice la de la tabla, como
+  siempre); la tarjeta del semáforo de OTRA persona (mentor y Administración) dice «No tiene su programa activado…»; y la ficha del mentor dice «Día 12» en vez de
+  «Día 12 de 90» (esa lectura no trae la duración del aprendiz).
+* **`FormacionContext` se partió en dos** (`context/contextoDeFormacion.ts`: el contexto y `useFormacionDeLaSesion`, sin la sesión; `FormacionContext.tsx`: el
+  proveedor, que re-exporta lo anterior, así que los imports de siempre no cambian). Así leer la formación no arrastra `AuthContext` ni `AsyncStorage` a cada pantalla y a
+  cada prueba (el primer intento de #103 dejó roja `fichaPasoAPaso` por eso).
+* **Excepciones del barrido, solo dos y justificadas** (`ningunNoventaDiasEscrito.test.ts`): `PLAZO_POR_DEFECTO = '90 días'` en `nombreDelObjetivo.ts` (el valor por defecto de
+  donde salen los demás) y el respaldo `{ dias: 90, texto: '90 días' }` de `diagnosticoSchemas.ts` (un servidor que no manda la duración; ninguna pantalla lo dibuja). Los
+  comentarios no cuentan. **No se tocó** el nombre del producto «Renaser 90 días» de las páginas públicas (`public/privacidad`, `public/eliminar-cuenta`): es la marca de la app.
+* **Pruebas:** `ningunNoventaDiasEscrito.test.ts` (barre `src/` y `App.tsx`: falla con «90 días», «Día 90», «de 90» o «noventa» escritos a mano), `plazoEnLasPantallas.test.ts`
+  y las de #103; se ajustaron `subtituloDelAlumno` y `tarjetaDelPodio`.
 * **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
 
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)

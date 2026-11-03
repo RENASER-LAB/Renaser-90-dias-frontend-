@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Card, MicroLabel } from '../../../components/ui';
 import { useTheme } from '../../../theme/ThemeContext';
 import { space } from '../../../theme/tokens';
+import { usePlazoDeLaSesion } from '../../formaciones/hooks/usePlazoDeLaSesion';
 import type { useProgramaPersonal } from '../../mentor/hooks/useProgramaPersonal';
 import { BotonElegirDiaUno } from './BotonElegirDiaUno';
 
@@ -36,10 +37,12 @@ export function InvitacionProgramaPropio({
   onActivado?: () => void;
 }) {
   const { c, t } = useTheme();
+  /* Issue #104: el plazo es el del programa de la persona («90 días», «3 meses», «1 año»), la misma formación de la sesión. */
+  const { plazo } = usePlazoDeLaSesion();
   return (
     <Card>
       <MicroLabel>Tu programa</MicroLabel>
-      <Text style={[t.cardTitle, { color: c.textStrong, marginTop: 8 }]}>Hacer mi programa de 90 días</Text>
+      <Text style={[t.cardTitle, { color: c.textStrong, marginTop: 8 }]}>{`Hacer mi programa de ${plazo}`}</Text>
       {/* Era `fontSize: 13`, por debajo del mínimo de párrafo de AGENTS.md §4 (14–15.5). */}
       <Text style={[t.body, { color: c.textSoft, marginTop: 8 }]}>
         Puedes recorrerlo tú también: tus hábitos y tus objetivos, con tu propio día. No cambia

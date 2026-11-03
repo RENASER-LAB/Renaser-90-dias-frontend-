@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { ApiError } from '../../../services/http/apiClient';
+import { usePlazoDeLaSesion } from '../../formaciones/hooks/usePlazoDeLaSesion';
 import { mensajeDeObjetivos } from '../utils/mensajeDeObjetivos';
 import * as objetivosApi from '../api/objetivosApi';
 import type {
@@ -57,6 +58,10 @@ export function useRocasSemanales(maestras: RocaMaestraApi[], semana?: number, a
   const [bloqueada, setBloqueada] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
+  /* Issue #104: el aviso nombra el plazo del programa de la persona. En una referencia para que `planificar` no cambie si la formación se lee tarde. */
+  const { plazo } = usePlazoDeLaSesion();
+  const plazoRef = useRef(plazo);
+  plazoRef.current = plazo;
 
   const cargar = useCallback(async () => {
     if (!activo) {
@@ -135,7 +140,7 @@ export function useRocasSemanales(maestras: RocaMaestraApi[], semana?: number, a
         return {
           ok: false as const,
           motivo: 'sin_objetivos' as const,
-          mensaje: 'Primero define tus tres objetivos de 90 días.',
+          mensaje: `Primero define tus tres objetivos de ${plazoRef.current}.`,
         };
       }
       return {

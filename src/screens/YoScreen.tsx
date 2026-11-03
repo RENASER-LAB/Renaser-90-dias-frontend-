@@ -42,6 +42,7 @@ import { MetodoEnPaginas, type FaseDelMetodo } from '../features/yo/components/M
 import { PactoFirmado } from '../features/yo/components/PactoFirmado';
 import { TarjetaDeFase } from '../features/yo/components/TarjetaDeFase';
 import { evolucionEnYo } from '../features/yo/utils/evolucionEnYo';
+import { usePlazoDeLaSesion } from '../features/formaciones/hooks/usePlazoDeLaSesion';
 import { FilaDelProgramaQueEmpieza } from '../features/programa/components/FilaDelProgramaQueEmpieza';
 import { animalConfigurado } from '../features/yo/utils/animalConfigurado';
 import { faseEnCurso, fasesEnOrden } from '../features/home/utils/faseEnCurso';
@@ -275,7 +276,8 @@ function descripcionDeLosTerminos(aceptados: TerminosAceptadosApi): string {
   return fecha ? `${version} · aceptada el ${fecha} · toca para releer` : `${version} · toca para releer`;
 }
 
-const PACTO_CLAUSULAS = [
+/** Las diez cláusulas del Pacto; la última nombra el último día del programa de la persona («Día 90», «Día 365»; issue #104). */
+const clausulasDelPacto = (duracionDias: number) => [
   '1. Cumplir mis 3 Objetivos diarios sin negociarlos conmigo.',
   '2. Subir las evidencias que el sistema me exija.',
   '3. Aceptar la disciplina como camino, no como castigo.',
@@ -285,7 +287,7 @@ const PACTO_CLAUSULAS = [
   '7. Sanar mis heridas en lugar de defenderlas.',
   '8. Cobrar lo que valgo y dejar de subvalorarme.',
   '9. Decir la verdad aunque tiemble la voz.',
-  '10. Llegar al Día 90 transformado, no entretenido.',
+  `10. Llegar al Día ${duracionDias} transformado, no entretenido.`,
 ];
 
 export default function YoScreen() {
@@ -313,6 +315,9 @@ export default function YoScreen() {
   const faseActual = faseEnCurso(resumen?.fase, resumen?.diaPrograma, resumen?.duracionDias);
   /* El Método dice los días de SU programa y las fases estiradas a ellos (spec 022); sin el dato, los 90 de siempre. */
   const duracionDelPrograma = resumen?.duracionDias ?? DIAS_DEL_PROGRAMA;
+  /* Issue #104: lo que nombra el plazo del programa en el Pacto es el de SU formación («90 días», «3 meses», «1 año»), no siempre 90. */
+  const { plazo: plazoDelPrograma, duracionDias: ultimoDiaDelPrograma } = usePlazoDeLaSesion();
+  const clausulasDeMiPacto = React.useMemo(() => clausulasDelPacto(ultimoDiaDelPrograma), [ultimoDiaDelPrograma]);
   const metodoFases = React.useMemo(() => metodoFasesDe(duracionDelPrograma), [duracionDelPrograma]);
   /* «¡Entraste en la Fase N!» es la pantalla completa de celebración desde el 2026-10-07 (pedido del dueño: reemplaza
      el momento chico de esta tarjeta). Yo también la revisa con lo que ya leyó, por si la fase nueva se ve acá primero. */
@@ -669,7 +674,7 @@ export default function YoScreen() {
 
       // Era el diálogo «¡Pacto sellado! 🦅»: ahora una línea sobre «Tu proceso completo», cuya barra
       // acaba de avanzar (2026-10-05).
-      confirmar('Pacto sellado. Tu compromiso de 90 días está activo.', 'onboarding');
+      confirmar(`Pacto sellado. Tu compromiso de ${plazoDelPrograma} está activo.`, 'onboarding');
       setActiveView('onboarding');
     } finally {
       setSellandoPacto(false);
@@ -684,6 +689,7 @@ export default function YoScreen() {
     firmaPacto,
     guardarCapitulo,
     guardarFirma,
+    plazoDelPrograma,
     profileName,
     sellandoPacto,
   ]);
@@ -1571,7 +1577,7 @@ export default function YoScreen() {
             </Text>
 
             <View style={{ gap: 10, marginVertical: 4 }}>
-              {PACTO_CLAUSULAS.map(clause => (
+              {clausulasDeMiPacto.map(clause => (
                 <Text key={clause} style={[t.body, { color: c.textSoft }]}>
                   {clause}
                 </Text>

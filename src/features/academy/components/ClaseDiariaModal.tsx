@@ -7,6 +7,8 @@ import { Presionable } from '../../../components/Presionable';
 import { HojaDesdeAbajo } from '../../../components/hojaDesdeAbajo/HojaDesdeAbajo';
 import { useAltoMaximoDelCuerpo } from '../../../components/hojaDesdeAbajo/altoDelCuerpo';
 import { useTheme } from '../../../theme/ThemeContext';
+import { usePlazoDeLaSesion } from '../../formaciones/hooks/usePlazoDeLaSesion';
+import { tuPlazo } from '../../formaciones/utils/plazoEnFrases';
 import { RESUMEN_MAX_LENGTH, RESUMEN_MIN_LENGTH } from '../api/claseDiariaApi';
 import type { ClaseDiariaApi } from '../types/academy.types';
 import { Icon, TAMANO_ICONO } from '../../../components/Icon';
@@ -79,6 +81,8 @@ export function ClaseDiariaModal({
   onCerrar,
 }: ClaseDiariaModalProps) {
   const { c, t } = useTheme();
+  /* Issue #104: el plazo es el del programa de la persona («tus 90 días», «tus 3 meses», «tu año»). */
+  const { plazo } = usePlazoDeLaSesion();
   const altoMaximo = useAltoMaximoDelCuerpo(RESERVA_CABECERA_Y_PIE);
   const [resumen, setResumen] = useState('');
   // Solo se pinta el borde de error DESPUÉS de un intento de envío: marcar en rojo un campo que
@@ -167,8 +171,7 @@ export function ClaseDiariaModal({
         {!cargando && !error && clase?.status === 'not_started' && (
           <View style={styles.centrado}>
             <Text style={[t.body, { color: c.text, textAlign: 'center' }]}>
-              Todavía no arrancaste tus 90 días, así que aún no hay clase asignada. Cuando
-              empiece tu programa, tu clase del día aparece acá.
+              {`Todavía no arrancaste ${tuPlazo(plazo)}, así que aún no hay clase asignada. Cuando empiece tu programa, tu clase del día aparece acá.`}
             </Text>
           </View>
         )}

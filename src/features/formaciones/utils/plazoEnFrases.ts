@@ -16,6 +16,11 @@ export function alPlazo(plazo: string): string {
   return plazo === '1 año' ? 'al año' : `a los ${plazo}`;
 }
 
+/** «tus 90 días», «tus 3 meses», «tu año»: para «Todavía no arrancaste …». */
+export function tuPlazo(plazo: string): string {
+  return plazo === '1 año' ? 'tu año' : `tus ${plazo}`;
+}
+
 /** «los próximos 90 días», «los próximos 3 meses», «el próximo año». */
 export function losProximos(plazo: string): string {
   return plazo === '1 año' ? 'el próximo año' : `los próximos ${plazo}`;

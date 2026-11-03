@@ -1,5 +1,5 @@
 import { plazoDelObjetivo, PLAZO_POR_DEFECTO } from '../../objetivos/utils/nombreDelObjetivo';
-import { useFormacionDeLaSesion } from '../context/FormacionContext';
+import { useFormacionDeLaSesion } from '../context/contextoDeFormacion';
 
 /**
  * El plazo del programa de la persona que tiene la sesión, para las pantallas que lo nombran antes de que exista un `/home` (el onboarding): lo saca de la

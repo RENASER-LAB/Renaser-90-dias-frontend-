@@ -6,7 +6,7 @@ import React from 'react';
 import TestRenderer, { act, type ReactTestRenderer } from 'react-test-renderer';
 
 let mockFormacion: unknown = null;
-jest.mock('../context/FormacionContext', () => ({
+jest.mock('../context/contextoDeFormacion', () => ({
   useFormacionDeLaSesion: () => ({ formacion: mockFormacion, elegir: async () => undefined, recargar: async () => undefined }),
 }));
 
