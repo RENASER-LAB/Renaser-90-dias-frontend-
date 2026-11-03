@@ -2110,6 +2110,39 @@ calendario, mal para un INSTANTE—, así que el día era el de UTC. Lo que camb
   de calendario que no se corre, la ficha dibujada y la cohorte). Jest corre con `TZ = America/Lima`.
 * **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
 
+## Cambio por pedido del dueño — 2026-11-03 — textos más compactos en Eventos y Hoy, y un tope a la letra del sistema
+
+Textual, con capturas de un teléfono real: «Redúcele el tamaño de texto, es muy grande» (Comunidad → Eventos) e «igual aquí es muy grande» (Hoy → la tarjeta de acciones,
+en «Hoy no tienes acciones agendadas»). Solo JavaScript y solo tamaños: ningún texto, flujo ni dato cambia. Lo que cambia y nada más:
+* **Causa de fondo: la letra del sistema no tenía tope.** React Native aplica el tamaño de letra del sistema (Android llega al 200 %) a todo `Text` y `TextInput`, y solo unos
+  pocos lugares pedían su propio `maxFontSizeMultiplier` (los chips de días de Planificar, la rueda de «Otra»). En el teléfono del dueño todo crecía sin límite. Ahora hay un
+  **tope global de 1,2** (`theme/topeDeLetra.ts`, `TOPE_DE_LETRA`): con la letra del sistema al 130 %, 150 % o 200 % la app crece como mucho un 20 %; al 100 % o al 110 % nada cambia.
+  La accesibilidad se respeta (la letra sigue agrandándose hasta ahí) pero nada se desborda. **Cómo se aplica, en un solo lugar:** `aplicarTopeDeLetra()` envuelve `Text` y
+  `TextInput` en la propia exportación de `react-native` y lo llama `theme/topeDeLetraGlobal`, lo PRIMERO que carga `index.ts` (antes que `expo` y `App`, para que lo que guarda `Text`
+  al cargar —p. ej. `Animated.createAnimatedComponent(TextInput)`— ya lo reciba con el tope). Se eligió esto y no `App.tsx` ni un componente `Texto`: en React Native 0.86 con React 19
+  `Text.defaultProps` ya no se lee, y cambiar los cientos de `import { Text } from 'react-native'` por un componente propio no cubría lo que ya existe. Los envoltorios solo suman la
+  prop (`ref`, `style`, `onPress` y `TextInput.State` pasan tal cual). **Lo que cada lugar pide gana:** un `maxFontSizeMultiplier` propio o `allowFontScaling={false}` se comportan como
+  antes. **En web no se hace nada** (`react-native-web` no usa la prop). Las pruebas de Jest no lo aplican (usan el `Text` de siempre).
+* **No choca con lo que ya usaba `fontScale`.** Las cuentas de espacio que seguían a `fontScale` pasan por `escalaDeLetra(fontScale)` (entre 1 y el tope), para no reservar sitio que la
+  letra ya no puede ocupar: la columna de la hora de Training (`FilaDelDia`, antes hasta 1,5), la línea de tiempo del tiempo libre (`LineaDeTiempoDelDia`, antes hasta 1,6) y la tarjeta
+  de fase de Yo (`TarjetaDeFase`, antes sin tope). El apilado de las mitades de «Hábitos de hoy» y el Radar (`fontScale > 1,15`) no cambia: con el tope sigue valiendo para toda letra
+  de 1,16 en adelante. `medidasDeLaTarjetaDeFase` sigue siendo una función pura de `fontScale`; el tope se pone en quien la llama.
+* **Comunidad → Eventos, la cabecera** (`SeccionEventos`, `CalendarioDelMes`, `SelectorDeVista`): «Mi agenda» y «Crear evento» son botones de **44** de alto con la etiqueta a **15** y
+  **siempre en un renglón** (`BotonPrincipal` / `BotonSecundario` suman la opción `compacto`: la etiqueta se achica hasta el 85 % antes de bajar de renglón, así «Crear evento» nunca va
+  en dos; sin la opción los botones de `Legible` siguen en 52 y 17); «Calendario / Tarjetas» y «Solo a los que voy» a 44 con letra de 15; el mes del calendario a **20** (el año a 14) y
+  «Hoy ‹ ›» a 44; el selector de formación de Comunidad («Todas · Escuela · Diplomado · Certificación», solo Administración, Alquimista y Soporte TI) con **letra de 14**
+  (`ControlSegmentado` suma `compacto`: segmentos de 40 con 2 de `hitSlop`, o sea 44 de área táctil; los demás controles segmentados no cambian); menos aire entre filas (10, era 16; 8 gap
+  entre los dos botones). La prueba de letra legible de mentoría y administración (`letraLegibleEnMentoriaYAdministracion`) acepta, marcada a mano como `/* compacto */`, la etiqueta de 15
+  del botón compacto: es una decisión del dueño y solo vale para botones de 44 con la etiqueta en un renglón.
+* **Hoy → la tarjeta de acciones** (`TarjetaAccionDeHoy`; vale para sus cuatro contenidos, que comparten esqueleto): el rótulo («Hoy» o la hora) a **13**, el título a **16 semibold**
+  (`fuentes.seminegrita`, era 18 negrita), «Meta: …» a 15, el botón dorado de **44** con la letra a **15** (`GoldButton` suma `compacto`; el dorado de siempre sigue en 52 y 16) y menos
+  relleno (14, era 17). No cambian las filas compactas «Define tu objetivo de 90 días en Plan» / «Confirma tus objetivos» (`FilaCompacta`).
+* **No cambian**: los textos, los flujos, las pestañas, el calendario (celdas, puntos, día elegido), las tarjetas de eventos ni el resto de Hoy.
+* **Pruebas:** `theme/__tests__/topeDeLetra.test.ts` (el tope, que lo propio gana, `TextInput.State`, idempotente, web, `index.ts` lo carga antes que la app),
+  `eventos/components/__tests__/eventosCompacto.test.ts`, `home/components/__tests__/tarjetaAccionDeHoy.test.ts` (ajustada) y `tiempoLibreDeLaSemana.test.ts` (el tope de la línea de tiempo
+  pasó de 1,6 a 1,2). Sin emulador en esta corrida: el aspecto, y que un teléfono con la letra al 200 % quede en 1,2, se confirman en pantalla.
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
+
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
 Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel especializado en React Native, Expo y TypeScript. Al crear, refactorizar o modificar cualquier pantalla o componente, debes cumplir OBLIGATORIAMENTE con los siguientes estándares:

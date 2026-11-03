@@ -5,7 +5,8 @@ import TestRenderer, { act, type ReactTestInstance, type ReactTestRenderer } fro
 
 /**
  * La tarjeta de acciones de Hoy (2026-10-31, pedido del dueño: «mismo diseño, no las mismas palabras»): la hora con su ícono, el
- * título en negrita, «Meta: …» y un botón dorado a todo el ancho de 52. Cuatro contenidos con el mismo esqueleto. Qué muestra
+ * título, «Meta: …» y un botón dorado a todo el ancho. **Compacta desde el 2026-11-03** (el dueño: «Redúcele el tamaño de texto, es
+ * muy grande»): rótulo a 13, título a 16 semibold, botón dorado de 44 con la letra a 15 y menos relleno. Cuatro contenidos con el mismo esqueleto. Qué muestra
  * cada caso lo decide `vistaDeLaAccionDeHoy` (probada aparte); acá se prueba lo que se dibuja y lo que hace cada botón.
  */
 
@@ -65,16 +66,28 @@ describe('la acción que sigue', () => {
     expect(iconos()).toContain('chevron');
   });
 
-  it('el título va en negrita y de 18; la hora de 16 con cifras tabulares', () => {
+  it('el título va en semibold y de 16; el rótulo de la hora de 13 con cifras tabulares', () => {
     montar({ tipo: 'accion', accion: accion() });
     const titulo = raiz!.root.findAll(x => (x.type as unknown) === 'Text' && x.props.children === 'Caminar 40 minutos')[0];
     const estiloTitulo = StyleSheet.flatten(titulo.props.style);
-    expect(estiloTitulo.fontFamily).toMatch(/700Bold/);
-    expect(estiloTitulo.fontSize).toBeGreaterThanOrEqual(17);
+    expect(estiloTitulo.fontFamily).toMatch(/600SemiBold/);
+    expect(estiloTitulo.fontSize).toBe(16);
     const hora = raiz!.root.findAll(x => (x.type as unknown) === 'Text' && x.props.children === '09:00 – 09:45')[0];
     const estiloHora = StyleSheet.flatten(hora.props.style);
-    expect(estiloHora.fontSize).toBeGreaterThanOrEqual(16);
+    expect(estiloHora.fontSize).toBe(13);
     expect(estiloHora.fontVariant).toContain('tabular-nums');
+  });
+
+  it('el estado «Hoy no tienes acciones agendadas» también va compacto: rótulo «Hoy» a 13, título a 16 y botón de 44 con letra de 15', () => {
+    montar({ tipo: 'sin-acciones' });
+    const [rotulo] = raiz!.root.findAll(x => (x.type as unknown) === 'Text' && x.props.children === 'Hoy');
+    expect(StyleSheet.flatten(rotulo.props.style).fontSize).toBe(13);
+    const [titulo] = raiz!.root.findAll(x => (x.type as unknown) === 'Text' && x.props.children === 'Hoy no tienes acciones agendadas');
+    expect(StyleSheet.flatten(titulo.props.style)).toMatchObject({ fontSize: 16, fontFamily: expect.stringMatching(/600SemiBold/) });
+    const degradado = raiz!.root.findAll(x => Array.isArray(x.props.colors))[0];
+    expect(StyleSheet.flatten(degradado.props.style).minHeight).toBe(44);
+    const [textoDelBoton] = raiz!.root.findAll(x => (x.type as unknown) === 'Text' && x.props.children === 'Agendar en Plan');
+    expect(StyleSheet.flatten(textoDelBoton.props.style).fontSize).toBe(15);
   });
 
   it('solo con inicio dice «09:00»; sin hora, «Sin hora»', () => {
@@ -97,10 +110,13 @@ describe('la acción que sigue', () => {
     expect(alEmpezar).toHaveBeenCalledWith('abc');
   });
 
-  it('el botón es dorado y mide 52 como mínimo, a todo el ancho; sin los «…» de la referencia', () => {
+  it('el botón es dorado y mide 44 en la tarjeta (52 en el resto de la app), a todo el ancho; sin los «…» de la referencia', () => {
     montar({ tipo: 'accion', accion: accion() });
     expect(iconos()).not.toContain('dots');
+    const degradado = raiz!.root.findAll(x => Array.isArray(x.props.colors))[0];
+    expect(StyleSheet.flatten(degradado.props.style).minHeight).toBe(44);
     const fuente = jest.requireActual<typeof import('fs')>('fs').readFileSync(require.resolve('../../../../components/GoldButton'), 'utf-8');
+    // El botón dorado de siempre sigue en 52: solo lo compacta quien lo pide.
     expect(fuente).toMatch(/minHeight: 52/);
     expect(fuente).toMatch(/colors=\{c\.goldGrad\}/);
   });

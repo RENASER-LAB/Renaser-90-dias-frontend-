@@ -100,6 +100,7 @@ export function TarjetaAccionDeHoy({
           label={boton.texto}
           onPress={boton.alPulsar}
           icon="chevron"
+          compacto
           style={estilos.boton}
           textStyle={estilos.textoDelBoton}
         />
@@ -108,14 +109,19 @@ export function TarjetaAccionDeHoy({
   );
 }
 
+/*
+ * Compacta (2026-11-03, el dueño, con la captura de su teléfono en «Hoy no tienes acciones agendadas»: «Redúcele el tamaño de
+ * texto, es muy grande»): el rótulo a 13, el título a 16 semibold, la meta a 15, el botón dorado de 44 con la letra a 15 y menos
+ * relleno. Vale para los cuatro contenidos de la tarjeta: comparten el esqueleto.
+ */
 const estilos = StyleSheet.create({
-  tarjeta: { borderWidth: 1, borderRadius: 16, padding: 17 },
-  fila: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  tarjeta: { borderWidth: 1, borderRadius: 16, padding: 14 },
+  fila: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   /** Cifras que cambian: ancho de dígito fijo (AGENTS.md §4). */
-  hora: { fontSize: 16, lineHeight: 22, fontFamily: fuentes.negrita, fontVariant: ['tabular-nums'], flexShrink: 1 },
-  titulo: { fontSize: 18, lineHeight: 25, fontFamily: fuentes.negrita, marginTop: 10 },
-  meta: { fontSize: 16, lineHeight: 22, marginTop: 6 },
-  boton: { marginTop: 16, alignSelf: 'stretch' },
-  /** El botón de siempre trae versalitas espaciadas de 11 px: acá es una frase en tipo oración de 16. */
-  textoDelBoton: { fontSize: 16, letterSpacing: 0 },
+  hora: { fontSize: 13, lineHeight: 18, fontFamily: fuentes.negrita, fontVariant: ['tabular-nums'], flexShrink: 1 },
+  titulo: { fontSize: 16, lineHeight: 22, fontFamily: fuentes.seminegrita, marginTop: 6 },
+  meta: { fontSize: 15, lineHeight: 21, marginTop: 4 },
+  boton: { marginTop: 12, alignSelf: 'stretch' },
+  /** El botón de siempre trae versalitas espaciadas de 11 px: acá es una frase en tipo oración de 15. */
+  textoDelBoton: { fontSize: 15, letterSpacing: 0 },
 });
