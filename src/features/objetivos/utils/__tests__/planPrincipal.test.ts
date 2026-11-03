@@ -75,32 +75,44 @@ describe('lineaDelObjetivo', () => {
   const NBSP = '\u00A0';
   it('«Inicio 82 · Actual 81 · Meta 80 kg»', () => {
     expect(lineaDelObjetivo({ lineaBase: 82, avance: 81, meta: 80, unidad: 'kg' })).toBe(
-      `Inicio${NBSP}82 · Actual${NBSP}81 · Meta${NBSP}80${NBSP}kg`,
+      `Inicio${NBSP}82 ·${NBSP}Actual${NBSP}81 ·${NBSP}Meta${NBSP}80${NBSP}kg`,
     );
-    expect(lineaDelObjetivo({ lineaBase: 0, avance: 1, meta: 3, unidad: null })).toBe(`Inicio${NBSP}0 · Actual${NBSP}1 · Meta${NBSP}3`);
+    expect(lineaDelObjetivo({ lineaBase: 0, avance: 1, meta: 3, unidad: null })).toBe(`Inicio${NBSP}0 ·${NBSP}Actual${NBSP}1 ·${NBSP}Meta${NBSP}3`);
   });
   it('sin punto de partida, sin «Inicio»; sin meta medible, no hay línea', () => {
-    expect(lineaDelObjetivo({ lineaBase: null, avance: 4, meta: 10, unidad: 'USD' })).toBe(`Actual${NBSP}4 · Meta${NBSP}10${NBSP}USD`);
+    expect(lineaDelObjetivo({ lineaBase: null, avance: 4, meta: 10, unidad: 'USD' })).toBe(`Actual${NBSP}4 ·${NBSP}Meta${NBSP}10${NBSP}USD`);
     expect(lineaDelObjetivo({ lineaBase: null, avance: null, meta: null, unidad: null })).toBeNull();
   });
   it('los miles se separan como en el resto de la app («30 000», con espacio duro) y la unidad va pegada a la cifra', () => {
     const linea = lineaDelObjetivo({ lineaBase: 10000, avance: 14000, meta: 30000, unidad: 'S/' }) as string;
-    expect(linea).toBe(`Inicio${NBSP}10${NBSP}000 · Actual${NBSP}14${NBSP}000 · Meta${NBSP}30${NBSP}000${NBSP}S/`);
+    expect(linea).toBe(`Inicio${NBSP}10${NBSP}000 ·${NBSP}Actual${NBSP}14${NBSP}000 ·${NBSP}Meta${NBSP}30${NBSP}000${NBSP}S/`);
     expect(linea).not.toContain('30000');
   });
   it('issue #115 (2): una unidad que empieza con «/» va pegada a la cifra: «Meta 8/10», no «Meta 8 /10»', () => {
-    expect(lineaDelObjetivo({ lineaBase: 5, avance: 5, meta: 8, unidad: '/10' })).toBe(`Inicio${NBSP}5 · Actual${NBSP}5 · Meta${NBSP}8/10`);
+    expect(lineaDelObjetivo({ lineaBase: 5, avance: 5, meta: 8, unidad: '/10' })).toBe(`Inicio${NBSP}5 ·${NBSP}Actual${NBSP}5 ·${NBSP}Meta${NBSP}8/10`);
     expect(lineaDelObjetivo({ lineaBase: 5, avance: 5, meta: 8, unidad: ' /10 ' })).toContain(`Meta${NBSP}8/10`);
     // Las demás unidades siguen separadas de la cifra por un espacio duro.
-    expect(lineaDelObjetivo({ lineaBase: null, avance: 4, meta: 10, unidad: '%' })).toBe(`Actual${NBSP}4 · Meta${NBSP}10${NBSP}%`);
+    expect(lineaDelObjetivo({ lineaBase: null, avance: 4, meta: 10, unidad: '%' })).toBe(`Actual${NBSP}4 ·${NBSP}Meta${NBSP}10${NBSP}%`);
   });
   it('si el renglón se parte, es entre partes (en « · »): ningún espacio normal queda dentro de una cifra ni antes de la unidad', () => {
     const linea = lineaDelObjetivo({ lineaBase: 1500000, avance: 14000.5, meta: 30000, unidad: 'S/' }) as string;
-    // Lo único que puede partirse son los espacios normales, y todos están pegados a un «·».
+    // Lo único que puede partirse son los espacios normales, y todos están ANTES de un «·».
     const espaciosNormales = linea.split('').flatMap((ch, i) => (ch === ' ' ? [i] : []));
-    for (const i of espaciosNormales) expect(linea[i - 1] === '·' || linea[i + 1] === '·').toBe(true);
+    for (const i of espaciosNormales) expect(linea[i + 1]).toBe('·');
     expect(linea).toContain(`1${NBSP}500${NBSP}000`);
     expect(linea).toContain(`14${NBSP}000.5`);
+  });
+  it('issue #115 (3): el « · » nunca queda colgado al final de un renglón: va pegado al par que sigue', () => {
+    const linea = lineaDelObjetivo({ lineaBase: 8000, avance: 8000, meta: 12000, unidad: 'S/' }) as string;
+    // Se parte donde el sistema pueda: en los espacios normales. Cada pedazo tiene que EMPEZAR con el punto o con «Inicio», y ninguno acabar en «·».
+    const renglones = linea.split(' ');
+    expect(renglones).toEqual([`Inicio${NBSP}8${NBSP}000`, `·${NBSP}Actual${NBSP}8${NBSP}000`, `·${NBSP}Meta${NBSP}12${NBSP}000${NBSP}S/`]);
+    for (const r of renglones) expect(r.endsWith('·')).toBe(false);
+    // Sin punto de partida, el primero es «Actual».
+    expect((lineaDelObjetivo({ lineaBase: null, avance: 4, meta: 10, unidad: null }) as string).split(' ')).toEqual([
+      `Actual${NBSP}4`,
+      `·${NBSP}Meta${NBSP}10`,
+    ]);
   });
 });
 
