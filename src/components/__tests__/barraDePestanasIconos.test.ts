@@ -58,7 +58,7 @@ const YA_SIGNIFICAN_OTRA_COSA: Partial<Record<IconName, string>> = {
   heart: 'Emociones y el Protocolo de retorno',
   users: 'la Tribu, el grupo, la célula y Administración',
   user: '«Editar perfil» y los campos de nombre del registro',
-  idCard: '«Ver ficha» e «Información»',
+  idCard: '«Ver ficha»',
   map: 'el Mapa de Renacimiento',
   flag: 'el objetivo principal de 90 días',
   target: 'las acciones',

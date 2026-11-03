@@ -24,7 +24,6 @@ const base = {
   status: 'ACTIVE',
   fullName: 'Ana Pérez',
   avatarUrl: null,
-  bio: null,
   department: null,
 };
 

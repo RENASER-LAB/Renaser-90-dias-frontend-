@@ -41,6 +41,12 @@ describe('volver en Yo', () => {
     expect(vistaDeRegreso('onboarding', origen)).toBe('hub');
   });
 
+  it('Editar perfil vuelve a Ajustes, y «Información» ya no existe como vista (03/11: su campo pasó a Editar perfil)', () => {
+    expect(vistaDeRegreso('editar_perfil', recorrer(['main', 'hub', 'editar_perfil']))).toBe('hub');
+    expect(TITULO_DE_VISTA.editar_perfil).toBe('Editar perfil');
+    expect(Object.keys(TITULO_DE_VISTA)).not.toContain('info_perfil');
+  });
+
   it('cada sub-vista tiene su título, en tipo oración', () => {
     for (const titulo of Object.values(TITULO_DE_VISTA)) {
       expect(titulo).not.toBe(titulo.toUpperCase());

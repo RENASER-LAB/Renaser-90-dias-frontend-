@@ -16,7 +16,6 @@ export type VistaDeYo =
   | 'main'
   | 'hub'
   | 'editar_perfil'
-  | 'info_perfil'
   | 'evidencias'
   | 'onboarding'
   | 'pacto'
@@ -53,7 +52,6 @@ export function origenTrasCambio(previa: VistaDeYo, origenActual: OrigenDeYo): O
 export const TITULO_DE_VISTA: Record<Exclude<VistaDeYo, 'main'>, string> = {
   hub: 'Ajustes',
   editar_perfil: 'Editar perfil',
-  info_perfil: 'Información',
   evidencias: 'Mis evidencias',
   onboarding: 'Mi onboarding',
   pacto: 'El Pacto',
