@@ -2018,6 +2018,26 @@ Con 90 días cada frase es la de siempre. Lo que cambia y nada más:
   y las de #103; se ajustaron `subtituloDelAlumno` y `tarjetaDelPodio`.
 * **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
 
+## Corrección — 2026-11-02 — SER: el texto de respaldo de las propuestas ya no queda encima de la tarjeta ni repetido al releer el historial (issue #105)
+
+E2E final del 2026-11-02 (capturas `B4-ser-ritual-tarjeta` y `B4-ser-historial-recargado`). El backend manda antes de cada evento un texto de respaldo para las
+apps viejas —«Propuesta: …», «Foto para registrar '…': …» y, para los rituales, «Para registrar '…' cuenta como te sientes: …»— y esta versión dibuja la tarjeta, así que
+los quita. Fallaban tres cosas, todas en `renasia/utils/propuestas` (ahora con las reglas en `respaldosDelBackend`, que `propuestas` re-exporta). Lo que cambia y nada más:
+* **Se quitan estén donde estén y aunque vengan varios seguidos.** Antes solo si iban al FINAL del mensaje: con dos respaldos seguidos (el de la foto o el del ritual
+  y después el de la propuesta) el de la propuesta quedaba como texto encima de la tarjeta. Ahora se compara línea por línea (cada respaldo es una línea) y se quita la
+  línea completa de cualquier lugar; lo que no es EXACTAMENTE esa línea no se toca (mejor repetido que borrar algo que dijo el asistente).
+* **El respaldo del ritual tiene quien lo quite** (`quitarRespaldoDeFoto` lo reconoce junto al de la foto del hábito y al de la foto de la acción del día), y el de la foto
+  ya no depende de «subela desde Hoy»: vale «desde Hoy» y «desde Training» (el servidor ahora dice Training). `destino` se acepta pero ya no distingue una forma de otra.
+* **Tolerante a las tildes** (el backend los va a corregir, #63): la comparación es sin tildes, sin mayúsculas, con los espacios juntos y con las comillas tipográficas
+  como rectas, así que «súbela», «botón», «cámara», «acción» y «cuenta cómo» valen igual que las formas sin tilde.
+* **Al releer el historial**, lo guardado trae los respaldos adentro y sin tarjeta (la propuesta ya venció o se resolvió) y una vez salió el mismo «Propuesta: …» dos
+  veces en la misma burbuja: `mapearMensajeApi` aplica `sinRespaldosRepetidos` a los mensajes del asistente, que deja UNA sola vez cada línea de respaldo. Una propuesta
+  guardada una sola vez se deja como estaba (ya sin botones, pero es lo que se dijo); lo que escribió la persona no se toca.
+* **La voz tampoco lee el del ritual** (`voz.ts` usaba un filtro propio que solo conocía «Propuesta:» y «Foto para registrar»; ahora usa `esLineaDeRespaldo`).
+* **No cambian** las tarjetas, los textos del asistente, el backend ni el stream. **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire).
+* **Pruebas:** `respaldosDelBackend.test.ts` (con los textos reales de `B4-SER-respuestas.txt`: ritual, kilómetros, última comida, dos seguidos, en medio, tildes, Hoy y
+  Training, y el historial repetido), `respaldosEnElChat.test.ts` (el hook: llegada con dos respaldos seguidos y relectura del historial) y `propuestas.test.ts`.
+
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
 Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel especializado en React Native, Expo y TypeScript. Al crear, refactorizar o modificar cualquier pantalla o componente, debes cumplir OBLIGATORIAMENTE con los siguientes estándares:
