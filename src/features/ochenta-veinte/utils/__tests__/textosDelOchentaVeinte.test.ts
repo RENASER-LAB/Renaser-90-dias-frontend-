@@ -7,6 +7,7 @@ import {
   fechaCorta,
   hayCifras,
   lineaDeAvance,
+  lineaDeLasPorVenir,
   lineaDeLasVerdes,
   lineaDeUnEje,
   lineaDeUnaAccion,
@@ -52,6 +53,23 @@ describe('las cifras', () => {
     expect(lineaDeAvance({ planificadas: 0, cumplidas: 0, porcentajeCumplidas: null })).toBeNull();
     expect(hayCifras({ planificadas: 0 })).toBe(false);
     expect(hayCifras({ planificadas: 3 })).toBe(true);
+  });
+
+  it('issue #115 (1): con el periodo en curso el avance dice «hasta hoy»; cerrado, no', () => {
+    // El servidor cuenta lo planificado hasta hoy y aparte lo que viene (spec 031): «Esta semana» de Plan cuenta de hoy a fin de semana, así que
+    // sin decir el universo, «0 de 6» bajo «Semana 3 · Del 2 al 8 de noviembre» se leía como la semana entera.
+    expect(lineaDeAvance({ planificadas: 6, cumplidas: 0, porcentajeCumplidas: 0 }, true)).toBe('0 de 6 acciones cumplidas hasta hoy · 0 %');
+    expect(lineaDeAvance({ planificadas: 1, cumplidas: 1, porcentajeCumplidas: null }, true)).toBe('1 de 1 acción cumplida hasta hoy');
+    expect(lineaDeAvance({ planificadas: 12, cumplidas: 9, porcentajeCumplidas: 75 }, false)).toBe('9 de 12 acciones cumplidas · 75 %');
+    expect(lineaDeAvance({ planificadas: 0, cumplidas: 0, porcentajeCumplidas: null }, true)).toBeNull();
+  });
+
+  it('issue #115 (1): lo que viene dice cuánto suma el periodo entero (6 hasta hoy + 15 = 21)', () => {
+    expect(lineaDeLasPorVenir({ planificadas: 6, porVenir: 15 }, 'SEMANA')).toBe(
+      '15 acciones más están agendadas para los días que vienen: la semana suma 21.',
+    );
+    expect(lineaDeLasPorVenir({ planificadas: 6, porVenir: 1 }, 'MES')).toBe('1 acción más está agendada para los días que vienen: el mes suma 7.');
+    expect(lineaDeLasPorVenir({ planificadas: 6, porVenir: 0 }, 'SEMANA')).toBeNull();
   });
 
   it('las dos reglas del 20 %: las verdes y las de más impacto', () => {
