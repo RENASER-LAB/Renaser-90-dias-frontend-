@@ -34,8 +34,8 @@ jest.mock('../../storage/borradorRadar', () => ({
   limpiarBorradoresViejos: async () => undefined,
 }));
 
-import { SliderRating } from '../../../../components/SliderRating';
 import { CodigoRenaserModal } from '../CodigoRenaserModal';
+import { EnergiaEnChips } from '../EnergiaEnChips';
 import type { CheckInRadarApi } from '../../types/radar.types';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -121,7 +121,7 @@ describe('Código Renaser: «Registrar» con algo sin responder', () => {
     const r = montar();
     escribirLasCuatro(r);
     act(() => {
-      r.root.findAll((n: ReactTestInstance) => n.type === SliderRating)[0].props.onChange(7);
+      r.root.findAll((n: ReactTestInstance) => n.type === EnergiaEnChips)[0].props.onChange(7);
     });
 
     await tocarRegistrar(r);
@@ -145,7 +145,7 @@ describe('Código Renaser: lo que pasa al volver de enviar', () => {
   function llenar(r: ReactTestRenderer) {
     escribirLasCuatro(r);
     act(() => {
-      r.root.findAll((n: ReactTestInstance) => n.type === SliderRating)[0].props.onChange(7);
+      r.root.findAll((n: ReactTestInstance) => n.type === EnergiaEnChips)[0].props.onChange(7);
     });
   }
 

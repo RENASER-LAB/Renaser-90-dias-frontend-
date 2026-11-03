@@ -36,13 +36,12 @@ jest.mock('../../../../services/http/relojServidor', () => ({ ahoraConfiable: ()
 jest.mock('../../hooks/useDictadoDelRadar', () => ({
   useDictadoDelRadar: () => ({ disponible: true, dictandoEn: null, parcial: '', fallo: null, alternar: () => undefined, detener: () => undefined }),
 }));
-jest.mock('../../hooks/useEscucharPregunta', () => ({ useEscucharPregunta: () => ({ leyendo: null, alternar: () => undefined, detener: () => undefined }) }));
 
-import { SliderRating } from '../../../../components/SliderRating';
 import { RETARDO_DEL_BORRADOR_MS } from '../../hooks/useBorradorDelRadar';
 import { borrarTodosLosBorradores, claveDeBorrador, leerBorrador } from '../../storage/borradorRadar';
 import type { CheckInRadarApi } from '../../types/radar.types';
 import { CodigoRenaserModal } from '../CodigoRenaserModal';
+import { EnergiaEnChips } from '../EnergiaEnChips';
 import { IndicadorDeGuardado } from '../IndicadorDeGuardado';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -120,7 +119,7 @@ const campos = (r: ReactTestRenderer) => r.root.findAll(n => (n.type as unknown)
 const valores = (r: ReactTestRenderer) => campos(r).map(c => c.props.value as string);
 const escribir = (r: ReactTestRenderer, i: number, texto: string) => act(() => campos(r)[i].props.onChangeText(texto));
 const energia = (r: ReactTestRenderer, v: number) =>
-  act(() => r.root.findAll((n: ReactTestInstance) => n.type === SliderRating)[0].props.onChange(v));
+  act(() => r.root.findAll((n: ReactTestInstance) => n.type === EnergiaEnChips)[0].props.onChange(v));
 const claveDeLaHora = (usuario = 'u1') => claveDeBorrador(usuario, mockReloj.ahora);
 const enDisco = async (usuario = 'u1') => leerBorrador(usuario, mockReloj.ahora);
 
@@ -262,7 +261,7 @@ describe('no se pierde lo escrito', () => {
     await reabrir(r);
 
     expect(valores(r)).toEqual(['En casa', 'En mi plan del día', 'Calma', 'Hacer ejercicio']);
-    expect(r.root.findAll((n: ReactTestInstance) => n.type === SliderRating)[0].props.value).toBe(8);
+    expect(r.root.findAll((n: ReactTestInstance) => n.type === EnergiaEnChips)[0].props.value).toBe(8);
   });
 
   it('y también tras cerrar la app y abrirla de nuevo (un formulario nuevo, no el mismo)', async () => {
@@ -277,7 +276,7 @@ describe('no se pierde lo escrito', () => {
     const segundo = await abrir();
 
     expect(valores(segundo)).toEqual(['', '', 'Ansiedad', '']);
-    expect(segundo.root.findAll((n: ReactTestInstance) => n.type === SliderRating)[0].props.value).toBe(3);
+    expect(segundo.root.findAll((n: ReactTestInstance) => n.type === EnergiaEnChips)[0].props.value).toBe(3);
   });
 
   it('un borrador de OTRA hora no aparece, y el viejo se barre', async () => {

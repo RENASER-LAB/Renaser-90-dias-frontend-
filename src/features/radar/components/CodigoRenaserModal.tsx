@@ -14,25 +14,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { GoldButton } from '../../../components/GoldButton';
 import { Icon } from '../../../components/Icon';
-import { SliderRating } from '../../../components/SliderRating';
 import { MicroLabel } from '../../../components/ui';
 import { useSystemBackHandler } from '../../../hooks/useSystemBackHandler';
 import { useResponsive } from '../../../theme/responsive';
 import { useTheme } from '../../../theme/ThemeContext';
 import { tacto } from '../../../utils/tacto';
-import {
-  CONFIG_RADAR,
-  ENERGIA_MAXIMA,
-  ENERGIA_MINIMA,
-  MAXIMO_CARACTERES,
-  PREGUNTA_ENERGIA,
-  PREGUNTAS_RADAR,
-  type CampoRadar,
-} from '../config/configRadar';
+import { MAXIMO_CARACTERES, PREGUNTAS_RADAR, type CampoRadar } from '../config/configRadar';
 import type { BorradorRadar } from '../storage/borradorRadar';
 import { useBorradorDelRadar } from '../hooks/useBorradorDelRadar';
 import { useDictadoDelRadar } from '../hooks/useDictadoDelRadar';
-import { useEscucharPregunta } from '../hooks/useEscucharPregunta';
 import type { CheckInRadarApi } from '../types/radar.types';
 import {
   huboDictado,
@@ -45,6 +35,7 @@ import {
 } from '../utils/dictadoDelRadar';
 import { faltantesDelRadar, textoDeLoQueFalta, type PiezaDelRadar } from '../utils/faltantesDelRadar';
 import type { SlotRadar } from '../utils/slotsDelRadar';
+import { EnergiaEnChips } from './EnergiaEnChips';
 import { IndicadorDeGuardado } from './IndicadorDeGuardado';
 import { PreguntaDelRadar } from './PreguntaDelRadar';
 
@@ -77,21 +68,23 @@ const EN_BLANCO: Record<CampoRadar, string> = {
  * hacer nada consume el evento, así que el gesto lateral de Android y el botón físico no sacan a
  * nadie de acá ni cierran la app.
  *
- * ## La voz (spec 030, 2026-10-31)
+ * ## La voz (spec 030, 2026-10-31; rehecha el 2026-11-03)
  *
- * Cada pregunta de texto tiene «Escuchar» (la voz Dora grabada, sin red) y «Dictar» (el reconocimiento de voz del teléfono,
- * el mismo del chat de SER; si el teléfono no lo tiene, el botón no está). Lo dictado se SUMA a lo que ya había y queda
- * editable: nada se registra solo, solo «Registrar» con las reglas de siempre. Es el MISMO formulario en las cuatro entradas
- * (pantalla obligatoria, Hoy, Mi Radar y el aviso), así que la voz se ve y funciona igual en todas. La energía no se dicta.
- * Si algo de lo dictado queda en el texto, el registro viaja con `dictado: true` y quien acompaña lo ve (decisión 030-2).
+ * Cada pregunta de texto tiene un micrófono para «Dictar» DENTRO de su campo, abajo a la derecha (el reconocimiento de voz del
+ * teléfono, el mismo del chat de SER; si el teléfono no lo tiene, el botón no está). Lo dictado se escribe en el campo mientras se
+ * habla, se SUMA a lo que ya había y queda editable: nada se registra solo, solo «Registrar» con las reglas de siempre. Es el MISMO
+ * formulario en las cuatro entradas (pantalla obligatoria, Hoy, Mi Radar y el aviso), así que la voz se ve y funciona igual en todas.
+ * La energía no se dicta. Si algo de lo dictado queda en el texto, el registro viaja con `dictado: true` y quien acompaña lo ve
+ * (decisión 030-2). **«Escuchar» ya no existe** (el dueño, 2026-11-03: «con solo leer ya basta»): ni el parlante ni las voces grabadas.
  *
- * ## Compacto (2026-11-03, pedido del dueño: «hay mucho texto y se extendió demasiado»)
+ * ## Compacto (2026-11-03, pedido del dueño: «hay mucho texto y se extendió demasiado»; opción C de su maqueta)
  *
  * La cabecera es solo «Código Renaser · 11:00» (con la ✕ si se puede cerrar): sin título grande ni párrafo. Las cinco preguntas
  * —«¿Dónde estoy y qué estoy haciendo ahora?», «¿Qué estoy pensando?», «¿Qué estoy sintiendo?», «¿Qué estoy evitando?» y «¿Cuál
- * es mi nivel de energía?»— van sin línea de ayuda, y los íconos de escuchar y dictar están en el renglón de cada pregunta
- * (`PreguntaDelRadar`). Lo escrito, lo dictado y la energía se guardan MIENTRAS se escriben (`useBorradorDelRadar`, 400 ms) y
- * vuelven al reabrir en la misma hora.
+ * es mi nivel de energía?»— van sin línea de ayuda; cada respuesta es un campo multilínea que arranca en ~2 líneas y crece hasta 5
+ * (`PreguntaDelRadar`), y la energía son diez chips del 1 al 10 (`EnergiaEnChips`). Bajo «Registrar» el formulario obligatorio no
+ * dice nada. Lo escrito, lo dictado y la energía se guardan MIENTRAS se escriben (`useBorradorDelRadar`, 400 ms) y vuelven al reabrir
+ * en la misma hora.
  */
 export function CodigoRenaserModal({
   visible,
@@ -117,7 +110,7 @@ export function CodigoRenaserModal({
   onEnviar: (checkIn: CheckInRadarApi) => Promise<boolean>;
   onCerrar: () => void;
   onLimpiarError: () => void;
-  /** Lo que dice bajo «Registrar». Sin esto, lo de la semana 1 (Mi Radar, desde el día 8, dice otra cosa). */
+  /** Lo que dice bajo «Registrar» en los formularios que se pueden cerrar (Mi Radar dice otra cosa). El obligatorio no dice nada. */
   textoDelPie?: string;
 }) {
   const { c, t } = useTheme();
@@ -144,16 +137,13 @@ export function CodigoRenaserModal({
     setDictados(marcas => marcarDictado(marcas, campo));
   }, []);
   const dictado = useDictadoDelRadar(alDictar);
-  const voz = useEscucharPregunta();
   const detenerDictado = dictado.detener;
-  const detenerVoz = voz.detener;
 
-  /* Al cerrarse el formulario no queda ni el micrófono abierto ni una pregunta sonando. */
+  /* Al cerrarse el formulario no queda el micrófono abierto. */
   useEffect(() => {
     if (visible) return;
     detenerDictado();
-    detenerVoz();
-  }, [visible, detenerDictado, detenerVoz]);
+  }, [visible, detenerDictado]);
 
   /* Se empieza en blanco AL ABRIR, y sólo al abrir.
 
@@ -213,24 +203,16 @@ export function CodigoRenaserModal({
     }
   }, []);
 
-  /* Escuchar y dictar nunca a la vez: abrir el micrófono detiene la lectura ANTES de pedirlo (para que no capte la voz de la
-     app), y escuchar una pregunta cierra el micrófono. Un toque, una vibración. */
+  /* Un toque en el micrófono de una pregunta: lo abre, lo cierra si ya era ese, o pasa de una pregunta a otra. Una vibración. */
   const dictarEn = useCallback(
     (campo: CampoRadar) => {
-      voz.detener();
       dictado.alternar(campo);
       tacto.seleccion();
     },
-    [voz, dictado],
+    [dictado],
   );
-  const escucharEn = useCallback(
-    (campo: CampoRadar) => {
-      dictado.detener();
-      voz.alternar(campo);
-      tacto.seleccion();
-    },
-    [voz, dictado],
-  );
+
+  const textoDelPieFinal = textoDelPie ?? (obligatorio ? null : 'Puedes cerrarlo; vuelve a ofrecerse la hora que viene.');
 
   const faltan = useMemo(() => faltantesDelRadar(respuestas, energia), [respuestas, energia]);
   const completo = faltan.length === 0;
@@ -254,7 +236,6 @@ export function CodigoRenaserModal({
       dictado.detener();
       return;
     }
-    voz.detener();
     setIntentoEnvio(true);
     if (!completo || energia === null) {
       const y = faltan.length > 0 ? posiciones.current[faltan[0].pieza] : undefined;
@@ -275,7 +256,7 @@ export function CodigoRenaserModal({
       descartarElBorrador();
       onCerrar();
     }
-  }, [completo, faltan, energia, respuestas, dictados, dictado, voz, descartarElBorrador, onEnviar, onCerrar]);
+  }, [completo, faltan, energia, respuestas, dictados, dictado, descartarElBorrador, onEnviar, onCerrar]);
 
   return (
     <Modal
@@ -335,13 +316,11 @@ export function CodigoRenaserModal({
                   textoVisible={dictandoAqui ? textoMientrasDicta(valor, dictado.parcial) : valor}
                   marcador={pregunta.marcador}
                   puedeDictar={dictado.disponible}
-                  leyendo={voz.leyendo === pregunta.campo}
                   dictando={dictandoAqui}
                   enviando={enviando}
                   marcadaVacia={intentoEnvio && valor.trim().length === 0}
                   fallo={dictado.fallo?.campo === pregunta.campo ? dictado.fallo.mensaje : null}
                   alCambiar={texto => escribir(pregunta.campo, texto)}
-                  alEscuchar={() => escucharEn(pregunta.campo)}
                   alDictar={() => dictarEn(pregunta.campo)}
                   alMedir={anotarPosicion(pregunta.campo)}
                 />
@@ -349,14 +328,7 @@ export function CodigoRenaserModal({
             })}
 
             <View onLayout={anotarPosicion('energia')}>
-              <SliderRating
-                variante="pregunta"
-                label={PREGUNTA_ENERGIA}
-                value={energia}
-                onChange={setEnergia}
-                minLabel={`En reserva (${ENERGIA_MINIMA})`}
-                maxLabel={`A tope (${ENERGIA_MAXIMA})`}
-              />
+              <EnergiaEnChips value={energia} onChange={setEnergia} deshabilitado={enviando} />
             </View>
           </ScrollView>
 
@@ -380,15 +352,12 @@ export function CodigoRenaserModal({
               loading={enviando}
               disabled={enviando}
             />
-            <Text style={[t.micro, { color: c.micro, fontSize: 11, textAlign: 'center' }]}>
-              {textoDelPie ??
-                (obligatorio
-                /* Texto pedido por el dueño (2026-09-18). Antes decía "Se pide una vez por hora
-                   durante los primeros N días": describía el sistema en pasiva —quién pide, a
-                   quién— en vez de decirle a la persona qué tiene que hacer. */
-                ? `Completa las preguntas cada hora. Durante los primeros ${CONFIG_RADAR.ultimoDia} días.`
-                : 'Puedes cerrarlo; vuelve a ofrecerse la hora que viene.')}
-            </Text>
+            {/* El formulario obligatorio de los días 1 a 7 ya no lleva texto bajo «Registrar» (2026-11-03, el dueño: se quitó «Completa
+                las preguntas cada hora. Durante los primeros 7 días.»): «Registrar» queda solo. Los formularios que se pueden cerrar
+                siguen diciéndolo. */}
+            {textoDelPieFinal ? (
+              <Text style={[t.micro, { color: c.micro, fontSize: 11, textAlign: 'center' }]}>{textoDelPieFinal}</Text>
+            ) : null}
           </View>
         </KeyboardAvoidingView>
       </SafeAreaView>

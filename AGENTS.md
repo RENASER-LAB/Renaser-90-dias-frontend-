@@ -2121,6 +2121,8 @@ calendario, mal para un INSTANTE—, así que el día era el de UTC. Lo que camb
 
 ## Cambio por pedido del dueño — 2026-11-03 — Código Renaser compacto: sin párrafos, con los íconos de voz en el renglón y el borrador al escribir
 
+> **Corregido el mismo día (opción C del dueño).** «Escuchar» se quitó y el 🎤 pasó DENTRO del campo; el campo crece, la energía son chips y el pie del obligatorio se quitó. Ver la entrada «Código Renaser, opción C», justo debajo. Lo de los íconos en el renglón del enunciado, las voces pregrabadas y la `SliderRating` de esta entrada ya no rige.
+
 Textual, con capturas: «Allí en el código Renaser hay mucho texto y se extendió demasiado. En qué hago es: ¿Dónde estoy y qué estoy haciendo ahora? / ¿Qué
 estoy pensando? / ¿Qué estoy sintiendo? / ¿Qué estoy evitando? / ¿Cuál es mi nivel de energía? Y esos botones de escuchar, dictar deben de aparecer allí de manera
 sutil» y «el de dictar o el ícono de audio dentro del label, y que se guarde gradualmente». Es el mismo formulario (`CodigoRenaserModal`) de las cuatro entradas
@@ -2162,6 +2164,46 @@ sutil» y «el de dictar o el ícono de audio dentro del label, y que se guarde 
   `tarjetaHabitoYRadar` y `alarmasDeLaCuentaAlSalir`. Sin emulador en esta corrida: el aspecto y el pulso del micrófono se confirman en pantalla.
   Maestro (escritos, **no corridos**): los flujos que reconocían el formulario por su título «¿Dónde estás ahora mismo?» ahora lo reconocen por el ícono «Escuchar la pregunta ¿Dónde estoy y qué
   estoy haciendo ahora?» (el enunciado solo también está en la hoja «Ya lo registraste»), `41-dictar-y-escuchar` usa los enunciados nuevos y `llenar-formulario-radar` busca «¿Cuál es mi nivel de energía?».
+## Cambio por pedido del dueño — 2026-11-03 — Código Renaser, opción C: sin «Escuchar», con «Dictar» dentro del campo, campo que crece y energía en chips
+
+Pedido del dueño, después de comparar una maqueta (https://claude.ai/artifact/FrrSUh8mqxFLMDgjvksCDp, artboard «C · Dictar dentro del campo»): quita «Escuchar» («con solo leer ya basta»),
+el micrófono va dentro del campo «como en un buscador», más espacio para escribir («capaz escriben bastante»), la energía en chips y fuera el texto del pie. **Corrige la entrada de arriba
+(«Código Renaser compacto»)**: donde ella dice que Escuchar y Dictar son dos íconos en el renglón del enunciado, que las voces pregrabadas dicen el texto de antes, que la energía es
+una `SliderRating` o que el pie del formulario obligatorio dice «Completa las preguntas cada hora…», léase lo de abajo. Es el mismo formulario (`CodigoRenaserModal`) de las cuatro
+entradas. Solo JavaScript y solo la forma; lo que se envía no cambia. Lo que cambia y nada más:
+* **Se quitó «Escuchar» en todas las preguntas, y todo lo que solo servía para eso:** `VozDeLaPregunta`, el hook `useEscucharPregunta`, `config/vozDelRadar.ts`, `vocesDelRadar.json`, los cuatro
+  `assets/sonidos/voz_radar_que_*.mp3` (los dos que se habían regenerado el mismo día) y sus cuatro entradas en `sounds` de `app.json` (**por eso `app.json` cambió: hace falta un APK nuevo**),
+  la parte del radar de `scripts/sonidos/tabla_de_voces.py` y `generar_voces.py` (`archivos_del_radar`, `sin_campanita`) y sus pruebas (`useEscucharPregunta`, `vozDelRadar`; `sonidosElegibles`
+  ya no nombra las voces del radar). Se verificó con `grep` que nada más los usaba. Ya no existe la línea «Si no la oyes, sube el volumen de tu teléfono.», ni el parlante, ni la pausa.
+* **La pregunta queda sola en su renglón, y el 🎤 «Dictar» va DENTRO del campo** (`PreguntaDelRadar` + `BotonDeDictar`, que reemplaza a `BotonDeVoz`), a la derecha y **anclado abajo**
+  (`position: absolute`, `right: 4`, `bottom: 4`) para no moverse cuando el campo crece: área de 44, ícono de 20, gris en reposo. **Activo** (dictando): círculo dorado suave de 36 (lavado
+  dorado y borde fino `goldInk`) con el ícono dorado y el pulso de opacidad de antes (1 ↔ 0,45, 650 ms cada mitad); con «reducir movimiento», solo el color. Además la caja toma el borde
+  dorado. Sin reconocimiento de voz en el teléfono no hay micrófono y el texto usa el margen normal. Los nombres accesibles son los de siempre («Dictar la respuesta a …» / «Parar de
+  dictar la respuesta a …»). La línea «Te escucho. Toca el micrófono para parar.» ya no existe: queda el «Te escucho…» gris dentro del campo vacío, el micrófono activo y el botón de
+  abajo, que dice «Terminar de dictar». El aviso rojo si el micrófono falla sigue, bajo la pregunta.
+* **El campo es multilínea y crece solo** (16 / 22): arranca en ~2 líneas (`ALTO_MINIMO_DEL_CAMPO` = 72, era 56) y crece con el texto hasta 5 líneas (`ALTO_MAXIMO_DEL_CAMPO` = 130); de ahí en
+  adelante se desplaza por dentro, sin que la pantalla gane un segundo scroll. La caja (`View` con borde, fondo y radio 12) lleva el borde; el `TextInput` de adentro no. El texto deja 52 de
+  margen a la derecha (`MARGEN_DEL_TEXTO_ANTE_EL_MICROFONO`) para no pasar por debajo del micrófono.
+* **Lo dictado se escribe EN el campo mientras se habla.** Ya era así (el reconocedor da resultados parciales y el campo muestra `textoMientrasDicta(escrito, parcial)` en la misma caja; el texto
+  queda en el campo, editable, al cerrar el micrófono); no hubo que cambiar de dónde sale. Lo que se sumó: el campo crece con eso y **el cursor queda al final** (`selection` controlado desde que
+  se abre el micrófono hasta que la persona toca el campo; con ese `selection` un campo ya lleno se desplaza para mostrar lo último dictado). Mientras se dicta el campo no se puede teclear
+  (`editable={false}`). **Límite sin comprobar:** que Android desplace de verdad un campo no editable hasta el cursor, pasadas las 5 líneas, se confirma en el teléfono (este trabajo no usó el emulador).
+* **Energía en chips del 1 al 10** (`EnergiaEnChips`, en lugar de `SliderRating` en este formulario; `SliderRating` vuelve a ser el de siempre y sigue en el onboarding): diez chips en fila,
+  44 de alto, borde fino y radio 10; el elegido en dorado suave (lavado dorado, borde dorado, número en negrita); debajo, «En reserva» y «A tope» a 13, sin números. Sin elegir, ningún chip
+  está marcado (`null` no es un número). Cada chip no lleva etiqueta propia (se oye «5, seleccionado») y el grupo se llama como la pregunta. Con diez chips en 324 dp cada uno mide ~29 de
+  ancho (la maqueta lo dibuja igual); `hitSlop` suma 1 por lado.
+* **Sin el texto del pie en el formulario obligatorio:** se quitó «Completa las preguntas cada hora. Durante los primeros 7 días.», y «Registrar» queda fijo abajo, solo. Los formularios que
+  se pueden cerrar siguen con su línea («Puedes cerrarlo; vuelve a ofrecerse la hora que viene.» y, en Mi Radar y en Hoy, «Puedes cerrarlo; tu borrador queda guardado en este teléfono.»):
+  el pedido nombró solo la del obligatorio; quitar también esas es borrar `textoDelPie` y la constante `TEXTO_DEL_PIE_DE_MI_RADAR`.
+* **No cambian**: el borrador (400 ms, por cuenta y por hora, «Guardado»), `POST /api/v1/radar` ni `dictado: true`, las preguntas, `faltantesDelRadar`, el 409, la obligatoriedad, la cabecera, ni la
+  hoja «Ya lo registraste».
+* **Maestro (escritos, no corridos):** el formulario se reconoce ahora por el gris «Estoy…» del primer campo (antes por el ícono «Escuchar…», que ya no existe); `41-dictar-y-escuchar` quedó con el
+  micrófono dentro del campo y sin los pasos de Escuchar. `llenar-formulario-radar.yaml` sigue valiendo (toca «5» y busca «¿Cuál es mi nivel de energía?»).
+* **Pruebas:** `codigoRenaserCompacto.test.ts` (reescrita: sin Escuchar ni pie, el micrófono dentro de la caja y anclado abajo a la derecha, el margen del texto, el campo multilínea 72–130, lo dictado
+  entrando en el campo, el cursor al final, los diez chips, «En reserva / A tope» a 13), `codigoRenaserConVoz.test.ts` (el micrófono), `borradorDelCodigoRenaser.test.ts` y `codigoRenaserModal.test.ts` (ajustadas).
+  Se borraron `useEscucharPregunta.test.ts` y `vozDelRadar.test.ts`.
+* **Hace falta un APK nuevo** (`app.json` cambió: ya no lista los cuatro MP3 de las preguntas). Sin backend nuevo.
+
 ## Cambio por pedido del dueño — 2026-11-03 — textos más compactos en Eventos y Hoy, y un tope a la letra del sistema
 
 Textual, con capturas de un teléfono real: «Redúcele el tamaño de texto, es muy grande» (Comunidad → Eventos) e «igual aquí es muy grande» (Hoy → la tarjeta de acciones,

@@ -4,7 +4,7 @@ appId: com.renaser.app
 ---
 - runFlow: ../comun/ya-adentro.yaml
 # Desde el día 8 el Código Renaser ya no se abre solo.
-- assertNotVisible: "Escuchar la pregunta ¿Dónde estoy y qué estoy haciendo ahora\\?"
+- assertNotVisible: "Estoy…"
 - tapOn: "YO"
 - assertVisible: "Tu evolución"
 - scrollUntilVisible:

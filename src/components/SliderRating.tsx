@@ -19,12 +19,6 @@ interface SliderRatingProps {
   minLabel?: string;
   maxLabel?: string;
   style?: ViewStyle;
-  /**
-   * `'etiqueta'` (por defecto): el rótulo chico en negrita de siempre y el valor grande a la derecha.
-   * `'pregunta'` (Código Renaser, 2026-11-03): el rótulo es el enunciado de una pregunta, igual que el de las otras cuatro
-   * (16 semibold, a la izquierda), y el valor va a su altura a la derecha, más chico. Mismo selector del 1 al 10.
-   */
-  variante?: 'etiqueta' | 'pregunta';
 }
 
 export function SliderRating({
@@ -34,26 +28,14 @@ export function SliderRating({
   minLabel = 'Mínimo (1)',
   maxLabel = 'Óptimo (10)',
   style,
-  variante = 'etiqueta',
 }: SliderRatingProps) {
   const { c, t } = useTheme();
-  const comoPregunta = variante === 'pregunta';
 
   return (
-    <View style={[styles.container, comoPregunta && styles.containerPregunta, style]}>
-      <View style={[styles.header, comoPregunta && styles.headerPregunta]}>
-        {comoPregunta ? (
-          <Text style={[t.cardTitle, styles.enunciado, { color: c.text }]}>{label}</Text>
-        ) : (
-          <MicroLabel>{label}</MicroLabel>
-        )}
-        <Text
-          style={[
-            t.screenTitle,
-            { color: value === null ? c.textSoft : c.goldInk, fontSize: comoPregunta ? 18 : 20 },
-            comoPregunta && styles.valorDePregunta,
-          ]}
-        >
+    <View style={[styles.container, style]}>
+      <View style={styles.header}>
+        <MicroLabel>{label}</MicroLabel>
+        <Text style={[t.screenTitle, { color: value === null ? c.textSoft : c.goldInk, fontSize: 20 }]}>
           {value === null ? '—' : value}
         </Text>
       </View>
@@ -106,28 +88,10 @@ const styles = StyleSheet.create({
   container: {
     gap: 8,
   },
-  containerPregunta: {
-    gap: 6,
-  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'baseline',
-  },
-  headerPregunta: {
-    alignItems: 'center',
-    gap: 8,
-  },
-  enunciado: {
-    flex: 1,
-    flexShrink: 1,
-    fontSize: 16,
-    lineHeight: 22,
-  },
-  valorDePregunta: {
-    lineHeight: 22,
-    minWidth: 24,
-    textAlign: 'right',
   },
   scaleRow: {
     flexDirection: 'row',
