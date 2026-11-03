@@ -1,5 +1,6 @@
 # 03 — El personal con la fila del programa sin activar (cuenta anterior a la spec 036) ve «Todavía no empezaste tu programa · Empieza mañana ›» en
-# Hoy y en Plan, «Todavía no empezaste tu programa» con «Empezar mañana» en Training, y en Yo → Mi Radar «Primero empieza tu programa».
+# Hoy, «Tu plan empieza con tu programa» con «Empezar mañana» en Plan (`PlanSinPrograma`, issues #82 y #85: la misma tarjeta que valida
+# `hoy-programa-propio/01`), «Todavía no empezaste tu programa» con «Empezar mañana» en Training, y en Yo → Mi Radar «Primero empieza tu programa».
 # ESCRITO Y SIN CORRER. Precondición: backend con la spec 036; administrador CON fila y `programa_activado_en` vacío. Sigue ESTADO=antes|despues:
 # `antes` solo mira; `despues` toca «Empezar mañana» en Training y «Entendido».
 # cuenta: admin
@@ -16,10 +17,13 @@ appId: com.renaser.app
 - assertNotVisible: "Elige cuándo empiezas"
 - assertNotVisible: "Ahora no. No se borra nada."
 - takeScreenshot: M03a-hoy
+# Plan no repite la fila de Hoy: sin programa activo no hay objetivos que leer, así que va una tarjeta arriba, pegada a la cabecera, con «Empezar mañana».
 - tapOn: "PLAN"
 - extendedWaitUntil:
-    visible: ".*Todavía no empezaste tu programa.*"
+    visible: "Tu plan empieza con tu programa"
     timeout: 30000
+- assertVisible: "Empezar mañana"
+- assertNotVisible: "Todavía no elegiste tu Día 1"
 - takeScreenshot: M03b-plan
 - tapOn: "TRAINING"
 - extendedWaitUntil:
