@@ -180,7 +180,9 @@ function Celda({
       <View
         style={[
           estilos.circulo,
-          elegida ? { backgroundColor: c.gold } : hoy ? { borderWidth: 1.5, borderColor: c.gold } : null,
+          // El día elegido también es un círculo de 40 en Android: con solo `backgroundColor` salía como un cuadrado de esquinas casi vivas
+          // (el de hoy, con borde, sí salía redondo; E2E del 03/11, issue #115). Va con un borde del mismo color y `overflow: 'hidden'`.
+          elegida ? { backgroundColor: c.gold, borderWidth: 1.5, borderColor: c.gold } : hoy ? { borderWidth: 1.5, borderColor: c.gold } : null,
         ]}
       >
         <Text style={[estilos.numero, { color: colorDelNumero, fontFamily: hoy || elegida ? fuentes.negrita : fuentes.media }]}>
@@ -241,7 +243,7 @@ const estilos = StyleSheet.create({
   semana: { flexDirection: 'row' },
   inicial: { flex: 1, textAlign: 'center', fontFamily: fuentes.negrita, fontSize: LETRA.cuerpo, paddingVertical: 6 },
   celda: { flex: 1, height: 56, alignItems: 'center', justifyContent: 'center', gap: 3 },
-  circulo: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  circulo: { width: 40, height: 40, borderRadius: 20, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
   numero: { fontSize: 17 },
   punto: { width: 7, height: 7, borderRadius: 3.5 },
   leyenda: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 4 },
