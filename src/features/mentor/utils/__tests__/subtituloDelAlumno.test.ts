@@ -9,9 +9,9 @@ describe('la línea bajo el nombre del aprendiz', () => {
   });
 
   it('dice lo que sabe', () => {
-    expect(subtituloDelAlumno(12, null)).toBe('Día 12 de 90');
+    expect(subtituloDelAlumno(12, null)).toBe('Día 12');
     expect(subtituloDelAlumno(0, null)).toBe('Todavía no arrancó su programa');
     expect(subtituloDelAlumno(null, 3)).toBe('Última actividad hace 3 días');
-    expect(subtituloDelAlumno(5, 0)).toBe('Día 5 de 90 · última actividad hace menos de un día');
+    expect(subtituloDelAlumno(5, 0)).toBe('Día 5 · última actividad hace menos de un día');
   });
 });

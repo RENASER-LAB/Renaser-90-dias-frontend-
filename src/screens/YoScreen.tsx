@@ -41,6 +41,9 @@ import { FilaDeAjuste, GrupoDeAjustes, LADO_BALDOSA } from '../features/yo/compo
 import { MetodoEnPaginas, type FaseDelMetodo } from '../features/yo/components/MetodoEnPaginas';
 import { PactoFirmado } from '../features/yo/components/PactoFirmado';
 import { TarjetaDeFase } from '../features/yo/components/TarjetaDeFase';
+import { evolucionEnYo } from '../features/yo/utils/evolucionEnYo';
+import { usePlazoDeLaSesion } from '../features/formaciones/hooks/usePlazoDeLaSesion';
+import { FilaDelProgramaQueEmpieza } from '../features/programa/components/FilaDelProgramaQueEmpieza';
 import { animalConfigurado } from '../features/yo/utils/animalConfigurado';
 import { faseEnCurso, fasesEnOrden } from '../features/home/utils/faseEnCurso';
 import { textoDelRecord } from '../features/home/utils/textoDelRecord';
@@ -273,7 +276,8 @@ function descripcionDeLosTerminos(aceptados: TerminosAceptadosApi): string {
   return fecha ? `${version} · aceptada el ${fecha} · toca para releer` : `${version} · toca para releer`;
 }
 
-const PACTO_CLAUSULAS = [
+/** Las diez cláusulas del Pacto; la última nombra el último día del programa de la persona («Día 90», «Día 365»; issue #104). */
+const clausulasDelPacto = (duracionDias: number) => [
   '1. Cumplir mis 3 Objetivos diarios sin negociarlos conmigo.',
   '2. Subir las evidencias que el sistema me exija.',
   '3. Aceptar la disciplina como camino, no como castigo.',
@@ -283,7 +287,7 @@ const PACTO_CLAUSULAS = [
   '7. Sanar mis heridas en lugar de defenderlas.',
   '8. Cobrar lo que valgo y dejar de subvalorarme.',
   '9. Decir la verdad aunque tiemble la voz.',
-  '10. Llegar al Día 90 transformado, no entretenido.',
+  `10. Llegar al Día ${duracionDias} transformado, no entretenido.`,
 ];
 
 export default function YoScreen() {
@@ -311,6 +315,9 @@ export default function YoScreen() {
   const faseActual = faseEnCurso(resumen?.fase, resumen?.diaPrograma, resumen?.duracionDias);
   /* El Método dice los días de SU programa y las fases estiradas a ellos (spec 022); sin el dato, los 90 de siempre. */
   const duracionDelPrograma = resumen?.duracionDias ?? DIAS_DEL_PROGRAMA;
+  /* Issue #104: lo que nombra el plazo del programa en el Pacto es el de SU formación («90 días», «3 meses», «1 año»), no siempre 90. */
+  const { plazo: plazoDelPrograma, duracionDias: ultimoDiaDelPrograma } = usePlazoDeLaSesion();
+  const clausulasDeMiPacto = React.useMemo(() => clausulasDelPacto(ultimoDiaDelPrograma), [ultimoDiaDelPrograma]);
   const metodoFases = React.useMemo(() => metodoFasesDe(duracionDelPrograma), [duracionDelPrograma]);
   /* «¡Entraste en la Fase N!» es la pantalla completa de celebración desde el 2026-10-07 (pedido del dueño: reemplaza
      el momento chico de esta tarjeta). Yo también la revisa con lo que ya leyó, por si la fase nueva se ve acá primero. */
@@ -458,7 +465,10 @@ export default function YoScreen() {
   const veMiRadar = veLaFilaDeMiRadar(lecturaDeMiRadar.lectura, diaDelPrograma);
   /* ¿Hay que preguntarle al servidor? Solo a quien podría no tener programa activado: sin fila (`puedeIniciarPrograma`) o con la fila sin
      Día 1. Al resto (aprendices, quien ya va por el programa) no se les pide nada antes del día 8. */
-  const diaUnoSinElegir = useDiaUnoPorElegir(resumen?.inscrito, diaDelPrograma, user?.id ?? null).porElegir;
+  const diaUno = useDiaUnoPorElegir(resumen?.inscrito, diaDelPrograma, user?.id ?? null);
+  const diaUnoSinElegir = diaUno.porElegir;
+  /* Issue #102: «Tu evolución» (fase y semáforo) solo con el programa en marcha; antes del Día 1, la fila «Tu programa empieza…»; sin programa, nada. */
+  const evolucion = evolucionEnYo({ resumen, esperandoInicio: diaUno.esperando, fechaInicio: diaUno.fechaInicio });
   const averiguarMiRadar = hayQueAveriguarMiRadar({ puedeIniciarPrograma: capacidades.puedeIniciarPrograma, diaUnoSinElegir });
   const { solicitar: solicitarMiRadar } = lecturaDeMiRadar;
   useEffect(() => {
@@ -664,7 +674,7 @@ export default function YoScreen() {
 
       // Era el diálogo «¡Pacto sellado! 🦅»: ahora una línea sobre «Tu proceso completo», cuya barra
       // acaba de avanzar (2026-10-05).
-      confirmar('Pacto sellado. Tu compromiso de 90 días está activo.', 'onboarding');
+      confirmar(`Pacto sellado. Tu compromiso de ${plazoDelPrograma} está activo.`, 'onboarding');
       setActiveView('onboarding');
     } finally {
       setSellandoPacto(false);
@@ -679,6 +689,7 @@ export default function YoScreen() {
     firmaPacto,
     guardarCapitulo,
     guardarFirma,
+    plazoDelPrograma,
     profileName,
     sellandoPacto,
   ]);
@@ -872,6 +883,12 @@ export default function YoScreen() {
           {/* Tu evolución. Tipo oración, como Hoy (pedido del dueño del 2026-10-05): el rótulo, la
               fase y el día iban en versales espaciadas («TU EVOLUCIÓN», «EL CICLO ALQUÍMICO», «DÍA 15
               DE 90»), lo único de Yo que había quedado así después del rediseño. */}
+          {evolucion.tipo === 'empieza' ? (
+            /* Antes del Día 1 (issue #102): una sola fila con la fecha, la misma de Hoy y Plan. Sin fase, sin días restantes y sin semáforo. */
+            <FilaDelProgramaQueEmpieza fechaInicio={evolucion.fechaInicio} />
+          ) : null}
+          {/* Sin programa, o con la fila sin activar, no se dibuja nada (ni el rótulo): un bloque vacío deja igual su separación del scroll y ese era el hueco. */}
+          {evolucion.tipo === 'en-curso' && (faseActual || (resumen?.semaforo && esDisponible(CLAVES.semaforo))) ? (
           <View>
             <Text style={[t.small, styles.rotulo, { color: c.textSoft }]}>Tu evolución</Text>
             {/* La tarjeta de tu fase (diseño B elegido por el dueño, 2026-10-06): el animal, la fase y los
@@ -903,6 +920,7 @@ export default function YoScreen() {
               </View>
             ) : null}
           </View>
+          ) : null}
 
           {/* STATS REALES CALCULADOS POR EL BACKEND
               Eran tres cajas con borde y fondo, una dorada y dos grises sin motivo. Ahora son tres
@@ -1559,7 +1577,7 @@ export default function YoScreen() {
             </Text>
 
             <View style={{ gap: 10, marginVertical: 4 }}>
-              {PACTO_CLAUSULAS.map(clause => (
+              {clausulasDeMiPacto.map(clause => (
                 <Text key={clause} style={[t.body, { color: c.textSoft }]}>
                   {clause}
                 </Text>

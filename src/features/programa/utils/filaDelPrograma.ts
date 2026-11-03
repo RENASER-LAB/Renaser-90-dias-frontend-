@@ -46,6 +46,16 @@ function vista(
   return { tipo, titulo, linea, ...extra, etiquetaAccesible: linea ? `${titulo}. ${linea}.` : titulo };
 }
 
+/**
+ * La fila de quien ya activó su programa y todavía no llega su Día 1 (`esperando`, issue #72): «Tu programa empieza el martes 3 de noviembre».
+ * Es UNA sola frase para todas las pantallas que lo dicen —Hoy y Plan (por `vistaDeLaFilaDelPrograma`), Training y Yo (issues #101 y #102)—:
+ * así el texto, la fecha y el «pronto» sin fecha no pueden divergir. Sin fecha (el servidor no la mandó) no se inventa ninguna.
+ */
+export function vistaDelProgramaQueEmpieza(fechaInicio?: string | null): VistaDeLaFilaDelPrograma {
+  const titulo = fechaInicio ? `Tu programa empieza el ${formatearFechaLarga(fechaInicio)}` : 'Tu programa empieza pronto';
+  return vista('esperando', titulo, null, { abreElSelector: false, conAhoraNo: false });
+}
+
 export function vistaDeLaFilaDelPrograma({
   entrada,
   plazo,
@@ -57,10 +67,8 @@ export function vistaDeLaFilaDelPrograma({
   fechaInicio?: string | null;
 }): VistaDeLaFilaDelPrograma | null {
   switch (entrada) {
-    case 'ESPERANDO_INICIO': {
-      const titulo = fechaInicio ? `Tu programa empieza el ${formatearFechaLarga(fechaInicio)}` : 'Tu programa empieza pronto';
-      return vista('esperando', titulo, null, { abreElSelector: false, conAhoraNo: false });
-    }
+    case 'ESPERANDO_INICIO':
+      return vistaDelProgramaQueEmpieza(fechaInicio);
     case 'ELEGIR_DIA_UNO':
       return vista('elegir', 'Todavía no empezaste tu programa', LINEA_EMPIEZA_MANANA, { abreElSelector: true, conAhoraNo: false });
     case 'EMPEZAR':

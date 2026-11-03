@@ -10,6 +10,7 @@ import { useSystemBackHandler } from '../../../hooks/useSystemBackHandler';
 import { ahoraConfiable } from '../../../services/http/relojServidor';
 import { useResponsive } from '../../../theme/responsive';
 import { useTheme } from '../../../theme/ThemeContext';
+import { usePlazoDeLaSesion } from '../../formaciones/hooks/usePlazoDeLaSesion';
 import { ESPACIO_PARA_LANZADOR } from '../../renasia/components/RenasiaLauncher';
 import { CifraDelSemaforo } from '../components/CifraDelSemaforo';
 import { ControlDePausa } from '../components/ControlDePausa';
@@ -122,12 +123,14 @@ function Detalle({
   onPausaCambiada?: () => void;
 }) {
   const { c, t } = useTheme();
+  /* Issue #104: el plazo es el del programa de la persona («90 días», «3 meses», «1 año»). */
+  const { plazo } = usePlazoDeLaSesion();
   const cuerpo = [t.body, { color: c.text, fontSize: 16, lineHeight: 23 }];
 
   if (!detalle.aplica) {
     return (
       <Text style={[cuerpo, { marginTop: 8 }]}>
-        Tu semáforo se mide cuando tienes el programa de 90 días activado. Por ahora no hay nada que medir.
+        {`Tu semáforo se mide cuando tienes el programa de ${plazo} activado. Por ahora no hay nada que medir.`}
       </Text>
     );
   }

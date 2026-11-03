@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { usePlazoDeLaSesion } from '../../formaciones/hooks/usePlazoDeLaSesion';
 import { mensajeDeObjetivos } from '../utils/mensajeDeObjetivos';
 import * as objetivosApi from '../api/objetivosApi';
 import { esRocaMaestraFija } from '../utils/objetivoFijo';
@@ -29,6 +30,10 @@ export function useRocasMaestras() {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
+  /* Issue #104: el aviso nombra el plazo del programa de la persona. En una referencia para no volver a pedir los objetivos si la formación se lee tarde. */
+  const { plazo } = usePlazoDeLaSesion();
+  const plazoRef = useRef(plazo);
+  plazoRef.current = plazo;
 
   const cargar = useCallback(async () => {
     setCargando(true);
@@ -36,7 +41,7 @@ export function useRocasMaestras() {
     try {
       setRocas(await objetivosApi.obtenerRocasMaestras());
     } catch (e) {
-      setError(mensajeDeObjetivos(e, 'No pudimos cargar tu objetivo de 90 días.'));
+      setError(mensajeDeObjetivos(e, `No pudimos cargar tu objetivo de ${plazoRef.current}.`));
     } finally {
       setCargando(false);
     }

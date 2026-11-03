@@ -1932,6 +1932,112 @@ chequeo de seguridad en el CI. Sin cambios de diseño, textos, tabs ni código d
 * **Hace falta un APK nuevo** para que `zod` y `@react-navigation/core` lleguen a los teléfonos (solo JavaScript: ni `app.json` ni código nativo; la
   app no se actualiza por aire). Backend nuevo, ninguno.
 
+## Corrección — 2026-11-02 — Training dice cuándo empieza el programa de quien empieza mañana (issue #101)
+
+E2E final del 2026-11-02: a quien activó su programa y su Día 1 es mañana (fila con `programa_activado_en` hoy; spec 036), Training le mostraba
+un día cualquiera —«Hoy no tienes nada planificado.», la semana, un evento y la ayuda— con ~65 % de la pantalla en blanco, mientras Hoy y Plan decían
+«Tu programa empieza el martes 3 de noviembre». Causa: `useArranqueDelPrograma` da a quien empieza mañana `EN_CURSO` con la fecha (D-103: ya puede
+organizar), y Training solo avisaba a quien empieza pasado mañana o más tarde (`ESPERANDO_INICIO`). Lo que cambia y nada más:
+* **Una fila arriba, pegada a la cabecera de Training**, con la MISMA fila y el MISMO texto de Hoy y Plan: `FilaDelProgramaQueEmpieza`
+  (`FilaCompacta`, ícono `calendarRange`, sin chevron: no lleva a nada) con «Tu programa empieza el martes 3 de noviembre» —o «Tu programa empieza
+  pronto» si el servidor no mandó la fecha: no se inventa una—. El texto sale de `vistaDelProgramaQueEmpieza` (`programa/utils/filaDelPrograma`), la
+  única frase que usan Hoy, Plan (por `vistaDeLaFilaDelPrograma`), Training y Yo (issue #102). Quién la ve lo decide `programaQueEmpieza` (pura):
+  `inscrito`, día 0 y `EN_CURSO`. Con el programa en marcha, sin fila, mientras se comprueba, con el aviso de «Todavía no empezaste tu programa» o el de
+  «Tu programa arranca pronto» (pasado mañana o más), no se dibuja. Con el programa en otra formación tampoco.
+* **No cambia**: la lista del día, la semana, «Tus prácticas» (siguen habilitadas: quien empieza mañana organiza hoy, D-103), el aviso de quien empieza
+  pasado mañana, ni ningún pedido al servidor (la fila usa la lectura que Training ya hacía). Sin animación nueva.
+* **Pruebas:** `trainingDiceCuandoEmpieza.test.ts` (`programaQueEmpieza`, el texto compartido, la fila y que `TrainingScreen` la dibuja arriba de la lista).
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
+
+## Corrección — 2026-11-02 — Yo: sin fase ni semáforo antes del Día 1 ni sin programa (issue #102)
+
+E2E final del 2026-11-02: a quien empieza mañana, Yo le decía «Fase 1 de 4 · Días 1–7 · Día 0 de 90 · Te quedan 6 días en esta fase» y «Tu semáforo ·
+Sin datos · 0 de 7 días con datos»; al personal sin programa, lo mismo. `/home` manda la fase y el semáforo también antes del Día 1 y sin fila, y Yo los
+dibujaba siempre que llegaran. Lo que cambia y nada más (`features/yo/utils/evolucionEnYo`, pura):
+* **Con el programa en marcha (día 1 o más):** «Tu evolución» —la tarjeta de fase y el semáforo— como siempre.
+* **Antes del Día 1 (activó su programa y espera):** en su lugar, UNA fila, «Tu programa empieza el martes 3 de noviembre» (o «pronto» sin fecha), la
+  misma de Hoy, Plan y Training (`FilaDelProgramaQueEmpieza`). Sin fase, sin días que quedan y sin semáforo.
+* **Sin programa** (`inscrito` falso: el personal sin fila) **o con la fila sin activar:** no se dibuja nada de «Tu evolución», ni siquiera el rótulo:
+  un bloque vacío deja igual su separación del scroll (`gapLg`) y ese era el hueco. Yo ya tiene lo que corresponde (la invitación o «Todavía no empezaste
+  tu programa», `EntradaAlProgramaPropio`). Mientras se comprueba cuál de los casos es, tampoco se dibuja nada (sin parpadeo). Si la tarjeta de fase y el
+  semáforo faltan por otro motivo (fase desconocida, semáforo apagado), el rótulo «Tu evolución» tampoco queda suelto.
+* **Sin pedidos nuevos:** Yo ya leía `/home` y `useDiaUnoPorElegir` (que antes solo usaba `porElegir`). No cambian Coherencia / Puntos / Racha, las filas ni Mi Radar.
+* **Pruebas:** `evolucionEnYo.test.ts` (los cuatro casos y que `YoScreen` condiciona la tarjeta, el semáforo y el rótulo).
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
+
+## Corrección — 2026-11-02 — la Ficha Inicial dice el plazo de la formación de cada persona (issue #103)
+
+Identidad por formación en todo: la Ficha Inicial estándar —la que ve quien no tiene diagnóstico— decía «durante los 90 días», «me comprometo a los 90 días» y
+«compromiso a los 90 días» a todos, también a quien está en un Diplomado de 3 meses o de 1 año. Ahora el plazo sale de la formación de la persona
+(`useFormacionDeLaSesion` → `plazoDelObjetivo(duracionDias, codigo)`, el mismo que usa «Tu programa empieza mañana», `lineaDelPlazo`). Lo que cambia y nada más:
+* **Tres textos**: la ayuda de «¿Qué esperas concretamente de Renaser?» («…en tu mente, cuerpo y negocio durante los 90 días» / «durante los 3 meses» / «durante
+  el año»), la casilla del consentimiento («Autorizo el uso de mis datos y me comprometo a los 90 días» / «a los 3 meses» / «al año») con su nombre para el lector de
+  pantalla («Consentimiento y compromiso de 90 días» / «3 meses» / «1 año»), y el aviso «Por favor marca la casilla de autorización de datos y compromiso a los 90 días
+  para continuar.» (`plazoConArticulo` y `alPlazo` en `pasosFicha`: el artículo y la contracción «al año»).
+* **Con 90 días las frases son EXACTAMENTE las de siempre**, palabra por palabra: la Escuela y la Certificación no ven ningún cambio, y sin formación conocida
+  (un servidor anterior, o todavía sin leer) vale el de siempre, 90 días (`PLAZO_POR_DEFECTO`). `validarPaso`, `validarCapitulo` y `ChapterConsentimiento` suman un
+  parámetro opcional `plazo`; `PasoFicha.bajada` puede ser una función del plazo (`bajadaDelPaso`).
+* **No cambia** lo que se guarda (`compromiso90Dias` sigue siendo la clave del contrato con el servidor), las preguntas, ni los demás avisos.
+* **Barrido de todo `features/onboarding/` (ampliación, mismo día).** El E2E lo confirmó en pantalla con un Diplomado de 1 año, y quedaban más «90 días». Un
+  solo mecanismo para todo: `usePlazoDeLaSesion` (`formaciones/hooks`; `{ plazo, duracionDias }` de la formación de la sesión) y las frases de
+  `formaciones/utils/plazoEnFrases` (`plazoConArticulo`, `alPlazo`, `losProximos`, `diaDeLaEtapa`). Con 90 días cada texto es el de siempre. Ahora también dicen el
+  plazo de SU formación: el subtítulo del capítulo 3 (`chaptersConfig.subtitle`, `subtituloDelCapitulo`), «Ratifico mi compromiso con los 90 días de Renaser» y su
+  «Día 90» (`ChapterCompromiso`), los campos de Cuerpo y Negocio y sus ejemplos (`ChapterCuerpo`, `ChapterNegocio`: «A 3 MESES», «al Día 365»), los avisos y campos del
+  cuestionario profundo (`bloquesCuestionarioProfundo`, `textoDelAviso`, `CuestionarioProfundoScreen`), «LOS PRÓXIMOS 90 DÍAS», «90 días de compromiso…» y las etapas
+  «DÍA 01 / 30 / 60 / 90» de la bienvenida (con 365 días: 01, 122, 243 y 365, la misma proporción de las fases; `BienvenidaScreen`), «Activaste tu protocolo innegociable de
+  90 días» (`GongVictoriaScreen`) y el último compromiso del Pacto (`pactoData`).
+  **Ojo, qué se ve de verdad:** la Ficha Inicial estándar y «Tu programa empieza mañana» son las pantallas vivas. `BienvenidaScreen`, `GongVictoriaScreen`, el cuestionario
+  profundo (`CuestionarioProfundoScreen` y sus `Chapter…`) y `pactoData` **no están montados hoy** (nadie los importa): se corrigieron para que, si vuelven, no digan 90 a
+  nadie. `usePlazoDeLaSesion` no pide nada: lee el contexto de la formación que ya está en la sesión.
+* **Fuera de `onboarding/`:** los demás «90 días» de la app se corrigieron en el issue #104 (entrada de abajo).
+* **Pruebas:** `fichaPorFormacion.test.ts` (los tres plazos en los tres textos, la frase de siempre con 90 días y el cableado de `FichaInicialScreen`),
+  `plazoEnElOnboarding.test.ts` (las frases, cada pantalla con 90 días, 3 meses y 1 año, y un barrido que falla si el código de `onboarding/` vuelve a escribir «90 días»
+  o «Día 90» a mano) y `usePlazoDeLaSesion.test.ts`.
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
+
+## Corrección — 2026-11-02 — ningún «90 días» escrito a mano en lo que ve la persona (issue #104)
+
+Decisión del dueño: «ningún «90 días» para el Diplomado ni la Certificación». Completa lo de #103 en todo `src/`. El plazo se dice con el de la formación de la
+persona (`usePlazoDeLaSesion`: «90 días» en la Escuela y la Certificación, «3 meses» o «1 año» en el Diplomado), o con un texto neutro donde no hay sesión.
+Con 90 días cada frase es la de siempre. Lo que cambia y nada más:
+* **Con el plazo de la formación:** la invitación del personal sin programa («Hacer mi programa de 3 meses», `InvitacionProgramaPropio`), el aviso de la clase diaria
+  («Todavía no arrancaste tus 3 meses / tu año», `ClaseDiariaModal`, `tuPlazo`), el Pacto de Yo (la cláusula 10 «Llegar al Día 365…» y «Pacto sellado. Tu compromiso de
+  1 año está activo.»), la tarjeta «Completa tu diagnóstico» («De él nacen tus objetivos de 3 meses.», `lineaDeLaTarjetaPendiente`), los avisos «No pudimos cargar
+  tu objetivo de …» y «Primero define tus tres objetivos de …» (`useRocasMaestras`, `useRocasSemanales`: el plazo va en una referencia, así que leer la formación tarde no
+  vuelve a pedir los objetivos) y «Tu semáforo se mide cuando tienes el programa de … activado» (`SemaforoScreen`).
+* **Neutro donde no hay sesión de esa persona:** la imagen del podio sin nombre de formación dice «Renaser» (antes «Renaser · 90 días»; con formación dice la de la tabla, como
+  siempre); la tarjeta del semáforo de OTRA persona (mentor y Administración) dice «No tiene su programa activado…»; y la ficha del mentor dice «Día 12» en vez de
+  «Día 12 de 90» (esa lectura no trae la duración del aprendiz).
+* **`FormacionContext` se partió en dos** (`context/contextoDeFormacion.ts`: el contexto y `useFormacionDeLaSesion`, sin la sesión; `FormacionContext.tsx`: el
+  proveedor, que re-exporta lo anterior, así que los imports de siempre no cambian). Así leer la formación no arrastra `AuthContext` ni `AsyncStorage` a cada pantalla y a
+  cada prueba (el primer intento de #103 dejó roja `fichaPasoAPaso` por eso).
+* **Excepciones del barrido, solo dos y justificadas** (`ningunNoventaDiasEscrito.test.ts`): `PLAZO_POR_DEFECTO = '90 días'` en `nombreDelObjetivo.ts` (el valor por defecto de
+  donde salen los demás) y el respaldo `{ dias: 90, texto: '90 días' }` de `diagnosticoSchemas.ts` (un servidor que no manda la duración; ninguna pantalla lo dibuja). Los
+  comentarios no cuentan. **No se tocó** el nombre del producto «Renaser 90 días» de las páginas públicas (`public/privacidad`, `public/eliminar-cuenta`): es la marca de la app.
+* **Pruebas:** `ningunNoventaDiasEscrito.test.ts` (barre `src/` y `App.tsx`: falla con «90 días», «Día 90», «de 90» o «noventa» escritos a mano), `plazoEnLasPantallas.test.ts`
+  y las de #103; se ajustaron `subtituloDelAlumno` y `tarjetaDelPodio`.
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
+
+## Corrección — 2026-11-02 — SER: el texto de respaldo de las propuestas ya no queda encima de la tarjeta ni repetido al releer el historial (issue #105)
+
+E2E final del 2026-11-02 (capturas `B4-ser-ritual-tarjeta` y `B4-ser-historial-recargado`). El backend manda antes de cada evento un texto de respaldo para las
+apps viejas —«Propuesta: …», «Foto para registrar '…': …» y, para los rituales, «Para registrar '…' cuenta como te sientes: …»— y esta versión dibuja la tarjeta, así que
+los quita. Fallaban tres cosas, todas en `renasia/utils/propuestas` (ahora con las reglas en `respaldosDelBackend`, que `propuestas` re-exporta). Lo que cambia y nada más:
+* **Se quitan estén donde estén y aunque vengan varios seguidos.** Antes solo si iban al FINAL del mensaje: con dos respaldos seguidos (el de la foto o el del ritual
+  y después el de la propuesta) el de la propuesta quedaba como texto encima de la tarjeta. Ahora se compara línea por línea (cada respaldo es una línea) y se quita la
+  línea completa de cualquier lugar; lo que no es EXACTAMENTE esa línea no se toca (mejor repetido que borrar algo que dijo el asistente).
+* **El respaldo del ritual tiene quien lo quite** (`quitarRespaldoDeFoto` lo reconoce junto al de la foto del hábito y al de la foto de la acción del día), y el de la foto
+  ya no depende de «subela desde Hoy»: vale «desde Hoy» y «desde Training» (el servidor ahora dice Training). `destino` se acepta pero ya no distingue una forma de otra.
+* **Tolerante a las tildes** (el backend los va a corregir, #63): la comparación es sin tildes, sin mayúsculas, con los espacios juntos y con las comillas tipográficas
+  como rectas, así que «súbela», «botón», «cámara», «acción» y «cuenta cómo» valen igual que las formas sin tilde.
+* **Al releer el historial**, lo guardado trae los respaldos adentro y sin tarjeta (la propuesta ya venció o se resolvió) y una vez salió el mismo «Propuesta: …» dos
+  veces en la misma burbuja: `mapearMensajeApi` aplica `sinRespaldosRepetidos` a los mensajes del asistente, que deja UNA sola vez cada línea de respaldo. Una propuesta
+  guardada una sola vez se deja como estaba (ya sin botones, pero es lo que se dijo); lo que escribió la persona no se toca.
+* **La voz tampoco lee el del ritual** (`voz.ts` usaba un filtro propio que solo conocía «Propuesta:» y «Foto para registrar»; ahora usa `esLineaDeRespaldo`).
+* **No cambian** las tarjetas, los textos del asistente, el backend ni el stream. **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire).
+* **Pruebas:** `respaldosDelBackend.test.ts` (con los textos reales de `B4-SER-respuestas.txt`: ritual, kilómetros, última comida, dos seguidos, en medio, tildes, Hoy y
+  Training, y el historial repetido), `respaldosEnElChat.test.ts` (el hook: llegada con dos respaldos seguidos y relectura del historial) y `propuestas.test.ts`.
+
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
 Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel especializado en React Native, Expo y TypeScript. Al crear, refactorizar o modificar cualquier pantalla o componente, debes cumplir OBLIGATORIAMENTE con los siguientes estándares:

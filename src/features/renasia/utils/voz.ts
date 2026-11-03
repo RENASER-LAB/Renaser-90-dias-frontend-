@@ -3,6 +3,7 @@
  * sintetizador. La respuesta del modelo viene con markdown básico pensado para leerse, no para
  * escucharse: un "asterisco asterisco" en voz alta es peor que nada.
  */
+import { esLineaDeRespaldo } from './respaldosDelBackend';
 
 /** Más que esto se vuelve un monólogo: se corta en una frase y el resto queda en el chat. */
 export const MAXIMO_CARACTERES_HABLADOS = 450;
@@ -60,7 +61,7 @@ export const MAXIMO_AGRUPADO = 220;
  *
  * Una oración por audio metía una pausa en cada punto: el silencio del final de un clip, el del
  * principio del siguiente y el cambio de clip en el reproductor. Juntas, además, la voz entona el
- * párrafo entero en vez de frases sueltas. El respaldo "Propuesta: …" nunca se lee, ni el del pedido de foto ("Foto para registrar …").
+ * párrafo entero en vez de frases sueltas. El respaldo "Propuesta: …" nunca se lee, ni el del pedido de foto ("Foto para registrar …") ni el del ritual ("Para registrar … cuenta como te sientes", issue #105).
  */
 export function crearAgrupador(decir: (texto: string) => void, maximo = MAXIMO_AGRUPADO) {
   let dijoLaPrimera = false;
@@ -68,7 +69,7 @@ export function crearAgrupador(decir: (texto: string) => void, maximo = MAXIMO_A
   return {
     oracion(oracion: string) {
       const limpia = oracion.trim();
-      if (!limpia || /^(Propuesta:|Foto para registrar )/i.test(limpia)) return;
+      if (!limpia || esLineaDeRespaldo(limpia)) return;
       if (!dijoLaPrimera) {
         dijoLaPrimera = true;
         decir(limpia);

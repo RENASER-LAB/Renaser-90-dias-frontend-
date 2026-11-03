@@ -17,7 +17,8 @@ export const SIN_DIAGNOSTICO_DISPONIBLE = 'Todavía no tienes un diagnóstico di
 export const NO_SE_PUDO_CARGAR_EL_DIAGNOSTICO = 'No pudimos cargar tu diagnóstico. Revisa tu conexión.';
 
 export const TARJETA_PENDIENTE_TITULO = 'Completa tu diagnóstico';
-export const TARJETA_PENDIENTE_LINEA = 'De él nacen tus objetivos de 90 días.';
+/** «De él nacen tus objetivos de 90 días.» con el plazo del programa de la persona («90 días», «3 meses», «1 año»; issue #104). */
+export const lineaDeLaTarjetaPendiente = (plazo: string): string => `De él nacen tus objetivos de ${plazo}.`;
 
 export const TODAVIA_NO_LO_COMPLETA = 'Todavía no lo ha completado.';
 export const TODAVIA_NO_LO_HAS_COMPLETADO = 'Todavía no has completado tu diagnóstico.';

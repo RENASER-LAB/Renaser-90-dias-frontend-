@@ -18,6 +18,7 @@ import {
   propuestaDesdeEvento,
   quitarRespaldoDeFoto,
   quitarTextoDeRespaldo,
+  sinRespaldosRepetidos,
 } from '../utils/propuestas';
 
 let contadorIdLocal = 0;
@@ -32,10 +33,12 @@ function idLocal(prefijo: string): string {
  * pero la pantalla ya no muestra las fuentes citadas. Ver `MensajeBurbuja`.
  */
 function mapearMensajeApi(m: MensajeRenasiaApi): RenasiaMensajeUI {
+  const delAsistente = m.role !== 'USER';
   return {
     id: m.id,
-    autor: m.role === 'USER' ? 'persona' : 'asistente',
-    texto: m.content,
+    autor: delAsistente ? 'asistente' : 'persona',
+    // Issue #105: lo guardado trae los respaldos «Propuesta: …» adentro y sin tarjeta; una vez salió el mismo respaldo dos veces en la misma burbuja.
+    texto: delAsistente ? sinRespaldosRepetidos(m.content) : m.content,
     creadoEn: m.createdAt,
   };
 }

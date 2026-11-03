@@ -19,7 +19,9 @@ import {
   TOTAL_BLOQUES,
   metaFacturacionEsValida,
   porcentajeDelBloque,
+  textoDelAviso,
 } from '../data/bloquesCuestionarioProfundo';
+import { usePlazoDeLaSesion } from '../../formaciones/hooks/usePlazoDeLaSesion';
 import {
   mapearBloqueCuestionarioProfundo,
   reconstruirCuestionarioProfundoDesdeRespuestas,
@@ -63,6 +65,8 @@ export function CuestionarioProfundoScreen({ onComplete, onBack }: CuestionarioP
   const { c, t, mode, toggle } = useTheme();
   const { isTablet } = useResponsive();
   const { guardarCapitulo, avanzarEstado } = usePersistenciaOnboarding();
+  /* Issue #103: lo que nombra el plazo es el del programa de la persona («90 días», «3 meses», «1 año»), no siempre 90 días. */
+  const { plazo } = usePlazoDeLaSesion();
 
   const [indiceBloque, setIndiceBloque] = useState(0);
   const [guardando, setGuardando] = useState(false);
@@ -115,9 +119,9 @@ export function CuestionarioProfundoScreen({ onComplete, onBack }: CuestionarioP
   const primerFaltante = (): string | null => {
     for (const { campo, aviso } of CAMPOS_OBLIGATORIOS[bloque.numero] ?? []) {
       const valor = formData[campo];
-      if (typeof valor === 'string' && !valor.trim()) return aviso;
+      if (typeof valor === 'string' && !valor.trim()) return textoDelAviso(aviso, plazo);
       // Un slider sin tocar vale `null`, no 0: se le pide igual que a un campo de texto vacío.
-      if (valor === null) return aviso;
+      if (valor === null) return textoDelAviso(aviso, plazo);
     }
     // La meta de facturación es la única pregunta NUMERO: si no se puede parsear, el mapeo la
     // descartaría y una respuesta obligatoria nunca llegaría a la base.
@@ -251,7 +255,7 @@ export function CuestionarioProfundoScreen({ onComplete, onBack }: CuestionarioP
           {bloque.numero === 1 && (
             <View style={styles.campos}>
               <FormField
-                label="OBJETIVO SMART DE CUERPO A 90 DÍAS *"
+                label={`OBJETIVO SMART DE CUERPO A ${plazo.toUpperCase()} *`}
                 helperText="Debe incluir: qué exactamente, cuánto, para cuándo."
                 value={formData.objetivoSmartCuerpo}
                 onChangeText={v => actualizar('objetivoSmartCuerpo', v)}
@@ -335,7 +339,7 @@ export function CuestionarioProfundoScreen({ onComplete, onBack }: CuestionarioP
           {bloque.numero === 4 && (
             <View style={styles.campos}>
               <FormField
-                label="META DE FACTURACIÓN A 90 DÍAS (USD) *"
+                label={`META DE FACTURACIÓN A ${plazo.toUpperCase()} (USD) *`}
                 helperText="Número específico, no rango."
                 value={formData.metaFacturacion}
                 onChangeText={v => actualizar('metaFacturacion', v)}
@@ -367,9 +371,9 @@ export function CuestionarioProfundoScreen({ onComplete, onBack }: CuestionarioP
                 numberOfLines={3}
               />
               <FormField
-                label="OBJETIVO SMART DE NEGOCIO A 90 DÍAS *"
+                label={`OBJETIVO SMART DE NEGOCIO A ${plazo.toUpperCase()} *`}
                 helperText="Debe incluir números y fecha."
-                placeholder="Mi objetivo concreto de negocio a 90 días es…"
+                placeholder={`Mi objetivo concreto de negocio a ${plazo} es…`}
                 value={formData.objetivoSmartNegocio}
                 onChangeText={v => actualizar('objetivoSmartNegocio', v)}
                 multiline
@@ -390,7 +394,7 @@ export function CuestionarioProfundoScreen({ onComplete, onBack }: CuestionarioP
               />
               <FormField
                 label="BAUTIZO DEL PROCESO *"
-                helperText="Ponle nombre a tu reto personal de 90 días."
+                helperText={`Ponle nombre a tu reto personal de ${plazo}.`}
                 placeholder={'Ej: "Operación Soberanía"'}
                 value={formData.bautizoProceso}
                 onChangeText={v => actualizar('bautizoProceso', v)}

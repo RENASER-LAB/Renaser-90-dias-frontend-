@@ -1,5 +1,6 @@
 import { ApiError } from '../../../services/http/apiClient';
 import type { DefinicionRocaMaestra, RocaMaestraApi } from '../types/objetivos.types';
+import { PLAZO_POR_DEFECTO } from './nombreDelObjetivo';
 
 /**
  * El objetivo de 90 días queda fijo una vez definido (D-234 del backend, decisión del dueño del
@@ -17,7 +18,7 @@ import type { DefinicionRocaMaestra, RocaMaestraApi } from '../types/objetivos.t
 export const CODIGO_ROCA_MAESTRA_FIJA = 'ROCA_MAESTRA_FIJA';
 
 /** Una línea, la que se muestra en el modal cuando el objetivo ya está definido. */
-export function lineaObjetivoFijo(plazo: string = '90 días'): string {
+export function lineaObjetivoFijo(plazo: string = PLAZO_POR_DEFECTO): string {
   return `Tu objetivo de ${plazo} quedó fijo. Aquí solo anotas cuánto llevas.`;
 }
 

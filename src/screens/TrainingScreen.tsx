@@ -62,6 +62,8 @@ import {
   useArranqueDelPrograma,
 } from '../features/programa/hooks/useArranqueDelPrograma';
 import { useProgramaPersonal } from '../features/mentor/hooks/useProgramaPersonal';
+import { FilaDelProgramaQueEmpieza } from '../features/programa/components/FilaDelProgramaQueEmpieza';
+import { programaQueEmpieza } from '../features/programa/utils/programaQueEmpieza';
 import { BotonElegirDiaUno } from '../features/programa/components/BotonElegirDiaUno';
 import { InvitacionProgramaPropio } from '../features/programa/components/InvitacionProgramaPropio';
 import { AvisoConsultaDiaUno } from '../features/programa/components/AvisoConsultaDiaUno';
@@ -261,6 +263,9 @@ export default function TrainingScreen() {
   const arranque = useArranqueDelPrograma(!cargandoDiaPrograma && diaPrograma === 0, versionArranque, user?.id);
   const programaSinArrancar =
     arranque.estado === 'PENDIENTE_ELEGIR' || arranque.estado === 'ESPERANDO_INICIO';
+  /* Issue #101: quien activó su programa y empieza MAÑANA ya puede organizar (D-103), así que no cae en `programaSinArrancar`; sin una línea que lo
+     diga, Training era «Hoy no tienes nada planificado.» y dos tercios de pantalla en blanco, mientras Hoy y Plan decían cuándo empieza. */
+  const programaQueEmpiezaPronto = programaQueEmpieza({ inscrito, diaPrograma: cargandoDiaPrograma ? null : diaPrograma, arranque });
 
   const [habits, setHabits] = useState<HabitItem[]>([]);
   const [planHabits, setPlanHabits] = useState<HabitItem[]>([]);
@@ -1020,6 +1025,12 @@ export default function TrainingScreen() {
                 void recargarEntrenamiento();
               }} />
             ) : null}
+            {/* «Tu programa empieza el martes 3 de noviembre», arriba y pegado a la cabecera, con la misma fila que dibujan Hoy y Plan (issue #101). */}
+            {programaQueEmpiezaPronto && programaEnOtraFormacion === null ? (
+              <View style={styles.programaQueEmpieza}>
+                <FilaDelProgramaQueEmpieza fechaInicio={programaQueEmpiezaPronto.fechaInicio} />
+              </View>
+            ) : null}
             {/* PROGRAMA SIN ARRANCAR — la misma compuerta que Plan tiene desde D-84. */}
             {programaSinArrancar && (
               <View
@@ -1231,6 +1242,8 @@ const styles = StyleSheet.create({
   // Aviso de "tu programa todavía no arrancó". Mismo lenguaje visual que el de Plan: recuadro
   // tenue con candado, no una alerta roja — no es un error, es que todavía no es el momento.
   formacionSinHabitos: { fontSize: 16, lineHeight: 22, marginBottom: 12 },
+  /** La fila de «Tu programa empieza…»: el título del día lleva 6 de aire propio, así que entre las dos cosas quedan los 16 de siempre. */
+  programaQueEmpieza: { marginBottom: 10 },
   avisoSinArrancar: {
     borderWidth: 1,
     borderRadius: space.radius,

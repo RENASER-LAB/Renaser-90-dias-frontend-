@@ -7,7 +7,8 @@ import { fuentes } from '../../../theme/fuentes';
 import { useTheme } from '../../../theme/ThemeContext';
 import { useEstadoDeMiDiagnostico } from '../hooks/useEstadoDeMiDiagnostico';
 import { diagnosticoPendiente } from '../utils/estadoDelDiagnostico';
-import { TARJETA_PENDIENTE_LINEA, TARJETA_PENDIENTE_TITULO } from '../utils/textosDelDiagnostico';
+import { usePlazoDeLaSesion } from '../../formaciones/hooks/usePlazoDeLaSesion';
+import { lineaDeLaTarjetaPendiente, TARJETA_PENDIENTE_TITULO } from '../utils/textosDelDiagnostico';
 
 /**
  * «Completa tu diagnóstico» en Hoy (spec 026, FR-026-9): para quien ya estaba dentro de la app y Administración le asignó el
@@ -22,14 +23,17 @@ import { TARJETA_PENDIENTE_LINEA, TARJETA_PENDIENTE_TITULO } from '../utils/text
 export function TarjetaDelDiagnosticoPendiente({ alAbrir }: { alAbrir: () => void }) {
   const { c, t } = useTheme();
   const { estado } = useEstadoDeMiDiagnostico();
+  /* Issue #104: el plazo es el del programa de la persona, no siempre 90 días. */
+  const { plazo } = usePlazoDeLaSesion();
 
   if (!diagnosticoPendiente(estado)) return null;
+  const linea = lineaDeLaTarjetaPendiente(plazo);
 
   return (
     <Presionable
       onPress={alAbrir}
       accessibilityRole="button"
-      accessibilityLabel={`${TARJETA_PENDIENTE_TITULO}. ${TARJETA_PENDIENTE_LINEA}`}
+      accessibilityLabel={`${TARJETA_PENDIENTE_TITULO}. ${linea}`}
       style={[estilos.tarjeta, { borderColor: c.border, backgroundColor: c.cardBg }]}
     >
       <Icon name="listChecks" size={TAMANO_ICONO.normal} color={c.goldInk} />
@@ -38,7 +42,7 @@ export function TarjetaDelDiagnosticoPendiente({ alAbrir }: { alAbrir: () => voi
           {TARJETA_PENDIENTE_TITULO}
         </Text>
         <Text style={[t.small, estilos.linea, { color: c.textSoft }]} numberOfLines={2}>
-          {TARJETA_PENDIENTE_LINEA}
+          {linea}
         </Text>
       </View>
       <Icon name="chevron" size={TAMANO_ICONO.chico} color={c.textSoft} />

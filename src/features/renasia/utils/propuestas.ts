@@ -1,5 +1,4 @@
 import { ApiError, mensajeDeError } from '../../../services/http/apiClient';
-import type { DestinoDeFoto } from '../../habits/utils/destinoDeFoto';
 import type {
   EstadoPropuestaUI,
   PropuestaUI,
@@ -10,38 +9,14 @@ import type {
 /**
  * Reglas puras de las propuestas del acompañante (D-153 del backend), separadas del hook para
  * poder probarlas sin React ni red.
+ *
+ * Los textos de respaldo que el backend manda antes de cada evento (la propuesta, el pedido de foto, el del ritual) se quitan con las reglas de
+ * `respaldosDelBackend`, que se re-exportan acá: es donde siempre se importaron.
  */
-
-/** El prefijo exacto con que el backend manda el texto de respaldo (`ConversacionRenasiaService`). */
-const ENCABEZADO_DE_RESPALDO = '\n\nPropuesta: ';
+export { esLineaDeRespaldo, quitarRespaldoDeFoto, quitarTextoDeRespaldo, sinRespaldosRepetidos } from './respaldosDelBackend';
 
 export function propuestaDesdeEvento(evento: RenasiaEventoPropuesta): PropuestaUI {
   return { id: evento.id, resumen: evento.resumen, venceEn: evento.venceEn, estado: 'pendiente' };
-}
-
-/**
- * El backend manda cada propuesta dos veces: primero como texto ("Propuesta: …", para versiones
- * viejas de la app que no conocen el evento) y enseguida como evento. Esta versión dibuja la
- * tarjeta, así que saca el texto para que el resumen no aparezca repetido. Solo lo saca si está al
- * FINAL del mensaje, que es donde queda en el instante en que llega el evento: si no coincide,
- * no toca nada (mejor repetido que borrar algo que dijo el asistente).
- */
-export function quitarTextoDeRespaldo(texto: string, resumen: string): string {
-  const respaldo = `${ENCABEZADO_DE_RESPALDO}${resumen}`;
-  return texto.endsWith(respaldo) ? texto.slice(0, texto.length - respaldo.length) : texto;
-}
-
-/**
- * Igual que la propuesta, el pedido de foto llega antes como texto para la app vieja (D-171 del
- * backend: "Foto para registrar '<titulo>': ..."). Esta versión dibuja la tarjeta, así que lo saca
- * si está al final del mensaje; si no coincide exacto, no toca nada.
- */
-export function quitarRespaldoDeFoto(texto: string, titulo: string, destino: DestinoDeFoto = 'habito'): string {
-  const respaldo =
-    destino === 'roca'
-      ? `\n\nFoto para registrar tu accion '${titulo}': si no ves el boton de la camara, subela desde Training.`
-      : `\n\nFoto para registrar '${titulo}': si no ves el boton de la camara, subela desde Hoy.`;
-  return texto.endsWith(respaldo) ? texto.slice(0, texto.length - respaldo.length) : texto;
 }
 
 /**
