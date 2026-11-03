@@ -28,7 +28,7 @@ const PANTALLAS: Record<string, number> = {
   'src/screens/ComunidadScreen.tsx': 9,
   'src/features/eventos/components/SeccionEventos.tsx': 1,
   // 12: la lista de Yo, Ajustes, Mi onboarding… y «Términos y condiciones» (spec 027, releer lo aceptado).
-  'src/screens/YoScreen.tsx': 12,
+  'src/screens/YoScreen.tsx': 11, // 03/11: se borró la sub-vista «Información» y su lista
   // «Mis mentores» del líder, una fila de Yo (2026-10-31).
   'src/features/paneles-de-rol/screens/MisMentoresEnYo.tsx': 1,
   // Administración
