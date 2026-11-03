@@ -47,6 +47,11 @@ export function CierresAnterioresDeLaSemana({
         {dias.map(dia => {
           const activo = dia.iso === elegido;
           const esHoy = dia.relacion === 'hoy';
+          const futuro = dia.relacion === 'futuro';
+          // Hoy es lo más visible de la fila (issue #115, 4): pleno (nunca atenuado, aunque no se pueda tocar), con el número en negrita y un
+          // punto debajo. Los días pasados van normales; los que vienen, apagados; y uno anterior al Día 1 (que tampoco se puede ver), también.
+          const apagado = !esHoy && !dia.leible;
+          const colorDelNumero = activo ? c.onGold : esHoy ? c.textStrong : futuro || apagado ? c.textSoft : c.textStrong;
           return (
             <Presionable
               key={dia.iso}
@@ -58,13 +63,14 @@ export function CierresAnterioresDeLaSemana({
               accessibilityRole="radio"
               accessibilityState={{ selected: activo, disabled: !dia.leible }}
               accessibilityLabel={`${dia.nombre} ${dia.numero}${esHoy ? ', hoy' : ''}${dia.leible ? '' : ', no se puede ver'}`}
-              contenedorStyle={{ flex: 1, opacity: dia.leible ? 1 : 0.45 }}
+              contenedorStyle={{ flex: 1, opacity: apagado ? 0.45 : 1 }}
               style={[estilos.pastilla, activo && { backgroundColor: c.gold }]}
             >
-              <Text style={[t.small, estilos.letra, { color: activo ? c.onGold : c.textSoft }]}>{dia.letra}</Text>
-              <Text style={[t.body, estilos.numero, { color: activo ? c.onGold : esHoy ? c.goldInk : c.textStrong }]}>
-                {dia.numero}
+              <Text style={[t.small, estilos.letra, { color: activo ? c.onGold : esHoy ? c.goldInk : c.textSoft }, esHoy && estilos.letraDeHoy]}>
+                {dia.letra}
               </Text>
+              <Text style={[t.body, estilos.numero, { color: colorDelNumero }, esHoy ? estilos.numeroDeHoy : estilos.numeroNormal]}>{dia.numero}</Text>
+              {esHoy ? <View style={[estilos.puntoDeHoy, { backgroundColor: activo ? c.onGold : c.goldInk }]} accessible={false} /> : null}
             </Presionable>
           );
         })}
@@ -103,7 +109,12 @@ const estilos = StyleSheet.create({
   fila: { flexDirection: 'row', gap: 4 },
   pastilla: { minHeight: 54, borderRadius: 14, alignItems: 'center', justifyContent: 'center', gap: 3 },
   letra: { fontFamily: fuentes.media, fontSize: 13 },
-  numero: { fontFamily: fuentes.negrita, fontSize: 15, lineHeight: 20, fontVariant: ['tabular-nums'] },
+  letraDeHoy: { fontFamily: fuentes.negrita },
+  numero: { fontSize: 15, lineHeight: 20, fontVariant: ['tabular-nums'] },
+  numeroNormal: { fontFamily: fuentes.media },
+  numeroDeHoy: { fontFamily: fuentes.negrita, fontSize: 17 },
+  /* Fuera del flujo: el punto no corre el número de hoy respecto de los demás días. */
+  puntoDeHoy: { position: 'absolute', bottom: 5, width: 5, height: 5, borderRadius: 3 },
   detalle: { gap: 4 },
   titulo: { fontFamily: fuentes.negrita, fontSize: 16 },
   enlace: { minHeight: 48, justifyContent: 'center', alignSelf: 'flex-start' },

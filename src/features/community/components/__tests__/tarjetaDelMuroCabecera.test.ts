@@ -151,7 +151,7 @@ describe('un nombre largo no saca nada de la tarjeta', () => {
 
   it('«grupo · hace cuánto» también es de una sola línea: ninguna de las dos líneas puede ensanchar la fila', () => {
     const r = dibujar(publicacion({ cell: 'Grupo Fénix de la Escuela de Verano 2026' }), true);
-    const linea = r.root.findAll(n => (n.type as unknown) === Text && Array.isArray(n.props.children) && n.props.children.join('').includes('Grupo Fénix de la'))[0];
+    const linea = r.root.findAll(n => (n.type as unknown) === Text && [n.props.children].flat().join('').includes('Grupo Fénix de la'))[0];
     expect(linea.props.numberOfLines).toBe(1);
   });
 

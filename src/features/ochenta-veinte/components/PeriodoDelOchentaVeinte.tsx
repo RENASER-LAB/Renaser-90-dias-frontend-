@@ -16,6 +16,7 @@ import {
   fechaCorta,
   hayCifras,
   lineaDeAvance,
+  lineaDeLasPorVenir,
   lineaDeLasVerdes,
   lineaDeUnEje,
   lineaDeUnaAccion,
@@ -170,7 +171,8 @@ function Cifras({ vista, conListas, voz }: { vista: VistaDelPeriodo; conListas: 
   const { c, t } = useTheme();
   const propia = voz === 'propia';
   const cifras = vista.cifras;
-  const avance = lineaDeAvance(cifras);
+  const avance = lineaDeAvance(cifras, !vista.cerrado);
+  const porVenir = lineaDeLasPorVenir(cifras, vista.tipo);
   const verdes = lineaDeLasVerdes(cifras);
   const veinte = lineaDelVeintePorCiento(cifras);
   const porcentaje = cifras.porcentajeCumplidas ?? 0;
@@ -190,11 +192,7 @@ function Cifras({ vista, conListas, voz }: { vista: VistaDelPeriodo; conListas: 
       ) : null}
       {verdes ? <Text style={[t.body, { color: c.text, fontSize: 16, lineHeight: 23 }]}>{verdes}</Text> : null}
       {veinte ? <Text style={[t.body, { color: c.text, fontSize: 16, lineHeight: 23 }]}>{veinte}</Text> : null}
-      {vista.cifras.porVenir > 0 ? (
-        <Text style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 23 }]}>
-          {vista.cifras.porVenir === 1 ? '1 acción más está agendada para los días que vienen.' : `${vista.cifras.porVenir} acciones más están agendadas para los días que vienen.`}
-        </Text>
-      ) : null}
+      {porVenir ? <Text style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 23 }]}>{porVenir}</Text> : null}
       {cifras.porEje.length > 0 ? (
         <View style={estilos.lista}>
           {cifras.porEje.map(eje => (

@@ -2307,6 +2307,33 @@ un texto corto («Tiempo», «Imprevisto», «Lo evité»); el elegido, con el f
   nombre completo (el del lector de pantalla) y suma el subtítulo; sin correr.
 * **No comprobado en el emulador** (esta corrida no tuvo): cómo se acomodan los cuatro chips por fila a 360 dp y con la letra del sistema grande, y el aspecto del elegido en claro y oscuro.
 * **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
+## Corrección — 2026-11-03 — números y textos que no cuadraban en Plan, Training, Cierra tu día, Eventos y el Muro (issue #115)
+
+E2E del 03/11 con la cuenta de las formaciones (3 objetivos, la semana y 21 acciones). Solo JavaScript, sin backend, sin diseño nuevo ni pantallas nuevas. Un commit por punto. Lo que cambia y nada más:
+* **Plan → «Tu 80/20», vistas Semana y Mes: se dice el universo.** El servidor cuenta lo planificado **hasta hoy** (spec 031: lo de un día que no llegó no cuenta; se informa aparte como `porVenir`), y
+  «Esta semana» de Plan cuenta **de hoy a fin de semana**; son dos universos distintos por diseño y no se unificaron (el servidor no lo permite sin castigar lo que viene como «no cumplido»).
+  Con el periodo en curso la línea dice **«0 de 6 acciones cumplidas hasta hoy · 0 %»** y la de lo que viene, **«15 acciones más están agendadas para los días que vienen: la semana suma 21.»** (6 + 15, que es lo que
+  Plan muestra de la semana; «el mes suma» en Mes). Un periodo cerrado cuenta entero y no dice «hasta hoy». Vale también para las fichas de quien acompaña (`lineaDeAvance(c, hastaHoy)`, `lineaDeLasPorVenir`).
+* **`lineaDelObjetivo`:** una unidad que empieza con «/» va pegada a la cifra: **«Meta 8/10»**, no «Meta 8 /10». Y **el «·» ya no queda colgado al final del renglón**: cada separador va pegado al par que
+  sigue con espacio duro (`·`+NBSP), así que el renglón solo se parte ANTES del punto, que abre el de abajo («Inicio 8 000 · Actual 8 000» / «· Meta 12 000 S/»).
+* **Cierra tu día, franja de la semana (`CierresAnterioresDeLaSemana`):** hoy salía atenuado al 45 % (la regla de «no se puede tocar» de los días por venir) y se leía como desactivado, con ayer más fuerte. Ahora
+  **hoy va pleno, con el número en negrita y un punto debajo**; los días pasados, normales; los que vienen y los anteriores al Día 1, apagados. El nombre para el lector de pantalla no cambia.
+* **Training, hoja de evidencia de una acción:** decía «Vida y negocio · Innegociable» para una acción de Cuerpo. «Vida y negocio» es solo el cajón técnico de Training; cada acción lleva ahora su **eje**
+  (`HabitItem.eje`) y la línea dice «Cuerpo · Innegociable» / «Negocio y dinero · …» / «Relaciones · …» (`contextoDeLaEvidencia`). Un hábito sigue diciendo su dimensión.
+* **Training, «N de M hechos · X pts»:** el resumen suma `puntosOtorgados` de cada hecho, y para una acción es el que el servidor guarda en ella (`GET /rocks/today`): **eso ya se sumaba** una vez releída la lista
+  (lo fija `accionesDeLosObjetivosEnTraining.test.ts`). El hueco real era el instante entre confirmar el cierre y la relectura: la lista reflejaba «hecho» **sin los puntos** y el resumen se quedaba en 0 hasta que
+  llegaba lo verdadero. Ahora `reflejarCierreConfirmado` pone los puntos que el servidor respondió al cerrar (`conElCierreConfirmado`; nunca un número calculado en la app). **Ojo, sin confirmar en pantalla:** si
+  el servidor paga 0 por una acción fuera de plazo (`EscalaPuntosRoca`: pasada la hora fin + 10 min de gracia + 3 h de extensión paga 0), «0 pts» es lo correcto; el E2E hizo la acción de las 07:00 a las 13:55.
+* **Eventos → Calendario:** el día elegido (que no es hoy) se dibujaba como un cuadrado de esquinas casi vivas en Android (solo `backgroundColor` + `borderRadius`); el de hoy, con borde, sí salía redondo. El círculo
+  de 40 recorta (`overflow: 'hidden'`) y el elegido lleva un borde del mismo color.
+* **Muro, tarjeta:** la línea bajo el nombre empezaba con un «·» suelto («· Hace 1 minuto»): el separador solo aparece si hay algo antes (`lineaDelAutor`). Y **con la letra grande**: (a) «Me gusta», «Comentar» y
+  «Compartir» ya no se cortan —sin `numberOfLines`, con `flexShrink`—; con la letra del sistema por encima de 1,15 (el umbral de Hoy) o si una etiqueta se parte en dos líneas (`onTextLayout`), la fila pasa a **solo
+  íconos**, cada uno con su nombre y un área de 48 (un «Me gusta» dado se distingue también por el fondo dorado); (b) **«Ver más...» lo decide la tarjeta por las líneas reales** (`TextoDeLaPublicacion`): un `Text`
+  invisible, del mismo ancho y letra y sin tope de líneas, mide una vez y se desmonta; el visible lleva su `numberOfLines={3}` aparte. Mientras no se mide se parte de la regla de antes (más de 120 caracteres) para que
+  el botón no aparezca de golpe; los textos de 36 caracteres o menos ni se miden. Las pruebas que dibujan la tarjeta fijan `fontScale` (Jest, sin mock, lo da en 2).
+* **No cambian:** el servidor, los puntos, la regla de Pareto, los textos del análisis de SER, ninguna pantalla ni tab. **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire).
+* **Pruebas:** `textosDelOchentaVeinte`, `hojaOchentaVeinte`, `planPrincipal`, `cierreEnPlan`, `contextoDeLaEvidencia`, `accionesDeLosObjetivosEnTraining`, `diaElegidoDelCalendario`, `lineaDelAutorEnElMuro` y
+  `muroConLetraGrande`. **Sin emulador en esta corrida:** el aspecto en pantalla (el punto de hoy, el círculo del calendario, los íconos del Muro con letra grande) se confirma con capturas.
 
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 

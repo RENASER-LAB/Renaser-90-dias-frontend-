@@ -22,7 +22,8 @@ import { usePasosDelDia } from '../features/pasos/hooks/usePasosDelDia';
 import { CLAVE_SISTEMA_KILOMETROS } from '../features/pasos/utils/vistaDeKilometros';
 import { textoDelAvisoDeRegistro } from '../features/pasos/utils/textosDePasos';
 import { PracticasDeTraining } from '../features/training/components/PracticasDeTraining';
-import { nombreDeLaDimension } from '../features/training/data/dimensiones';
+import { conElCierreConfirmado } from '../features/training/utils/cierreConfirmado';
+import { contextoDeLaEvidencia } from '../features/training/utils/contextoDeLaEvidencia';
 import { AvisoDeProgramaEnOtraFormacion } from '../features/habits/components/AvisoDeProgramaEnOtraFormacion';
 import { useFormacionDeLaSesion } from '../features/formaciones/context/FormacionContext';
 import { useProgramaEnOtraFormacion } from '../features/formaciones/hooks/useProgramaEnOtraFormacion';
@@ -126,6 +127,8 @@ export interface HabitItem {
   estado?: string;
   /** `YYYY-MM-DD` del registro de hoy: para decir de qué día era uno que ya cerró. */
   fechaEjecucion?: string | null;
+  /** Solo en las acciones de los objetivos (`dimension` `VIDA Y NEGOCIO`): su eje real, `CUERPO`, `TRABAJO` o `RELACIONES`. */
+  eje?: string;
   note?: string;
   /**
    * Clave FUNCIONAL del hábito de catálogo (`DAILY_CLASS`, `PASTILLA_RENACER`…), `null` en las
@@ -349,14 +352,9 @@ export default function TrainingScreen() {
    * > Antes cada cierre esperaba `await recargarEntrenamiento()`: dos rondas de pedidos con el
    * > esqueleto tapando la pantalla (~3 s) antes de ver el check.
    */
-  const reflejarCierreConfirmado = (id: string, conEvidencia = false) => {
-    setHabits(prev =>
-      prev.map(h =>
-        h.id === id
-          ? { ...h, done: true, estado: 'COMPLETADO', hasEvidence: h.hasEvidence || conEvidencia }
-          : h
-      )
-    );
+  const reflejarCierreConfirmado = (id: string, conEvidencia = false, puntosOtorgados?: number | null) => {
+    // Con los puntos que el SERVIDOR respondió al cerrar (si los trae): el resumen del día los suma ya, sin esperar la relectura.
+    setHabits(prev => prev.map(h => (h.id === id ? conElCierreConfirmado(h, conEvidencia, puntosOtorgados) : h)));
     void recargarEntrenamiento();
   };
 
@@ -408,7 +406,7 @@ export default function TrainingScreen() {
    */
   const registroConFoto = useRegistroConFoto({
     onCompletado: async (registroId, resultado) => {
-      reflejarCierreConfirmado(registroId, true);
+      reflejarCierreConfirmado(registroId, true, resultado.puntosOtorgados);
       // Decisión del dueño (2026-10-05): «Evidencia entregada» y los puntos solo si el servidor los dio.
       confirmar(avisoDeEvidenciaEntregada(resultado.puntosOtorgados), registroId);
     },
@@ -872,7 +870,7 @@ export default function TrainingScreen() {
     habitoDeLaEvidencia.current = null;
     setActiveEvidenceHabit(null);
     if (cerrado) {
-      reflejarCierreConfirmado(cerrado.id, true);
+      reflejarCierreConfirmado(cerrado.id, true, puntosOtorgados);
     } else {
       void recargarEntrenamiento();
     }
@@ -1156,11 +1154,7 @@ export default function TrainingScreen() {
             }
             titulo={activeEvidenceHabit?.dimension === 'VIDA Y NEGOCIO' ? activeEvidenceHabit.title : tituloEnTipoOracion(activeEvidenceHabit?.title ?? '')}
             medicion={activeEvidenceHabit?.medicion ?? null}
-            contexto={
-              activeEvidenceHabit
-                ? `${nombreDeLaDimension(activeEvidenceHabit.dimension)} · ${activeEvidenceHabit.tag}`
-                : undefined
-            }
+            contexto={activeEvidenceHabit ? contextoDeLaEvidencia(activeEvidenceHabit) : undefined}
             notaInicial={activeEvidenceHabit?.respuestaTexto ?? activeEvidenceHabit?.note ?? ''}
             onCerrar={() => setActiveEvidenceHabit(null)}
             onCompletado={handleEvidenciaCompletada}

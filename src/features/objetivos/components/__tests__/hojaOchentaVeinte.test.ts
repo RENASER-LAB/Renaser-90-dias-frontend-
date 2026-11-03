@@ -100,12 +100,30 @@ describe('con las vistas nuevas del servidor', () => {
     const r = await abrir();
     await tocar(r, 'Semana');
     expect(textos(r)).toContain('Semana 10');
-    expect(textos(r)).toContain('9 de 12 acciones cumplidas · 75 %');
+    expect(textos(r)).toContain('9 de 12 acciones cumplidas hasta hoy · 75 %');
     await tocar(r, 'Mes');
     expect(textos(r)).toContain('Mes 3');
     await tocar(r, 'Semana');
     expect(mockLeer.mock.calls.filter(c => c[0] === 'SEMANA')).toHaveLength(1);
     expect(mockLeer.mock.calls.filter(c => c[0] === 'MES')).toHaveLength(1);
+  });
+
+  it('issue #115 (1): con la semana en curso dice «hasta hoy» y que lo que viene suma el total (0 de 6 hasta hoy + 15 = 21)', async () => {
+    mockLeer.mockImplementation(async () =>
+      vista({ cifras: { ...CIFRAS, planificadas: 6, cumplidas: 0, porcentajeCumplidas: 0, porVenir: 15 } }),
+    );
+    const r = await abrir();
+    await tocar(r, 'Semana');
+    expect(textos(r)).toContain('0 de 6 acciones cumplidas hasta hoy · 0 %');
+    expect(textos(r)).toContain('15 acciones más están agendadas para los días que vienen: la semana suma 21.');
+  });
+
+  it('issue #115 (1): una semana cerrada cuenta entera y no dice «hasta hoy»', async () => {
+    mockLeer.mockImplementation(async () => vista({ cerrado: true, estado: 'PENDIENTE' }));
+    const r = await abrir();
+    await tocar(r, 'Semana');
+    expect(textos(r)).toContain('9 de 12 acciones cumplidas · 75 %');
+    expect(textos(r)).not.toContain('hasta hoy');
   });
 
   it('el aviso «tu análisis está listo» la abre directo en el mes (sin parpadear en «Hoy»)', async () => {

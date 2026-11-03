@@ -65,15 +65,21 @@ const NBSP = '\u00A0';
  *
  * Las cifras llevan el separador de miles de la app (`formatearNumero`: «30 000», con espacio duro) y cada parte —«Meta 30 000 S/»—
  * va con espacios duros, así que si el renglón se parte (lo hace en un teléfono angosto) es entre partes, en el « · », y nunca a la
- * mitad de una cifra ni entre la cifra y su unidad (2026-10-31, E2E del rediseño: «Meta / 30000 S/»).
+ * mitad de una cifra ni entre la cifra y su unidad (2026-10-31, E2E del rediseño: «Meta / 30000 S/»). El único espacio que deja partir es
+ * el de ANTES del punto: «Inicio 8 000 · Actual 8 000» / «· Meta 12 000 S/», y no «… Actual 8 000 ·» / «Meta 12 000 S/» con el punto colgado
+ * (E2E del 03/11, issue #115).
  */
 export function lineaDelObjetivo(roca: Pick<RocaMaestraApi, 'lineaBase' | 'avance' | 'meta' | 'unidad'>): string | null {
   if (roca.meta == null || roca.avance == null) return null;
-  const unidad = roca.unidad?.trim() ? `${NBSP}${roca.unidad.trim()}` : '';
+  const sufijo = roca.unidad?.trim() ?? '';
+  // Una unidad que empieza con «/» («/10», la escala de Relaciones) es parte de la cifra: «8/10», no «8 /10» (issue #115, 2).
+  const unidad = sufijo ? (sufijo.startsWith('/') ? sufijo : `${NBSP}${sufijo}`) : '';
   const partes: string[] = [];
   if (roca.lineaBase != null) partes.push(`Inicio${NBSP}${formatearNumero(roca.lineaBase)}`);
   partes.push(`Actual${NBSP}${formatearNumero(roca.avance)}`, `Meta${NBSP}${formatearNumero(roca.meta)}${unidad}`);
-  return partes.join(' · ');
+  // Cada « · » va pegado al par que sigue (espacio duro después del punto): el renglón solo se parte ANTES del punto, que pasa a abrir el renglón de
+  // abajo, y nunca queda colgado al final del de arriba (issue #115, 3).
+  return partes.reduce((linea, parte, i) => (i === 0 ? parte : `${linea} ·${NBSP}${parte}`), '');
 }
 
 /** El color de la regla de Pareto: la VERDE va primero. Recibe la paleta porque el verde y el rojo cambian con el tema. */

@@ -1,6 +1,6 @@
 import { fuentes } from '../../../theme/fuentes';
-import React, { memo } from 'react';
-import { Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import React, { memo, useState } from 'react';
+import { Image, Pressable, StyleSheet, Text, TextInput, View, useWindowDimensions, type NativeSyntheticEvent, type TextLayoutEventData } from 'react-native';
 
 import { Icon, TAMANO_ICONO } from '../../../components/Icon';
 import { AvatarPersona } from '../../../components/ui';
@@ -11,9 +11,12 @@ import { useTheme } from '../../../theme/ThemeContext';
 import { space } from '../../../theme/tokens';
 import { useFuncionalidad } from '../../plataforma/estado/useFuncionalidad';
 import { CLAVES } from '../../plataforma/utils/clavesDeLaApp';
+import { lineaDelAutor } from '../utils/lineaDelAutor';
+import { accionesSoloConIconos } from '../utils/accionesDelMuro';
 import type { FotoMuroNormalizada } from '../utils/normalizarImagen';
 import { PROPORCION_POR_DEFECTO } from '../utils/proporcionImagen';
 import { FotoMuro } from './FotoMuro';
+import { TextoDeLaPublicacion } from './TextoDeLaPublicacion';
 
 const EMOJIS_RAPIDOS = ['🔥', '👏', '💪', '⚡', '❤️', '🦅', '🎯', '🙌'];
 
@@ -90,6 +93,15 @@ function TarjetaPublicacionMuroBase({
   acciones,
 }: Props) {
   const { c, t } = useTheme();
+  const { width: anchoDeLaVentana, fontScale } = useWindowDimensions();
+  /* Letra grande (issue #115): las tres etiquetas de acción no caben en una fila y se cortaban («Me gus…», «Coment…», «Compart…»). Sin tope de
+     líneas y con `flexShrink`, si aun así una se parte, la fila pasa a mostrar solo los íconos (cada uno con su nombre y un área de 48). */
+  const [etiquetaPartidaEn, setEtiquetaPartidaEn] = useState<string | null>(null);
+  const claveDeLaFila = `${Math.round(anchoDeLaVentana)}|${fontScale}`;
+  const soloIconos = accionesSoloConIconos(fontScale, etiquetaPartidaEn === claveDeLaFila);
+  const alMedirUnaEtiqueta = (e: NativeSyntheticEvent<TextLayoutEventData>) => {
+    if (e.nativeEvent.lines.length > 1) setEtiquetaPartidaEn(claveDeLaFila);
+  };
   const reacciones = useFuncionalidad(CLAVES.muroReacciones);
   const comentarios = useFuncionalidad(CLAVES.muroComentarios);
   const isExpanded = expandida;
@@ -120,9 +132,7 @@ function TarjetaPublicacionMuroBase({
             <View style={styles.autorTextos}>
               {/* Hasta dos líneas: el nombre completo se lee (a quien modera le sirve verlo entero) y, si aun así no cabe, «…». */}
               <Text numberOfLines={2} style={[t.cardTitle, { color: c.textStrong }]}>{post.author}</Text>
-              <Text numberOfLines={1} style={[t.small, { color: c.micro }]}>
-                {post.cell} · {post.timeAgo}
-              </Text>
+              <Text numberOfLines={1} style={[t.small, { color: c.micro }]}>{lineaDelAutor(post.cell, post.timeAgo)}</Text>
             </View>
           </View>
           <View style={styles.insigniaYModerar}>
@@ -150,25 +160,8 @@ function TarjetaPublicacionMuroBase({
           </View>
         </View>
 
-        {/* Texto del Post con "Ver más..." */}
-        <View style={{ marginTop: 8 }}>
-          <Text
-            numberOfLines={isExpanded ? undefined : 3}
-            style={[t.body, { color: c.text }]}
-          >
-            {post.text}
-          </Text>
-          {post.text.length > 120 && (
-            <Pressable
-              onPress={() => acciones.alternarExpandida(post.id)}
-              style={{ minHeight: 48, justifyContent: 'center' }}
-            >
-              <Text style={[t.small, { color: c.goldInk, fontFamily: fuentes.negrita }]}>
-                {isExpanded ? 'Ver menos' : 'Ver más...'}
-              </Text>
-            </Pressable>
-          )}
-        </View>
+        {/* Texto del Post con «Ver más...»: lo decide lo que se dibuja (issue #115), no el largo en caracteres. */}
+        <TextoDeLaPublicacion texto={post.text} expandida={isExpanded} onAlternar={() => acciones.alternarExpandida(post.id)} />
 
         {/* Galería Autodetectada */}
         {post.media.length > 0 && (
@@ -289,7 +282,7 @@ function TarjetaPublicacionMuroBase({
             gusta» pasa a dorado y negrita cuando ya lo diste (el color no es la única señal). Antes:
             íconos de 14, texto de 10,5 en versales y un color distinto por botón (verde, dorado, gris)
             que no significaba nada. */}
-        <View style={[styles.actionButtonsRow, { borderTopColor: c.divider }]}>
+        <View style={[styles.actionButtonsRow, soloIconos && styles.actionButtonsRowSoloIconos, { borderTopColor: c.divider }]}>
           {/* Spec 002, fase 2: «Me gusta» y «Comentar» que esta cuenta todavía no tiene no se dibujan. */}
           {reacciones.disponible ? (
           <Pressable
@@ -297,24 +290,30 @@ function TarjetaPublicacionMuroBase({
             accessibilityRole="button"
             accessibilityLabel={post.userReaction === 'like' ? 'Quitar reaccion' : 'Reaccionar a la publicacion'}
             accessibilityState={{ selected: post.userReaction === 'like' }}
-            style={({ pressed }) => [styles.actionBtn, pressed && { backgroundColor: c.goldWash }]}
+            style={({ pressed }) => [
+              styles.actionBtn,
+              soloIconos && styles.actionBtnSoloIcono,
+              (pressed || (soloIconos && post.userReaction === 'like')) && { backgroundColor: c.goldWash },
+            ]}
           >
             <Icon
               name="thumbsUp"
               size={TAMANO_ICONO.normal}
               color={post.userReaction === 'like' ? c.goldInk : c.textSoft}
             />
-            <Text
-              numberOfLines={1}
-              style={[
-                styles.actionTexto,
-                post.userReaction === 'like'
-                  ? { color: c.goldInk, fontFamily: fuentes.negrita }
-                  : { color: c.textSoft },
-              ]}
-            >
-              Me gusta
-            </Text>
+            {soloIconos ? null : (
+              <Text
+                onTextLayout={alMedirUnaEtiqueta}
+                style={[
+                  styles.actionTexto,
+                  post.userReaction === 'like'
+                    ? { color: c.goldInk, fontFamily: fuentes.negrita }
+                    : { color: c.textSoft },
+                ]}
+              >
+                Me gusta
+              </Text>
+            )}
           </Pressable>
           ) : null}
 
@@ -323,12 +322,14 @@ function TarjetaPublicacionMuroBase({
             onPress={() => acciones.alternarComentarios(post.id)}
             accessibilityRole="button"
             accessibilityLabel="Ver y escribir comentarios"
-            style={({ pressed }) => [styles.actionBtn, pressed && { backgroundColor: c.goldWash }]}
+            style={({ pressed }) => [styles.actionBtn, soloIconos && styles.actionBtnSoloIcono, pressed && { backgroundColor: c.goldWash }]}
           >
             <Icon name="messageCircle" size={TAMANO_ICONO.normal} color={c.textSoft} />
-            <Text numberOfLines={1} style={[styles.actionTexto, { color: c.textSoft }]}>
-              Comentar
-            </Text>
+            {soloIconos ? null : (
+              <Text onTextLayout={alMedirUnaEtiqueta} style={[styles.actionTexto, { color: c.textSoft }]}>
+                Comentar
+              </Text>
+            )}
           </Pressable>
           ) : null}
 
@@ -336,12 +337,14 @@ function TarjetaPublicacionMuroBase({
             onPress={() => acciones.compartir(post.id)}
             accessibilityRole="button"
             accessibilityLabel="Compartir la publicacion"
-            style={({ pressed }) => [styles.actionBtn, pressed && { backgroundColor: c.goldWash }]}
+            style={({ pressed }) => [styles.actionBtn, soloIconos && styles.actionBtnSoloIcono, pressed && { backgroundColor: c.goldWash }]}
           >
             <Icon name="forward" size={TAMANO_ICONO.normal} color={c.textSoft} />
-            <Text numberOfLines={1} style={[styles.actionTexto, { color: c.textSoft }]}>
-              Compartir
-            </Text>
+            {soloIconos ? null : (
+              <Text onTextLayout={alMedirUnaEtiqueta} style={[styles.actionTexto, { color: c.textSoft }]}>
+                Compartir
+              </Text>
+            )}
           </Pressable>
         </View>
 
@@ -616,6 +619,10 @@ const styles = StyleSheet.create({
     paddingTop: 6,
     borderTopWidth: 1,
   },
+  /** Solo íconos (letra grande): un poco más de aire entre ellos. */
+  actionButtonsRowSoloIconos: { gap: 8 },
+  /** Solo el ícono: un área de 48 × 48, con su nombre para el lector de pantalla (cada botón ya lo trae). */
+  actionBtnSoloIcono: { flexShrink: 0, minWidth: 48, paddingHorizontal: 12 },
   actionBtn: {
     /* Sin `flex: 1`: cada botón mide lo que su contenido. `flexShrink` evita que los tres juntos
        desborden en 360 px, que es el ancho de referencia (AGENTS.md §2). */
