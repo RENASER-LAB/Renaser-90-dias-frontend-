@@ -40,7 +40,7 @@ describe('los archivos de las voces', () => {
     }
   });
 
-  it('son MP3 mono de 44,1 kHz a 64 kb/s, como las otras voces, y se oyen en menos de 5 segundos', () => {
+  it('son MP3 mono de 44,1 kHz a 64 kb/s, como las otras voces, y se oyen en 1 a 5 segundos', () => {
     for (const archivo of ARCHIVOS_DE_VOZ_DEL_RADAR) {
       const mp3 = leerMp3(path.join(CARPETA, archivo));
       expect({ archivo, tasa: mp3.tasa, canales: mp3.canales, kbps: mp3.kbps }).toEqual({
@@ -49,7 +49,7 @@ describe('los archivos de las voces', () => {
         canales: 1,
         kbps: 64,
       });
-      expect(mp3.segundos).toBeGreaterThan(2);
+      expect(mp3.segundos).toBeGreaterThan(1); // las preguntas del 03/11 son cortas (≈1,8 s); el piso solo descarta un audio vacío
       expect(mp3.segundos).toBeLessThan(5);
     }
   });
