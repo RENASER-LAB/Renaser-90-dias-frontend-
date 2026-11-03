@@ -88,6 +88,12 @@ describe('lineaDelObjetivo', () => {
     expect(linea).toBe(`Inicio${NBSP}10${NBSP}000 · Actual${NBSP}14${NBSP}000 · Meta${NBSP}30${NBSP}000${NBSP}S/`);
     expect(linea).not.toContain('30000');
   });
+  it('issue #115 (2): una unidad que empieza con «/» va pegada a la cifra: «Meta 8/10», no «Meta 8 /10»', () => {
+    expect(lineaDelObjetivo({ lineaBase: 5, avance: 5, meta: 8, unidad: '/10' })).toBe(`Inicio${NBSP}5 · Actual${NBSP}5 · Meta${NBSP}8/10`);
+    expect(lineaDelObjetivo({ lineaBase: 5, avance: 5, meta: 8, unidad: ' /10 ' })).toContain(`Meta${NBSP}8/10`);
+    // Las demás unidades siguen separadas de la cifra por un espacio duro.
+    expect(lineaDelObjetivo({ lineaBase: null, avance: 4, meta: 10, unidad: '%' })).toBe(`Actual${NBSP}4 · Meta${NBSP}10${NBSP}%`);
+  });
   it('si el renglón se parte, es entre partes (en « · »): ningún espacio normal queda dentro de una cifra ni antes de la unidad', () => {
     const linea = lineaDelObjetivo({ lineaBase: 1500000, avance: 14000.5, meta: 30000, unidad: 'S/' }) as string;
     // Lo único que puede partirse son los espacios normales, y todos están pegados a un «·».

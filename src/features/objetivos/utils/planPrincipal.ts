@@ -69,7 +69,9 @@ const NBSP = '\u00A0';
  */
 export function lineaDelObjetivo(roca: Pick<RocaMaestraApi, 'lineaBase' | 'avance' | 'meta' | 'unidad'>): string | null {
   if (roca.meta == null || roca.avance == null) return null;
-  const unidad = roca.unidad?.trim() ? `${NBSP}${roca.unidad.trim()}` : '';
+  const sufijo = roca.unidad?.trim() ?? '';
+  // Una unidad que empieza con «/» («/10», la escala de Relaciones) es parte de la cifra: «8/10», no «8 /10» (issue #115, 2).
+  const unidad = sufijo ? (sufijo.startsWith('/') ? sufijo : `${NBSP}${sufijo}`) : '';
   const partes: string[] = [];
   if (roca.lineaBase != null) partes.push(`Inicio${NBSP}${formatearNumero(roca.lineaBase)}`);
   partes.push(`Actual${NBSP}${formatearNumero(roca.avance)}`, `Meta${NBSP}${formatearNumero(roca.meta)}${unidad}`);
