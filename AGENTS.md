@@ -2113,7 +2113,7 @@ calendario, mal para un INSTANTE—, así que el día era el de UTC. Lo que camb
 ## Cambio por pedido del dueño — 2026-11-03 — textos más compactos en Eventos y Hoy, y un tope a la letra del sistema
 
 Textual, con capturas de un teléfono real: «Redúcele el tamaño de texto, es muy grande» (Comunidad → Eventos) e «igual aquí es muy grande» (Hoy → la tarjeta de acciones,
-en «Hoy no tienes acciones agendadas»). Solo JavaScript y solo tamaños: ningún texto, flujo ni dato cambia. Lo que cambia y nada más:
+en «Hoy no tienes acciones agendadas»). Solo JavaScript y solo tamaños (más dos textos que el dueño pidió cambiar al final, abajo): ningún flujo ni dato cambia. Lo que cambia y nada más:
 * **Causa de fondo: la letra del sistema no tenía tope.** React Native aplica el tamaño de letra del sistema (Android llega al 200 %) a todo `Text` y `TextInput`, y solo unos
   pocos lugares pedían su propio `maxFontSizeMultiplier` (los chips de días de Planificar, la rueda de «Otra»). En el teléfono del dueño todo crecía sin límite. Ahora hay un
   **tope global de 1,2** (`theme/topeDeLetra.ts`, `TOPE_DE_LETRA`): con la letra del sistema al 130 %, 150 % o 200 % la app crece como mucho un 20 %; al 100 % o al 110 % nada cambia.
@@ -2137,9 +2137,17 @@ en «Hoy no tienes acciones agendadas»). Solo JavaScript y solo tamaños: ning�
 * **Hoy → la tarjeta de acciones** (`TarjetaAccionDeHoy`; vale para sus cuatro contenidos, que comparten esqueleto): el rótulo («Hoy» o la hora) a **13**, el título a **16 semibold**
   (`fuentes.seminegrita`, era 18 negrita), «Meta: …» a 15, el botón dorado de **44** con la letra a **15** (`GoldButton` suma `compacto`; el dorado de siempre sigue en 52 y 16) y menos
   relleno (14, era 17). No cambian las filas compactas «Define tu objetivo de 90 días en Plan» / «Confirma tus objetivos» (`FilaCompacta`).
-* **No cambian**: los textos, los flujos, las pestañas, el calendario (celdas, puntos, día elegido), las tarjetas de eventos ni el resto de Hoy.
-* **Pruebas:** `theme/__tests__/topeDeLetra.test.ts` (el tope, que lo propio gana, `TextInput.State`, idempotente, web, `index.ts` lo carga antes que la app),
-  `eventos/components/__tests__/eventosCompacto.test.ts`, `home/components/__tests__/tarjetaAccionDeHoy.test.ts` (ajustada) y `tiempoLibreDeLaSemana.test.ts` (el tope de la línea de tiempo
+* **Dos textos que el dueño cambió después, con sus propias palabras** (commit aparte):
+  * **Eventos → Calendario, la leyenda bajo el mes.** Decía «Hay evento» (cortado en un teléfono angosto) y «Vas». El dueño: «El lenguaje se fue, hay que ponerle allí, por ejemplo,
+    Actividad programada / Confirmé asistencia». Ahora dice **«Actividad programada»** (el punto dorado) y **«Confirmé asistencia»** (el punto verde), a 14. Las dos piezas (punto + palabra)
+    envuelven (`flexWrap`): si no caben en un renglón la segunda baja a otro, y ninguna se corta (sin `numberOfLines`). Lo que oye el lector de pantalla en cada día usa las mismas palabras:
+    «Jueves 5 de noviembre, 1 actividad programada» / «2 actividades programadas» / «sin actividad programada», y «, confirmaste asistencia» con el punto verde (antes «evento(s)» y «, vas»).
+    La etiqueta «Vas» / «No vas» de las tarjetas del día, y «Toca un día con punto para ver sus eventos», no se tocaron: no se pidió.
+  * **Muro, la barra de crear publicación.** Bajo «¿Qué conquistaste hoy, <nombre>?» decía «Publicación sin límite de caracteres ›»; ahora dice **«Queremos leerte y acompañarte ›»**
+    (`ComunidadScreen`). El placeholder del compositor («…sin límite de caracteres…») no se tocó.
+* **No cambian**: los flujos, las pestañas, el calendario (celdas, puntos, día elegido), las tarjetas de eventos ni el resto de Hoy.
+* **Pruebas:** `theme/__tests__/topeDeLetra.test.ts' (el tope, que lo propio gana, `TextInput.State`, idempotente, web, `index.ts` lo carga antes que la app),
+  `eventos/components/__tests__/eventosCompacto.test.ts`, `leyendaDelCalendario.test.ts` (la leyenda, lo que oye el lector de pantalla y el texto de la barra del Muro), `home/components/__tests__/tarjetaAccionDeHoy.test.ts` (ajustada) y `tiempoLibreDeLaSemana.test.ts` (el tope de la línea de tiempo
   pasó de 1,6 a 1,2). Sin emulador en esta corrida: el aspecto, y que un teléfono con la letra al 200 % quede en 1,2, se confirman en pantalla.
 * **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
 

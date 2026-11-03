@@ -182,7 +182,7 @@ describe('la cabecera de Eventos', () => {
 
 describe('el mes del calendario', () => {
   const propsDelCalendario = {
-    mes: { anio: 2026, mes: 10 },
+    mes: { anio: 2026, mes: 11 },
     hoyIso: '2026-11-03',
     porDia: {},
     diaElegido: '2026-11-03',

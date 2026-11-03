@@ -3084,10 +3084,10 @@ function ComunidadPorFormacion({
                     <Text style={[t.body, { color: c.textStrong, fontFamily: fuentes.media }]}>
                       ¿Qué conquistaste hoy, {primerNombreUsuario}?
                     </Text>
-                    {/* Era 10 px: por debajo del mínimo de micro-etiqueta, y es la línea que
-                        explica qué pasa al tocar la barra. */}
+                    {/* Era 10 px: por debajo del mínimo de micro-etiqueta. Decía «Publicación sin límite de caracteres ›»; el dueño
+                        pidió (2026-11-03) una invitación en su lugar: «Queremos leerte y acompañarte». */}
                     <Text style={[t.small, { color: c.goldInk }]}>
-                      Publicación sin límite de caracteres ›
+                      Queremos leerte y acompañarte ›
                     </Text>
                   </View>
                 </View>
