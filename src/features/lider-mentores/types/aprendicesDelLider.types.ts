@@ -16,7 +16,7 @@ export interface AprendizDeLaLista {
   grupoId: string | null;
   grupoNombre: string | null;
   mentorNombre: string | null;
-  /** El día del programa en que va; `null` = todavía no eligió su Día 1 (o el servidor no lo dijo). */
+  /** El día del programa en que va; `null` = todavía no empezó su programa (o el servidor no lo dijo). */
   diaPrograma: number | null;
 }
 

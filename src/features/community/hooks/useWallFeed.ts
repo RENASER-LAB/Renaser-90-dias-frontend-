@@ -3,6 +3,11 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CommentItem, PostItem } from '../../../screens/ComunidadScreen';
 import { mensajeDeError } from '../../../services/http/apiClient';
 import * as wallApi from '../api/wallApi';
+import {
+  MENSAJE_ELEGIR_PARA_PUBLICAR,
+  formacionDeLaLectura,
+  formacionDelCuerpo,
+} from '../../formaciones/estado/formacionDeLaComunidad';
 import { aplicarReaccion, mapearComentario, mapearPublicacion } from '../api/wallMappers';
 import { escucharMuroModerado } from '../events/muroModerado';
 import type { WallReactionType } from '../types/community.types';
@@ -40,7 +45,7 @@ export function useWallFeed() {
     setLoading(true);
     setError(null);
     try {
-      const pagina = await wallApi.obtenerFeedMuro();
+      const pagina = await wallApi.obtenerFeedMuro(undefined, undefined, formacionDeLaLectura());
       setPosts(pagina.posts.map(mapearPublicacion));
       setCursor(pagina.nextCursor);
     } catch (e) {
@@ -67,7 +72,7 @@ export function useWallFeed() {
     pidiendoMas.current = true;
     setCargandoMas(true);
     try {
-      const pagina = await wallApi.obtenerFeedMuro(cursor);
+      const pagina = await wallApi.obtenerFeedMuro(cursor, undefined, formacionDeLaLectura());
       setPosts(prev => {
         const yaEstan = new Set(prev.map(p => p.id));
         const nuevos = pagina.posts.map(mapearPublicacion).filter(p => !yaEstan.has(p.id));
@@ -106,7 +111,7 @@ export function useWallFeed() {
     if (releyendo.current) return;
     releyendo.current = true;
     try {
-      const pagina = await wallApi.obtenerFeedMuro();
+      const pagina = await wallApi.obtenerFeedMuro(undefined, undefined, formacionDeLaLectura());
       const { posts: fusionadas, hayMasAbajo } = fusionarPrimeraPagina(
         postsAhora.current,
         pagina.posts.map(mapearPublicacion)
@@ -191,6 +196,10 @@ export function useWallFeed() {
       // la categoría elegida en el compositor no llegaba nunca al backend.
       categoria: string | null = null
     ) => {
+      /* Spec 024: Administración publica en la formación que eligió arriba; con «Todas» no hay dónde y no se envía nada (el
+         servidor respondería 400). Va ANTES de dibujar la publicación temporal y de subir las fotos. Para las demás cuentas
+         `formacionDelCuerpo` devuelve `{}`: el pedido es el de siempre. */
+      const formacion = formacionDelCuerpo(MENSAJE_ELEGIR_PARA_PUBLICAR);
       const idTemporal = `pendiente-${Date.now()}`;
       const optimista: PostItem = {
         id: idTemporal,
@@ -237,7 +246,7 @@ export function useWallFeed() {
         // La respuesta ya trae la publicación real (id del servidor, conteos, URL firmada), así que
         // se cambia el temporal por ella. NO se recarga el muro entero: esa recarga era una carga
         // completa del feed de más por cada publicación.
-        const real = await wallApi.publicarEnMuro(texto, media, categoria);
+        const real = await wallApi.publicarEnMuro(texto, media, categoria, formacion.formation);
         setPosts(prev => prev.map(p => (p.id === idTemporal ? mapearPublicacion(real) : p)));
         return null;
       } catch (e) {

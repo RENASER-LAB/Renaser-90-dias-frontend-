@@ -2,7 +2,6 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 
 import { useAuth } from '../../context/AuthContext';
 import { useMinutoActual } from '../../hooks/useMinutoActual';
-import { useMapaRenacimientoAbierto } from '../mapa-renacimiento/MapaRenacimientoContext';
 import { obtenerResumenHome } from '../home/api/homeApi';
 import { useArranqueGuiado } from '../sparkie/hooks/useArranqueGuiado';
 import { CONFIG_RADAR, rolObligadoAlRadar } from './config/configRadar';
@@ -70,9 +69,9 @@ interface ValorRadar {
     guardar: (pedido: PedidoDeMiRadarApi) => Promise<MiRadarApi>;
     /** Lee de nuevo sin vaciar lo que se ve. */
     recargar: () => void;
-    /** Antes del día 8: pide que el servidor diga si hay Mi Radar o por qué no (el personal que todavía no eligió su Día 1). */
+    /** Antes del día 8: pide que el servidor diga si hay Mi Radar o por qué no (el personal que todavía no empezó su programa). */
     solicitar: () => void;
-    /** Olvida un motivo o un fallo (queda «pendiente») y lee: para «Reintentar» y para después de elegir el Día 1. */
+    /** Olvida un motivo o un fallo (queda «pendiente») y lee: para «Reintentar» y para después de empezar el programa. */
     reiniciar: () => void;
   };
 }
@@ -158,18 +157,13 @@ export function RadarProvider({ children }: { children: React.ReactNode }) {
   const { estado: arranque } = useArranqueGuiado(haySesion);
   const arranqueTerminado = arranque.paso === 'NINGUNO';
 
-  /* El Mapa de Renacimiento también toma la pantalla entera, y es una sesión de 15-20 minutos
-     que cruza cuatro cambios de hora. Taparlo con el formulario a mitad de camino sería la
-     misma colisión que ya se corrigió con el arranque guiado, pero peor: ahí sí se pierde
-     trabajo. Mientras el Mapa esté abierto, el radar espera; al cerrarlo, si el slot sigue
-     vivo, aparece. */
-  const { abierto: mapaAbierto } = useMapaRenacimientoAbierto();
-
-  const puedePedirse = arranqueTerminado && !mapaAbierto;
+  /* (Hasta la spec 026 el radar también esperaba a que se cerrara el Mapa de Renacimiento, que tomaba la pantalla entera; el Mapa se
+     retiró y ya solo espera al arranque guiado.) */
+  const puedePedirse = arranqueTerminado;
   const radar = useRadarDelDia(puedePedirse ? diaPrograma : null, user?.id ?? null);
 
   /* Mi Radar (spec 012): se lee solo desde el día 8. Los días 1 a 7 este hook no pide nada, salvo que Yo lo pida para el personal
-     que todavía no eligió su Día 1 (spec 019: el 403 dice por qué). */
+     que todavía no empezó su programa (spec 019: el 403 dice por qué). */
   const miRadar = useConfigDeMiRadar(diaPrograma, user?.id ?? null);
   const configMiRadar = configDeMiRadar(miRadar.lectura);
   /* La clave de lo que importa a los avisos (encendido, horas y días con horas propias): leer de nuevo lo mismo (al abrir
@@ -177,8 +171,8 @@ export function RadarProvider({ children }: { children: React.ReactNode }) {
   const huellaDeMiRadar = claveDeMiRadar(configMiRadar);
 
   /* Las alarmas diarias. Se sincronizan con el DÍA DE PROGRAMA, no con `puedePedirse`: los
-     avisos tienen que seguir puestos aunque en este momento el Mapa esté abierto o el arranque
-     guiado sin terminar —esas son razones para no interrumpir AHORA, no para dejar a alguien sin
+     avisos tienen que seguir puestos aunque en este momento el arranque
+     guiado esté sin terminar —esas son razones para no interrumpir AHORA, no para dejar a alguien sin
      recordatorio a las 15:00. Los días 1 a 7 son las doce de siempre. Al salir de la ventana (día 8) se cancelan
      solas, y desde ahí suenan las que la persona eligió en Mi Radar, si lo encendió. Mientras no se sabe qué tiene
      Mi Radar (se está leyendo, o la lectura falló) no se toca lo programado. */

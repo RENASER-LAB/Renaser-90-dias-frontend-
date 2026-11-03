@@ -1,6 +1,24 @@
 # Expo HAS CHANGED
 Read the exact versioned docs at https://docs.expo.dev/versions/v57.0.0/ before writing any code.
 
+## Trazabilidad de specs — la marca `spec NNN FR-NNN` en cada prueba
+
+Cada requisito (`FR-NNN`) y criterio de éxito (`SC-NNN`) de una spec que se exige tiene que tener una
+prueba que lo cubra, y la prueba lo dice con una marca en un comentario (o en el nombre del `it`):
+
+```ts
+// spec 037 FR-006, SC-002
+it('km = distancia agregada; sin ella, pasos × 0,75 m', () => { … });
+```
+
+En los flujos de Maestro (`.maestro/**.yaml`): `# spec 037 FR-007`. Solo cuentan las marcas en pruebas:
+Jest bajo `src/` (`__tests__` o `*.test.*` / `*.spec.*`) y Maestro; en código de producción o en un `.md`
+no cubren nada. El número es el de la spec, no el de la issue. **No se marca por marcar**: si la prueba no
+falla cuando el requisito se rompe, no lleva la marca. Lo comprueba `scripts/trazabilidad-specs.mjs` del
+backend, que recibe la ruta de esta app (`node scripts/trazabilidad-specs.mjs <ruta-de-la-app>`); la regla
+completa es `.claude/rules/06-trazabilidad-de-specs.md` del backend. Las specs de la app viven en el
+backend (ver `specs/README.md`), así que la lista de las que se exigen es `specs/trazabilidad.json` de allá.
+
 ## Corrección autorizada — 2026-10-17 — hábitos al cambiar de día
 
 Pedido del dueño: continuar con spec-kit e implementar el bug documentado del 17 de octubre;
@@ -235,6 +253,47 @@ Hasta hoy el líder llegaba a una persona solo por Hoy → «Mis mentores» → 
 > aprendices» sigue siendo una de sus filas. Donde esta entrada dice «Hoy → Mis mentores» o «estado de Hoy», léase Yo → Mis mentores. El
 > atrás sube un nivel: persona → lista → «Mis mentores» → Yo. El flujo de Maestro `lider-ve-a-todos/01` entra ahora por Yo.
 
+## Cambio por pedido del dueño — 2026-10-31 — Yo → «Mis mentores» → «Hábitos de todos»: el líder ve, hábito por hábito, quién cumplió y quién no (spec 029)
+
+Pedido del dueño del 31/10 (decisiones en `~/.config/renaser-e2e/formaciones/decisiones-del-dueno-2026-10-31.md`; spec, plan y contrato en el backend,
+`specs/029-lider-ve-todos-los-habitos/`, D-305): «que el líder de mentores vea todos los hábitos». Eligió todo A: por hábito, quién lo cumplió y quién no, con
+su hora; **un día a la vez** (hoy y hasta 7 atrás); **solo aprendices**; y **los que menos cumplen, primero**. **Solo lectura y todo del servidor**
+(`GET /leadership/habits`): la app no suma ni cuenta nada. Lo que cambia y nada más:
+* **Una fila nueva «Hábitos de todos»** en `ListaDeMisMentores` (Yo → «Mis mentores»), la última de las cuatro bajo «Resultado por grupo», con la forma de las
+  otras (`FilaDeLista`, sin ícono propio). **Solo existe si el servidor la ofrece**: Yo pregunta con la lectura de hoy (`useHabitosDeTodosDisponibles`, la misma
+  puerta que «Todos los aprendices») y la fila se dibuja únicamente con un 200; con 404 o 403 (backend anterior u otro rol), con cualquier otro fallo o mientras
+  no se sabe, no se dibuja. Se pregunta solo si la cuenta lidera mentores y tiene prendida la entrada `lider`. **Para otros roles, Yo no cambia.**
+* **`HabitosDeTodosScreen`** (estado de Yo, como las otras pantallas del líder: sin pestaña nueva; cabecera `BarraDelLider` «‹ Hábitos de todos»): ‹ día › con
+  «Hoy», «Ayer» o «Mar 27 oct» y el día completo debajo (`EncabezadoDelDia`; las flechas de 48 llegan hasta donde dice el servidor y se apagan en el límite sin
+  desaparecer; cambiar de día es instantáneo y vibra con el «tic» de selección), el resumen en una frase («118 de 120 alumnos con hábitos · 940 de 1 500
+  cumplidos»), los filtros (`FiltrosDeLosHabitos`: dimensión —con las categorías que el servidor manda, las de la formación—, **formación solo para quien ve más
+  de una a la vez**, y grupo con «Sin grupo») y una fila por hábito (`FilaDeHabito`: nombre en tipo oración, dimensión, «41 de 100 cumplidos» y su barra), del
+  que menos se cumple al que más. Deslizar hacia abajo recarga. Estados: cargando, sin hábitos («Ese día nadie tenía hábitos por cumplir.»), sin coincidencias
+  con filtros («Ningún alumno coincide con estos filtros.» y «Quitar los filtros») y error con «Reintentar» de 48. Cada lectura toma un turno y al cambiar de
+  día o de filtro no queda a la vista el dato del anterior ni por un instante.
+* **`PersonasDeUnHabitoScreen`**: las personas de ese hábito en ese día, por secciones y en este orden —«No cumplieron», «Pendientes», «Cumplieron» y, plegada,
+  «No les tocaba o en pausa»—, con buscador «Buscar por nombre» (el servidor, 300 ms después de la última tecla), páginas de 30 (la siguiente al acercarse al
+  final; si falla, lo leído se queda y hay «Reintentar») y por fila la foto o las iniciales, el nombre, el grupo, la hora planificada y, si cumplió, **a qué hora**
+  (`FilaDePersonaEnHabito`). Una persona sin datos dice **por qué** («Todavía no empezaba», «No le tocaba o en pausa») y nunca como una falta. Si cumplió con
+  evidencia, un botón de 48 abre la hoja de siempre (`EvidenciaDeObligacion`, que sí deja constancia en el servidor).
+* **Tocar a una persona abre `PersonaDelLiderScreen`** —la ficha de siempre— **en ese mismo día**, por la puerta sin grupo (`desdeTodos`, como «Todos los
+  aprendices»; «Avisar a su mentor» solo si el servidor lo permite). El rótulo es el nombre de su grupo o «Sin grupo».
+* **El atrás (sistema y flecha) sube un nivel por vez**: ficha → personas del hábito → hábitos del día → «Mis mentores» → Yo. Los niveles de abajo quedan
+  montados y ocultos (como «Todos los aprendices»): al volver conservan el día, los filtros, la búsqueda, lo leído y la posición, sin releer.
+* **Esquemas tolerantes** (`habitosDeTodosSchemas`): una fila rota se pierde sola, no la lista; un nombre vacío no esconde a la persona; un estado
+  desconocido cuenta como «sin datos». **Sin animaciones nuevas** más que `Presionable` en las filas (se toca decenas de veces por visita).
+* **Aislamiento entre formaciones**: lo decide el servidor (el líder ve a los alumnos de la formación o formaciones que tiene activas; Administración y
+  Alquimista, todas). La app no filtra ni recuerda nada entre formaciones: el filtro «formación» solo acota, y las vistas se arman de nuevo si cambia la formación
+  activa (`llaveDeLasVistas`), así que no queda a la vista nada de la anterior.
+* **No cambian**: los demás tabs y papeles, el resultado por grupo, el semáforo, «Todos los aprendices», «Mi grupo», los permisos (los decide el servidor: 403
+  para mentor, guía, aprendiz y cuenta suspendida; 404 con un backend anterior) ni la barra de pestañas. Sin dependencias nuevas ni código nativo.
+* **Pruebas:** Jest `habitosDeTodos` (la API y los esquemas, y las reglas puras: días, orden, secciones, textos), `hooksDeHabitosDeTodos` (un turno por
+  lectura, filtros, páginas, la puerta de la fila), `habitosDeTodosPantalla` (el día, los filtros, las secciones, la ficha en ese día y el atrás nivel por
+  nivel), `panelesDeRol` / `vistasDeLosPaneles` / `panelesDeRolEnYo` (la fila y el atrás). Maestro, **escritos y sin correr**: `.maestro/habitos-de-todos/`
+  (hábito → personas → ficha → atrás; ayer y los límites; un mentor no ve la fila).
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire) y **el backend con la spec 029 antes** (que a su vez pide la 023): contra uno
+  anterior la fila no se dibuja y Yo queda como estaba.
+
 ## Cambio por pedido del dueño — 2026-10-31 — diseño de Hoy, Plan y Training, y la fuente Inter en toda la app
 
 Pedidos del dueño del 31/10 con capturas; **todo es de la app, sin backend**. Cada punto es un commit aparte de la rama
@@ -251,6 +310,8 @@ Pedidos del dueño del 31/10 con capturas; **todo es de la app, sin backend**. C
   > Coherencia / Racha: «no tan grande»), sin botón dorado. Los otros estados de la tarjeta no cambian. Hace falta APK nuevo.
   > Y sin Mapa **no se repite la tarjeta «Mapa de renacimiento · Diseña tu mapa»** de más abajo (el dueño: «sí, quita la de abajo»):
   > la invitación ya está arriba. Con el Mapa empezado o activo esa tarjeta sigue, porque es la entrada para verlo (`mostrarTarjetaDelMapa`).
+  > **Corregido 2026-11-01.** La frase **sale siempre**, también sin día de programa (personal sin programa, Día 0, sin Día 1 elegido): ver la
+  > entrada «Hoy (y Plan): la frase siempre, el programa propio en una fila y la fecha de inicio» del 2026-11-01.
 * **Se quita el bloque Coherencia / Racha** («Coherencia 0 %», «Consistencia del día», «Racha 2 días», «Récord histórico»): **Yo ya
   los muestra** (Coherencia con su %, Puntos de liga y Racha con «días»). Comprobado en `YoScreen`. Lo único que Hoy mostraba y Yo no
   es el «Récord histórico» (`rachaMaxima`) y las dos líneas de apoyo («Consistencia del día», «Nivel de excelencia»): se van con el
@@ -482,6 +543,8 @@ cambia y nada más:
   escuchas de avisos** y de `abrirCajaAprendizId` / `abrirFichaAprendiz`. La raya dorada ya no depende de ningún papel y nada queda
   «oculto pero montado». **Se conserva** la invitación «Elegir mi Día 1» para el personal que no hace su programa
   (`EntradaAlProgramaPropio`) y el color del semáforo que recibe el fénix (`usePublicarSemaforoDeHoy(resumen?.semaforo, …, null)`).
+  > **Corregido 2026-11-01.** Esa invitación ya no es la tarjeta grande `EntradaAlProgramaPropio` bajo el fénix: en Hoy es una fila compacta
+  > (`FilaDelProgramaPropio`) justo debajo de la frase. La tarjeta grande se conserva solo en Yo.
 * **Yo suma una fila por panel de rol, con la misma forma que «Administración»** (`FilaDeAjuste`, en la misma lista, entre
   «Administración» y «Tuve una emergencia»): **«Mi grupo»** (ícono `users`, «Tus aprendices») y **«Mis mentores»** (ícono `award`,
   «Grupos, consultas y reporte del mes»; no `usersThree`, que es el de la pestaña Comunidad y `barraDePestanasIconos.test.ts` no deja usar en otra parte). **Las reglas de quién las ve son las de siempre, sin inventar ninguna** (`paneles-de-rol/utils/
@@ -567,6 +630,108 @@ animaciones, íconos ni dependencias nuevas. Cada punto es un commit aparte de l
   `recordatoriosDeLasAcciones` (la fila, la hoja con el mismo control, las alarmas con la hoja cerrada) y `planDelEje`.
 * **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
 
+## Cambio por pedido del dueño — 2026-10-31 — formaciones: Escuela, Diplomado y Certificación (spec 022)
+
+Pedido del dueño del 31/10 (decisiones en `~/.config/renaser-e2e/formaciones/decisiones-del-dueno-2026-10-31.md`; spec, plan y contrato en el backend,
+`specs/022-formaciones/`, D-295). Renaser deja de ser un solo programa de 90 días: hay **tres formaciones fijas** —**Escuela Renaser** (90 días),
+**Diplomado Renaser** (3 meses = 90 días, o 1 año = 365) y **Certificación Renaser** (90 días)— con los mismos roles pero **aisladas entre sí**. Lo
+decide y lo filtra **siempre el servidor**; la app solo lo muestra. Lo que cambia y nada más (esta spec es la base: el contenido por formación —hábitos,
+Muro, cursos, ranking— llega con las siguientes):
+* **Autorizado en los cinco tabs, y nada más que esto:** (1) en **Hoy**, una línea con el **nombre de la formación** sobre la frase del día, solo si la
+  persona tiene más de una o no es de la Escuela (`NombreDeLaFormacion`); para el aprendiz de la Escuela Hoy queda **idéntico**; (2) en **Yo**, la fila
+  **«Cambiar de formación»** (ícono `layoutGrid`, ya existente) con la activa como detalle, **solo** para el personal asignado a más de una, que abre
+  una `HojaDesdeAbajo`; (3) en **Yo**, la tarjeta de fase y «Día N de M» usan la **duración de cada persona**; (4) en **Administración**, la sección
+  **«Formaciones»** (en «Más» de la raíz) y los filtros/fichas de abajo. Los tabs, la barra y los diseños de las otras pantallas **no cambian**.
+* **La sesión trae la formación** (`formacion` en `/auth/me`, login y social; `GET /api/v1/me/formacion`): `{ activa, disponibles, puedeElegir,
+  veTodas, sinFormacion, duracionDias, fases }`. `FormacionProvider` (en `App.tsx`, dentro de la sesión) la guarda, la relee al volver al frente (así
+  un traslado se nota sin cerrar la app) y expone `elegir`. **Un backend anterior no la manda: la persona se trata como de la Escuela** (nunca se
+  inventa una elección ni un selector). El esquema es tolerante (`formaciones/api/formacionesSchemas`): una opción rota se pierde ella, no la sesión.
+* **Al cambiar de formación todo se arma de nuevo**: la `key` de `MainTabs` (en `RootNavigator`) es `cuenta|formaciónActiva` (`llaveDeLasVistas`), el
+  mismo mecanismo de «ver como». No queda a la vista nada de la formación anterior ni por un instante. Sin formación conocida la `key` es la de siempre.
+* **La pregunta de la primera vez** (`EleccionDeFormacionScreen`): «¿En qué formación vas a trabajar hoy?», una fila por formación, **una sola vez por
+  teléfono y cuenta** (`renaser.formacion.eligio.<cuenta>` en AsyncStorage; si el almacenamiento falla, no se pregunta) y solo para el personal con
+  varias. Después el servidor recuerda la última. Sin ✕ ni «atrás» (no hay a dónde volver). **No lleva cifras por formación** (aprendices, pendientes):
+  el servidor no las manda a esta cuenta y no se inventan.
+* **Personal sin ninguna formación** (`SinFormacionScreen`): «Administración todavía no te asignó una formación.» con «Volver a revisar» y «Cerrar
+  sesión»; nada más. Administración, Alquimista y Soporte TI **ven las tres** (`veTodas`) y no tienen selector ni nombre en Hoy.
+* **Días y fases por duración.** `/home` suma `duracionDias` y `formacion`. Las cuatro fases se estiran: con 90 días son 1, 8, 35 y 65; con 365, **1, 29,
+  138 y 260** (`formaciones/utils/fasesDeLaDuracion`, la misma cuenta que el servidor; `faseEnCurso(fase, día, duración)`). Los nombres y las claves de
+  fase no cambian (son contrato). «Los días que quedan» del Mapa usa la duración (`diasQueQuedan(día, duración)`). **No se tocó** el plan de
+  objetivos/acciones ni las pastillas de hábitos: siguen en 90 hasta sus specs.
+* **Cerrado el mismo día (pedido del coordinador):** (1) **«El Método»** (Yo → Ajustes) dice «4 fases en N días» y el rango de cada fase de SU
+  programa (`metodoFasesDe(duración)`, sobre `fasesEnOrden`); con 90 días es el de siempre. (2) **«Cambiar día del programa»** (Administración y el
+  aviso de emergencia del chat de soporte) acota con la duración de la persona: el último día ajustable es el penúltimo (89 en la Escuela, 364 en el
+  Diplomado de un año; `ultimoDiaAjustable`), «Hoy está en el día N de M» dice la suya, y la ficha le pasa `programDuration` del detalle; si no la
+  sabe (el aviso del chat solo trae el día de hoy), `useDuracionDelPrograma` la lee una vez del detalle y mientras tanto vale 90 (el servidor vuelve a
+  acotar). La pantalla de emergencia del aprendiz ya leía el tope que manda el servidor (`diaMaximo`).
+* **Administración → Formaciones** (`formaciones/screens/FormacionesAdminScreen` y `FormacionDetalleAdminScreen`, **solo Administración y Alquimista**):
+  las tres con nombre, duraciones, cifras y «N por atender»; el detalle (Resumen, Personas, Grupos, Por atender) y **«Ver personas» / «Ver grupos»,
+  que abren esas listas ya filtradas por la formación** (las cifras salen de las mismas consultas que las listas). «Editar» (`EditarFormacionSheet`):
+  nombre (3–80), descripción (≤ 600), «Disponible» y las duraciones (3 meses / 1 año); guarda con `version` (409 si otra persona la cambió antes). Cambiar
+  las duraciones rige solo para quien entre o se traslade después. Las secciones «Ficha y términos» y «Hábitos y contenido» del detalle **no se dibujan
+  todavía**: llegan con las specs 026/027 y 023.
+* **Filtro «Formación»** (`FiltroDeFormacion`: Todas · Escuela · Diplomado · Certificación) en **Personas** (va al servidor, `?formation=`) y en
+  **Grupos** (sobre `formation` de cada grupo); cada fila nombra la formación si no es la Escuela.
+* **Ficha de una persona** (`FormacionDeLaPersona`): su formación y duración, **lo que cursó antes** (historial) y, para un **aprendiz**, **«Pasar a otra
+  formación»** (`TrasladarAprendizSheet`): destino entre las disponibles, duración que ese destino ofrece, y «Darla por terminada» con un **motivo** (3–500)
+  si todavía no terminó. Una confirmación dice que **empieza de cero allí** (día 0, sin grupo ni mentor, 100 puntos) y que su historial queda. Un 409
+  («todavía no terminó») abre el motivo. **Equipo y roles** suma **«Formaciones en las que trabaja»** (`FormacionesDelPersonal`) para mentor, guía y
+  líder: marcar una o más, cuál queda activa; el servidor impide quitar una donde lidera un grupo y dice cuál. Si el servidor no ofrece estas secciones
+  (backend anterior), no se dibujan.
+* **Sin animaciones nuevas** (se ven poco y son de consulta): `Presionable`, `HojaDesdeAbajo`, `tacto.seleccion()` al elegir y `tacto.logro()` al
+  quedar guardado. Textos en tipo oración y tuteo; áreas táctiles de 48 o más; un solo scroll por pantalla; la fuente solo por los roles de
+  `theme/fuentes.ts`. Sin íconos, dependencias ni código nativo nuevos.
+* **Pruebas:** Jest en `src/features/formaciones/__tests__` (fases y duraciones, tolerancia de la sesión, el nombre/pregunta/aviso, el proveedor, la
+  API, el centro, la edición, el traslado, las formaciones del personal y el cableado) y los tres guardas de texto de `src/screens/__tests__` que
+  cambian con `duracionDias`. Maestro, escritos y sin correr: `.maestro/formaciones/` (`README.md` explica las cuentas).
+* **Hace falta un APK nuevo** (solo JavaScript: no hay código nativo nuevo, pero la app no se actualiza por aire) **y el backend de la spec 022 antes**
+  (V125–V128). Con el APK nuevo contra un backend anterior todo queda como hoy; con el APK anterior contra el backend nuevo también (la formación
+  por defecto es la Escuela).
+
+## Cambio por pedido del dueño — 2026-10-31 — Código Renaser con la voz: dictar la respuesta y escuchar la pregunta (spec 030)
+
+Pedido del dueño (textual): «El sistema debe poder ofrecer el servicio de audios al responder el radar.» Spec, plan y tareas en
+`Renaser-90-dias-backend/specs/030-codigo-renaser-con-audio/`; decisiones del dueño del mismo día: **030-1 A** (dictar la respuesta y
+escuchar la pregunta con la voz Dora, grabada y sin red; la energía se toca, no se dicta) y **030-2 B** (el registro dice «dictado» y
+lo ven el mentor, el líder y Administración). Toca el formulario del Código Renaser, que vive en **Hoy** (pantalla obligatoria de los
+días 1 a 7 y mitad del Radar) y en **Yo → Mi Radar**. Lo que cambia y nada más:
+* **Un micrófono y un «Escuchar» por pregunta** (`radar/components/VozDeLaPregunta`, `BotonDeVoz`; 48 de alto, ícono y palabra, sin
+  movimiento propio salvo el hundimiento de `Presionable`, un «tic» de `tacto.seleccion()` por toque). Es el mismo formulario
+  (`CodigoRenaserModal`) en las cuatro entradas —la pantalla obligatoria, Hoy, Mi Radar y el aviso del teléfono—, así que se ve y funciona
+  igual en todas. Las cuatro preguntas, las horas, la obligatoriedad, el borrador, un registro por hora y el 409 **no cambian**.
+* **Dictar** reutiliza `useDictado` (el reconocimiento de voz del teléfono, el mismo del chat de SER; español `es-419`; el audio no se
+  guarda ni se sube). Lo dictado se **suma** al final del campo, se ve mientras se habla, queda **editable** y se corta en los 2 000
+  caracteres de siempre. **Nada se registra solo:** solo «Registrar»; con el micrófono abierto ese botón dice «Terminar de dictar» y
+  cierra el micrófono. **Un solo micrófono a la vez**: tocar el de otra pregunta cierra el primero, espera a que entregue su texto y recién
+  entonces abre el segundo (`useDictadoDelRadar`). Sin reconocimiento de voz en el teléfono no hay «Dictar» y el formulario es el de hoy.
+  Si falla (sin permiso, sin red, sin motor en español, ocupado) una línea bajo esa pregunta lo dice —«… escribe tu respuesta»— y lo
+  escrito y lo dictado antes no se tocan.
+* **Escuchar** lee el enunciado y su ayuda con la voz Dora de las alarmas, **cuatro MP3 grabados** (`assets/sonidos/voz_radar_que_*.mp3`,
+  generados con `scripts/sonidos/generar-sonidos.sh voces`, que ahora también lee `radar/vocesDelRadar.json`; sin campanita; Whisper los
+  entendió sin errores), desde el paquete de la app, **sin red**. Una voz a la vez; se detiene al terminar, al tocar de nuevo, **antes** de
+  abrir el micrófono, al registrar y al cerrar el formulario. El reproductor (`expo-audio`) nace al primer toque. **Límite aceptado:** el
+  teléfono no le cuenta su volumen a la app (haría falta código nativo nuevo), así que mientras suena una línea dice «Si no la oyes, sube
+  el volumen de tu teléfono.» en vez de detectar el volumen en cero.
+* **«Dictado»** (030-2 B): el pedido de `POST /api/v1/radar` suma `dictado: true` **solo si** alguna respuesta se dictó y sigue en el texto
+  (un campo que la persona vacía deja de contar; corregir una palabra no); una respuesta escrita viaja idéntica a la de siempre. El
+  borrador local guarda qué respuestas se dictaron. En las fichas del mentor o guía, del líder, de Administración y de Alquimista
+  (`CodigoRenaserDelAlumno`), cada registro dictado dice «Dictado por voz. Puede haber errores de transcripción.» (solo texto, como el
+  resto de la sección). Viaja en las mismas filas que ya leen, así que si el interruptor de la spec 034 oculta el Código Renaser, tampoco
+  se ve «dictado».
+* **Arreglo en lo compartido:** `useDictado` ahora atiende **solo su propia sesión** de micrófono. El reconocedor manda sus eventos a todos
+  los que escuchan; sin este seguro, dictar el Código Renaser habría puesto al orbe de Hoy «escuchando» y habría mostrado «Tú: <lo que
+  dictaste>» bajo el fénix. El chat de SER y el orbe se comportan igual que antes (`useDictado.test.ts`).
+* **Política de privacidad** (`public/privacidad/index.html`): dice que el Código Renaser también se puede dictar con el reconocimiento de
+  voz del teléfono y que el audio no se guarda. **Debe publicarse antes de sacar el APK.**
+* **No cambian**: Plan, Training, Comunidad, los demás tabs, el semáforo, los puntos, Mi Radar (horas, modos, veces), los avisos y sus
+  canales, ni quién ve el Código Renaser.
+* **Hace falta el backend con V132 (D-297) antes y un APK nuevo** (los cuatro MP3 van dentro del APK; la app no se actualiza por aire).
+  Contra un backend anterior la app funciona igual (el servidor ignora `dictado`) y las fichas no muestran la línea.
+* **Pruebas:** `useDictado.test.ts`, `useDictadoDelRadar.test.ts`, `useEscucharPregunta.test.ts`, `dictadoDelRadar.test.ts`,
+  `vozDelRadar.test.ts`, `codigoRenaserConVoz.test.ts`, `dictadoEnElContrato.test.ts`, `codigoRenaserDelAlumno.test.ts` y
+  `sonidosElegibles.test.ts`. Maestro: `.maestro/codigo-renaser/41-dictar-y-escuchar.yaml` (escrito, **no corrido**: este trabajo no usó el
+  emulador).
+
 ## Cambio por pedido del dueño — 2026-10-31 — «Cierra tu día» pasa de Training a Plan (spec 033)
 
 Textual: «Cerrar el día se mueve a Plan, todo de acuerdo a Plan.» Decisiones del dueño del mismo día: **todo la opción A** (spec y
@@ -605,6 +770,1345 @@ decisiones en `Renaser-90-dias-backend/specs/033-cierre-del-dia-en-plan/`; D-298
   `tarjetaDelCierre`, `semanaDelCierre`, `ejeDeLasAcciones`, `hojaDelCierre` y `trainingSinElCierre` (Training ya no monta nada del cierre);
   se ajustaron `listaDelDia` y `calendarioDeTraining`. Maestro, escritos y sin correr: `.maestro/cierre-en-plan/`.
 * **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). **Sin backend nuevo.**
+
+## Cambio por pedido del dueño — 2026-10-31 — «Código Renaser en las fichas»: Administración decide si el mentor y el líder lo ven (spec 034)
+
+Textual: «El líder de mentores y el mentor no pueden ver el Código Renaser: un interruptor para activar y desactivar.» Decisiones del dueño del
+mismo día (spec y decisiones en `Renaser-90-dias-backend/specs/034-codigo-renaser-visible-por-admin/`; D-299): **de fábrica apagado**, **un solo**
+interruptor para el mentor, la guía y el líder juntos, apagado **no ven nada** (ni un indicador de «registró / no registró»), lo deciden
+**Administración, Alquimista y Soporte TI**, **sin motivo escrito** y **sin avisar** a la persona, al mentor ni al líder. Lo que cambia y nada más:
+* **El servidor lo hace cumplir** (no es solo esconder la sección): es una funcionalidad más del catálogo de Soporte TI, `radar.fichas` («Código Renaser
+  en las fichas», hija de `radar`), que nace apagada para MENTOR, TRAINEE_GUIDE y MENTOR_LEAD. Apagada **se esconde** (404
+  `FUNCIONALIDAD_NO_DISPONIBLE`, no el aviso de mantenimiento) en las tres lecturas ajenas del Código Renaser —`GET /mentor/groups/{g}/learners/{u}/radar`,
+  `GET /leadership/groups/{g}/people/{p}/radar` y `GET /leadership/people/{p}/radar`— y entra en `noDisponibles` de `GET /funcionalidades/mias`. El 403
+  de siempre gana al 404. Administración y Alquimista no están entre los roles que se apagan, y la propia persona no pasa por ahí (`/radar/**`).
+* **En la app, las tres fichas** (`CodigoRenaserDelAlumno` es el mismo componente de `AlumnoScreen`, `PersonaDelLiderScreen` y `FichaAprendizScreen`):
+  con `radar.fichas` apagada o no disponible la sección «Código Renaser» **no se dibuja ni se pide** (sin hueco, sin error y sin aviso de
+  mantenimiento). Un 404 del servidor que llegue igual tampoco la dibuja. Administración y Alquimista siguen viéndola siempre.
+* **Administración → Más opciones → «Código Renaser en las fichas»** (`CodigoRenaserEnFichasAdminScreen`, vista nueva de la pila de `AdminScreen`; sigue la
+  disponibilidad de Administración, `CLAVES.admin`): un `Interruptor` «El mentor y el líder ven el Código Renaser» con una frase que dice qué pasa en
+  cada estado («El mentor, la guía y el líder no lo ven. Tú, Alquimista y la propia persona lo siguen viendo.») y «Último cambio: Ana Pérez, 31 oct 2026,
+  18:40». **Cambiarlo pide una confirmación que dice qué va a pasar** («Mostrar el Código Renaser» / «Ocultar el Código Renaser»; sin motivo y con «No se
+  avisa a nadie») y rige en el acto. El interruptor es el del servidor: no se mueve hasta que éste acepta (`useCodigoRenaserEnFichas`); un cambio doble
+  manda un solo pedido; si falla, queda donde estaba y se dice por qué («Tu cuenta no puede cambiar esto.» en 403, «Esta opción todavía no está
+  disponible…» en 404, «Sin conexión con el servidor.», «No se pudo cargar esta opción.») con «Reintentar» donde tiene sentido. Al quedar guardado,
+  `tacto.logro()` una vez y «Listo: el mentor y el líder ya ven / ya no ven el Código Renaser.» Si Soporte TI dejó los tres roles distintos desde su
+  consola, lo dice («Soporte TI lo dejó distinto para cada rol…») y no afirma que lo ven todos; cambiarlo aquí los iguala.
+* **`GET/PUT /api/v1/admin/codigo-renaser-en-fichas`** (`admin/api/codigoRenaserEnFichasApi`, esquema tolerante): `{ visible, mixto, porRol, ultimoCambio }`
+  y `PUT { visible }`. Solo ADMIN, ALCHEMIST e IT_SUPPORT activos; cualquier otro, 403 del servidor. Deja una fila de auditoría y no crea ninguna
+  notificación. Soporte TI también lo ve en su consola, rol por rol (sin cambios en la app).
+* **Quien publique el backend primero** (sin migración nueva): al publicar, **el mentor, la guía y el líder dejan de ver el Código Renaser hasta que
+  Administración lo encienda**. Contra un backend anterior la pantalla nueva dice que todavía no está disponible (404) y las fichas quedan como estaban.
+* **No cambian**: lo que se ve cuando está encendido (la sección es la de siempre, incluida la marca de dictado de la spec 030, que sale por las mismas
+  tres lecturas), el Código Renaser de la propia persona, Hoy, Yo → Mi Radar, los demás tabs ni la barra. Sin dependencias nuevas ni código nativo.
+* **Pruebas:** Jest `codigoRenaserEnFichasApi` (ruta, verbos, cuerpo sin motivo y esquema tolerante), `codigoRenaserEnFichas` (los textos y la
+  confirmación), `useCodigoRenaserEnFichas` (el servidor es la verdad, fallos, «Reintentar», un solo pedido),
+  `codigoRenaserEnFichasEnAdministracion` (el cableado y la pantalla) y `codigoRenaserDelAlumnoEnFichas` (apagado: ni se dibuja ni se pide); se ajustó
+  `pilaDeAdministracion`. Maestro, escritos y sin correr: `.maestro/codigo-renaser-en-fichas/` (apagado de fábrica, Administración lo enciende y el
+  mentor lo ve, lo apaga y ya no).
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire) **y el backend con la spec 034 antes** (sin migración).
+
+## Cambio por pedido del dueño — 2026-10-31 — Training → Planificar y Plan: «Solo esta semana», repetir la semana y planificar el mes (spec 028)
+
+Pedido textual: «si una persona planifica una semana, ofrecerle la misma planificación la siguiente semana; y, a la par, que pueda hacer la
+planificación de cada mes, si lo desea». Spec, plan, contratos y decisión **D-296** en el backend (`specs/028-planificacion-semana-y-mes/`).
+Decisiones del dueño del mismo día: **028-1 A** «todas las semanas» sigue como base y se suma «Solo esta semana», con la oferta de repetir la
+semana anterior; **028-2** «planificar el mes» es el **plan de OBJETIVOS de Plan** (el mes del programa, Mes 1 = semanas 1 a 4), no el calendario;
+**028-3** repetir la semana es de los **hábitos** y el mes es de los **objetivos**; **028-4 A**, **028-5 A**; y «lo único bueno que ya está es la
+planificación de hábitos»: se reutiliza el editor de Planificar (specs 008 a 011) y no se reescribe. Lo que cambia y nada más:
+
+> **Corregido 2026-11-02 (pedido del dueño).** El control ya no dice «Todas las semanas | Solo esta semana» sino **«Siempre | Por semana»**; «Por semana» deja
+> pasar de semana (flechas y deslizando) hasta la última del programa y ya no lleva la ayuda «Solo esta semana: los días que faltan…», el rótulo «Toda esta
+> semana», «Cargando esta semana…» ni la línea «Cambiado solo esta semana: sáb, dom» (queda el punto del día). El editor abre en «Por semana» cuando lo
+> guardado ya tiene cambios. Ver «Training → Planificar: «Siempre | Por semana»…», más abajo.
+
+* **El editor de un hábito** (`PlanificarDimensionModal`): un `ControlSegmentado` «Todas las semanas | Solo esta semana» arriba del bloque de los
+  días. Por defecto «Todas las semanas», con **los mismos textos, pedidos y alarmas de siempre** (las pruebas de las specs 008 a 011 siguen
+  sin modificarse). Solo se ofrece si el servidor sabe de esto (`GET /habit-preferences` manda `dateOverrides`).
+  * En «Solo esta semana» los siete días salen de `GET /habit-preferences/{id}/week?weekStart=` (el lunes de la semana que el editor ya dibuja;
+    el domingo, la siguiente), mapeados al mismo `DiaDelEditor` con el que ya funcionan las pastillas, el aviso y «Cómo suena». Vienen marcados
+    los días que faltan y que el plan de siempre no apaga; **nunca queda ninguno sin marcar** (acá «sin días» no significaría «general»).
+    Hoy y los días pasados siguen con candado. Los días con cambio propio de esa fecha llevan un punto (`marcaDelDia`, prop **opcional** nueva de
+    `FilaDeDiasDelPlan`) con su etiqueta accesible, y una línea dice «Cambiado solo esta semana: sáb, dom».
+  * **Se guarda solo lo tocado** (`utils/alcanceDeLaSemana.ts`, puro): hora si se movió la rueda, aviso si se tocó, «Cómo suena» si se tocó y
+    apagar si se pidió, en un solo `PUT …/week` todo o nada. «Guardar … · solo esta semana» se apaga si no se tocó nada. «Volver al plan de siempre
+    los …» devuelve esas fechas (`reset`; si son todas las que tenían cambio, `DELETE …/week`). Un hábito obligatorio no se apaga (409).
+  * No cobra cupo, no cambia el plan de siempre ni las demás semanas.
+* **«Tus prácticas»** (`PracticasDeTraining`) muestra arriba de las dimensiones la tarjeta **«Repetir tu semana»** («Tu semana del 26 oct al 1 nov, en la
+  del 2 al 8 nov»), solo cuando el servidor la ofrece (`GET …/week-repeat`: la semana en curso tiene cambios propios y repetirla cambiaría la siguiente).
+  «Repetir», «Ahora no» y «Ver qué se repite» (una `HojaDesdeAbajo` con el resumen por hábito: hora, aviso, «no va» o «cómo suena», y los hábitos que se
+  dejan afuera con su motivo). Si la semana siguiente ya tiene cambios propios, dice «Reemplaza lo que ya cambiaste esa semana» y pide **un segundo toque**
+  antes de mandar `replace: true`. Al repetir sale «Tu semana del 2 al 8 nov quedó como esta» con **«Deshacer»** (`DELETE …/weeks/{lunes}`); otro día queda
+  «Volver al plan de siempre», con pregunta. «Ahora no» se recuerda **por cuenta en el teléfono** (`renaser.habitos.repetirSemana.descartada.<cuenta>` =
+  `{ modelo, siguiente, huella }`): no reaparece mientras la huella de la semana modelo sea la misma; en otro teléfono puede salir una vez más. No hay
+  notificación nueva: el recordatorio de los domingos abre Planificar como siempre. Mientras no se sabe no se dibuja nada (sin parpadeo); un fallo o un 204 no
+  muestran nada. Doble toque: un solo envío.
+* **Las alarmas del teléfono respetan lo «solo esta semana»** (`habits/notificaciones/**`, solo JavaScript). Una alarma `DAILY`/`WEEKLY` no puede saltarse una fecha
+  (el mismo problema del #33), así que el hábito con fechas propias vigentes pasa al esquema por día y los **días de la semana afectados** dejan la alarma semanal por
+  **alarmas de fecha** —una por aviso y por ocurrencia de ese día, desde hoy hasta la última fecha propia más dos semanas de cola, con el valor propio donde hay fila y el
+  de siempre donde no—; los demás días siguen semanales. Identificadores: el primer aviso de cada día afectado conserva `habito-{id}-d{iso}-0` (la etiqueta del push de
+  respaldo, spec 007) y el resto `habito-{id}-f{AAAAMMDD}-{n}`. Tope de 48 alarmas de fecha por hábito por esta vía (las más próximas primero). **Se revierte solo**: cuando
+  ya no quedan fechas propias vigentes, la puesta al día (al abrir la app y al volver a primer plano) deja las `DAILY`/`WEEKLY` de siempre; guardar o deshacer en el
+  editor y repetir reprograman en el acto (`utils/reprogramarLasAlarmas.ts` → `ajustarRecordatoriosAlServidor`). El puente del #33 y las repeticiones de la spec 009 leen
+  la misma cuenta (`valoresDelDia`), así que respetan la hora, el aviso y «Cómo suena» de la fecha. `programar` sin `opciones.fechas` conserva las que el teléfono
+  recordaba (`EsquemaGuardado.fechas`): guardar «todas las semanas» no las pierde. Sin fechas propias vigentes todo es **idéntico a hoy** (mismos identificadores y firma).
+  **Límites aceptados**: (1) si la persona no abre la app en las dos semanas siguientes a la última fecha propia, ese día de la semana queda sin alarma hasta que la
+  abra; (2) cuando suena una alarma de fecha, la siguiente puesta al día rehace el hábito; (3) un APK anterior no conoce las fechas propias (sus alarmas locales siguen como
+  el plan de siempre; el push del servidor sí las respeta).
+* **Plan → «Planificar mi mes»** (solo con el Mapa activo; `BotonPlanificarMes` debajo del objetivo de 90 días, `PlanDelMesModal`, `utils/mesDelPrograma.ts`): una hoja opcional
+  con los **tres meses del programa** (`ControlSegmentado`, abre en el actual; semanas como las cuenta el servidor, D-203: lunes a domingo, trece, la 1 desde el Día 1 y la 13
+  hasta el día 90), el **objetivo del mes del eje abierto** (cifra «Propuesta» o «Tu cifra», o el motivo si no hay cifra) y las **semanas del mes** con sus fechas, su estado
+  («Revisada», «Esta semana», «Se arma el domingo», «Todavía no llega») y su objetivo semanal. «Cambiar» abre el mismo `EditarObjetivoDelMesModal` y guarda con
+  `PUT /rocks/monthly/{eje}/{mes}` **para cualquiera de los tres meses** (hoy Plan solo ofrecía el mes en curso; el servidor ya lo aceptaba). Tocar la semana de ahora cierra la
+  hoja y abre «Organizar mi semana» de siempre. **No se arman objetivos semanales de semanas que no llegaron**: la ventana del domingo no cambia. Nada lo exige ni lo
+  recuerda. Sin backend nuevo.
+* **No cambian**: Hoy, Comunidad y Yo; la hoja de cada dimensión salvo el control de alcance; las alarmas de Despertar de Yo → Alarmas; «Arma tu semana los domingos»; Plan salvo el botón y la
+  hoja; las acciones de los objetivos (no se repiten); lo ya registrado, los puntos, la racha ni el semáforo; las pausas (no se repiten). Hoy y los días pasados nunca se cambian.
+* **Hace falta publicar primero el backend** (V130 y V131 y los endpoints nuevos) **y un APK nuevo** (solo JavaScript: la app no se actualiza por aire). La app nueva contra el backend anterior
+  no ofrece «Solo esta semana» ni la oferta (le falta `dateOverrides`) y Plan funciona igual; el APK anterior contra el backend nuevo sigue como hoy.
+* **Pruebas**: Jest — `alcanceDeLaSemana`, `ofertaDeRepetir`, `useOfertaDeRepetirSemana`, `ofertaDeRepetirSemana`, `soloEstaSemana`, `fechasPropiasDeAlarmas`, `fechasPropiasEnElTelefono`,
+  `mesDelPrograma`, `objetivoDelMesEnPalabras`, `planDelMes`, `botonPlanificarMes`, `useObjetivosSemanalesDelMes` y `planificarMiMesEnPlan`. Maestro, **escritos y sin correr** (sin emulador en esta
+  entrega): `.maestro/planificacion/solo-esta-semana.yaml`, `repetir-la-semana.yaml` y `planificar-el-mes.yaml`.
+
+## Cambio por pedido del dueño — 2026-11-02 — Training → Planificar: «Siempre | Por semana» con flechas, lo guardado marcado y menos texto
+
+Pedido del dueño con la captura del editor de «Escritura libre nocturna»: «el de todas las semanas, si yo guardo el de semana debería de salir marcado,
+cuidado; y dice todas las semanas, ¿a qué? debería deslizar hacia la derecha y poder planificar ¿no? arregla esa parte; y recuerda: mucho texto o entrada a
+veces no les conviene». Eligió: `[ Siempre | Por semana ]`, `‹ Semana del 9 al 15 nov ›`, la fila de días con su punto, «Recordatorio» y
+«Guardar 21:30 · semana 9–15 nov». Solo el editor de hábitos de **Training → Planificar** (`PlanificarDimensionModal`); Plan, Hoy, Yo y el control de
+recordatorios de las acciones de los objetivos no cambian. Issues: **#95** (lo guardado no salía marcado) y **#94** (el nombre en «Qué se repite»).
+Lo que cambia y nada más:
+
+* **«Siempre | Por semana».** El control de alcance deja «Todas las semanas | Solo esta semana». **«Siempre» es exactamente lo de antes**: el plan de todas las
+  semanas, con sus mismos pedidos, alarmas y pruebas (specs 008 a 011). **«Por semana»** guarda por fecha, como el «Solo esta semana» de la spec 028, pero de
+  **cualquier semana por venir**, no solo de la en curso.
+* **Pasar de semana** (`SelectorDeSemana`, `utils/semanasDelEditor`). Arriba de la fila de días: `‹  Semana del 9 al 15 nov  ›` (las flechas de 48 × 48 de
+  «Tiempo libre»; apagadas en la primera y la última semana). También se pasa **deslizando la fila de días**: el dedo a la izquierda trae la semana siguiente; a la
+  derecha, la anterior. Es un `PanResponder` (como el arrastre de `HojaDesdeAbajo`; Gesture Handler no está instalado) que solo toma el gesto cuando el dedo va
+  claramente de lado y no lo suelta, así que no pelea con el desplazamiento vertical de la hoja ni con los toques en las pastillas. El cambio de semana es
+  **instantáneo** (sin animación) y vibra con `tacto.seleccion()`. Va **desde la semana en curso** (el domingo, desde la que empieza) **hasta la última semana del
+  programa de la persona**: su lunes ≤ `hoy + duración − día del programa` (90 días, 3 meses = 90 o 1 año = 365; `/home` manda `diaPrograma` y `duracionDias`, que
+  `TrainingScreen` pasa por `PracticasDeTraining`; sin ellos solo se ve la primera semana). Hoy y lo pasado siguen con candado (solo existen en la primera
+  semana). **Cada semana se lee una sola vez** (`GET /habit-preferences/{id}/week?weekStart=`, al llegar a ella; memoria de la apertura del hábito): ir y volver
+  no repite el pedido. Mientras se lee, la fila se ve atenuada y no se pasa a otra; si falla, se vuelve a la anterior y se dice. Tras guardar se vuelve a leer **esa**
+  semana; cambiar el plan de siempre vacía lo leído.
+* **Guardar vale SOLO para la semana que se ve** (`PUT …/week`, la misma regla de «solo lo tocado», todo o nada). El botón dice `Guardar 21:30 · semana 9–15 nov`
+  (con algunos días: `Guardar aviso · sáb, dom · semana 9–15 nov`); la confirmación, `Queda a las 21:30 todos los días de la semana 9–15 nov.`. **Lo tocado en una
+  semana no se lleva a otra**: pasar de semana suelta el aviso, «Cómo suena» y la fila de «Otra», y la rueda vuelve a donde arrancó (supuesto, ver abajo).
+* **Lo guardado sale marcado (#95).** Al abrir un hábito, si alguna semana por venir ya tiene cambios propios de ese hábito (las fechas con fila propia que
+  `GET /habit-preferences` manda en `dateOverrides`: las de hoy o pasadas no cuentan), el editor abre en **«Por semana», en esa semana** (la más cercana con
+  cambios; si es la en curso, esa), con sus días marcados con el punto (`marcaDelDia`; su etiqueta dice «cambiado solo esta semana») y con sus valores (hora,
+  aviso, «Cómo suena»). Sin cambios propios abre en «Siempre». Si esa lectura falla, queda en «Siempre» sin diálogo. Al pasar a otra semana con cambios, también se
+  ven marcados.
+* **Menos texto.** Se quitaron: «Toca un día para darle su propia hora, aviso y alarma. Hoy y lo pasado van con candado.» (y sus variantes sin aviso/alarma), «Solo
+  sáb, dom, todas las semanas. Hoy no cambia.», «Solo esta semana: los días que faltan. Tu plan de siempre no cambia. Hoy y lo pasado van con candado.», «Cambiado
+  solo esta semana: sáb, dom», el rótulo «Toda esta semana» con su enlace, «Cargando esta semana…» y «Este hábito no corre en los días que faltan de esta semana. Hoy
+  y lo pasado van con candado.» (ahora, en una línea: «Sin días por cambiar esta semana.»). Con **«Sin aviso»** (o el hábito apagado ese día) **«Cómo suena» no se
+  dibuja** (antes, atenuada con «Este hábito no tiene aviso / Elige un aviso en Recordatorio…»). Quedan los rótulos (`MicroLabel`), la fila de días, el punto y los
+  botones; el aire entre bloques es el de siempre (el rótulo «Recordatorio» ya llevaba su propio margen). «No hacerlo los sáb, dom · semana 9–15 nov» y «Volver
+  a hacerlo…» dicen la semana; «Volver al plan de siempre los sáb» se queda.
+* **Backend** (`PlanDeLaSemanaService`, spec 028 al día): `GET` y `PUT …/week` aceptan cualquier semana por venir cuyo lunes caiga **dentro del programa de la
+  persona** (la misma cuenta que usa repetir la semana); **400 después de su último día**, sin escribir nada. La semana en curso y las pasadas no se acotan. Sin tablas
+  nuevas. Hace falta publicar el backend antes: con el anterior, «Por semana» acepta cualquier fecha (sin tope) y la app igual no ofrece más allá del programa.
+* **Alarmas del teléfono con semanas lejanas** (`habits/notificaciones/**`, sin cambios de código): el servidor manda en `dateOverrides` las fechas con fila propia
+  de los **próximos 20 días**, y la puesta al día (al abrir la app y al volver a primer plano) arma con ellas las alarmas de fecha (tope de 48 por hábito, las más
+  próximas primero). Un cambio en una semana lejana ya se respeta cuando entra en esa ventana; las alarmas semanales de antes de esa fecha pasan a ser de fecha con los
+  valores de siempre. **Límites aceptados**: (1) un cambio de una semana que está a más de 20 días solo llega a las alarmas del teléfono cuando entra en la ventana y la
+  persona abre la app; antes suena la alarma de siempre (el push de respaldo del servidor sí lo respeta); (2) con dos o tres semanas completas planificadas, el tope de 48
+  gasta las alarmas en los días planificados y la «cola» de siempre vuelve cuando se abre la app.
+* **#94**: «Repetir tu semana» → «Ver qué se repite» escribe el nombre del hábito en tipo oración (`tituloEnTipoOracion`), como el resto de la app.
+* **Supuestos a confirmar con el dueño**: (1) pasar de semana **descarta** lo que se tocó sin guardar (en vez de llevarlo a la otra semana), para que un guardado
+  nunca caiga en una semana distinta de la que se mira; (2) el editor abre en la **semana más cercana con cambios** (no solo la en curso), para que lo guardado en
+  una semana que viene tampoco se pierda de vista; (3) la lectura de lo ya guardado cubre los próximos 20 días (la ventana de `dateOverrides`): un cambio más lejano
+  se ve al navegar hasta esa semana; (4) las flechas son las de «Tiempo libre» (`arrowLeft`/`arrow`), no el `chevron`.
+* **No cambian**: «Siempre» (hora, días, aviso, «Cómo suena», alarmas, pedidos), «Tus prácticas» y la tarjeta «Repetir tu semana», Plan (incluido «Planificar mi mes»),
+  los demás tabs, la barra ni las animaciones (sin animación nueva). Sin dependencias ni código nativo.
+* **Pruebas**: Jest `semanasDelEditor` (las semanas hasta el final del programa, abrir en la semana con cambios, el deslizamiento), `planificarPorSemana` (pasar de
+  semana, una lectura por semana, guardar solo esa semana, lo guardado marcado al reabrir, menos texto), `alcanceDeLaSemana`, `soloEstaSemana` y `planificarComoSuena`
+  (ajustadas), `fechasPropiasDeAlarmas` (semanas lejanas y el tope) y `ofertaDeRepetirSemana` (#94); backend `PlanDeLaSemanaServiceTest` y `PlanificacionDeLaSemanaIT`.
+  Maestro, escritos y sin correr: `.maestro/planificacion/` (`solo-esta-semana` y `repetir-la-semana` adaptados y sin esperar los avisos de 3 s;
+  `por-semana-con-flechas-y-deslizando` y `lo-guardado-sale-marcado` nuevos).
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire) **y el backend con esta ampliación antes**.
+
+## Cambio por pedido del dueño — 2026-10-31 — hábitos y categorías por formación (spec 023)
+
+Pedido del dueño del 31/10 (decisiones en `~/.config/renaser-e2e/formaciones/decisiones-del-dueno-2026-10-31.md`; spec, plan y contrato en el backend,
+`specs/023-habitos-por-formacion/`, D-300): «el sistema debe configurarse las categorías de hábito por formación» y «debe mostrar los hábitos por formación».
+Cada formación (Escuela, Diplomado, Certificación) tiene **sus categorías** y **sus hábitos**; una persona ve solo los de la formación en que hace su
+programa. Lo decide y filtra **siempre el servidor**; la app solo lo dibuja. Lo que cambia y nada más:
+* **Autorizado en Training, Hoy y Administración, y nada más que esto:** (1) las **dimensiones de Training** (nombre, ícono y orden) salen de las
+  categorías de la formación; (2) en **Hoy**, «Hábitos de hoy» no se dibuja si la formación todavía no tiene hábitos para la persona; (3) la línea de
+  **«Mi programa» en otra formación**; (4) **Administración → Más opciones → «Hábitos del programa»** gana el selector de formación, «Categorías» y «Copiar a
+  otra formación». Plan, Yo, Comunidad, la barra y los diseños de Training y Hoy **no cambian**; el aprendiz de la Escuela ve **exactamente lo mismo**.
+* **Las categorías llegan del servidor** (`habits/categorias/`: `GET /api/v1/habit-categories`, esquema zod tolerante —una categoría rota se pierde ella,
+  no la lista—, `useCategoriasDeHabito` con UNA lectura por cuenta y formación compartida por todas las pantallas, y `estado/estadoDeCategorias`). Sin
+  respuesta (backend anterior, 404, sin red) valen **las cuatro de la Escuela de siempre**, con su orden, nombre e ícono. `DimensionDeTraining` pasó de una
+  unión cerrada a `string`: las cuatro de la Escuela conservan su clave (`CUERPO`, `MENTE`, `EMOCIONES`, `ESPÍRITU`, que usan Planificar, los avisos con
+  `?dimension=` y las pruebas); cualquier otra categoría usa su `code` (`DIPLOMADO_ESTUDIO`). «Vida y negocio» sigue siendo de las acciones de los
+  objetivos, no una categoría de hábito. El campo `category` de los hábitos es ahora un texto abierto y llega además `categoryKey`.
+* **Training** dibuja las categorías **activas** de la formación en el orden del servidor, y una categoría sin hábitos que le toquen a la persona **no se
+  dibuja** (`dimensionesQueSeDibujan`). Un **hábito propio** cuya categoría no está entre las de la formación vigente se agrupa en **«Mis hábitos»**
+  (dimensión virtual `MIS_HABITOS`, ícono `listChecks`). Si la formación no tiene ningún hábito para la persona, Training dice «Tu formación todavía no
+  tiene hábitos.» (nunca un error ni una pantalla vacía) y Hoy no dibuja «Hábitos de hoy» (`sinHabitosEnLaFormacion`).
+* **«Mi programa» solo en la formación del programa** (`programaEnOtraFormacion`, `AvisoDeProgramaEnOtraFormacion`): si el servidor dice que los hábitos
+  de la persona son de una formación distinta de la que tiene activa y puede elegir, Training y Hoy muestran **una línea** —«Tu programa propio está en
+  Escuela Renaser. Cámbiate a ella para verlo.»— con «Cambiar de formación» (el selector de la spec 022) en lugar de la lista. Para quien tiene una sola
+  formación, o ve las tres, no hay nada nuevo (ni selector ni la palabra «formación»). El servidor sigue entregando esos hábitos propios del programa; es
+  la app la que no los muestra.
+* **Las alarmas de otra formación no suenan** (FR-018): la puesta al día de alarmas (`ajustarRecordatoriosAlServidor`) **retira** las alarmas locales,
+  el puente de «cumplido hoy» (issue #33) y las repeticiones de un hábito que el servidor ya no lista —los de la formación anterior tras un traslado—,
+  solo cuando la lista llegó bien (una lectura fallida no borra nada; una lista vacía legítima sí retira todo). No cambia sonido, canales ni «cómo suena».
+* **Administración → «Hábitos del programa»** (solo Administración y Alquimista): el selector de formación (`FiltroDeFormacion`: Todas · Escuela ·
+  Diplomado · Certificación; sin `formation` el servidor responde la Escuela, que es lo que el cliente anterior esperaba, y la app pide `ALL` para «Todas»)
+  decide la lista, los filtros por rol y los activos/inactivos. En **«Todas»** cada fila nombra su formación y **no se crea** (crear y editar son siempre
+  dentro de una formación concreta). El formulario ofrece **solo las categorías activas de la formación del hábito**. **«Copiar a otra formación»**: elegir la
+  formación destino y una categoría de ELLA; la copia es independiente (mismo contenido, horarios, guía y audiencia por rol) y los motivos del servidor
+  (título o función repetidos, categoría desactivada) se muestran tal cual. **«Categorías»** (`CategoriasDeHabitoAdminScreen`, vista de la pila de
+  `AdminScreen`): la lista de la formación con ícono, nombre, activa/inactiva y cuántos hábitos tiene; «Nueva categoría», renombrar, el ícono (entre los 16
+  que la app ya dibuja), subir/bajar (botones de 48, sin arrastrar), activar/desactivar y eliminar (con confirmación). Una categoría con hábitos activos no se
+  desactiva ni se elimina y una con historial solo se desactiva: lo dice el servidor con su motivo. El atrás sube un nivel por vez (categorías → hábitos del
+  programa → más opciones).
+* **Sin animaciones nuevas** (pantallas de consulta y configuración): `Presionable`, `HojaDesdeAbajo`, `tacto.seleccion()` al elegir y `tacto.logro()` al
+  quedar guardado. Textos en tipo oración y tuteo; toques de 48 o más; un solo scroll por pantalla; la fuente solo por los roles de `theme/fuentes.ts`.
+  Sin íconos, dependencias ni código nativo nuevos.
+* **Compatibilidad:** contra un backend anterior no hay categorías por formación (404): valen las cuatro de siempre y todo queda como hoy; con el APK
+  anterior contra el backend nuevo, la Escuela sigue igual (`category` conserva `BODY`, `MIND`, `CONSCIENCE`, `SPIRIT`).
+* **Pruebas:** Jest en `habits/categorias/__tests__` (esquema tolerante, dimensiones, estado, hook), `training/hooks/__tests__/categoriasPorFormacion`
+  (un aprendiz del Diplomado ve sus categorías y nada de la Escuela, «Mis hábitos», formación sin hábitos), `dimensionesQueSeDibujan`,
+  `formaciones/__tests__/programaEnOtraFormacion`, `home/__tests__/sinHabitosEnLaFormacion`, `alarmas/__tests__/retirarLasAlarmasDeHabitosAjenos`
+  y las de Administración (`habitosPorFormacionEnAdministracion`, `categoriasDeHabito`, `habitosProgramaPorFormacion`, `habitosProgramaApi`). Maestro,
+  escritos y sin correr: `.maestro/habitos-por-formacion/` (`README.md` explica las cuentas).
+* **Hace falta un APK nuevo** (solo JavaScript: no hay código nativo nuevo, pero la app no se actualiza por aire) **y el backend de la spec 023 antes**
+  (V134–V136, y la 022).
+
+## Cambio por pedido del dueño — 2026-10-31 — Administración → Solicitudes: aceptar eligiendo formación, duración, rol y ficha (spec 025)
+
+Pedido del dueño (textual): «Al aceptar a la persona, primero se elige a qué formación entra; si es el Diplomado, si es de 3 meses o de 1 año. Luego, qué rol ocupará dentro de la app.
+Debe activarse con diagnóstico o sin diagnóstico.» Decisiones del 31/10 (025-1 a 025-8): «con diagnóstico» vale para cualquier rol; se puede cambiar la duración de quien ya empezó; se acepta una
+por una y varias a la vez; **viene marcado Escuela, Aprendiz y sin diagnóstico**. Backend D-302 (`specs/025-solicitud-con-formacion/`). Lo que cambia y nada más:
+* **«Aceptar» abre una hoja** (`AceptarSolicitudSheet`, `HojaDesdeAbajo`) en lugar de la fila de chips de rol que cada solicitud llevaba. Tres bloques numerados que se abren de a uno
+  (`BloqueDeAceptacion`): **1 Formación** (con la **duración** debajo si el Diplomado ofrece más de una: «3 meses» / «1 año», con las palabras que manda el servidor), **2 Rol** (los mismos
+  chips y orden de siempre, con los roles personalizados) y **3 Ficha de entrada** («Sin diagnóstico» / «Con diagnóstico»). Arriba, una **frase de resumen** («María entrará al Diplomado Renaser de
+  1 año como Aprendiz, con diagnóstico.») y «Aceptar» fijo abajo, apagado con una línea que dice qué falta. Aceptar a un aprendiz de la Escuela son **dos toques** (Aceptar y Aceptar). La hoja no
+  acepta sola: devuelve lo elegido y la pantalla hace el pedido.
+* **El rol decide cuántas formaciones se piden** (`modoDeFormacionDelRol`, en `utils/aceptarSolicitud`): el aprendiz, una; mentor, guía de aprendiz y líder, una o varias; Administración y
+  Alquimista, ninguna («ven las tres»). Cambiar el rol ajusta la formación conservando lo que siga valiendo. Un rol personalizado se pide según su rol base.
+* **Aceptar varias** (025-3 C): «Seleccionar varias» marca solicitudes (`Checkbox`) y «Aceptar N solicitudes» abre la misma hoja con **una misma elección**; se hacen **una por una**
+  (`aceptarUnaPorUna`): una que falla (la decidió otra persona) no deshace las demás; queda en la hoja con su motivo para reintentar. «La misma que la última» (solo en esta sesión) repite la
+  elección anterior sin aceptar por sí sola.
+* **La lista tiene tres vistas** (`ControlSegmentado`): Por decidir, Aceptadas y Rechazadas. Las aceptadas dicen «Aceptada por Ana el 31 oct» y qué se eligió («Diplomado 1 año · Aprendiz ·
+  con diagnóstico»; las de antes de las formaciones, «Escuela · sin diagnóstico»), con el filtro `FiltroDeFormacion` de la 022. Las rechazadas, el motivo.
+* **Contra un backend anterior** (sin `GET /account-requests/acceptance-options`, 404) la hoja pide solo el rol y **no manda formaciones**: el servidor viejo las ignoraría en silencio y la
+  persona entraría a la Escuela sin que quien la acepta lo sepa. «Con diagnóstico» no se ofrece mientras el servidor diga `diagnosisAvailable: false` (no hay diagnóstico publicado, spec 026).
+* **La ficha de la persona dice cómo entró** (US4, escenario 1; `AceptacionDeLaPersona`, entre «Su formación» y «Día del programa» de `FichaAprendizScreen`): «Cómo entró», «Aceptada por Ana el 31 de
+  octubre» y debajo lo que se eligió («Diplomado 1 año · Aprendiz · con diagnóstico»). **Dice exactamente lo mismo que la lista de «Aceptadas»**: las dos usan `textoDeLaAceptada`
+  (`utils/aceptarSolicitud`) y el servidor manda la misma forma `acceptance` en `GET /account-requests` y en `GET /admin/trainees/{id}` (con `acceptedByName` y `acceptedAt`). Es la foto de ese día:
+  la formación y la duración de HOY están en las secciones de arriba y pueden haber cambiado. Una cuenta que no entró por una solicitud (la invitó Administración) o un backend anterior: la sección
+  no se dibuja.
+* **El rol personalizado queda en la foto** (V142): si se aceptó con «Mentor junior», la lista y la ficha dicen «Mentor junior (Mentor)» —el nombre que tenía ese día y, entre paréntesis, su rol base—
+  (`customRoleId`, `customRoleName`; tolerantes: un backend anterior no los manda y se dice solo el rol base). Renombrar o borrar el rol después no cambia lo que dice lo aceptado.
+* **Cambiar de formación en la hoja vuelve a pedir la duración** (o la aplica sola si la nueva ofrece una única): no se arrastra en silencio la que quedó de la formación anterior.
+* **Cambiar la duración de quien ya empezó** (025-2 A): en la ficha de la persona (`FormacionDeLaPersona`), «Cambiar la duración» (`CambiarDuracionSheet`) pide la nueva duración entre las que
+  ofrece su formación y un motivo de 3 a 280 letras; conserva su día y mueve el último; el último ajuste de la ficha lo dice («su programa pasó de 3 meses a 1 año»). Quien todavía no empezó
+  se corrige con «Pasar a otra formación» (022).
+* **Pruebas:** Jest `aceptarSolicitud` (reglas por rol, duración, frase, descripción, rol personalizado, `textoDeLaAceptada`), `aceptarVarias`, `aceptarSolicitudApi` (cuerpo, filtro, opciones, servidor anterior), `cambioDeDuracion` y `aceptacionEnLaFicha` (la lista y la ficha dicen lo mismo).
+  Maestro, escritos y sin correr: `.maestro/solicitud-con-formacion/`.
+* **No cambian:** Rechazar y borrar solicitudes, los demás tabs, «Equipo y roles», el resto de la ficha ni el onboarding de la persona (la ficha con o sin diagnóstico la pone la 026). Sin
+  dependencias nuevas ni código nativo.
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire) y el backend con la spec 025 antes.
+
+## Cambio por pedido del dueño — 2026-10-31 — Términos y condiciones editables desde la app, por formación y con versiones (spec 027)
+
+Pedido del dueño (textual): «El sistema debe poder gestionar sus propios términos y condiciones, para no estar borrando ni editando código.» Decisiones del 31/10 (todas la opción A):
+uno por formación (copia de la Escuela en borrador), Administración decide en cada publicación si se acepta de nuevo (por defecto no), el personal firma los de cada formación y Administración y
+Alquimista los de la Escuela, releer desde Yo, texto plano, editan Administración y Alquimista, sin push. Backend D-304 (`specs/027-terminos-editables/`). Lo que cambia y nada más:
+* **La pantalla de Términos del primer ingreso no cambia** (SC-006): el texto lo manda ahora el servidor —los vigentes de MI formación— y, si no los ofrece (backend anterior) o falla la lectura, se
+  usa el que la app lleva dentro (`TERMINOS_DE_LA_APP`: las 23 cláusulas de siempre). Las cláusulas se dibujan con `ContenidoDeLosTerminos` (extraído tal cual de la pantalla). Al aceptar, el hito
+  de Términos lleva la **versión que leyó** (`termsVersionId`) y deja constancia de ella; si Administración publicó mientras leía, el servidor responde 409 y la pantalla relee el texto y avisa «Los
+  términos cambiaron mientras leías: léelos de nuevo». Antes el hito se ignoraba si fallaba; ahora, como la respuesta y la firma, **no se avanza sin constancia** (FR-013).
+* **«Actualizamos nuestros términos»** (`TerminosActualizadosScreen`, montada en `RootNavigator` después de la elección de formación): si Administración publicó una versión **pidiendo aceptar de nuevo**,
+  o la persona entra a una formación cuyos términos no aceptó (personal asignado, aprendiz trasladado), al abrir la app ve la nota de lo que cambió, el texto, la casilla y la firma, y **no usa el resto
+  de la app hasta aceptar**; puede cerrar sesión (la flecha de arriba; el atrás del sistema también). Se relee al volver al frente. Si no se pidió aceptar de nuevo, nadie es interrumpido. El primer
+  ingreso no se bloquea: lo lleva su paso de Términos del onboarding. Mientras llega la primera lectura la app no se dibuja (sin parpadeo); si la lectura falla, se deja pasar.
+* **Administración → Más opciones → «Términos y condiciones»** (y, en el centro «Formaciones», la sección «Ficha y términos»): las tres formaciones con su versión vigente o «Por revisar»
+  (`TerminosAdminScreen`); los de una formación con su historial —versión, fecha, autor, nota, cuántas personas la aceptaron, si pidió aceptar de nuevo—, «Editar», «Ver el texto vigente» y
+  «Descartar el borrador» (`TerminosDeUnaFormacionScreen`); y el **editor** (`EditorDeTerminosScreen`): título, introducción, cada cláusula (escribir, subir, bajar, insertar después, quitar; la
+  numeración sale sola de la posición), texto de la casilla, **Vista previa** (la pantalla que verá la persona), «Guardar borrador» y «Publicar» (`PublicarTerminosSheet`: nota opcional e interruptor
+  «Pedir que acepten de nuevo», apagado por defecto). No se publica con cláusulas vacías, sin cláusulas, sin cambios ni si otra persona publicó antes (se relee y se avisa). Avisa si una cláusula
+  cita a otra por su número. Los marcadores `{formacion}` y `{duracion}` se muestran con el nombre y la duración de cada persona. Una versión vieja se **restaura como borrador** (no se publica sola) y
+  se puede ver **quiénes la aceptaron y quiénes faltan** (`VersionDeTerminosSheet`).
+* **La ficha de la persona** (Administración) suma «Aceptó los términos de Escuela Renaser, versión 2, el 31 oct 2026» con «Ver su firma» (`ConstanciaDeTerminos`); sin aceptar, «Todavía no aceptó los
+  términos». **La hoja «Aceptar» de la spec 025** apaga la formación que todavía no tiene términos publicados («Todavía no tiene términos publicados.»): no recibe personas nuevas.
+* **Yo → Mi onboarding → «Términos y condiciones»** (P3, FR-023; `TerminosAceptadosVista`, vista `terminos` de Yo, solo lectura): bajo las dos etapas, una fila «Términos y condiciones · Versión 2 · aceptada
+  el 31 de octubre de 2026 · toca para releer» (`useTerminosAceptados`, que lee `GET /onboarding/terms/accepted` al entrar a Mi onboarding). La vista muestra el número de versión, el día, **la firma que
+  dibujó al aceptar** (`signatureUrl`, enlace de 15 minutos; sin ella, o si la imagen no carga, no se dibuja el recuadro) y el texto **tal como lo aceptó**, aunque Administración haya publicado otro
+  después. Sin botones: no se acepta ni se firma de nuevo desde ahí. No es una etapa: **no cuenta** en «N de 2 etapas completadas». La fila solo se dibuja si el servidor dice que aceptó unos (un 404, un
+  backend anterior o un fallo de red la esconden; la vista distingue «no pude leerlo» de «nunca aceptó»). El atrás sube un nivel: términos → Mi onboarding. **Es la única parte de Yo que toca esta spec**
+  (autorizada por el dueño: «releer desde Yo», decisión Q6-A del 31/10); el resto de Yo no cambia.
+* **No cambian:** el diseño y los textos de la pantalla de Términos para quien entra a la Escuela sin que nadie edite, el resto del onboarding, los demás tabs, ni el Pacto. Sin dependencias nuevas.
+* **Pruebas:** Jest `borradorDeTerminos`, `terminosDeLaPersona` (la versión en el hito, la lectura tolerante, la pantalla que bloquea, la API de Administración y la lista) y `releerLoAceptado` (la lectura de lo aceptado con su firma, «nunca aceptó» frente a «no se pudo leer», la vista de solo lectura y su lugar en Yo). Maestro, escritos y sin correr:
+  `.maestro/terminos-editables/`.
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire) y el backend con la spec 027 antes; contra uno anterior la app usa el texto que lleva y la sección de Administración no
+  encuentra datos.
+
+## Cambio por pedido del dueño — 2026-10-31 — Plan → «Tu 80/20»: tus cifras y el análisis de SER por semana y por mes (spec 031)
+
+Textual del pedido: un análisis 80/20 con IA de lo que la persona hizo. Spec, decisiones y contrato en
+`Renaser-90-dias-backend/specs/031-analisis-80-20-con-ia/` (D-306, V153 y V154). Decisiones del dueño del mismo día: **031-1 A y B** (el 20 % son las
+acciones verdes **y también** el 20 % de las cumplidas con más impacto), **031-2 A** (lo ve quien ve su Código Renaser, respetando el interruptor de la
+spec 034), **031-3 A** (patrones y cifras; nunca cita frases ni nombra emociones o cuadros), **031-4 B** («Cierra tu día» entra al análisis), **031-5 A**
+(NO se une con el Espejo de la Sombra), **031-6 A** (el mes es el del programa: semanas 1–4, 5–8, 9–13), **031-7 A** (solo se genera solo, al cerrar el
+periodo; no se pide antes), **031-8 B** (sigue después del día 90 mientras use la app: la app no corta nada por un 90 fijo) y **031-9 A** (la persona no
+borra análisis sueltos; se borran con la cuenta). Lo que cambia y nada más:
+* **La hoja «Tu 80/20» de Plan** (`HojaOchentaVeinte`, la que abre el botón «Tu 80/20» de `PlanDelEje`): suma un `ControlSegmentado` **Hoy · Semana · Mes**.
+  «Hoy» es la hoja de siempre, sin tocar (la regla de Pareto, los candados y las acciones de hoy del eje). «Semana» y «Mes» (`PeriodoDelOchentaVeinte`)
+  muestran, de **todos los ejes**: arriba el periodo con flechas ‹ › («Semana 10 · Del 26 de octubre al 1 de noviembre»), «9 de 12 acciones cumplidas · 75 %»
+  con su barra, las dos reglas del 20 % («Acciones verdes: 3 de 5 cumplidas · el 55 % del impacto…» y «El 20 % que más movió: 2 acciones…»), los ejes, la
+  semana a semana (en el mes) y la línea del Código Renaser (solo cuenta: «12 respuestas · energía promedio 6.4»). **Cuando el periodo cierra y el análisis
+  está listo**: las cuatro partes en este orden y con estos títulos, «Lo que más movió», «Lo que se te fue», «Cómo estuviste» y «Para la próxima semana» /
+  «Para el próximo mes» (de 1 a 3 pasos), y «Análisis de SER · 2 de noviembre. No cambia tu plan: lo que sugiere lo decides tú.» Sin texto de la IA, las
+  listas de lo que movió y de lo que se fue se dicen en cifras (sin frases). Un periodo sin acciones **no dibuja un tablero de ceros**: «Todavía no
+  planificaste acciones en este periodo…» con **«Agendar mis acciones»**, que cierra la hoja y abre el planificador.
+* **Por qué todavía no hay análisis, sin culpa** (`avisoDelEstado`): en curso («Tu análisis llega cuando cierre la semana»), pendiente («estará listo en cuanto
+  podamos generarlo»), sin datos («Con al menos 5 acciones planificadas analizamos la semana», «Reparte tus acciones en más días…»; el mínimo lo manda el
+  servidor, `minimoDeAcciones`) y sin análisis («No pudimos generar el análisis… Tus cifras de arriba siguen siendo las tuyas»). Nunca se inventa uno: un
+  «LISTO» sin texto legible se lee como pendiente, y el texto solo se conserva con el estado LISTO.
+* **Solo si el servidor ofrece las vistas**: la hoja lee la semana en curso al abrirse (la misma lectura que la vista «Semana» reusa) y dibuja el control
+  únicamente con un 200. **Contra un backend anterior** (404) la hoja es exactamente la de siempre. Cerrada no pide nada. Cada periodo se lee una sola vez
+  mientras la hoja está abierta (`useOchentaVeinte`, un almacén por función `cargar` estable, como `useCierresDeLaSemana`) y **ninguna lectura llama a la IA**
+  (el servidor lo hace en su barrido horario). Un 403 o un 404 no dibujan nada; los demás fallos se dicen con «Reintentar» de 48.
+* **Soporte TI**: el texto del análisis tiene su propio interruptor, `ia.analisis` (hijo de `ia`, nuevo en el catálogo). Con él apagado las cifras se ven
+  igual y el texto se cambia por el aviso de mantenimiento; con él no disponible para el rol no se dibuja nada del análisis (`CLAVES.iaAnalisis`).
+* **El aviso «Tu análisis de la semana/del mes está listo»** (tipo `ANALISIS_80_20`, texto fijo «Entra a Plan y míralo.»: **el aviso nunca lleva el
+  análisis**): su ruta es `/plan/80-20?periodo=SEMANA|MES&inicio=AAAA-MM-DD`. Tocarlo abre Plan con la hoja «Tu 80/20» directo en esa vista, sin
+  parpadear en «Hoy», y espera —como los avisos de hábitos y de la Caja— a que se cierre una capa obligatoria (`abrirOchentaVeinte`, que `PlanScreen`
+  consume una sola vez). **Yo → Notificaciones** suma el interruptor «Análisis de tu 80/20» (`ANALISIS_80_20`), al final, solo si el servidor lo lista.
+* **Las fichas de quien acompaña** (`OchentaVeinteDeLaFicha`, debajo de «Cierres del día» en `AlumnoScreen` —mentor o guía—, `PersonaDelLiderScreen` —líder— y
+  `FichaAprendizScreen` —Administración y Alquimista, solo con grupo—): «Tu 80/20» en solo lectura, con el control **Semana · Mes** y el mismo periodo. Rutas:
+  `GET /mentor/groups/{g}/learners/{u}/analisis-80-20` y `GET /leadership/groups/{g}/people/{p}/analisis-80-20` (o `/leadership/people/{p}/analisis-80-20`,
+  sin grupo). **Respeta el interruptor de la spec 034** (`radar.fichas`): apagado o no disponible para el rol, la sección ni se dibuja ni se pide, igual
+  que «Código Renaser» (el análisis resume lo que la persona respondió ahí). Un 403 o un 404 la esconden sin error; mientras llega la primera lectura no
+  hay marco. Administración y Alquimista la ven siempre. Cada lectura de líder, Administración o Alquimista deja constancia en el servidor, como las demás.
+* **No cambian**: la regla de Pareto, los candados, los puntos, el registro de acciones, las otras secciones de las fichas, Hoy, Training, Yo (salvo el
+  interruptor de avisos), Comunidad ni la barra. Sin dependencias nuevas ni código nativo. La app solo lee: nada del análisis se edita ni se borra desde
+  aquí, y nada del texto de la IA ni de las cifras personales se escribe en el registro de la app (lo frena una prueba).
+* **Pruebas:** Jest `ochentaVeinteSchemas` (tolerante por partes, nunca inventa un análisis), `ochentaVeinteApi` (las tres puertas y sus rutas),
+  `textosDelOchentaVeinte`, `almacenDelOchentaVeinte` (un pedido por periodo, 403/404 esconden, «Reintentar»), `ochentaVeinteDeLaFicha` (el periodo, los
+  estados, `ia.analisis`, `radar.fichas`), `hojaOchentaVeinte` (las vistas, el aviso, el servidor anterior), `fichasConOchentaVeinte` (las tres fichas),
+  `avisoDelOchentaVeinte` (la ruta y la espera a las capas) y `avisoDelAnalisis` (el interruptor de avisos); se ajustó `planDelEje`. Maestro, escritos
+  y sin correr: `.maestro/analisis-80-20/`.
+* **La Política de Privacidad** (`public/privacidad/index.html`) dice ahora que las respuestas del Código Renaser y de «Cierra tu día» se usan también para
+  este análisis. Sale con el deploy de Vercel.
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire) **y el backend con la spec 031 antes** (V153 y V154). Contra un backend
+  anterior no aparece nada nuevo: la hoja «Tu 80/20» y las fichas quedan como estaban.
+
+## Cambio por pedido del dueño — 2026-10-31 — ficha con diagnóstico: reemplaza al Mapa de Renacimiento (spec 026)
+
+Pedido y decisiones del dueño del 31/10 (spec 026 del backend, `Renaser-90-dias-backend/specs/026-ficha-con-diagnostico/`, D-303): una **ficha nueva
+«con diagnóstico»** —su formulario de Google, adaptado— va **en lugar de** la ficha estándar para quien Administración decida (al aceptar la solicitud,
+spec 025, o después, a quien ya estaba dentro); **el Mapa de Renacimiento ya no va** («será reemplazado con la nueva ficha»). De las respuestas nacen los
+objetivos de 90 días de Plan, que la persona revisa y confirma una vez. La ficha estándar queda como hoy. **Todo es de la app y necesita el backend de
+la 026 antes**: contra uno anterior nadie tiene el diagnóstico y la app queda como estaba, salvo que el Mapa ya no se ofrece. Son tres partes:
+
+### La persona: el ingreso, el recorrido y la lectura (spec 026)
+
+Pedido del dueño: una ficha nueva «con diagnóstico» —su formulario de Google, adaptado— que va **EN LUGAR de** la ficha estándar para
+quien Administración decida (al aceptar su solicitud, spec 025, o después, a quien ya estaba dentro); de ella nacen los objetivos de 90
+días de Plan. Esta entrada es solo la mitad de la **persona** (spec y contrato en
+`Renaser-90-dias-backend/specs/026-ficha-con-diagnostico/`). Todo vive en `src/features/diagnostico/`. Lo que cambia y nada más:
+
+* **El ingreso** (`OnboardingFlow`): lee `ficha` de `GET /onboarding/state` (`ESTANDAR` | `CON_DIAGNOSTICO`; ausente o desconocida =
+  `ESTANDAR`, así que un backend anterior no cambia nada). Con `CON_DIAGNOSTICO` y el diagnóstico sin terminar, el paso inicial es
+  `diagnostico` (`DiagnosticoDeLaPersonaScreen`) en lugar de `FichaInicialScreen`; al terminar sigue Términos y «Elige tu Día 1», igual
+  que hoy. Si ya lo terminó y no aceptó Términos (cerró la app ahí), entra a Términos; con Términos aceptados, a «Elige tu Día 1»; si no se
+  puede saber (sin red), abre el diagnóstico, que sabe reintentar. «Salir» de la portada cierra la sesión, como la ficha estándar. **El
+  «volver» de Términos** de esta persona muestra lo que respondió en solo lectura (`MiDiagnosticoScreen`), porque no hay una ficha a la que
+  volver a editar. Al entrar a la app se llama `completeOnboarding()` **sin ficha** (la ficha estándar no existe para ella: el diagnóstico ya
+  está en el servidor). **La ficha estándar no cambia en nada.** Límite aceptado: si `GET /onboarding/state` falla por red justo al abrir,
+  se queda con la ficha estándar (el comportamiento de siempre); `AuthContext` ya leyó ese mismo endpoint un instante antes.
+  > **Corregido 2026-11-02 (spec 036, D-309).** El último paso ya no es «Elige tu Día 1» sino «Tu programa empieza mañana» (un solo botón, «Entendido»). El recorrido (Diagnóstico → Términos → ese paso → Hoy) y los saltos de reanudación no cambian.
+* **El recorrido** (`components/RecorridoDelDiagnostico`, la misma pantalla para la persona y para la vista previa de Administración):
+  **portada** (título, mensaje con sus saltos de línea y «Empezar»; la barra de avance no la cuenta) → **pasos cortos** → **cierre**.
+  Es la ficha estándar con otro contenido: el mismo esqueleto (`MarcoDePaso`: barra arriba, un solo scroll, botón fijo abajo que sube con
+  el teclado), la misma `BarraDeAvance` (un tramo por sección) y las mismas opciones grandes (`OpcionElegible`).
+  * **Pasos**: cada sección se parte en pasos de 1 a 3 preguntas según lo que pesa cada una (`utils/pasosDelRecorrido`): un párrafo, una
+    cuadrícula, el consentimiento y una lista de más de 5 opciones van solos; de 4 a 5 opciones pesan doble. **La composición de un paso nunca
+    depende de sus propias respuestas**: una pregunta que se muestra «solo si» otra del mismo paso abre un paso nuevo.
+  * **Condicionales** (`seMuestraSi`, `utils/visibilidad`): se muestra solo si la respuesta de la pregunta indicada ES ese `valor` (en casillas,
+    si lo INCLUYE); recursivo; una condición que nombra una pregunta que no está (otra formación) o un ciclo la deja oculta. Las ocultas no se
+    piden ni cuentan; **sus respuestas guardadas se conservan** y reaparecen si la condición vuelve a cumplirse. Los pasos y secciones sin
+    preguntas visibles se saltan.
+  * **Tipos**: TEXTO (`FormField`), AREA_TEXTO (con contador «123 / 500» si hay `largoMaximo`, que además corta en ese tope), NUMERO (teclado
+    decimal, acepta coma, solo dígitos), SELECCION_UNICA (`OpcionElegible`), SELECCION_MULTIPLE (casillas cuadradas; con `maximoOpciones` la
+    tercera no se marca y un texto dice «Elige como máximo 2.»), ESCALA y CUADRICULA (números de 48, repartidos en filas parejas si son más de
+    cinco; la cuadrícula muestra cada fila con su escala, los extremos una vez arriba y «N de M respondidas»; no avanza hasta responder todas
+    las filas), FECHA (`CampoDeFecha`: las ruedas de día, mes y año de la ficha estándar sin su tope de «mayor de 18»; guarda `DD/MM/AAAA`) y
+    CASILLA = consentimiento (la declaración, que viene en `ayuda`, completa y sin scroll propio sobre la casilla; **siempre se marca**, sea cual
+    sea `requerida`). Un tipo que la app no conoce no llega (el esquema lo descarta).
+  * **Precarga**: si `precarga` viene y no hay respuesta guardada, el campo arranca con ese valor para confirmarlo (se guarda al avanzar).
+  * **Lo que falta**: al tocar «Siguiente» con una obligatoria sin responder se marca **esa** pregunta (borde rojo y un mensaje de 15 px en
+    tuteo bajo ella: «Escribe tu respuesta para continuar.», «Elige una opción para continuar.», «Responde todas las filas para continuar.»…),
+    vibra con `tacto.error()` y la vista baja hasta ella (`MarcoDePaso` suma la prop opcional `desplazarA`). Nada de diálogos.
+  * **Guardar de verdad**: cada «Siguiente» llama a `onGuardarPaso(respuestasDeEsePaso, pasoAlQueLlega)` y **solo avanza si resuelve**; si falla,
+    el paso dice «No se pudo guardar. Revisa tu conexión.» con «Reintentar» de 48, sin perder lo escrito. En el último paso se revisa TODO
+    antes de mandar nada (un borrador restaurado pudo dejar un hueco) y se guarda ese mismo paso. «Terminar» llama a `onTerminar()`; un 400
+    `DIAGNOSTICO_INCOMPLETO` (`faltan`) lleva al paso de la primera pregunta que falta y la marca; un fallo de red dice «No se pudo terminar…»
+    con «Reintentar». Un doble toque manda un solo pedido.
+  * **Atrás** (flecha y gesto del sistema, `useSystemBackHandler`): sube un paso; en el primero vuelve a la portada; en la portada llama a
+    `onSalir`; en el cierre es «Continuar». Volver no manda nada ni pierde lo escrito.
+  * **Retomar**: arranca en el paso de `datos.paso` (acotado), sin portada, con todo lo respondido. Se guarda el paso **al que se llega**.
+  * **El cierre**: «Tus objetivos ya están preparados» con los objetivos que devolvió `terminar` (el de la prioridad principal primero, con su
+    eje y el texto tal como lo escribió), la primera acción si hubo y qué sigue; sin objetivos, «Los escribirás en Plan.». «Continuar» llama
+    a `onContinuar`. En el ingreso «qué sigue» dice Términos y Día 1; para quien ya estaba dentro, revisar y confirmar los objetivos en Plan.
+  * **Vista previa** (`modo: 'vistaPrevia'`): no guarda nada ni en el servidor ni en el teléfono, no llama a `onTerminar`, y el último botón
+    («Cerrar vista previa») cierra con `onSalir`.
+  * **Movimiento** (`emil-design-eng`, `animate-expo`): ninguno propio. El paso nuevo entra con el desplazamiento de 25 px + fundido de 260 ms
+    de `MarcoDePaso` (con «reducir movimiento», solo fundido), la barra rellena en 280 ms, y los toques usan `Presionable`. Las respuestas
+    cambian al instante (se hacen decenas de veces).
+* **Borrador local** (`utils/borradorLocal`): lo que se escribe en el paso en curso se guarda en `AsyncStorage`, clave
+  `renaser.diagnostico.<usuario>.<versión>`, medio segundo después de la última tecla, al pasar la app a segundo plano y al salir; se borra al
+  guardar el paso y al terminar. Al abrir, lo escrito y no mandado le gana a lo del servidor (es más reciente). Cualquier fallo de
+  almacenamiento se lee como «no hay borrador».
+* **Pantallas conectadas** (`components/DiagnosticoConectado`, envuelto por `screens/DiagnosticoDeLaPersonaScreen` para el ingreso y
+  `screens/CompletarDiagnosticoScreen` para quien ya estaba dentro, con su cabecera «‹ Diagnóstico» en los avisos): abre `GET /diagnostico/mio`;
+  **404** → «Todavía no tienes un diagnóstico disponible.» con «Reintentar»; **409** → ya lo terminó (avisa y sigue); sin red → «No pudimos
+  cargar tu diagnóstico. Revisa tu conexión.». Guardar un paso = `PUT /diagnostico/mio/respuestas` y después `PUT /onboarding/state`
+  (`flow: diagnostico`, `step`); si el servidor rechaza solo el cursor, el paso se da por guardado (lo respondido está a salvo).
+* **Ofrecerlo a quien ya estaba dentro** (FR-026-9): `hooks/useEstadoDeMiDiagnostico` (`GET /diagnostico/mio/estado`; sin lectura —404, sin red—
+  no hay oferta; se relee al cambiar de cuenta, al volver la app al frente y al terminar el diagnóstico) y
+  `components/TarjetaDelDiagnosticoPendiente` (props `{ alAbrir }`; «Completa tu diagnóstico · De él nacen tus objetivos de 90 días ›», una fila
+  compacta toda tocable, del estilo de la tarjeta del Mapa que reemplaza; **devuelve `null` salvo con el diagnóstico pendiente o en curso**).
+  Hoy la monta y abre `CompletarDiagnosticoScreen` (lo hace el agente `plan-hoy`). Para la fila «Mi diagnóstico» de Yo,
+  `utils/estadoDelDiagnostico.diagnosticoTerminado(estado)` dice si ya lo terminó (con el mismo hook).
+* **Lectura de solo lectura**: `screens/MiDiagnosticoScreen` (props `{ onBack }`; Yo → «Mi diagnóstico», cabecera «‹ Mi diagnóstico») y
+  `components/SeccionDelDiagnosticoDeLaPersona` (props `{ cargar }`) en las fichas del **mentor o la guía** (`AlumnoScreen`), del **líder**
+  (`PersonaDelLiderScreen`, con grupo y desde «Todos los aprendices») y de **Administración** (`FichaAprendizScreen`), debajo de «Cierres del
+  día». Por sección, cada pregunta tal como se le hizo con su respuesta legible (texto, valores como lista, una fila por área de la cuadrícula,
+  «Aceptó» en el consentimiento; sin respuesta, «Sin respuesta»); una pregunta retirada lleva la marca «Pregunta retirada» y conserva lo que se
+  respondió. Mismo criterio que el tiempo libre y los cierres: **403, 404, la ficha estándar o ningún diagnóstico no dibujan nada**; mientras
+  llega la primera lectura tampoco (sin parpadeo); un fallo de red dice «No se pudo cargar el diagnóstico.» con «Reintentar» de 48; si
+  todavía no lo completó, «Todavía no lo ha completado.». Rutas: `GET /admin/diagnostico/personas/{id}`,
+  `/mentor/groups/{g}/learners/{u}/diagnostico` y `/leadership/groups/{g}/people/{p}/diagnostico` (o `/leadership/people/{p}/diagnostico` sin
+  grupo). **No hay nada que editar ni ningún pedido de escritura.**
+* **Retoques a lo compartido (aditivos, sin cambio para nadie más)**: `MarcoDePaso` suma la prop opcional `desplazarA` (bajar la vista hasta
+  una altura); `FormField` suma `mensajeDeErrorAparte` (borde rojo sin el texto de 12 px, para decirlo a 15); el esquema de
+  `GET /onboarding/state` suma `ficha`; `PreguntaLeida` suma `escalaMax` opcional (con él la cuadrícula se lee «Mi salud… · 4 de 5»; sin él,
+  «Mi salud… · 4»: el contrato de §4 todavía no trae la escala en la lectura).
+* **No cambian**: la ficha estándar (preguntas, pasos, validaciones, borrador), Términos, «Elige tu Día 1», los cinco tabs, Plan, Hoy y Yo por
+  dentro (solo montan lo que esta entrada exporta), ni ningún permiso (lo decide el servidor). Sin dependencias nuevas ni código nativo.
+* **Pruebas**: Jest `respuestasEnEdicion`, `visibilidadYPasos`, `validacion`, `borradorLocal`, `lecturaLegible`, `estadoDelDiagnostico`,
+  `diagnosticoLecturaApi`, `recorridoDelDiagnostico` (portada, pasos, condicionales, lo que falta, guardar/reintentar, terminar,
+  `DIAGNOSTICO_INCOMPLETO`, atrás, retomar, borrador, vista previa, bajar hasta la pregunta), `campoDeFecha`, `diagnosticoConectado`,
+  `onboardingFlowConDiagnostico`, `estadoOnboardingFicha`, `useEstadoDeMiDiagnostico`, `tarjetaDelDiagnosticoPendiente`,
+  `seccionDelDiagnosticoDeLaPersona`, `miDiagnosticoScreen` y `lecturaEnLasFichas`. Maestro, **escritos y sin correr**:
+  `.maestro/ficha-con-diagnostico/01–04` y `comun/diagnostico-responder-el-paso`.
+* **Sin comprobar en pantalla** (solo se ve con el emulador): el aspecto de los pasos (alturas de las opciones, la cuadrícula de 7 filas, el
+  texto largo de la declaración), el desplazamiento hasta la pregunta marcada con el teclado abierto, y el borrador tras matar la app.
+* **Hace falta un APK nuevo** (solo JavaScript: ni `package.json`, ni `app.json`, ni código nativo; la app no se actualiza por aire) **y el backend
+  con la spec 026 antes** (`/diagnostico/mio…`, `ficha` en `/onboarding/state` y las tres lecturas). Contra un backend anterior nadie tiene
+  `CON_DIAGNOSTICO`: la app queda como estaba.
+
+### Administración → Más opciones → «Fichas» (spec 026)
+
+Pedido del dueño (026-1 A, 026-4 A, 026-9 B): el **diagnóstico se administra desde la app**; la ficha estándar queda como hoy y solo se nombra. Solo
+ADMIN y ALQUIMISTA (Administración ya se muestra por `canAdminister`; el servidor vuelve a exigirlo en cada pedido). Todo vive en
+`src/features/diagnostico-admin/`. Lo que cambia y nada más:
+
+* **La fila «Fichas»** en «Más opciones» (`MasOpcionesScreen`; sigue la disponibilidad de las personas, `CLAVES.adminPersonas`) abre
+  `FichasAdminScreen`, un nivel más de la pila de `AdminScreen` (`{ nombre: 'fichas' }`): lista ↔ editor ↔ asignar a varias personas. El atrás
+  (flecha y sistema) sube un nivel por vez: editor → lista → Más opciones.
+* **El editor** (`DiagnosticoEditorScreen`): la portada (su título y su mensaje se editan, no se borra) y las secciones con sus preguntas, en el orden en
+  que las ve la persona. Por pregunta (`EditorDePreguntaSheet`, una hoja): texto, ayuda, tipo (Texto corto, Párrafo, Número, Opción única, Casillas,
+  Escala, Cuadrícula, Fecha, Consentimiento), obligatoria, opciones o filas (`EditorDeOpciones`), máximo de opciones, rango de la escala
+  (`EditorDeEscala`), **«Se muestra solo si»** (`SelectorDeCondicion`: solo una pregunta ANTERIOR de opciones y una de sus opciones; las demás no se
+  ofrecen), **«Alimenta»** (`SelectorDeDestino`: objetivo de Cuerpo, Negocio o Relaciones, prioridad principal, primera acción; el trato no se asigna
+  a mano y uno ya usado se marca) y **«Se muestra en»** (formaciones; vacío = todas). Duplicar, subir y bajar (botones de 48, sin arrastre; una pregunta
+  que llega al borde de su sección pasa a la de al lado). Cada cambio se manda al servidor y se **relee el borrador** antes de avisarlo: lo que se ve es
+  lo que el servidor tiene. El aviso de lo guardado es `AvisoDeAbajo`. Un solo scroll.
+* **Preguntas protegidas**: la del **trato** (la usa SER) y el **consentimiento** no se quitan ni cambian de tipo; el editor lo dice en lugar de ofrecer el
+  botón. A una pregunta con respuestas no se le cambia el tipo (el servidor lo rechaza con su motivo, que se dice tal cual).
+* **Quitar** (`BarraDeQuitar`, modo «Quitar preguntas», barra fija ARRIBA —abajo flota el botón de SER—): se marcan varias y hay **una sola confirmación**.
+  El servidor las **elimina** si nunca se publicaron ni se respondieron, y las **retira** (dejan de mostrarse y conservan sus respuestas) si no; lo dice
+  en el aviso («2 eliminadas · 1 retirada»). Si otra pregunta depende de una (409 `TIENE_DEPENDIENTES`) se muestran cuáles y se repite con confirmación
+  quitándolas juntas. **Retiradas** (`PreguntasRetiradas`, plegada): se pueden restaurar (409 si su «alimenta» ya lo tiene otra).
+* **Vista previa** (`VistaPreviaDelDiagnosticoScreen`, `GET /admin/diagnostico/vista-previa`): el MISMO `RecorridoDelDiagnostico` de la persona en
+  `modo: 'vistaPrevia'` (no guarda nada), elegible por formación y duración (Escuela 90 días, Diplomado 3 meses o 1 año, Certificación 90 días).
+* **Publicar** (`PanelDePublicar`): dice qué versión está vigente y si hay cambios; si el servidor no deja publicar, **lo dice antes con cada motivo y
+  apaga el botón** (sin preguntas, sin consentimiento, **falta el texto de la declaración de responsabilidad y consentimiento**, una condición rota).
+  Publicar manda `versionBase`; un 409 `OTRA_PERSONA_PUBLICO` pide releer. «Versiones» (`HojaDeVersiones`): quién publicó y cuándo. **La declaración
+  de responsabilidad y consentimiento la escribe Administración** en la ayuda de la pregunta del consentimiento (026-6); mientras diga
+  `[PENDIENTE DEL DUEÑO]` el diagnóstico no se publica.
+* **Importar** (`HojaDeImportar`, 026-4 A): se **pega** la tabla (lo copiado de Excel o Google Sheets sale con tabuladores; también vale CSV con coma o
+  punto y coma) y el servidor dice qué entendió y los errores **por fila** (la cabecera es la 1); con un error no se puede confirmar (todo o nada).
+  «Añadir» o «Reemplazar» (reemplazar muestra cuántas preguntas se retirarían y cuántas ya tienen respuestas). **«Descargar plantilla»** y
+  **«Descargar la ficha»** (`useDescargaDeFicha`: `plantilla.csv` y `exportar.csv`) abren la hoja de compartir del sistema. **No hay selector de
+  archivos** (pediría un módulo nativo nuevo): se pega el texto. Lo importado queda en borrador.
+* **Asignar el diagnóstico a quien ya estaba dentro** (026-9 B): en la **ficha de una persona** (`FichaAprendizScreen`, `FichaDeIngresoDeLaPersona`,
+  debajo de la formación) se lee su ficha de ingreso («Estándar» o «Con diagnóstico»), con «Asignar el diagnóstico» y «Volver a la ficha estándar»;
+  quien decide si se puede es el servidor (409 con el motivo si ya respondió). Y en **Fichas → «Asignar a varias personas»**
+  (`AsignarDiagnosticoVariasScreen`, `utils/seleccionDePersonas`): se busca como en «Personas» (al servidor, con el filtro de formación), se marcan,
+  lo marcado se conserva al cambiar la búsqueda y **una sola confirmación** las cambia a todas; el servidor deja afuera a las que no se pueden y dice por
+  qué («12 asignadas · 2 omitidas»). La barra de la selección va arriba y fija.
+* **Rutas** (`/api/v1/admin/diagnostico`): `GET ` (borrador), `GET /vista-previa`, `POST/PUT/DELETE /secciones[/id]`, `PUT /secciones/orden`,
+  `POST/PUT /preguntas[/id]`, `PUT /preguntas/{id}/mover`, `POST /preguntas/{id}/duplicar|restaurar`, `POST /preguntas/quitar`, `POST /publicar`,
+  `GET /versiones`, `POST /importacion/vista-previa`, `POST /importacion`, `GET /plantilla.csv|exportar.csv`, `GET /personas/{id}` (la lectura) y
+  `POST /personas/ficha`. Las respuestas se leen con esquemas tolerantes (`diagnosticoAdminSchemas`): una pregunta o sección rota se pierde ella.
+* **No cambian**: la ficha estándar, el resto de Administración, los demás tabs. Sin dependencias nuevas ni código nativo.
+* **Pruebas**: Jest `diagnosticoAdminApi`, `diagnosticoAdminSchemas`, `borradorDePregunta`, `condicionesYOrden`, `editorDelDiagnostico`,
+  `quitarPreguntasEnElEditor`, `publicarYVistaPrevia`, `importarPreguntas`, `useDiagnosticoAdmin`, `fichasAdminScreen`, `fichasEnAdministracion`,
+  `textosDeLaFicha`, `seleccionDePersonas`, `asignarDiagnosticoVarias` y `fichaDeIngresoDeLaPersona`. Maestro, escritos y sin correr:
+  `.maestro/ficha-con-diagnostico/10–13`.
+* **Sin comprobar en pantalla** (solo se ve con el emulador): el aspecto del editor con muchas preguntas, la hoja de importar con una tabla larga y la
+  barra fija de «Quitar» con el teclado abierto.
+* **Hace falta un APK nuevo** y **el backend con la spec 026 antes**; contra uno anterior «Fichas» responde 404 y lo dice.
+
+### El Mapa se retira; Plan, Hoy y Yo dependen del diagnóstico (spec 026)
+
+Decisión del dueño (spec 026 del backend, `specs/026-ficha-con-diagnostico/`): el **Mapa de Renacimiento ya no va**; lo reemplaza la
+ficha con diagnóstico. De las respuestas del diagnóstico nacen los objetivos de 90 días de Plan, el eje de la prioridad principal va
+primero y la primera acción se sugiere al agendar. Sin diagnóstico, la persona escribe sus objetivos directo en Plan, **sin ningún
+requisito del Mapa**. Esta entrada es la parte de Plan / Hoy / Yo; el recorrido de la persona, las lecturas de otras personas y
+Administración → «Fichas» son de otras entradas de la 026. Lo que cambia y nada más:
+
+#### El Mapa se retira de la app
+* **Se borró `src/features/mapa-renacimiento/` entero** (flujo de diez pasos, pantallas, `MapaRenacimientoContext`, hooks, esquemas y
+  tests) y todo lo que entraba a él: la tarjeta «Mapa de renacimiento» de Hoy, la fila/estado «Haz tu Mapa de Renacimiento» de la
+  tarjeta de acciones, «Primero tu Mapa de Renacimiento» y «Ir al Mapa de Renacimiento» de Plan, la etapa «Mapa de Renacimiento» de
+  Yo → Ajustes → Mi onboarding, el overlay que reemplazaba a las pestañas (`RootNavigator`, `MapaRenacimientoProvider` de `App.tsx`),
+  y los dos lugares que esperaban a que se cerrara (el botón flotante de SER, `RenasiaLauncher`, y el radar, `RadarContext`).
+  `useEtapasOnboarding` ya no lee `GET /api/v1/mapa-renacimiento`; `catalogoPreguntas` ya no pide el flujo `mapa_dia7`.
+* **Los datos que el servidor guarde del Mapa no se tocan**: solo la app deja de ofrecerlo. El servidor (contrato §3) responde
+  `stageCompleted: true` a todos y `409 MAPA_RETIRADO` a lo que intentara escribir.
+* **Se borraron** también `e2e/mapa-poder/mapa-por-rol.spec.ts` y `playwright.mapa.config.ts` (el recorrido del Mapa del Poder).
+  **Se conservó la suite del Día 1**, que vivía en esa carpeta y no dependía del Mapa: ahora es `e2e/dia-uno/` (`dia-uno.spec.ts`,
+  `preparar.py`, `README.md`) con `playwright.dia-uno.config.ts` autónomo; la variable `E2E_ACTORES` reemplaza a `E2E_MAPA_ACTORES`
+  (el nombre viejo se sigue aceptando).
+* **Se conservó** lo que otras funciones siguen usando: `home/utils/diasQueQuedan` (lo prueba `formaciones/__tests__/fasesYDuraciones`;
+  hoy sin uso en el código de producción), `objetivos/utils/iconoDelEje`, `objetivos/utils/cifraDelObjetivo` y los esquemas de Plan.
+  `EXPO_PUBLIC_MAPA_DIA7` de `eas.json` quedó sin efecto (nada la lee); se puede quitar cuando convenga.
+* Prueba que lo vigila de punta a punta: `navigation/__tests__/mapaRetirado.test.ts` (ningún import, identificador ni texto del Mapa).
+
+#### Plan sin la puerta
+* **Plan siempre muestra el selector de eje y todo lo del eje** (objetivo de 90 días, semana, acciones…). Se borraron `PuertaDelMapa`,
+  `usePuertaDeObjetivos`, `puertaDeObjetivos` y `mapaPendiente`. Sin Mapa ni diagnóstico, «Define tu objetivo de 90 días» se escribe
+  ahí mismo (los «…» de la tarjeta del objetivo abren la hoja de siempre).
+* **`PUT /api/v1/rocks/master/{eje}`** sigue como siempre (`409 ROCA_MAESTRA_FIJA` incluido); `MAPA_PENDIENTE` ya no existe y se quitó
+  `mapaPendiente` de `useRocasMaestras.definir`. La línea de la hoja del objetivo fijo dice «Tu objetivo de 90 días quedó fijo.
+  Aquí solo anotas cuánto llevas.» (sin «en tu Mapa»). La opción `desdeElMapa` de `definirRocaMaestra` se quitó.
+* **Con la semana bloqueada** (faltan objetivos de 90 días; el servidor responde 403 `ROCKS_LOCKED`) la tarjeta «Esta semana» dice
+  «Primero define tus tres objetivos de 90 días…» y ofrece **«Escribir mis objetivos»**, que abre el editor del primer eje (en el orden
+  de la pantalla) que todavía no tiene objetivo. «Organizar mi semana ›» hace lo mismo en ese estado.
+
+#### Objetivos de 90 días «por confirmar»
+* `GET /rocks/master` suma `origin` (`PLAN | MAPA | DIAGNOSTICO`) y `confirmed` por fila. Se leen **tolerantes** (`objetivosSchemas`):
+  ausentes ⇒ `PLAN` y confirmado, así un servidor anterior no muestra nada «por confirmar». Un objetivo `DIAGNOSTICO` con
+  `confirmed: false` está «por confirmar» (`objetivos/utils/objetivosPorConfirmar`).
+* **Plan**: arriba, la tarjeta **«Revisa tus objetivos de 90 días»** («3 objetivos por confirmar», «Salieron de tu diagnóstico. Léelos,
+  cámbialos si quieres y confírmalos: después quedan fijos.», botón **«Revisar y confirmar»**) mientras haya alguno. El objetivo por
+  confirmar lleva en su tarjeta una píldora **«Por confirmar»** (ícono `hourglass`, borde y texto: no solo color) y sus «…» abren la
+  revisión en lugar de «Anotar avance».
+* **La hoja** (`HojaConfirmarObjetivos`, `HojaDesdeAbajo grande`): el aviso a la vista «Puedes reescribirlos una vez. Después quedan
+  fijos.», un campo editable por objetivo por confirmar (el de la prioridad principal primero) con contador «n / 500» —**nunca se
+  recorta en silencio**: el campo no lleva `maxLength`; pasar de 500 se dice y no deja confirmar— y «Confirmar mis objetivos» fijo
+  abajo. Confirmar manda **un `PUT /rocks/master/{eje}` por eje, en serie**, solo con `{ objetivo }` (sin meta; el servidor lo marca
+  confirmado). Si uno falla se detiene, dice **cuál** («No pudimos confirmar tu objetivo de Cuerpo.» y el motivo) y cuáles ya quedaron
+  confirmados; con un `ROCA_MAESTRA_FIJA` (otro teléfono ya lo confirmó) se vuelve a leer lo guardado. Al terminar: línea «Tus
+  objetivos de 90 días quedaron confirmados.», `tacto.logro()`, y la tarjeta y las etiquetas desaparecen.
+* **Ya confirmado, o de otro origen, el objetivo es fijo como siempre** (D-234: solo el avance, si tiene meta).
+
+#### Prioridad y primera acción desde el diagnóstico
+* `usePrioridadPrincipal` y las acciones del Mapa dejaron de leer el Mapa. Ahora `usePrioridadPrincipal` lee
+  `GET /api/v1/diagnostico/mio/resumen` (`obtenerResumenDeMiDiagnostico`) cada vez que Plan recupera el foco: **el eje de la
+  prioridad va primero en el selector** (y es el que se abre mientras la persona no toque otro; antes arrancaba siempre en Cuerpo) y
+  la **primera acción** se ofrece al agendar.
+* **«Agendar mis acciones»** (`AgendarAccionesModal`): en el eje de la prioridad aparece la primera acción como **«Sugerida por tu
+  diagnóstico»**; **no se agenda sola** (nada viene marcado: se elige tocándola). Ya no se ofrecen las acciones del Mapa ni se marcan
+  solas las que «tocaban hoy». Lo que la persona escribe a mano sigue igual.
+* **Sin diagnóstico, con un servidor anterior (404) o sin red**: el orden de siempre y sin sugerencia, sin error visible. Un fallo al
+  releer conserva lo último que se leyó. Lo que el Mapa daba y ya no hay (hitos, acciones motoras) no se muestra; la cifra del mes
+  sigue la regla de siempre («sin cifra no se muestra nada», `usePlanMensual`).
+
+#### Hoy
+* Se quitó la tarjeta «Mapa de renacimiento» y `useLecturaDelEstadoDelMapa`. **La tarjeta de acciones** (`vistaDeLaAccionDeHoy`) ya no
+  tiene el estado `mapa`; sin acciones hoy dice, según los objetivos de 90 días (`useObjetivosDeNoventaDias`: una lectura de
+  `GET /rocks/master` por foco): **«Confirma tus objetivos de 90 días» / «Confirmar»** (hay objetivos del diagnóstico por confirmar),
+  **«Define tu objetivo de 90 días en Plan» / «Escribir mi objetivo»** (no tiene sus tres objetivos) —ambas son la misma fila compacta
+  de siempre, toda tocable, y llevan a Plan—, o «Hoy no tienes acciones agendadas» / «Agendar en Plan». **Una acción que seguir manda
+  sobre todo** (como mandaba sobre el Mapa). Mientras no se sabe, nada (sin parpadeo); si la lectura de los objetivos falla, no afirma
+  nada de ellos.
+* **Con el diagnóstico pendiente o en curso**, Hoy muestra `TarjetaDelDiagnosticoPendiente` (de la persona; no se dibuja si no hay
+  nada pendiente) en el lugar donde estaba la tarjeta del Mapa, debajo del programa propio. Al tocarla abre `CompletarDiagnosticoScreen`
+  **como un estado de Hoy** (reemplaza la pantalla, sin pestaña nueva); al terminar o salir, Hoy vuelve y relee el resumen, las
+  acciones y los objetivos.
+* No cambia nada más de Hoy.
+
+#### Yo
+* **Mi onboarding** queda con una etapa, **El Pacto** (la fila dice «Tu Pacto de Renacimiento»; «0 de 1 etapa completada»). Se quitó el
+  estado `mapa_renacimiento` de `VistaDeYo`.
+* **Fila nueva «Mi diagnóstico»** en la lista de Yo (junto a «Tuve una emergencia» y «Mi Radar»; ícono `fileText`), solo con la ficha con
+  diagnóstico: **completado** → «Mi diagnóstico / Lee lo que respondiste» abre `MiDiagnosticoScreen`; **en curso** → «Mi diagnóstico /
+  Sigue donde lo dejaste» y **pendiente** → «Completa tu diagnóstico / Todavía no lo empiezas» abren `CompletarDiagnosticoScreen`; con la
+  ficha estándar, sin lectura o con un servidor anterior no hay fila (`yo/utils/filaDeMiDiagnostico`). A pantalla completa como la Caja y
+  la emergencia; el estado se relee cada vez que Yo recupera el foco y al terminar el recorrido.
+
+#### Compatibilidad
+* **Sin backend nuevo para que nada se rompa**: contra un servidor anterior (sin las rutas del diagnóstico, 404) Plan, Hoy y Yo
+  funcionan sin el Mapa y sin errores visibles; la persona escribe sus objetivos en Plan, Hoy dice «Define tu objetivo de 90 días en
+  Plan» y Yo no muestra «Mi diagnóstico». Los objetivos «por confirmar» y la primera acción necesitan el backend de la 026.
+* **No cambian**: los demás tabs, la barra de pestañas, las reglas del servidor de las semanas y las acciones, ningún diseño fuera de lo
+  de arriba. Sin dependencias nuevas ni código nativo.
+* **Pruebas**: Jest `planSinMapa`, `planPorConfirmar`, `objetivosPorConfirmar` (utils, componentes y esquema), `useRocasMaestrasConfirmar`,
+  `usePrioridadPrincipal`, `agendarAccionesSugerida`, `accionesPropias`, `useObjetivosDeNoventaDias`, `vistaDeLaAccionDeHoy`,
+  `tarjetaAccionDeHoy`, `hoySinMapaConDiagnostico`, `yoSinMapaConDiagnostico`, `filaDeMiDiagnostico`, `useEtapasOnboarding`,
+  `definirRocaMaestra` y `mapaRetirado`. Maestro, escritos y sin correr: `.maestro/ficha-con-diagnostico/20-plan-objetivos-por-confirmar`,
+  `21-hoy-sin-mapa` y `22-sin-diagnostico-escribe-objetivos-en-plan` (y se ajustaron `diseno-31/01–03`).
+* **Hace falta un APK nuevo** (solo JavaScript: ni `package.json`, ni `app.json`, ni código nativo; la app no se actualiza por aire).
+  **Hace falta el backend de la 026** para los objetivos por confirmar y la primera acción.
+
+### Las semanas y los meses del plan siguen la duración de la persona (spec 026, tras la 022)
+
+* `objetivos/utils/periodoDelPrograma` cuenta las semanas y los bloques de cuatro semanas con la **duración propia** (`semanasDelProgramaDe`, `mesesDelProgramaDe`): con 90 días son
+  13 semanas y 3 bloques (como siempre); con 365, **53** semanas y 13 bloques (el último se lleva la 53). `semanaDe`, `semanaAPlanificar`, `mesDe`, `semanasDelMes`,
+  `mesDeLaSemana` y `etiquetaDelMes` reciben `duracionDias` (opcional: sin dato, la de 90). Plan la pasa desde `GET /home` (`resumen.duracionDias`), igual que Yo.
+  Es la misma cuenta de `SemanaPrograma` del backend (V156 sube los topes de la base a la semana 53 y el mes 12); prueba `periodoDelProgramaSegunLaDuracion`.
+* **No cambia** el texto «objetivo de 90 días» (es el nombre del objetivo en toda la app); decidir si en el Diplomado de 1 año se llama de otra forma es del dueño.
+
+### La meta medible y la constancia de las lecturas (spec 026, decisiones del dueño del 2026-11-01)
+
+Dos decisiones del dueño sobre la ficha con diagnóstico (backend V157, D-303). Solo JavaScript en la app; **hace falta el backend con V157 antes** y un APK nuevo.
+
+* **La meta medible se pregunta en el diagnóstico.** Por cada eje, debajo de su objetivo en palabras, el borrador del backend trae preguntas **opcionales**: a qué
+  número quiere llegar, en qué unidad (kg, soles, clientes…) y desde qué número parte; Relaciones solo los dos números, enteros del 1 al 10 (siempre es esa escala).
+  Alimentan ocho destinos nuevos (`DestinoDeLaPregunta`: `META_CUERPO`, `UNIDAD_CUERPO`, `PARTIDA_CUERPO`, `META_NEGOCIO`, `UNIDAD_NEGOCIO`, `PARTIDA_NEGOCIO`,
+  `META_RELACIONES`, `PARTIDA_RELACIONES`). Con las tres partes el objetivo llega a Plan **con su meta**: Plan lo dibuja como cualquier objetivo con meta
+  («Inicio · Actual · Meta», el %, «Este mes») y saca la cifra del mes y los hitos; sin alguna parte, queda en palabras y el plan dice «sin cifra», como hasta hoy.
+  Confirmar el objetivo (`PUT /rocks/master/{eje}` solo con el texto) no borra la meta.
+* **Los dos esquemas leen los destinos nuevos** (`diagnostico/api/diagnosticoSchemas`, `diagnostico-admin/api/diagnosticoAdminSchemas`): sin ellos una pregunta de la
+  meta se leería «sin destino» y, al guardar el editor, dejaría de alimentarla. **El editor** (`diagnostico-admin/utils/tiposDePregunta`) los ofrece según el tipo:
+  la meta y el punto de partida piden una pregunta de **Número**; la unidad, de **Texto corto**. Al dejar de alimentar una meta el editor avisa («Su objetivo de ese
+  eje quedará solo en palabras: Plan no podrá sacar la cifra de cada mes.», `dejaDeAlimentarUnaMeta`). La importación por CSV los acepta por su nombre («Meta de
+  Cuerpo», «Unidad de Negocio», «Punto de partida de Relaciones»…).
+* **La persona ve antes de guardar lo que el servidor exige** (`diagnostico/utils/validacion`): Relaciones, «Escribe un número entero del 1 al 10.»; Cuerpo y
+  Negocio, «Escribe un número de cero o más.» y «Ese número es demasiado grande.» (de 10¹² en adelante). Aceptan decimales y la coma. Siguen siendo opcionales.
+* **Supuesto a confirmar con el dueño:** Negocio se toma como un **nivel** (dónde estar al cierre de cada mes); no se pregunta si la meta es mensual o acumulada
+  al final, como hacía el Mapa. Y la unidad que parece una escala («puntos», «/10») se trata como escala (cifras enteras).
+* **Quién abrió el diagnóstico de una persona queda anotado** (backend): el mentor o la guía de su grupo, el líder, Administración y Alquimista. **No hay nada
+  nuevo en la app**: las pantallas que lo leen (`diagnostico/components/SeccionDelDiagnosticoDeLaPersona` en las fichas) piden lo mismo de siempre. La propia
+  persona («Mi diagnóstico») no deja registro. Esa constancia no entra al resumen de las 20:00 que recibe el mentor.
+* **Pruebas:** Jest `validacion` (la meta de un eje), `diagnosticoSchemas`, `diagnosticoAdminSchemas` y `borradorDePregunta` (los destinos nuevos). Maestro, escrito
+  y sin correr: `.maestro/ficha-con-diagnostico/05-persona-responde-la-meta-y-plan-saca-la-cifra.yaml` (pide el borrador sembrado por la V157 publicado; el ayudante
+  `comun/diagnostico-responder-el-paso.yaml` contesta la meta con `META: si`). Los flujos 01 a 04 siguen igual: las preguntas nuevas son opcionales.
+
+### Entradas anteriores que esta deja obsoletas
+
+Donde una entrada de este documento nombra el Mapa de Renacimiento (el flujo de diez pasos, su tarjeta en Hoy, `PuertaDelMapa` /
+`usePuertaDeObjetivos`, «Primero tu Mapa de Renacimiento», `MAPA_PENDIENTE`, `mapa-renacimiento/*`, `useAccionesDelMapa`, la etapa «Mapa de
+Renacimiento» de Mi onboarding, el E2E del Mapa del Poder, `EXPO_PUBLIC_MAPA_DIA7`), léase **retirado** y vale esta entrada. En concreto:
+«tab `Plan`: los objetivos esperan al Mapa de Renacimiento (issue #37)» y «Corrección encontrada en el E2E del Mapa del Poder por rol — 2026-10-10»
+quedan solo como historia; en «diseño de Hoy, Plan y Training» (2026-10-31) el estado `mapa` de la tarjeta de acciones, «sin Mapa no se repite la tarjeta
+Diseña tu mapa» y la `PuertaDelMapa` de Plan ya no existen; «Recuperación del Día 1 de cuentas anteriores» sigue valiendo pero su suite pasó de
+`e2e/mapa-poder/` a `e2e/dia-uno/` (`E2E_ACTORES`). Las demás menciones (la fase y los días que quedan, el radar que esperaba al Mapa, los íconos por eje)
+son sueltas y se leen igual con el Mapa fuera.
+
+## Cambio por pedido del dueño — 2026-10-31 — la Comunidad de cada formación (spec 024)
+
+Pedido del dueño del 31/10 (decisiones en `~/.config/renaser-e2e/formaciones/decisiones-del-dueno-2026-10-31.md`; spec, plan y contrato en el backend,
+`specs/024-comunidad-por-formacion/`, D-301). Cada formación tiene **su** comunidad: el Muro, los testimonios, los eventos, los cursos, la Tribu y el
+ranking de una no se ven ni se escriben desde otra. **Lo filtra siempre el servidor**; la app solo avisa qué formación mira quien las ve todas. **Comunidad no
+cambia de forma** (sus seis secciones, sus diseños y textos) y para el aprendiz, el mentor, la guía y el líder **no cambia nada**: ni un selector ni la palabra
+«formación». Lo que cambia y nada más:
+* **Selector de formación** (`formaciones/components/SelectorDeFormacionDeLaComunidad`), **solo para Administración, Alquimista y Soporte TI** (`veTodas`):
+  una fila de 52 con el `ControlSegmentado` «Todas · Escuela · Diplomado · Certificación» arriba de Comunidad. Cambiarlo es instantáneo y vuelve a leer las
+  seis secciones; se recuerda por cuenta en este teléfono (`formaciones/estado/formacionDeLaComunidad`, fuera de React porque lo leen las funciones de las
+  APIs; lo mantiene `SincronizadorDeLaFormacionDeLaComunidad`, montado en `App.tsx`). **Un código de formación solo sale en un pedido si la cuenta ve todas y
+  eligió una**: `?formation=` en las lecturas del Muro, las ocultas, los testimonios, los eventos, los cursos, la Tribu (lista, integrantes y renombre de la
+  comunidad general) y el ranking. Para las demás cuentas cada pedido sale **exactamente como antes**.
+* **«Todas»**: cada fila (publicación, testimonio, evento, curso, chat, entrada del ranking) lleva un rótulo chico con el nombre de su formación
+  (`RotuloDeFormacion`, solo texto con borde, no se toca) y el ranking se agrupa por formación, cada una con su podio y su tabla
+  (`ranking/components/RankingPorFormacion`, `agruparPorFormacion`: las posiciones son las que manda el servidor, dentro de cada formación; no se recalcula nada).
+* **Crear exige elegir**: publicar en el Muro y crear un evento con «Todas» no envían nada y dicen «Elige una formación arriba para publicar.» / «…para
+  crear.» (`AvisoDeFormacionPorElegir`, una línea en el lugar de la acción, no un diálogo); con una elegida viaja `formation` en el cuerpo. El servidor igual
+  responde 400 si faltara. Nada se crea «para todas» ni «sin formación».
+* **Administración → Formaciones → el detalle de una formación → «Comunidad»** (`SeccionComunidadDeLaFormacion`): los cuatro tipos —comunidad general, grupo
+  con mentor, soporte y directos— con un interruptor cada uno (`GET /admin/formaciones/{codigo}/comunidad`, `PUT …/comunidad/{tipo}`). Apagar uno **esconde**
+  sus conversaciones para toda la formación sin borrar un mensaje y pide confirmación diciendo cuántas esconde («Esto esconde 12 conversaciones para toda
+  la formación…»); prender guarda al instante. Rige al instante y sin app nueva. Contra un backend anterior (404/403 al leer) la sección no se dibuja.
+* **El aviso de un mensaje** (`navigation/abrirAviso`, `formaciones/utils/avisoDeFormacion`): la ruta es `/chat/{id}` en la Escuela y
+  `/chat/{id}?formacion=CÓDIGO` en las demás. El personal con varias formaciones **cambia su formación activa** a la del chat antes de abrirlo y se avisa en una
+  línea («Cambiamos a Diplomado Renaser.»); si no la tiene asignada, el aviso se descarta. Administración pasa su elección a la del chat (solo local). Quien
+  tiene una sola formación ignora el parámetro.
+* **La imagen del podio** (`ranking/components/BotonDescargarPodio`) lleva el nombre de la formación que se mira (la elegida por Administración; la propia en
+  las demás cuentas); sin dato, como hoy. Las pestañas **Kilómetros y Gimnasio salen siempre**: ocultarlas según los hábitos de la formación es de la spec 023
+  (`// spec 023` en el código).
+* **Esquemas tolerantes** (`formaciones/api/formacionTolerante`): `formation` en las filas de la Comunidad es opcional; un valor roto se pierde él, no la fila ni la
+  página, y un servidor anterior (sin el campo) se lee como la Escuela.
+* **No cambian**: los permisos (los decide el servidor), los diseños y textos de las seis secciones, la barra de pestañas, ni los otros tabs. Sin animaciones,
+  íconos ni dependencias nuevas (`Presionable`, `HojaDesdeAbajo`, `tacto.seleccion()` y `tacto.logro()`). Textos en tipo oración y tuteo; áreas táctiles de 48 o
+  más; un solo scroll por pantalla; la fuente solo por los roles de `theme/fuentes.ts`.
+* **Pruebas:** Jest en `src/features/formaciones/__tests__` (`formacionDeLaComunidad`, `selectorYRotulosDeLaComunidad`, `comunidadMandaLaFormacion`,
+  `esquemasConFormacion`, `seccionComunidadDeLaFormacion`, `avisoDeUnChatDeOtraFormacion`) y en `ranking` (`rankingPorFormacion`,
+  `botonDescargarPodioConFormacion`). Maestro, escritos y sin correr: `.maestro/comunidad-por-formacion/`.
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire) **y el backend de la spec 024 antes** (V137–V139). El APK 1.6.0 contra el backend
+  nuevo sigue mostrando la Escuela completa sin mandar nada nuevo; el APK nuevo contra un backend anterior queda como hoy.
+
+## Cambio por pedido del dueño — 2026-10-31 — al juntar las formaciones: Ranking según los hábitos de la formación y el nombre del objetivo según la duración
+
+Dos decisiones del dueño que aparecieron al integrar las specs 022 a 034 (solo la app; el backend, sin endpoints nuevos). Lo que cambia y nada más:
+* **Ranking → «Kilómetros» y «Gimnasio» solo salen si el catálogo de hábitos de la formación que se mira tiene ese hábito** (`KILÓMETROS DIARIOS`,
+  clave `DAILY_KM`, y `GIMNASIO`, clave `GYM`; spec 023 sobre el ranking de la 024). «General» y «Coherencia» salen siempre. Las demás cuentas leen
+  su propio catálogo (`GET /habits`); Administración, Alquimista y Soporte TI con una formación elegida, el de esa formación (`GET /admin/habits?formation=`,
+  solo los activos); con «Todas» salen las cuatro. **Solo se esconde una pestaña cuando el catálogo se leyó bien y de verdad no la tiene**: sin lectura, con
+  fallo o vacío (una cuenta que no hace su programa en esa formación) salen las cuatro, como antes. Si la pestaña elegida deja de ofrecerse, vuelve a «General».
+  Lógica pura en `ranking/utils/tablasQueSeOfrecen`, lectura en `ranking/hooks/useTablasDelRanking`. Pruebas: `tablasQueSeOfrecen`.
+* **El objetivo grande se nombra según la duración del programa de la persona** (`/home` `duracionDias` y `formacion`): «objetivo de 90 días» en la
+  Escuela y la Certificación, «objetivo de 3 meses» en el Diplomado de 90 días y «objetivo de 1 año» en el de 365 (`objetivos/utils/nombreDelObjetivo`,
+  puro y con pruebas). Plan y Hoy lo leen del contexto `PlazoDelObjetivoProvider` / `usePlazoDelObjetivo` (sin dato, «90 días»): «Tu objetivo de …», «Define tu
+  objetivo de …», «Revisa tus objetivos de …», «Tu dirección en …», los avisos de guardado y la tarjeta de Hoy. **No cambia** el nombre de la formación
+  («Escuela Renaser 90 días»), ni lo que dicen el onboarding y los términos del programa de 90 días de la Escuela como hecho. Los textos de error de los hooks
+  (`useRocasMaestras`, `useRocasSemanales`) no saben la duración y siguen igual.
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire).
+
+## Cambio por pedido del dueño — 2026-11-01 — tab `Hoy` (y Plan): la frase siempre, el programa propio en una fila y la fecha de inicio
+
+Pedido del dueño del 1/11 con capturas de Hoy de una cuenta del personal sin programa propio: «recuerda la frase y abajo va ese de los 90 días con
+menos texto, el tamaño que antes de coherencia y racha bro, y luego el fénix… ok bro que salga pese que no inició su programa» y, sobre quien ya
+eligió su Día 1: «¿y por qué no le salió cuándo empezar? eso es un bug». Todo es de la app, sin backend. Cada punto es un commit aparte de la rama
+`hoy-frase-y-dia-uno`. Lo que cambia y nada más:
+* **La frase del día sale siempre** (`TarjetaConfrontacion`, con su raya dorada): también sin día de programa (personal sin programa, Día 0 y quien no
+  eligió su Día 1). Con día de programa es la de siempre. **Sin día de programa se elige por la FECHA del calendario** (`fraseDelDia(dia, fechaDeHoy)`):
+  `f(fecha)`, derivada y sin guardar nada (nueve frases, días seguidos dan frases seguidas). **Supuesto:** `/home` no manda la fecha de hoy, así que es el día
+  civil del teléfono (`fechaLocalISO`); aquí no corre el riesgo de E-91 (no hay contador): un huso distinto solo cambia cuál de las nueve toca. Hoy da la fecha
+  solo cuando ya se sabe si hay día de programa (`/home` respondió o falló), para que quien sí lo tiene no vea primero la del calendario y se le cambie.
+  Sin día ni fecha sigue sin dibujar nada.
+* **El programa propio es una fila compacta y sube**: justo debajo de la frase y antes del fénix (`FilaDelProgramaPropio`, sobre `components/FilaCompacta`),
+  del alto que tenía Coherencia / Racha (72 de mínimo), toda tocable, título en negrita (16), una línea corta en dorado, chevron, **sin botón dorado**. Es la
+  misma fila compacta que ya usaba la tarjeta de acciones («Define tu objetivo de 90 días en Plan»), que ahora comparte el componente. Reemplaza a la tarjeta
+  grande «Tu programa · Hacer mi programa de 90 días · Puedes recorrerlo tú también… · Elegir mi Día 1 / Ahora no» (`EntradaAlProgramaPropio`), que **Yo
+  conserva** (y Training conserva su invitación). Textos (`programa/utils/filaDelPrograma`, pura):
+  | Estado | Título | Línea | Al tocar |
+  |---|---|---|---|
+  | Sin fila en el programa y el servidor dice que puede empezar | «Haz tu programa de {plazo}» | «Elige tu Día 1» | el selector del Día 1 de siempre; con una ✕ «Ahora no» |
+  | Con fila, sin Día 1 elegido | «Todavía no elegiste tu Día 1» | «Elige cuándo empiezas» | el selector del Día 1 |
+  | Eligió su Día 1 y la fecha no llega (día 0) | «Tu programa empieza el martes 3 de noviembre» | — | nada (sin chevron) |
+  | Esperando y el servidor no mandó la fecha | «Tu programa empieza pronto» | — | nada |
+  `{plazo}` es «90 días», «3 meses» o «1 año» según SU programa (`plazoDelObjetivo`, el mismo con que se nombra el objetivo grande). «Ahora no» se conserva como
+  una **✕ chica de 48 de área** a la derecha, fuera de la fila tocable, y hace lo mismo que el botón de antes: deja de ofrecer la invitación a esa cuenta en
+  ese teléfono, sin borrar nada. Si una lectura falló, en su lugar va el aviso de siempre «No pudimos comprobar tu Día 1» con «Reintentar Día 1». Igual en todos los
+  roles y formaciones: lo decide el servidor (`canStartProgram`, `activated`). **Ningún pedido nuevo en Hoy**: las mismas lecturas que hacía la tarjeta.
+  > **Corregido 2026-11-02 (spec 036, D-309).** Ya no se elige el Día 1: el programa empieza siempre mañana. La tabla de arriba dice ahora «Haz tu programa de
+  > {plazo} · **Empieza mañana**» (sin fila) y «**Todavía no empezaste tu programa** · **Empieza mañana**» (con fila sin activar); el aviso de error es «No pudimos comprobar
+  > tu programa» con «Reintentar». Al tocarlas se abre «Tu programa empieza mañana» (ver la entrada del 2026-11-02). «Tu programa empieza el …» (día 0) no cambia.
+* **Sin hueco vacío antes del fénix**: el bloque entre la frase y el fénix solo existe si tiene algo que dibujar (la fila, la tarjeta de acciones o el error de `/home`).
+  Vacío dejaba sus dos separaciones de 28 (`gapLg`) y a la cuenta sin programa le quedaba un hueco grande entre «Escuela Renaser» y «Tu acompañante». Si hay fila y
+  también tarjeta de acciones, la fila va primero. Para saberlo antes de dibujar, el hook `useFilaDelProgramaPropio` vive en Hoy (y en Plan), no dentro de la fila.
+* **BUG (issue #72): quien ya eligió su Día 1 y espera no veía cuándo empieza.** El Día 1 nunca puede ser hoy (`ActivarProgramaScreen`), así que todo aprendiz recién
+  activado pasa al menos un día en el día 0; desde el 31/10 Hoy ya no tiene la cabecera de fase y día y ningún texto decía «empieza el…» (Training lo decía solo si
+  faltaba más de un día). La fecha **ya la entrega `GET /onboarding/activate-program`** (`startDate`), que Hoy ya leía con `useDiaUnoPorElegir` (solo inscrito y día 0):
+  no hace falta backend. `useArranqueDelPrograma` suma `fechaInicio` al estado `EN_CURSO` cuando la fecha es posterior a hoy (empieza mañana: el programa ya cuenta como
+  «en curso» para planificar, D-103, pero la fecha se dice), y `useDiaUnoPorElegir` expone `esperando` y `fechaInicio`. Una fecha de hoy o pasada no se dice (D-90): «pronto».
+  La fecha se escribe con `formatearFechaLarga` (español, sin pasar por UTC).
+* **Plan lleva la misma fila**, arriba de todo y sin hueco si no hay nada que decir: mismo hook, mismo componente, misma función pura (un solo lugar para los textos; una
+  prueba vigila que Hoy y Plan no los repitan). **Plan suma lecturas que antes no hacía**, las mismas que Hoy: las capacidades (`GET /mentor/context`, que ya leen Hoy,
+  Yo y Comunidad) y la del programa personal solo para el personal, y `GET /onboarding/activate-program` solo con `inscrito` y día 0. Quien ya está en su programa no ve
+  nada nuevo en Plan.
+* **No cambian**: Yo (conserva la tarjeta grande), Training, las reglas de quién puede empezar un programa, el selector del Día 1, `TarjetaAccionDeHoy` en sus estados
+  (solo comparte la fila), el diagnóstico pendiente, los demás tabs, ni el backend. Sin animaciones nuevas (`Presionable` y la `Aparicion` que ya tenía el bloque), sin
+  íconos nuevos (`calendarRange`, `close`, `chevron`), sin dependencias ni código nativo.
+* **Pruebas:** Jest `fraseDelDia` y `tarjetaConfrontacion` (la frase por calendario), `filaDelPrograma` (los textos y la fecha en español), `filaDelProgramaPropio` (los tres
+  estados con el hook real, por rol y por formación, la ✕, el selector, el error), `filaCompacta`, `hoyFilaDelPrograma` y `planFilaDelPrograma` (el orden y el cableado). Se
+  ajustaron `hoyIconosYTextos`, `panelesDeRolEnYo` y `hoySinMapaConDiagnostico`. Maestro, escrito y sin correr: `.maestro/hoy-programa-propio/01-fila-del-programa-en-hoy-y-plan.yaml`
+  (`ESTADO` = `sin-programa` | `sin-dia-1` | `esperando`).
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
+
+## Corrección — 2026-11-01 — lo que salió en la segunda jornada del E2E de las formaciones (issues #73 a #80; backend #53 y #54)
+
+Pedido del dueño: corregir todo lo que salió, también lo menor. Solo JavaScript en la app y un parámetro opcional en el backend. Un commit por error. Lo que cambia y nada más:
+* **#73 «Asignar a varias personas» (Fichas)** pide solo las cuentas activas: `listarAprendices({ soloActivas: true })` manda `activeOnly=true` y el padrón del servidor deja fuera las
+  solicitudes que esperan aprobación (cuentas INACTIVAS, sin programa) y las suspendidas, en la lista y en el total (`u.estado = 'ACTIVO'`). «Personas» no lo pide y sigue viendo todo (D-138).
+* **#74 «Planificar mi mes» según la duración.** Los meses del programa son los del servidor, `duración / 30` (`MesPrograma.mesesDe`): 3 en 90 días y **12 en 365** (antes la app contaba 13 bloques de
+  cuatro semanas en 365 y ofrecía solo 3 en la hoja). Las semanas (53 en 365) se reparten parejo entre los meses: 4 + 4 + 5 en 90 días, exactamente como siempre; en 365, meses de 4 o 5 semanas hasta la 53
+  (`periodoDelPrograma.mesesDelProgramaDe` / `semanasDelMes` / `mesDeLaSemana`). `mesDelPrograma` y `PlanDelMesModal` reciben `duracionDias`; con 12 meses el selector son chips que se deslizan
+  de lado (con 3, el control de siempre). El número de mes es el que viaja al servidor en `PUT /rocks/monthly/{eje}/{mes}`. **Límite conocido:** el mes de la hoja es un bloque de semanas y el «mes actual» del
+  servidor se cuenta por días (30, 60, …): pueden decir meses distintos unos días al año, igual que ya pasaba en 90 días (decisión del dueño 028-2).
+* **#75 «Elige tu Día 1»** nombra el programa de la persona (`introduccionDelDiaUno`: «90 días», «3 meses», «1 año», con `plazoDelObjetivo`) en vez de «90 días» fijo.
+  > **Corregido 2026-11-02 (spec 036, D-309).** «Elige tu Día 1» ya no existe; el plazo lo dice ahora «Tu programa empieza mañana» con `lineaDelPlazo` («Son tus 90 días.», «Son tus 3 meses.», «Es tu año.»).
+* **#76 El 80/20 de la ficha** habla en tercera persona para quien acompaña (`voz="ficha"`): «Su 80/20», «Sus cifras al día. Su análisis llega cuando cierre la semana.», flechas, avisos, «Lo que se le fue» y
+  el pie del análisis. Plan (la propia persona) no cambia. Los textos de las dos voces viven en `textosDelOchentaVeinte` (`textosDeLaVoz`, `avisoDelEstado(vista, voz)`).
+* **#77 Editor del diagnóstico:** las tarjetas muestran `[formación]` y `[duración]` en vez de `{formacion}` y `{duracion}` (`verLasMarcas`, solo para mostrar; al editar se conserva el texto con sus marcas).
+* **#78 Copiar un hábito a otra formación** dice qué falta para poder copiar («Elige la formación…», «Elige la categoría en … para poder copiar.») y el aviso «Copiado a …» sale dentro de la misma sección.
+* **#79 «Aceptar N solicitudes»** queda fijo abajo mientras se elige (fuera de la lista que se desliza), corrido lo justo para no quedar debajo del botón de SER (`entradaParaElLanzador`).
+* **#80 Solicitudes aceptadas:** la Escuela y la Certificación (90 días, una sola duración) ya no dicen «3 meses»; la duración se dice solo en el Diplomado o cuando no es la de 90 días.
+* **Backend #53:** mensajes del servidor con sus tildes (repetir la semana, chats directos apagados, plan de la semana, copiar un hábito).
+* **No cambian:** los textos de Plan, los demás tabs, el resto de «Personas» ni las reglas de las formaciones. **No hace falta APK nuevo** más allá del que ya llevan las formaciones; sí el backend con `activeOnly`
+  para #73 (con uno anterior la lista trae todas las cuentas, como antes).
+
+## Cambio por pedido del dueño — 2026-11-01 — cronograma de pagos: «Mi ingreso» en Yo, el bloque «Pago» al aceptar, los pagos en la ficha y los recordatorios de pago (spec 032)
+
+Pedido del dueño (textual, con su maqueta «Mi ingreso»): «al momento de solicitud del usuario sin cronograma o con cronograma de pagos; sin cronograma es que pagó y en Yo debe de salir su pago fue cancelado;
+con cronograma de pagos se calendariza de esta forma [la maqueta]… es por fecha como sale la cantidad y el administrador o alquimista puede decir se pagó o no… si es cronograma le debe de salir en Yo su
+cronograma y debe de tener recordatorios… si no paga no pasa nada, no se inhabilita la cuenta, ya que gerencia decidió eso… que le salga en Yo los recordatorios y probar los recordatorios». **La app no cobra
+ni mueve dinero: solo anota.** Backend D-307 (`specs/032-cronograma-de-pagos/`, V158). Todo vive en `src/features/pagos/`. Lo que cambia y nada más:
+* **Yo → fila «Mi ingreso»** (`FilaDeAjuste`, ícono `wallet` nuevo —Lucide, caja de 24, `s24`—, después de «Mi diagnóstico»): **solo si el servidor dice que hay un pago anotado** (`GET /api/v1/me/ingreso` con
+  `payments` distinto de `null`; un 404, un 403 o una función apagada la esconden; un fallo de red conserva lo último). Su línea dice «Tu pago fue cancelado», «2 cuotas pendientes» o «Todas tus cuotas figuran
+  pagadas» (`detalleDeLaFila`). Quien no tiene nada anotado ve Yo exactamente como antes. Se relee al volver Yo al foco (`useMiIngreso`). **No duplica «Mi onboarding» de Ajustes**: esa es la de los documentos
+  (ficha, Términos, Pacto, y desde la 026 «Mi diagnóstico»); esta es la de los pagos, y sus pasos son orientación, no atajos (no se tocan).
+* **`MiIngresoScreen`** (pantalla completa de Yo como la Caja; el atrás del sistema y la flecha vuelven a Yo; un solo scroll): la cabecera de la maqueta (`PasosDelIngreso`: Diagnóstico → Acuerdo → Pagos, con ✓ dorado,
+  aro dorado en el que toca y círculo vacío; **un paso que no aplica —sin diagnóstico asignado— no se dibuja**), y debajo:
+  * **Sin cronograma:** «Tu pago fue cancelado» (texto del dueño; en el Perú, pagado por completo) y una línea «No tienes cuotas por pagar.» para quien lo lea de otro modo. Sin cuotas, sin casilla, sin botón.
+  * **Con cronograma:** «Tus fechas de pago · Revisa el cronograma acordado.», una fila por cuota (`FilaDeCuota`: calendario, fecha corta «15 nov» —con el año si no es el actual—, monto con su moneda «US$ 1 000» y
+    «✓ Pagado» en verde o «Pendiente» con reloj en dorado; ícono Y palabra, nunca solo color; la fila se lee como una frase), los recordatorios de pago y, **una sola vez**, la casilla «Revisé mis fechas y montos.»,
+    «Tu nombre» y «Confirmar cronograma» (`ConfirmarElCronograma`). Sin la casilla o sin el nombre no manda nada, dice qué falta y vibra con `tacto.error()`; el doble toque manda un solo pedido; al confirmar, una línea
+    «Cronograma confirmado» (`tacto.logro()`) y la pantalla dice «Confirmaste tu cronograma el 3 de noviembre. Firmó: …». **Si Administración cambia fechas o montos, la confirmación se vuelve a pedir**
+    («Tu cronograma cambió. Revísalo y confírmalo de nuevo.»; lo decide el servidor con una huella de lo acordado; marcar un pago no la invalida). **Nunca bloquea nada.**
+  > **Corregido 2026-11-02 (#96, el dueño: «tremendo espacio, ajustar»).** La cuota ya no es una sola fila con `flexWrap` (la pastilla de estado bajaba sola a un segundo renglón cuando el monto no cabía): es `DatosDeLaCuota`, en la ficha de Administración y en «Mi ingreso», en dos renglones fijos —calendario y fecha a la izquierda, «✓ Pagado» / «Pendiente» a la derecha; debajo, el monto a 22 px, negrita y tabular, con todo el ancho— y, solo en la ficha, la nota de quién la marcó y los botones (sin cambios). El monto sigue sin `adjustsFontSizeToFit` ni encogerse (#89, #91). Solo JavaScript: hace falta un APK nuevo.
+  * **«Pendiente» no es un reproche**: una cuota con la fecha pasada se dice igual (ni «atrasada» ni «vencida»); una prueba lo vigila.
+  * Con la funcionalidad `pagos` apagada por Soporte TI, `AvisoDeMantenimiento` reemplaza el contenido. Sin animaciones propias (se ve de vez en cuando): solo `Presionable` y la línea de confirmación.
+* **Hoja «Aceptar» de Solicitudes (025): un bloque 4 «Pago»** (`BloqueDeAceptacion`), solo si el servidor lo ofrece (`paymentScheduleAvailable` en `acceptance-options`; contra un backend anterior la hoja queda como era):
+  «Sin cronograma (pagó completo)» o «Con cronograma», **para cualquier rol**. Con cronograma, el editor (`EditorDeCronograma`, el mismo de la ficha): la **moneda S/ o US$ sin valor por defecto**, el atajo «Armar cuotas
+  mensuales» (cuántas, de cuánto y desde cuándo; un día 31 cae el último día de los meses cortos y vuelve al 31; después se edita cada fila) y las filas (fecha con las ruedas de siempre en `CampoDeFecha compacto`,
+  monto, quitar; hasta 60). **El aprendiz parte sin elegir** (así no se anota «pagó completo» por descuido): «Aceptar» espera y la hoja dice «Elige cómo paga…». **El personal viene con «Sin cronograma» y eso NO anota nada**
+  (no verá «Tu pago fue cancelado» por algo que nunca pagó; supuesto a confirmar con el dueño). Al aceptar varias a la vez, todas reciben el mismo cronograma. La frase del resumen suma «y con cronograma de 3 cuotas» o «y
+  pagó completo». Un plan inválido es 400 y deshace la aceptación entera (una sola transacción en el servidor). **Los flujos de la 025 (`01`, `02`, `04`) piden un toque más: elegir el pago.**
+* **Administración → ficha de la persona: sección «Pagos»** (`PagosDeLaPersona`, después de la ficha de ingreso; solo Administración y Alquimista: el servidor responde 403 a los demás y la sección no se dibuja):
+  el cronograma con su moneda, quién confirmó y cuándo; por cuota, «Marcar pagado» / «Volver a pendiente» (un toque, sin confirmación; queda **quién y cuándo**), editar y quitar **solo las pendientes** (una pagada
+  no se edita ni se quita; quitar pregunta) y «Agregar una cuota» (`HojaDeUnaCuota`); «Asignar un cronograma» o «Marcar sin cronograma (pagó completo)» a quien ya estaba dentro sin nada (respuesta 8 del dueño),
+  y «Reemplazar el cronograma» / «Marcar sin cronograma» solo si **no hay cuotas pagadas** (409 en el servidor). **Nada se recalcula solo.** Cada escritura devuelve el pago entero y la sección queda al día.
+* **Recordatorios de pago** (alarmas locales como las de eventos y acciones; `notificaciones/`): una alarma por cuota **pendiente** y aviso, **por defecto 3 días antes y el mismo día a las 09:00**, de este teléfono y por
+  cuenta (`renaser.pagos.preferencias.<cuenta>`; no viajan). Se configuran en **un solo control** (`ControlDeRecordatoriosDePago`: encendido, avisos «3 días antes» / «1 día antes» / «El mismo día», uno o varios, y la hora
+  con `HoraPickerModal`): en **Yo → Alarmas → «Recordatorios de pago»** (solo con un cronograma) y en **Mi ingreso**, como la fila «Recordatorios de pago ›» que abre una hoja con el mismo control (como «Recordatorios de
+  tus acciones» en Plan). **Su propio canal con vibración** (`recordatorios-pagos-vib`, E-641; sonido del teléfono). Identificador `pago-<instante>`: programar con el mismo id REEMPLAZA, y dos avisos al mismo instante
+  se juntan en uno (E-410). **Se ponen al día** al abrir la app y al volver al frente (`SincronizadorDePagos`, cada 10 min como el rearmado) y cada vez que se lee Mi ingreso, comparando con lo que el sistema tiene
+  (`getAllScheduledNotificationsAsync`): una cuota que Administración marcó pagada **deja de recordarse en la siguiente lectura**, una alarma que el teléfono olvidó se vuelve a poner y lo que no cambió no se toca.
+  Una pendiente con la fecha ya pasada no suena (ni reproche ni ruido). Un fallo de red no toca las alarmas. Sin permiso de avisos no se programa nada y el control lo dice (el permiso se pide solo con un toque de la
+  persona). **Tocar el aviso abre Yo → «Mi ingreso»** (ruta `/mi-ingreso` → `abrirMiIngreso`, como `/caja` y `/mi-radar`; espera a que se cierre una capa obligatoria). Cerrar sesión suelta las alarmas y lo que el teléfono
+  guarda de ellas; las preferencias quedan. Sin alarmas locales (web, Expo Go) no se dibuja el control.
+* **Lo único que se toca fuera de `pagos/`**, todo aditivo: `CampoDeFecha` suma `compacto` (la fecha corta y sin chevron, para una fila de una lista); `Icon` suma `wallet`; `CLAVES.pagos`; `YoScreen` (la fila, el estado, el parámetro
+  `abrirMiIngreso` y la pantalla); `SeccionAlarmas` (`pagos`); `avisosApi` y `abrirAviso` (el destino `miIngreso`); `alarmasDeLaCuenta` (un prefijo); `App.tsx` (`SincronizadorDePagos`); la hoja `AceptarSolicitudSheet` y
+  `aceptarSolicitud` (el bloque y sus reglas); `FichaAprendizScreen` (la sección).
+* **Compatibilidad:** sin backend nuevo (404) no hay fila, ni bloque «Pago», ni sección «Pagos», y la app queda como antes. Un APK anterior contra el backend nuevo no manda `payment` y nadie queda con un pago anotado.
+* **No cambian:** ningún bloqueo ni pausa de la cuenta por no pagar (decisión de gerencia), los demás tabs, «Mi onboarding», la Caja, los términos, el diagnóstico ni los avisos de las demás alarmas.
+* **Pruebas:** Jest en `src/features/pagos/__tests__` (`dineroYFechas`, `borradorDelCronograma`, `pagosSchemas`, `pagosApi`, `vistaDeMiIngreso`, `planDeAlarmasDePago`, `preferenciasDePagos`, `alarmasDePagos`,
+  `miIngresoScreen`, `pagosDeLaPersona`, `controlDeRecordatoriosDePago`), `aceptarSolicitudConPago` y el pago en `aceptarSolicitudApi`, y `avisoDeMiIngreso`. Maestro, escritos y sin correr: `.maestro/pagos/` (aceptar con y
+  sin cronograma, marcar pagado desde la ficha, asignar a quien ya estaba, «Mi ingreso» con y sin cronograma, confirmar, la fila que no existe sin pago anotado, los recordatorios y probar que la alarma suena y abre «Mi ingreso»).
+* **Sin comprobar en pantalla** (solo se ve con el emulador): el aspecto de «Mi ingreso» contra la maqueta, el editor de cuotas en un teléfono de 360 dp, el aviso de la alarma con el teléfono en reposo y el permiso de avisos.
+* **Hace falta un APK nuevo** (solo JavaScript: ni `package.json`, ni `app.json`, ni código nativo; la app no se actualiza por aire) **y el backend con la spec 032 antes** (V158).
+
+## Decisión del dueño — 2026-11-01 — Administración: la cabecera en dos renglones, y el espacio libre de las pantallas cortas
+
+Del E2E de la segunda jornada. Con la letra del sistema grande, la cabecera de la ficha cortaba con «…» el nombre («Diana Diplomado T…») y
+el correo, junto a «Escribirle». El dueño respondió: «cambia la cabecera a dos líneas». Lo que cambia y nada más:
+* **`CabeceraAdmin`** (la de toda Administración, del líder y de las sub-vistas de Yo): el título y el subtítulo llegan a **dos renglones**
+  (`numberOfLines={2}`), y ya no a uno. Con nombres cortos se ve igual que antes.
+* **No cambian:** el botón de volver, la acción de la derecha ni las medidas.
+* **Prueba:** `admin/components/__tests__/cabeceraAdminEnDosLineas.test.ts`.
+* **También decidido, sin cambios en el código.** En «Mi ingreso» sin cronograma y en Plan sin programa propio, la tarjeta va arriba y
+  debajo queda la pantalla libre. **Se deja así**: es donde termina el contenido, no un hueco entre bloques, y rellenarlo sería inventar
+  información. El dueño respondió: «sí, déjalas así».
+* **Hace falta un APK nuevo** (solo JavaScript).
+
+## Corrección — 2026-11-02 — el selector de hora sin huecos y con las 24 horas a la vista (issue #97)
+
+Del E2E del 2/11 («Yo → Ajustes → Alarmas → Recordatorios de pago → Cambiar la hora»). El selector `HoraPickerModal` ocupaba toda la pantalla y dejaba
+~500 px en blanco entre «HORA» y «MINUTOS» y hasta el botón; además la fila de horas solo mostraba de 00 a 05 (para elegir las 11 había que arrastrarla de
+lado). **También estaba en `master`**: el archivo es idéntico y lo usan Despertar de Yo → Alarmas, los recordatorios de las acciones y el formulario de
+eventos (el de pagos es de la rama de formaciones). Lo que cambia y nada más:
+* **Causa:** los dos `ScrollView horizontal` (una fila de horas y otra de minutos) llevan `flexGrow: 1` por defecto, y en React Native una caja de alto
+  automático con hijos con `flexGrow` los estira hasta lo que tenga disponible el contenedor: dentro de la tarjeta centrada de un `Modal`, los dos carriles
+  se llevaban el alto de la pantalla. (Es la misma razón por la que los otros carriles horizontales de la app, el de meses de `PlanDelMesModal` y el de
+  íconos de Planificar, llevan `flexGrow: 0`.) **No se reprodujo en el emulador** (estaba ocupado por el E2E): la causa se deduce de la regla de React
+  Native y de esos precedentes, y se confirma en pantalla al correr el flujo de Maestro.
+* **El selector ahora es una `HojaDesdeAbajo` del alto de su contenido** (la forma del selector de fecha de nacimiento y de las demás hojas de la app), no una
+  tarjeta centrada con `VeloModal`. De arriba abajo: la agarradera, «Elegir hora» y debajo, en una línea, el nombre de lo que se está programando; la hora
+  elegida en grande («09:00», «de la mañana»); «Hora» con **las 24 horas en una grilla de 4 renglones de 6**; «Minutos» con **los 12 minutos en 2 renglones de
+  6**; y, fijo abajo, «✓ Guardar hora». Todo seguido y con el aire normal (16 entre bloques, 8 bajo cada rótulo, 6 entre botones). **Ningún carril se arrastra de
+  lado.** Cada botón mide 48 de alto y reparte el ancho parejo (≈ 48 dp en un teléfono de 320 dp de ancho, ≈ 57 en uno de 411). Se cierra con la ✕, tocando
+  fuera, arrastrando la hoja o con el atrás de Android (lo de siempre de `HojaDesdeAbajo`).
+* **Por qué una grilla y no la rueda de Planificar** (`RuedaHoraPicker`): esa rueda tiene otras reglas —minutos de 1 en 1 y un tope de arranque a las 23:40
+  (D-122, solo de los hábitos)—, así que usarla aquí cambiaría lo que el selector puede devolver a eventos, pagos y acciones; y para llegar a una hora hay que
+  desplazar la rueda, mientras la grilla muestra las 24 a la vez. La grilla es lo que ya era este selector (botones grandes para un público de 40+), sin el defecto.
+* **Un solo scroll, por si no entra:** el cuerpo va en un `ScrollView` vertical con `flexGrow: 0` y tope de alto (`useAltoMaximoDelCuerpo`), para que el botón
+  quede siempre a la vista en una pantalla baja o con la letra del sistema grande. En un teléfono normal no desplaza nada.
+* **Elegir no se anima** (se toca decenas de veces): el cambio de color es en el acto, el botón se hunde al apretar (`Presionable`, 0,97) y vibra el «tic» de
+  selección una vez por cambio (`tacto.seleccion()`; no vibra si se toca lo ya elegido). Cada botón se anuncia al lector de pantalla como «11 horas» o «35 minutos»,
+  con estado elegido.
+* **No cambia lo que devuelve ni sus props** (`visible`, `tituloHabito`, `horaInicial`, `onConfirmar`, `onCerrar`): `HH:mm`, horas de 00 a 23 y minutos de 5 en
+  5; parte de la hora que se le pasa (el minuto llevado al múltiplo de 5 más cercano) cada vez que se abre. Las cuatro pantallas que lo usan no se tocaron.
+* **Textos:** el título «ELEGIR HORA» pasó a «Elegir hora» (tipo oración, como las demás hojas), los rótulos «HORA» y «MINUTOS» a «Hora» y «Minutos», y se fue el
+  «Cerrar» de texto: la ✕ de la hoja tiene el mismo nombre accesible («Cerrar el selector de hora»). El botón dice «Guardar hora» (tipo oración, 16 px, sin espaciar; era «GUARDAR HORA» en versales, el estilo por defecto de `GoldButton`).
+* **Pruebas:** Jest `horaDelSelector` (la lógica pura: las 24 horas en 4 renglones de 6, los 12 minutos en 2, `HH:mm`, de qué hora parte) y `horaPickerModal`
+  (ningún `ScrollView` horizontal ni que crezca, los 24 + 12 botones, se llega a 00:00, 11:35 y 23:55, lo devuelto, un «tic» por cambio y que al reabrir parte de la
+  hora nueva). Maestro `.maestro/pagos/09-…` actualizado (toca «14 horas» y «35 minutos» por su etiqueta); **sigue escrito y sin correr**.
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
+
+
+## Decisión del dueño — 2026-11-02 — los botones dorados en tipo oración y sin espaciado, en toda la app
+
+Conviven dos estilos de `GoldButton`: el nuevo («Empezar ahora ›», «Elegir mi Día 1», «Guardar hora»: 16 px, sin espaciado) y el viejo, el que el
+componente traía por defecto: versales de 11 px con `letterSpacing` 2,2 (1,6 en el contorno), con el texto escrito en MAYÚSCULAS («LISTO»,
+«CONFIRMAR MI DÍA 1», «CONTINUAR A TÉRMINOS»). El dueño eligió **unificar todos al estilo nuevo**. Solo JavaScript, sin backend. Lo que cambia y nada más:
+* **`GoldButton` trae el estilo nuevo por defecto** (`src/components/GoldButton.tsx`), en sus tres variantes (primario, contorno y secundario): tipo
+  oración, **16 px y `letterSpacing: 0`**; la pesa no cambia (negrita en el primario, media en el contorno y el secundario, siempre por los roles de
+  `theme/fuentes.ts`). Sale `t.micro` y el espaciado; se suman `flexShrink: 1` y `textAlign: 'center'`, para que un texto largo baje de renglón dentro
+  del botón en vez de salirse de él en 360 dp (por ejemplo «Continuar al siguiente módulo» en el cuestionario). Es la regla global: se cambia en ese
+  único lugar. Los `textStyle` que ya pasaban 16 px y `letterSpacing: 0` quedan como estaban (ahora repiten el valor por defecto); los de 15 px siguen en 15.
+* **Los textos escritos en MAYÚSCULAS pasan a tipo oración** (antes → después): «LISTO» → «Listo» (selector de fecha y fecha del diagnóstico),
+  «REINTENTAR» → «Reintentar» (diagnóstico, bandeja de tickets, «Mis evidencias» de Yo y registro con foto), «EMPEZAR» → «Empezar», «SIGUIENTE» → «Siguiente»,
+  «TERMINAR» → «Terminar», «CERRAR VISTA PREVIA» → «Cerrar vista previa» y «Continuar» (ya no pasa por `toUpperCase()`) en el diagnóstico;
+  «REGISTRANDO…», «REGISTRAR» y «TERMINAR» → «Registrando…», «Registrar» y «Terminar» (registro con foto); en el onboarding, «CONFIRMAR MI DÍA 1» →
+  «Confirmar mi Día 1», «COMENZAR MI VIAJE» → «Comenzar mi viaje», «ANTERIOR», «GUARDANDO…», «CONTINUAR» y «CONTINUAR AL SIGUIENTE MÓDULO» del cuestionario →
+  «Anterior», «Guardando…», «Continuar» y «Continuar al siguiente módulo», «CONTINUAR A TÉRMINOS» / «SIGUIENTE» de la ficha → «Continuar a términos» /
+  «Siguiente», «ENTRAR A MI DÍA 01 (HOY)» → «Entrar a mi Día 1 (hoy)», «CONTINUAR» de Términos → «Continuar» y «ACEPTAR» de Términos actualizados → «Aceptar»;
+  «TOMAR FOTO» de la tarjeta de SER → «Tomar foto»; y «💬 ENVIAR MENSAJE DIRECTO 1 A 1» de la ficha de un integrante → «Enviar mensaje directo»,
+  **sin emoji** (los emojis no son íconos): lleva `messageCircle` a la izquierda. «Cancelar» de la pantalla de registro con foto (un botón de borde que
+  iba justo debajo del dorado) pasó de «CANCELAR» a «Cancelar», 16 px, para que los dos no se contradigan. «Día 1» lleva la D mayúscula.
+* **Pruebas:** `goldButtonTipoOracion` (las tres variantes, en claro y oscuro: 16 px, sin espaciado, sin versales, con la pesa de su rol) y
+  `botonesDoradosSinMayusculas` (barre cada `<GoldButton>` de `src/` y `App.tsx`: falla si el texto literal de su `label` vuelve a las mayúsculas, si
+  alguien lo pasa por `toUpperCase()` o le pide `textTransform` o un espaciado positivo; las siglas —OK, SER, IA…— se permiten). Se ajustaron las pruebas
+  Jest y los flujos de Maestro que buscaban el texto viejo (`ficha-con-diagnostico`, `pagos/01` y `03`, `regresion/01`, `12` y `13`,
+  `terminos-editables/02` y `04`, `hoy-programa-propio/01`, `mi-radar/16`) y el de Playwright `e2e/dia-uno`.
+* **Queda fuera, a la vista:** lo que no es un `GoldButton`: los botones de los diálogos del sistema (`components/Alerta`, que escriben su texto en
+  versales con `toUpperCase()`), enlaces como «VER EVENTO ›» y los rótulos de campo en mayúsculas del cuestionario y de Administración. Y el «✓ GUARDAR
+  HORA» del selector de hora, que reescribe la rama `hora-picker-compacto` (#97) para que diga «Guardar hora»: la prueba lo deja exento hasta que se
+  fusione (`PENDIENTES_EN_OTRA_RAMA`) y el flujo `pagos/09` sigue con su texto de ahora.
+* **Hace falta un APK nuevo** (solo JavaScript: ni `package.json`, ni `app.json`, ni código nativo; la app no se actualiza por aire). Backend nuevo, ninguno.
+
+## Cambio por pedido del dueño — 2026-11-02 — identidad por formación: la bienvenida y la imagen de cada formación (spec 035)
+
+Textual: «procede con la spec; revisa siempre eso en todas las partes, no quiero errores en producción». Tras los nombres de los chats por
+formación (spec 024), quedaban dos huecos: la bienvenida automática era la de la Escuela para las tres formaciones, y la imagen de los chats
+(el fénix de la comunidad y la tarjeta de los grupos) era la misma. Backend: spec 035, V159, D-308 (`specs/035-identidad-por-formacion/`).
+Lo que cambia y nada más:
+* **Administración → Más opciones → Bienvenida** (`BienvenidaAdminScreen`): arriba, el control **«Escuela · Diplomado · Certificación»**
+  (`ControlDeFormacion`, el `ControlSegmentado` de la app: la píldora viaja 250 ms con su «tic»; sin otro movimiento). Todo lo de abajo
+  —la tarjeta con su vista previa, los tres mensajes, sus estados y «volver al original»— es de la formación elegida. Arranca en la
+  Escuela. Cambiar de formación pide la suya y **no deja a la vista la de la anterior** mientras llega (`useBienvenidaAdmin(formacion)`: una
+  respuesta tardía de otra formación se descarta); los borradores no se mezclan (cada pieza lleva `key` con la formación). Subtítulo de la
+  cabecera: «La tarjeta y los mensajes de cada formación».
+  * **El pedido** lleva `?formation=` solo para el Diplomado y la Certificación (`conFormacion`): para la Escuela sale exactamente como
+    siempre, así que la app nueva contra un backend anterior edita la Escuela sin notar nada.
+  * **Tolerante a un backend anterior** (`bienvenidaEsDe`): ese backend contesta SIEMPRE con la bienvenida de la Escuela y no manda `formation`.
+    Con el Diplomado o la Certificación elegidos y una respuesta sin `formation`, la pantalla no muestra ni deja editar nada y dice «Este
+    servidor todavía no tiene una bienvenida para cada formación. Cuando se actualice, la podrás cambiar acá.»: nunca se edita —ni se cree
+    editar— la de la Escuela bajo el nombre de otra.
+  * **Portada**: en el Diplomado y la Certificación, sin portada propia la línea dice «Usa la portada de la Escuela.» (`portada.heredada`); su
+    botón es «Volver a la portada de la Escuela» (con su confirmación y su aviso); en la Escuela, todo como antes.
+* **Administración → Formaciones → cada formación → «Imagen de la formación»** (`ImagenDeLaFormacion`, después de «Comunidad»): la imagen
+  que esa formación lleva en el chat, en su comunidad general y en sus grupos sin foto propia. Dos círculos de 72 («Comunidad» y «Grupos») dicen
+  cómo se ve hoy (con imagen, los dos la llevan; sin ella, cada uno lleva lo de siempre: el fénix y la tarjeta); una línea de estado («Usa la
+  imagen de siempre.», «Usa la imagen de la Escuela.», «Cambiada por … el …»); «Cambiar la imagen» (el selector cuadrado de la foto de perfil,
+  sin otro) que sube la candidata y muestra **«Así se vería en el chat»** con «Usar esta imagen» / «Elegir otra» / «Cancelar» —nada queda
+  vigente hasta «Usar»—; y «Volver a la imagen de siempre» (Escuela) o «Volver a la imagen de la Escuela» (las otras), con confirmación.
+  Lo guardado se dice con `ConfirmacionEnLinea` y una vibración de logro. Sin almacenamiento de verdad (local) el botón queda apagado y la
+  sección lo dice. **Contra un backend anterior (404) o sin permiso (403) la sección no se dibuja.**
+* **El chat** muestra esa imagen **según lo que manda el servidor**, con lo local de respaldo (mientras carga o si falla, y siempre que no haya
+  imagen): `photoPath` ahora también llega en la **comunidad general** y en un **grupo sin foto propia** cuando su formación tiene imagen.
+  `fotoDeLaConversacion('global', ruta)` es `foto-del-servidor` (con el fénix debajo, `AvatarDeChat`); el grupo conserva su tarjeta debajo.
+  La lista, la cabecera y la info lo toman sin más cambios.
+  > **Corregido 2026-11-02 (sobre D-206 y D-212).** «La comunidad es siempre el fénix» y «`tieneFotoPropia` = hay `fotoPath`» dejaron de ser
+  > ciertos. El fénix es lo de siempre; la imagen de la formación lo reemplaza si existe. Y como `fotoPath` ya no dice que la foto sea del grupo,
+  > el servidor manda `ownPhoto` (solo en grupos): «Volver a la foto de Renaser» y «Guardar foto» usan `grupoTieneFotoPropia` (con un backend
+  > anterior, sin `ownPhoto`, vale que `fotoPath` solo existe si es propia).
+* **El nombre de la formación en el chat**, sin cambiar diseño: la sección de chats de Tribu y la de «Compartir publicación» se rotulan con
+  `rotuloDeLaSeccionDeTribu` («Formación Renaser» en la Escuela y donde no se sabe la formación o se lee «Todas»; «Diplomado Renaser» y
+  «Certificación Renaser» en las otras, con el nombre que Administración les puso). Los mensajes del programa se firman con el nombre que manda
+  el servidor (`firmaDelProgramaDe`: solo se aceptan las tres firmas; la cuenta de staff que guardó el mensaje no es una firma).
+  > **Corregido 2026-11-02 (sobre 2026-09-27).** «Formación Renaser» como rótulo fijo de la sección de grupos y como firma única del programa
+  > pasó a ser el de la **Escuela**; las otras formaciones llevan el suyo.
+* **No cambian**: el diseño de Bienvenida, Formaciones y el chat, los tabs, los textos de las alarmas ni los cinco principales. Sin animaciones
+  nuevas, íconos ni dependencias.
+* **Supuestos para que el dueño revise** (están en la spec del backend): los textos del Diplomado y la Certificación arrancan con el original de
+  su formación (el de la Escuela con el nombre de la institución cambiado) y no copian lo que Administración haya editado de la Escuela; la
+  portada y la imagen sin la propia **siguen a la Escuela en vivo**; hay **una sola imagen por formación** para la comunidad y los grupos sin
+  foto propia.
+* **Pruebas:** Jest `identidadPorFormacion` (bienvenida por formación, `bienvenidaEsDe`, imagen, rótulo, firma, `grupoTieneFotoPropia`,
+  cableado), `imagenDeLaFormacionApi`, `bienvenidaApi` (rutas con formación), `fotosDelChat`. Maestro, escritos y sin correr:
+  `.maestro/identidad-por-formacion/` (01 a 04).
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire) y el backend con V159 antes: contra uno anterior se edita solo la
+  Escuela, la sección de imagen no aparece y el chat queda como estaba.
+
+## Cambio por pedido del dueño — 2026-11-02 — el programa empieza al día siguiente, sin elegir el Día 1
+
+Cambio de gerencia relayado por el dueño (02/11), textual: «Después de la ficha inicial se preguntaba qué día quiere empezar. Ahora iniciará al día siguiente: el
+usuario no podrá elegir, lo hará al día siguiente. No es un gran cambio, pero sí cambiaría el mensaje: que comienza al día siguiente.» Backend: spec 036 / D-309
+(`specs/036-empieza-al-dia-siguiente/`). Rama `036-empieza-al-dia-siguiente`, sobre `botones-tipo-oracion`. Lo que cambia y nada más:
+* **Regla única: el Día 1 es MAÑANA** en la zona de la persona, **para todos**: el aprendiz al terminar la ficha y los Términos, el personal que se suma a su programa propio
+  (D-260/D-261) y las cuentas antiguas que nunca eligieron (E-594/596/597). **Nadie elige la fecha.** La duración (90 días, 3 meses o 1 año) y el estado del día 0 («Tu programa
+  empieza el martes 3 de noviembre», issue #72) no cambian; quien ya había elegido +2 o +3 conserva su fecha.
+* **La pantalla** (`ActivarProgramaScreen`, la de siempre, ahora corta; el dueño pidió poco texto): «Tu programa empieza mañana» (título), la fecha en una tarjeta con el ícono
+  `calendarRange` («Martes 3 de noviembre»), una línea con el plazo de SU programa (`lineaDelPlazo` sobre `plazoDelObjetivo` y la formación de la sesión: «Son tus 90 días.», «Son tus
+  3 meses.», «Es tu año.») y un solo botón, **«Entendido»**, que activa (`tacto.logro()` y a Hoy). Se fueron la lista de fechas (`OpcionElegible`), «Confirmar mi Día 1» y «Elige tu Día 1».
+  La fecha **la manda el servidor** (`GET /onboarding/activate-program` → `validStartDates[0]`) y es la que se envía en el `POST`: contra un servidor anterior, que ofrecía tres, la primera
+  también es mañana. Todos los textos viven en `onboarding/utils/textoDelDiaUno` (con `fechaDelDiaUno`, que arma la fecha sin pasar por UTC).
+* **Errores**: sin red al activar, «No pudimos activar tu programa. Revisa tu conexión e inténtalo de nuevo.» y el **mismo botón «Entendido» reintenta** con la misma fecha; sin red al leer
+  la fecha, «No pudimos cargar tu fecha de inicio. Revisa tu conexión.» con «Reintentar». **400** (pasó la medianoche con la pantalla abierta y la fecha mostrada ya no es mañana): se
+  vuelve a leer, se muestra la fecha nueva y se dice «Pasó la medianoche y tu fecha cambió. Mira la nueva.»; nunca se activa con un día distinto al que se vio. **409** (otro teléfono ya
+  activó): «Vamos a comprobar tu programa.», se relee y entra directo. Ya activado al abrir, entra sin mostrar nada.
+* **Las entradas, con la misma pantalla** (los nombres internos `BotonElegirDiaUno`, `useSelectorDelDiaUno`, `SelectorDelDiaUno` y `ELEGIR_DIA_UNO` se conservan: renombrarlos tocaría una docena
+  de archivos sin cambiar nada de lo que se ve):
+  | Dónde | Antes | Ahora |
+  |---|---|---|
+  | Hoy y Plan, sin fila (fila compacta) | «Haz tu programa de 90 días · Elige tu Día 1 ›» | «Haz tu programa de {plazo} · **Empieza mañana** ›» |
+  | Hoy y Plan, con fila sin activar | «Todavía no elegiste tu Día 1 · Elige cuándo empiezas ›» | «**Todavía no empezaste tu programa** · **Empieza mañana** ›» |
+  | Training, Plan (estado vacío), Yo (tarjeta), Mi Radar (botón) | «Elegir mi Día 1» | «**Empezar mañana**» |
+  | Training, con fila sin activar | «Todavía no elegiste tu Día 1» + «Elige en qué día quieres empezar tus 90 días. Hasta entonces no hay evidencia que entregar.» | «Todavía no empezaste tu programa» + «**Tu programa empieza mañana. Hasta entonces no hay evidencia que entregar.**» |
+  | Yo, tarjeta de la fila sin activar | «Todavía no elegiste tu Día 1» + «Elige en qué día quieres empezar tus 90 días. Tu programa arranca ese día.» | «Todavía no empezaste tu programa» + «**Tu programa empieza mañana.**» |
+  | Plan, estado vacío | «Cuando elijas tu Día 1 podrás escribir tus objetivos y agendar tus acciones aquí.» | «Cuando empiece tu programa podrás escribir tus objetivos y agendar tus acciones aquí.» |
+  | Mi Radar (motivo y fila de Yo) | «Mi Radar empieza en tu día 8. Primero elige tu Día 1.» / «Primero elige tu Día 1» | «Mi Radar empieza en tu día 8. **Primero empieza tu programa.**» / «**Primero empieza tu programa**» |
+  | Aviso de error (Hoy, Yo, Training) | «No pudimos comprobar tu Día 1» + «Reintentar Día 1» | «No pudimos comprobar tu programa» + «**Reintentar**» |
+  | Objetivos sin programa; fin del diagnóstico; Administración (cambiar día) | «Cuando elijas tu Día 1…»; «…aceptar los Términos y elegir tu Día 1»; «Todavía no eligió su Día 1» | «Cuando empiece tu programa…»; «…aceptar los Términos y empezar tu programa»; «Todavía no empezó su programa» |
+  «Ahora no» (la ✕ de la fila de Hoy), el «volver» de la pantalla fuera del onboarding (su etiqueta pasa de «Volver sin elegir» a «Volver sin empezar») y que en el onboarding la pantalla se
+  trague el gesto de retroceso no cambian.
+* **Cómo se comporta un APK anterior contra el backend nuevo**: ve UNA sola fecha en el selector, preseleccionada, y «Confirmar mi Día 1» activa con ella; si guardó las fechas antes de la
+  medianoche, el servidor responde 400 y ese APK vuelve a leerlas (E-594). **La app nueva contra un backend anterior** también funciona: usa la primera fecha que ofrece (mañana).
+* **No cambian**: la duración por formación, `POST /mentor/activate-tracking` (inicio hoy; solo lo llaman APK ≤ 1.5.0), el reloj del programa, Hoy ni Plan fuera de estos textos, los
+  demás tabs, ninguna animación (la pantalla es la misma, sin movimiento propio), ícono ni dependencia nueva.
+* **Pruebas:** Jest `textoDelDiaUno` (el plazo y la fecha), `diaUnoRecuperacion` (la pantalla: una fecha, 400 con aviso y fecha nueva, 409, red perdida, servidor anterior),
+  `elegirDiaUnoDelPersonal`, `filaDelProgramaPropio`, `filaDelPrograma`, `botonElegirDiaUnoSinEspaciado`, `onboardingFlowConDiagnostico`, `vistaDeMiRadar`, `miRadarEnYo`, `miRadarScreen`,
+  `planFilaDelPrograma` y `planSinProgramaPropio` ajustadas. `e2e/dia-uno/` (Playwright) ajustado. Maestro, escritos y sin correr: `.maestro/empieza-manana/` (01 aprendiz en el
+  onboarding, 02 personal sin fila, 03 fila sin activar con Training y Mi Radar, 04 el plazo según la formación); se ajustaron `hoy-programa-propio/01` y `mi-radar/16`.
+* **Supuestos para el dueño**: «al día siguiente» es el día calendario siguiente (quien termina a las 23:58 empieza dos minutos después); `activate-tracking` queda como está; no hay
+  aviso del teléfono nuevo.
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire) y el backend con la spec 036 (sin migración); sin él la app funciona igual.
+  > **Corregido 2026-11-02, más tarde (ajuste del dueño: «Después de la ficha inicial ya no le sale qué día escogerá. Firma, y al día siguiente ya es su día número 1, ¿verdad?»).**
+  > En el **onboarding**, «Tu programa empieza mañana» ya no espera el toque: al montarse, justo después de firmar los Términos (o al reabrir la app con los Términos firmados),
+  > activa sola (`activarAlMontar`: `POST /onboarding/activate-program` sin fecha, una sola vez aunque se monte dos veces; `activacionAlFirmar`, `useActivacionAlFirmar`). Dice
+  > «Preparando tu programa…» sin fecha mientras responde; con la respuesta, la fecha del servidor y el plazo, y **«Entendido» solo continúa** a la app. Sin red: el mensaje de
+  > siempre y «Reintentar». Si ya había activado y su Día 1 ya llegó, entra directo sin decir «mañana»; contra un servidor anterior que exige la fecha, usa la primera que ofrece.
+  > **Siguen necesitando el toque** (para el personal el programa es opcional): Hoy, Plan, Yo, Training y Mi Radar, y las cuentas anteriores sin Día 1. Backend nuevo, ninguno (el
+  > cuerpo del POST ya era opcional). Maestro `empieza-manana/01` y `04` y `e2e/dia-uno` ajustados; Jest `diaUnoRecuperacion`, `activacionAlFirmar`, `textoDelDiaUno` y
+  > `onboardingFlowConDiagnostico`.
+
+## Cambio por pedido del dueño — 2026-11-02 — Acuerdo de transformación: los términos nuevos, «Mi aceptación» y el cronograma que se firma al entrar (spec 039)
+
+Textual: «Este será el nuevo términos y condiciones. Y cuando aceptes la solicitud con cronograma o sin cronograma: con cronograma, sale abajo para firmar también que estás de acuerdo; y sin cronograma, el de siempre
+de firmar. No te guíes explícitamente como mencionan, solamente agregar esa parte cuando el usuario, administrador o alquimista agregue a alguien dentro de la app.» Spec y contrato en el backend
+(`specs/039-acuerdo-de-transformacion/`, D-312). Lo que cambia y nada más (ni diseño de las demás pantallas, ni tabs):
+* **El texto**: las 23 cláusulas del dueño, tal cual y numeradas, en las TRES formaciones (lo publica el servidor con la migración V162; las edita Administración desde la app, como siempre). Las de dos párrafos (18, 21, 22 y
+  23) llevan una línea en blanco entre ellos. La Escuela dice «Formación RENASER»; el Diplomado, «Diplomado RENASER»; la Certificación, «Certificación RENASER»; «NASER» (la app) se deja. El texto que la app lleva por
+  dentro para un servidor que no ofrece los términos (`terminosData.ts`, `TERMINOS_DE_LA_APP`) pasó al nuevo. El subtítulo dice «Lee atentamente las 23 cláusulas y sella tu aceptación.» (con punto).
+* **«MI ACEPTACIÓN»** (`terminos/components/MiAceptacion`), al final de los términos y antes de firmar, solo lectura y quieto: las dos frases fijas —«He decidido formar parte de RENASER, consciente de mi compromiso con este
+  proceso de transformación.» y «Declaro que he leído, comprendido y aceptado los términos y condiciones del programa al que ingreso.»— y cinco datos que llena el SISTEMA (ninguna IA): **Participante** (el nombre completo del
+  perfil), **Programa** («Formación RENASER · 90 días», «Diplomado RENASER · 3 meses» / «· 1 año», «Certificación RENASER · 90 días»), **Fecha de inicio**, **Fecha de finalización** y **Fecha de aceptación** (la del día
+  de hoy; la hora que queda guardada es la del servidor). La app no calcula nada: llega en `GET /onboarding/terms` → `agreement`. El inicio es el de «Tu programa empieza mañana» (spec 036) —o el real, si ya
+  empezó— y el fin es su último día (inicio + duración − 1), nunca «90 días» escrito a mano. Sin programa que prometer (el personal que no activó el suyo) no hay fechas y el programa dice solo su nombre; sin `agreement`
+  (un servidor anterior) no se dibuja el bloque. Lo escribe `terminos/utils/miAceptacion` (puro).
+* **Con cronograma** (solo al entrar a la app, el onboarding, y solo si el servidor manda `agreement.schedule`: primer ingreso, cronograma de la spec 032 sin confirmar): debajo de «Mi aceptación» sale **«Mi cronograma de pagos»**
+  (`MiCronogramaDePagos`): la moneda, una fila por cuota con el mismo dibujo de «Mi ingreso» (`FilaDeCuota`: fecha, monto y «Pendiente») y la casilla con la frase de la cláusula 19, «Acepto el cronograma de pagos registrado en NASER
+  y me comprometo a cumplirlo.». Sin esa casilla «Continuar» no avanza y dice «Cronograma por aceptar» (la casilla se marca en rojo con «Marca esta casilla para continuar.»). Al firmar, el pedido lleva `scheduleFingerprint` y el
+  servidor confirma el cronograma con la MISMA confirmación de la spec 032 (el nombre completo del perfil, la hora y la huella): «Mi ingreso» ya sale «Confirmaste tu cronograma el …» y no lo vuelve a pedir. **Sin
+  cronograma, o con «pagó completo», la firma es la de siempre, sin esa sección.**
+  > **Corregido 2026-11-02 (decisión del dueño: «lo de los pagos no debe de salir en términos y condiciones ya que será asíncrono»).** Todo este punto **ya no es cierto**: ni «Mi cronograma de
+  > pagos», ni su casilla, ni `scheduleFingerprint`, ni el 409 «Tu cronograma cambió mientras leías», ni «Firmaste tu cronograma de pagos con los términos.». Lo mismo en «El pedido», «Qué guarda el servidor»
+  > y «Orden del onboarding» de abajo, en lo que hablan del cronograma. «Mi aceptación» y el texto no cambian. Ver «Decisión del dueño — 2026-11-02 — el cronograma de pagos no va en los términos».
+* **Orden del onboarding**: Ficha → (diagnóstico, si lo tiene) → Términos con «Mi aceptación» y, si corresponde, el cronograma → firma → «Tu programa empieza mañana» (se activa sola). Las fechas de «Mi aceptación» y las de «empieza
+  mañana» son las mismas (las dos salen de la misma cuenta del servidor).
+* **Volver a aceptar** (quien ya estaba dentro: «Actualizamos nuestros términos», `TerminosActualizadosScreen`): el texto nuevo y «Mi aceptación» con su programa y sus fechas REALES (ya empezó), **sin** la sección del cronograma,
+  aunque tenga uno. A quien recibe un cronograma después, o lo tiene cambiado, se le pide en «Mi ingreso» como hoy (spec 032), sin volver a firmar los términos. Esta pantalla no manda ninguna huella.
+* **El pedido** (`POST /onboarding/milestones`, hito `TERMINOS`) suma `agreementStartDate` (el inicio que vio) y `scheduleFingerprint` (la huella del cronograma que aceptó, si lo firmó). Si ya no coinciden con los de ahora el
+  servidor responde **409** y no registra nada: «Pasó la medianoche y tus fechas cambiaron: léelas de nuevo.» o «Tu cronograma cambió mientras leías: revísalo de nuevo.»; la app relee, lo dice con las palabras del servidor
+  (título «Algo cambió mientras leías») y vuelve a pedir lo marcado. «Continuar» espera a que lleguen los términos (`loading` hasta `cargada`) para no firmar sin lo que el servidor ofrece.
+* **Qué guarda el servidor** junto a la constancia de la spec 027: el programa, el inicio y el fin que se mostraron y, si firmó el cronograma, su huella. Yo → Mi onboarding → «Términos y condiciones» y la constancia de la ficha de
+  Administración lo dicen («Formación RENASER · 90 días», «Del 3 de noviembre de 2026 al 31 de enero de 2027», «Firmaste tu cronograma de pagos con los términos.»); lo aceptado antes no dice nada de eso.
+* **No cambian**: la firma (dibujo o nombre) y su casilla, las validaciones de siempre («Aceptación requerida», «Firma requerida»), «Mi ingreso», el editor de términos de Administración (muestra y edita las 23 cláusulas, también
+  las de dos párrafos), la barra de pestañas ni las demás pantallas. Sin dependencias ni código nativo.
+* **Supuestos para el dueño**: el texto nuevo reemplaza a los vigentes en las tres formaciones; «(Formación, Diplomado o Certificación RENASER)» es el programa de la persona; quien ya estaba dentro vuelve a aceptar con su firma al abrir
+  la app; el Diplomado y la Certificación, que no tenían términos publicados, quedan con estos; el nombre con el que se confirma el cronograma es el nombre completo del perfil. Límite aceptado: si la medianoche cae entre firmar y que
+  se active el programa (segundos), la fecha de «Tu programa empieza mañana» puede ser un día después de la firmada.
+* **Pruebas**: Jest `miAceptacion` (lectura y líneas), `acuerdoDeTransformacion` (las pantallas sin cronograma, con cronograma y volver a aceptar, el 409), `loMostradoAlAceptar` (releer y la constancia), `borradorDeTerminos` y
+  `cableadoDeTerminos` (el texto de respaldo y el cableado). Maestro, escritos y sin correr: `.maestro/acuerdo-de-transformacion/` (01 a 04).
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire) y el backend con la spec 039 (V162) antes; sin él la app usa el texto que lleva y no dibuja «Mi aceptación» ni el cronograma.
+
+## Decisión del dueño — 2026-11-02 — el cronograma de pagos no va en los términos
+
+Textual: «lo de los pagos no debe de salir en términos y condiciones ya que será asíncrono bro, eso saldrá luego que el administrador lo llene». Corrige la spec 039 (más arriba) y se apoya en la 032. Backend: D-315,
+`specs/039-acuerdo-de-transformacion/`. Lo que cambia y nada más:
+* **Los términos y la firma NO muestran ni exigen el cronograma**, ni al entrar (el onboarding) ni al aceptar los «términos actualizados». Se quitaron `MiCronogramaDePagos`, la casilla de la cláusula 19, la huella (`useSellarTerminos`,
+  `aceptarHito`: el pedido solo lleva `termsVersionId` y `agreementStartDate`), el 409 por cronograma cambiado y las líneas «Firmaste tu cronograma de pagos con los términos.» de «Mis términos» y de la constancia de la ficha. La app
+  ignora `agreement.schedule` y `scheduleSigned` aunque un servidor anterior los mande. **«MI ACEPTACIÓN» se queda tal cual** (nombre, programa y fechas que llena el servidor), como las 23 cláusulas y la firma de siempre.
+* **El cronograma es asíncrono: lo llena Administración cuando quiera, después de aceptar.** En la hoja «Aceptar» (Pago → «Con cronograma») **las cuotas son opcionales**: la moneda sigue siendo obligatoria (el servidor la guarda con la
+  modalidad; no hay valor por defecto) y se manda `SCHEDULE` con la moneda y las cuotas que se hayan escrito (ninguna, si no); una fila sin nada escrito no cuenta y una a medias sigue siendo un error (`problemaDelBorrador(…, {
+  permiteSinCuotas })`). La ayuda dice «Eliges la moneda; las cuotas las puedes registrar ahora o después, en su ficha.». La persona queda «con cronograma» **sin cuotas**.
+* **Dónde se llenan después (ya existía, la spec 032; no se inventó nada):** la ficha de la persona → «Pagos» (`PagosDeLaPersona`). Con cronograma y sin cuotas dice «Con cronograma en soles (S/). Sin cuotas registradas.» y «Todavía no hay cuotas.
+  La persona verá que aparecerán cuando las registres.», con **«Armar las cuotas»** (la hoja del cronograma con la moneda ya puesta y el atajo mensual; puede guardarse otra vez sin cuotas) y «Agregar una cuota» (una por una). Quien ya tiene
+  cuotas conserva «Reemplazar el cronograma» y no puede guardarlo sin cuotas.
+* **Lo que ve la persona** (Yo → «Mi ingreso», spec 032): la fila existe en cuanto hay un pago anotado y dice «Aún no hay cuotas registradas»; la pantalla, en lugar de la lista vacía y de la casilla de confirmar, dibuja una tarjeta corta con el
+  ícono del calendario, «Tu cronograma de pagos» y «Tu cronograma de pagos aparecerá aquí cuando Administración lo registre.» (sin recordatorios de pago, que no hay qué recordar). El paso «Pagos» de arriba queda pendiente. En cuanto hay
+  una cuota, es el «Tus fechas de pago» de siempre, con su confirmación **solo aquí** (el servidor responde 409 si se intenta confirmar sin cuotas).
+* **No cambian**: el diseño de las demás pantallas, los tabs, el texto de las cláusulas (la 19 sigue hablando del acuerdo de pagos), «Sin cronograma (pagó completo)», los recordatorios de pago ni las reglas de la 032 (lo pagado no se toca,
+  nada se recalcula solo, nunca bloquea).
+* **Backend** (D-315): el acuerdo de `GET /onboarding/terms` ya no trae `schedule`; sellar los términos ya no lee ni valida ninguna huella (un APK de la 039 que todavía manda `scheduleFingerprint` no falla: se ignora) y no confirma el
+  cronograma; «con cronograma» sin cuotas es válido al aceptar y en `PUT /admin/pagos/personas/{id}`. No se borró ninguna tabla ni columna: `aceptaciones_de_terminos.cronograma_huella` queda sin escribir ni leer.
+* **Pruebas** (marcadas `decisión 2026-11-02 pagos fuera de términos`): Jest `acuerdoDeTransformacion` (la firma sin cronograma aunque tenga cuotas), `cableadoDeTerminos`, `miAceptacion`, `loMostradoAlAceptar`,
+  `borradorDelCronograma`, `aceptarSolicitudConPago` (aceptar «Con cronograma» sin cuotas), `pagosDeLaPersona` (la ficha sin cuotas), `vistaDeMiIngreso` y `miIngresoScreen` («Mi ingreso» sin cuotas, sin hueco). Maestro, escritos y sin
+  correr: `.maestro/acuerdo-de-transformacion/02-con-cronograma-la-firma-no-lo-muestra.yaml` (antes firmaba el cronograma), `.maestro/pagos/10-aceptar-con-cronograma-sin-cuotas.yaml` y `11-mi-ingreso-con-cronograma-sin-cuotas.yaml`.
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). El backend nuevo funciona con el APK de la 039 (ignora `schedule`); el APK nuevo con un backend anterior simplemente no dibuja el cronograma (lo ignora).
+
+## Cambio por pedido del dueño — 2026-11-02 — «Kilómetros diarios»: los pasos del teléfono llenan los km (spec 037, D-310)
+
+Textual: «cómo hacemos que el celular cuente los pasos, tipo Pokémon GO. Procede.» Maqueta aprobada (opción A, 14 pantallas). Pokémon GO no cuenta
+los pasos él mismo: lee lo que el sistema registra; aquí igual, **sin servicio propio, sin notificación fija y con la app cerrada**. Spec, plan y
+contrato en el backend: `specs/037-pasos-y-km/` (D-310, V161). **Cambio del dueño el mismo día («todos tienen Android 14»): solo Health Connect.** Lo que
+cambia y nada más:
+* **Solo Health Connect, Android 14 o más.** El sistema cuenta los pasos del teléfono en cuanto una app tiene `READ_STEPS`, y los relojes (Samsung,
+  Fitbit, Garmin, Xiaomi/Zepp) escriben en el mismo lugar. **No hay módulo propio, ni Recording API, ni `play-services-fitness`.** Android menor a 14,
+  un teléfono sin Health Connect, Huawei sin Google y el iPhone (web) **se quedan con la captura de siempre, por decisión del dueño**, y no se ofrece
+  instalar nada (`soporteDeSalud`: API 34 y `SDK_AVAILABLE`; en la web `saludConectada.web.ts` dice siempre «no disponible»).
+* **La fila de «Kilómetros diarios»** (`features/pasos/`; solo esa fila y solo HOY): sin conectar, bajo el nombre «Cuenta tus pasos solo ›» (48 de alto);
+  conectado, una barra y «3,2 de 5 km» con la fuente, un círculo apagado, y **sin «Subir»**; con la meta alcanzada, «5,4 km · ¡Meta lista!» y el botón
+  **«Registrar»**, que relee, comprueba la meta y cierra el hábito; sin pasos hoy, «Todavía no vemos pasos hoy» con «Actualizar» y «Subir captura»; sin
+  permiso, «Perdimos tus pasos»; ya cumplido, «5,4 km». La hoja de lo cumplido suma «5,4 km · Health Connect · Galaxy Watch» (o «· Captura»). Todo lo
+  decide `vistaDeKilometros` (pura, con una prueba por estado). La lista de hoy lo comparte con la fila por contexto (`PasosDeLaLista`): ni `ListaDeHoy` ni
+  los días anteriores cambian, y sin `medicion.meta` en la agenda (un backend anterior) la fila es exactamente la de siempre.
+* **Dos hojas** (`HojaDesdeAbajo`, sin animación propia): `HojaConectarPasos` («Cuenta tus km solo»: «Tu teléfono o tu reloj cuentan los pasos. · Renaser solo lee pasos y
+  distancia. · Tu mentor y el ranking ven tu total de km.», «Conectar» / «Ahora no», y la política de privacidad; después «Ya contamos tus pasos»; y en un teléfono
+  sin soporte, «Sube tu captura» con «Subir captura») y `HojaDeKilometros` (el número grande, los pasos «aprox.» si salen de la zancada, la meta, la fuente y la
+  última lectura, «Registrar 5,4 km», «Actualizar» y «Desconectar»; con dos fuentes, «La usamos» / «No se suma» y «Cambiar prioridad»). «Conectar» es el consentimiento
+  que pide Google Play: dice que el mentor y el ranking ven el total.
+* **Cuándo lee** (`usePasosDelDia`): al abrir Training, al volver a primer plano, con «Actualizar» y justo antes de registrar; entre lecturas automáticas, 30 s.
+  Nunca en segundo plano, ni en un día anterior, ni con el hábito cumplido, ni sin conectar o sin permiso. Lee solo `Steps` y `Distance`, solo el día del registro.
+* **Una sola fuente por día, sin doble conteo** (`saludConectada`, `fuentesDeSalud`): se leen los registros del día con su método y su origen; un origen con algo escrito a mano
+  (`recordingMethod` 3) o de método desconocido (0) **no cuenta** (`METODOS_QUE_NO_CUENTAN`; si en un teléfono real los relojes llegaran con 0, es una línea). El número es el
+  AGREGADO de Health Connect pedido solo a los orígenes limpios: Health Connect elimina duplicados con la prioridad que la persona fijó. Km = la distancia agregada o, si no hay,
+  los pasos × 0,75 m («aprox.»). La etiqueta de la fuente sale del paquete (los nombres están escritos de memoria y se confirman en un teléfono real) o del modelo del dispositivo.
+* **Registrar** (`registrarKilometrosAutomaticos`, `POST /habit-tracks/{id}/auto-measurement`): mismas reglas del 17-oct que `/complete`: se compara el id del registro con
+  el de hoy antes de enviar; si el día cambió no se manda nada, se recarga y se avisa «Tu día cambió»; un 409 de día cerrado tampoco se reasigna ni se celebra. Al confirmar sale
+  `habitoCumplido` (alarmas, celebración, puntos del servidor) y la línea «Registramos tus 5,4 km.». Doble toque = un pedido. El servidor valida la meta, los topes y el día, y es idempotente.
+* **Quién más lo ve:** el mentor, la guía, el líder y Administración ven en cada día «5,9 km · Medido por el reloj», los pasos y la distancia, «Galaxy Watch · leído a las 17:10» y
+  **«Por revisar»** si el servidor dejó dudosa la lectura (`LineaDeLaMedicion`, en `AlumnoScreen` y `DiaDeLaPersona`; la captura dice «Captura de la persona»). El **ranking de
+  Kilómetros** no cambia sus cifras: marca **«· auto»** junto al total de quien tiene días leídos por el teléfono y dice «Km de tus pasos o de tu captura.» bajo el selector.
+* **Administración → Hábitos del programa → Kilómetros diarios:** «Meta diaria de km» (`MetaDeKilometrosDelHabito`, `GET/PUT /admin/habits/{id}/measurement-goal`, de 0,5 a 50, por
+  defecto 5; «Volver a la del programa»). Rige desde ya para los registros automáticos; la captura sigue aceptando cualquier km mayor que cero. La sección solo existe si el servidor responde.
+* **Supuestos del equipo, a confirmar con el dueño:** (1) la meta de 5 km; (2) solo el cierre automático exige la meta; (3) el ranking mezcla km de GPS y de pasos (±10–20 %) y los marca «auto»;
+  (4) lo dudoso (más de 30 km, o una zancada fuera de 0,3 a 1,6 m) entra marcado «por revisar» y cuenta; (5) los pasos son de todo el día, no solo caminatas.
+* **Privacidad y Play:** la política (`/privacidad/`) suma una sección de pasos y distancia, para qué se usan, quién los ve y cómo se desconecta. **Antes de publicar** hay que declarar
+  «Activity and fitness» (Steps y Distance) en el formulario «Health apps» de Play Console y actualizar Data safety. La pantalla de permisos de Health Connect abre NUESTRA actividad
+  (`plugins/withHealthConnect.js` escribe `PoliticaDePrivacidadDeSaludActivity.kt`, el filtro `ACTION_SHOW_PERMISSIONS_RATIONALE` y el alias `ViewPermissionUsageActivity`): el plugin de la
+  librería (`app.plugin.js`) **no** se pone en `plugins` porque apunta a `MainActivity`, y tocar el enlace solo abría la app.
+* **Dependencias nuevas, revisadas antes de instalar** (`specs/037-pasos-y-km/research.md` del backend): `react-native-health-connect@4.1.3` **fijada sin `^`** (MIT, publicada por GitHub Actions con
+  proveniencia, sin scripts de instalación, sin dependencias, sin red) y `expo-build-properties@~57.0.22` (Expo). **`minSdk` pasa de 24 a 26** (lo exige `androidx.health.connect:connect-client:1.1.0`):
+  Android 7.x queda fuera. **No se agregó `expo-dev-client`:** cambiaría cómo arrancan `expo start` y `expo run:android` y los flujos de Maestro.
+* **Hace falta un build nativo** (código nativo nuevo: no llega por aire, no sirve Expo Go ni el APK publicado): `eas build --platform android --profile debug-pasos` (el APK de depuración de siempre,
+  que carga el JS desde Metro). Probar en un emulador Android 14+ con Health Connect Toolbox sembrando pasos (`.maestro/pasos-y-km/README.md`). Y **el backend con V161 antes** (contra uno anterior
+  no hay `medicion.meta` y la fila es la de siempre).
+* **Fuera de alcance, para después:** cerrar el hábito sin tocar al abrir la app (B), en segundo plano (C, pide `READ_HEALTH_DATA_IN_BACKGROUND`), iPhone (HealthKit), una fila «Mis pasos» en Yo.
+* **Pruebas:** Jest `fuentesDeSalud`, `lecturaDelDia`, `vistaDeKilometros`, `textosDePasos`, `medicionDeLaFicha`, `pasosApi`, `conexionDeLosPasos`, `usePasosDelDia`, `pasosEnPantalla`,
+  `filaDeKilometrosConPasos`, `pasosEnLaApp` y `healthConnectEnLaApp` (configuración del build). Maestro, escritos y sin correr: `.maestro/pasos-y-km/`.
+
+## Cambio por pedido del dueño — 2026-11-02 — SER al día con la lógica nueva y para las tres formaciones (spec 038)
+
+Textual: «Lo de cumplir hábito, su lógica, y SER también puede hacerlo: ¿sabe de estos cambios? Ahora no pide foto, pero SER debe ayudar con lo que tenemos. Cada
+cambio debe ser de acuerdo a lo de ahora: no ayudará a Plan como antes, ya que no podrá, o saldrá error»; y «SER estará para las 3» (Escuela, Diplomado y
+Certificación). La mayor parte es del **backend** (prompt, herramientas, V160; `specs/038-ser-al-dia/` y D-311 del backend). En la app cambia solo esto, sin
+diseño nuevo ni dependencias:
+* **Un ritual que pide SER se escribe, no se fotografía.** La tarjeta del chat y la hoja del orbe de Hoy (`TarjetaFotoDeHabito`, `AccionDelAcompanante`) leen el pedido
+  con `conPregunta` en un hábito como «ritual: se escribe» (`seRegistraEscribiendoElPedido`, `renasia/utils/pedidosDeFoto`; una acción del día nunca lo es). Su botón dice
+  **«Escribir cómo me siento»** (con lápiz en la hoja del orbe) y abre la MISMA hoja de Training, `RegistroDeRitualConTexto` (evidencia TEXTO y cierre con la respuesta,
+  que emite `habitoCumplido`), montada dentro del panel de SER y en Hoy (`useRitualPorTexto`). Así también las tarjetas que ya estaban en un chat, de cuando se pedía la
+  cámara, pasan a escribir. Registrada, la tarjeta dice «Listo, quedó registrado tu ritual.». Los demás hábitos con foto siguen con «Tomar foto».
+* **Rótulos de esas tarjetas en tipo oración y en segunda persona** («Evidencia de tu hábito», «Evidencia de tu acción», «Registro de tu ritual», «Tomar foto», «Tu día ya
+  cerró…»; antes «EVIDENCIA DE TU HÁBITO», «TOMAR FOTO» y «Su día ya cerró…»).
+* **Cumplir un hábito con SER hace lo mismo que cumplirlo en Training (issue #33).** `POST /renasia/propuestas/{id}/confirmar` devuelve, si la propuesta cumplió un hábito
+  (Despertar, Dormir, Última comida, un opcional…), `habitoCumplido {registroId, habitoId, fecha, puntos}`, y `confirmarPropuestaRenasia` emite `habitoCumplido` con ese dato
+  **antes** de avisar a Training y a Hoy que recarguen: se apagan las alarmas de ese hábito que le quedaban a ese día (`atenderAlCumplirUnHabito` → `alCumplirElHabito`),
+  sale la celebración con sus puntos y se refresca el semáforo y el fénix. El campo es opcional y tolerante: un backend anterior, una propuesta que no cumple un hábito o un
+  dato mal formado no emiten nada. **Límites aceptados:** la Pastilla, la Audioterapia y la Clase por SER siguen sin avisar (cierran por su propio camino), y una respuesta
+  repetida (doble toque) trae solo el texto.
+* **«Última comida del día» lleva el círculo en todos los entornos** porque el backend (V160) la deja con evidencia opcional; la app no cambió (ya decidía por el dato).
+* **Política de privacidad (`public/privacidad/index.html`)**: declara que el diagnóstico inicial completo (ingresos, emociones, situación personal) llega al proveedor de IA
+  para responderte, que la memoria del acompañante no guarda dinero personal y que SER no lee los pagos; ya no promete el Mapa ni fija «90 días». Prueba: `paginaPoliticaDePrivacidad`.
+* **Pruebas:** Jest `ritualPorSer`, `propuestaCumpleUnHabito`, `tarjetaDelRitualPorSer`, `useRitualPorTexto`, `ritualPorSerEnLasPantallas` y la de la política de privacidad.
+  Maestro, escrito y sin correr: `.maestro/ser-al-dia/`.
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire) y **el backend con la spec 038 antes** (V160 y `habitoCumplido`). Sin él, los rituales
+  por SER siguen abriendo el registro por texto, pero cumplir con SER no apaga alarmas.
+* **Para cuando se integren 036 y 037:** el día 0 («tu programa empieza mañana») y los km con pasos conectados (SER no pide foto y manda al «Registrar» de la fila) se
+  programan al integrarlas; ver `specs/038-ser-al-dia/` del backend.
+  > **Corregido 2026-11-02 (integración de las formaciones).** Esos dos pendientes (T020 y T021 de la spec 038) son **del servidor** y no cambian la app: en el día 0 SER
+  > dice que el programa empieza mañana, con la fecha y el plazo de la formación, y no habla de día ni de fase; `proponer_plan_del_dia` exige que el programa haya
+  > empezado; y en KILÓMETROS DIARIOS con medición automática SER no pide foto sino que manda al «Registrar» de la fila de Training (la fila y su pantalla son de la
+  > spec 037, ya en la app). La app solo dibuja lo que el servidor le manda, así que ni la tarjeta del chat ni la hoja del orbe cambian.
+
+## Cambio de infraestructura — 2026-11-02 — CI de seguridad y alertas de Dependabot del frontend
+
+Del barrido de seguridad del 02/11: el repositorio es público, tenía **27 alertas abiertas de Dependabot** (1 crítica, 13 altas, 9 medias y 4 bajas) y ningún
+chequeo de seguridad en el CI. Sin cambios de diseño, textos, tabs ni código de `src/`. Lo que cambia y nada más:
+* **Dependencias** (`package.json` y `package-lock.json`): `zod` `^4.5.4` → `^4.6.7` (directa, alta: agota memoria con arreglos grandes) y
+  `@playwright/test` `^1.49.1` → `^1.55.1` (desarrollo, alta: bajaba navegadores sin verificar). El lock sube además `node-forge` 1.4.0 → 1.4.2
+  (12 alertas), `shell-quote` 1.10.0 → 1.12.0 (la crítica), `brace-expansion`, `compression`, `source-map-js` y `@react-navigation/core`
+  7.21.13 → 7.24.0 (con eso sale `query-string` y su `decode-uri-component`, dos alertas más). Ninguna otra versión directa cambia. Ninguno de los
+  15 paquetes que cambian trae scripts de instalación; `zod@4.6.7` está publicado con procedencia (SLSA) desde GitHub Actions.
+* **Después de fusionar quedan 4 alertas abiertas, a propósito**: `uuid` 7.0.3 (#2), `deepmerge` (#17, sin versión corregida), `glob` 13.0.6 (#30) y `minimatch`
+  10.2.6 (#31). Las cuatro cuelgan de la herramienta de compilación de Expo y de Jest (`@expo/cli`, `@expo/config-plugins`, `xcode`,
+  `jest-config`), no entran en el paquete de la app, y arreglarlas exige saltos mayores (`glob` 14, `minimatch` 11, `uuid` 11) que las versiones
+  de Expo y Jest que usamos no aceptan; `npm audit fix --force` propone *bajar* Expo a la 51. Se vuelven a mirar al subir de SDK. Si
+  Dependabot mantiene abierta la de `zod` por la copia 3.25.76 que trae `@expo/cli`, es un falso positivo: el código vulnerable (`$ZodArray`) es
+  de la línea 4.
+* **`.github/workflows/seguridad.yml`** (nuevo, aparte de `ci.yml`): corre en cada PR, en `master` y **cada lunes** (una dependencia puede
+  volverse vulnerable sin que nadie toque el repo). Tres jobs: **gitleaks** (secretos en todo el historial, con `--redact` porque el registro
+  es público), **trivy** (dependencias de `package-lock.json`, incluidas las de desarrollo: frena con severidad ALTA o CRÍTICA que ya tenga
+  arreglo; lo medio y lo bajo solo se imprime) y **CodeQL** (JavaScript/TypeScript; no frena, sube a Security → Code scanning). Gitleaks y trivy se
+  bajan como binarios con versión y SHA-256 fijos en el workflow (ninguna acción de terceros); para subir de versión se cambian los dos valores
+  juntos.
+* **`.trivyignore.yaml`** (nuevo, vacío): las excepciones con motivo y fecha de vencimiento. Va pasado con `--ignorefile` porque la versión que
+  fijamos no lo busca sola.
+* **`.github/dependabot.yml`** (nuevo): PR semanal de menores y parches (los saltos mayores, aparte) para npm y para las acciones de los
+  workflows. **No toca lo que Expo fija por SDK** (`expo*`, `@expo/*`, `react`, `react-native*`, `@react-native/*`, Skia, Rive, `jest-expo`,
+  `typescript`…): se mueve junto, a mano, al subir de SDK.
+* **Comprobado sin `node_modules`**: el lock se regenera idéntico con `npm install --package-lock-only`; `trivy` da
+  14 altas/críticas con el lock anterior (sale con 1) y 0 con el nuevo (sale con 0); `gitleaks` limpia sobre 922 commits y falla ante un secreto
+  de prueba. **Falta** `npm ci`, `npm run typecheck` y `npm test -- --ci` con `node_modules` (zod 4.5 → 4.6 y `@react-navigation/core` 7.21 → 7.24 son
+  código de la app), y que el workflow corra una vez en GitHub.
+* **Hace falta un APK nuevo** para que `zod` y `@react-navigation/core` lleguen a los teléfonos (solo JavaScript: ni `app.json` ni código nativo; la
+  app no se actualiza por aire). Backend nuevo, ninguno.
+
+## Corrección — 2026-11-02 — Training dice cuándo empieza el programa de quien empieza mañana (issue #101)
+
+E2E final del 2026-11-02: a quien activó su programa y su Día 1 es mañana (fila con `programa_activado_en` hoy; spec 036), Training le mostraba
+un día cualquiera —«Hoy no tienes nada planificado.», la semana, un evento y la ayuda— con ~65 % de la pantalla en blanco, mientras Hoy y Plan decían
+«Tu programa empieza el martes 3 de noviembre». Causa: `useArranqueDelPrograma` da a quien empieza mañana `EN_CURSO` con la fecha (D-103: ya puede
+organizar), y Training solo avisaba a quien empieza pasado mañana o más tarde (`ESPERANDO_INICIO`). Lo que cambia y nada más:
+* **Una fila arriba, pegada a la cabecera de Training**, con la MISMA fila y el MISMO texto de Hoy y Plan: `FilaDelProgramaQueEmpieza`
+  (`FilaCompacta`, ícono `calendarRange`, sin chevron: no lleva a nada) con «Tu programa empieza el martes 3 de noviembre» —o «Tu programa empieza
+  pronto» si el servidor no mandó la fecha: no se inventa una—. El texto sale de `vistaDelProgramaQueEmpieza` (`programa/utils/filaDelPrograma`), la
+  única frase que usan Hoy, Plan (por `vistaDeLaFilaDelPrograma`), Training y Yo (issue #102). Quién la ve lo decide `programaQueEmpieza` (pura):
+  `inscrito`, día 0 y `EN_CURSO`. Con el programa en marcha, sin fila, mientras se comprueba, con el aviso de «Todavía no empezaste tu programa» o el de
+  «Tu programa arranca pronto» (pasado mañana o más), no se dibuja. Con el programa en otra formación tampoco.
+* **No cambia**: la lista del día, la semana, «Tus prácticas» (siguen habilitadas: quien empieza mañana organiza hoy, D-103), el aviso de quien empieza
+  pasado mañana, ni ningún pedido al servidor (la fila usa la lectura que Training ya hacía). Sin animación nueva.
+* **Pruebas:** `trainingDiceCuandoEmpieza.test.ts` (`programaQueEmpieza`, el texto compartido, la fila y que `TrainingScreen` la dibuja arriba de la lista).
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
+
+## Corrección — 2026-11-02 — Yo: sin fase ni semáforo antes del Día 1 ni sin programa (issue #102)
+
+E2E final del 2026-11-02: a quien empieza mañana, Yo le decía «Fase 1 de 4 · Días 1–7 · Día 0 de 90 · Te quedan 6 días en esta fase» y «Tu semáforo ·
+Sin datos · 0 de 7 días con datos»; al personal sin programa, lo mismo. `/home` manda la fase y el semáforo también antes del Día 1 y sin fila, y Yo los
+dibujaba siempre que llegaran. Lo que cambia y nada más (`features/yo/utils/evolucionEnYo`, pura):
+* **Con el programa en marcha (día 1 o más):** «Tu evolución» —la tarjeta de fase y el semáforo— como siempre.
+* **Antes del Día 1 (activó su programa y espera):** en su lugar, UNA fila, «Tu programa empieza el martes 3 de noviembre» (o «pronto» sin fecha), la
+  misma de Hoy, Plan y Training (`FilaDelProgramaQueEmpieza`). Sin fase, sin días que quedan y sin semáforo.
+* **Sin programa** (`inscrito` falso: el personal sin fila) **o con la fila sin activar:** no se dibuja nada de «Tu evolución», ni siquiera el rótulo:
+  un bloque vacío deja igual su separación del scroll (`gapLg`) y ese era el hueco. Yo ya tiene lo que corresponde (la invitación o «Todavía no empezaste
+  tu programa», `EntradaAlProgramaPropio`). Mientras se comprueba cuál de los casos es, tampoco se dibuja nada (sin parpadeo). Si la tarjeta de fase y el
+  semáforo faltan por otro motivo (fase desconocida, semáforo apagado), el rótulo «Tu evolución» tampoco queda suelto.
+* **Sin pedidos nuevos:** Yo ya leía `/home` y `useDiaUnoPorElegir` (que antes solo usaba `porElegir`). No cambian Coherencia / Puntos / Racha, las filas ni Mi Radar.
+* **Pruebas:** `evolucionEnYo.test.ts` (los cuatro casos y que `YoScreen` condiciona la tarjeta, el semáforo y el rótulo).
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
+
+## Corrección — 2026-11-02 — la Ficha Inicial dice el plazo de la formación de cada persona (issue #103)
+
+Identidad por formación en todo: la Ficha Inicial estándar —la que ve quien no tiene diagnóstico— decía «durante los 90 días», «me comprometo a los 90 días» y
+«compromiso a los 90 días» a todos, también a quien está en un Diplomado de 3 meses o de 1 año. Ahora el plazo sale de la formación de la persona
+(`useFormacionDeLaSesion` → `plazoDelObjetivo(duracionDias, codigo)`, el mismo que usa «Tu programa empieza mañana», `lineaDelPlazo`). Lo que cambia y nada más:
+* **Tres textos**: la ayuda de «¿Qué esperas concretamente de Renaser?» («…en tu mente, cuerpo y negocio durante los 90 días» / «durante los 3 meses» / «durante
+  el año»), la casilla del consentimiento («Autorizo el uso de mis datos y me comprometo a los 90 días» / «a los 3 meses» / «al año») con su nombre para el lector de
+  pantalla («Consentimiento y compromiso de 90 días» / «3 meses» / «1 año»), y el aviso «Por favor marca la casilla de autorización de datos y compromiso a los 90 días
+  para continuar.» (`plazoConArticulo` y `alPlazo` en `pasosFicha`: el artículo y la contracción «al año»).
+* **Con 90 días las frases son EXACTAMENTE las de siempre**, palabra por palabra: la Escuela y la Certificación no ven ningún cambio, y sin formación conocida
+  (un servidor anterior, o todavía sin leer) vale el de siempre, 90 días (`PLAZO_POR_DEFECTO`). `validarPaso`, `validarCapitulo` y `ChapterConsentimiento` suman un
+  parámetro opcional `plazo`; `PasoFicha.bajada` puede ser una función del plazo (`bajadaDelPaso`).
+* **No cambia** lo que se guarda (`compromiso90Dias` sigue siendo la clave del contrato con el servidor), las preguntas, ni los demás avisos.
+* **Barrido de todo `features/onboarding/` (ampliación, mismo día).** El E2E lo confirmó en pantalla con un Diplomado de 1 año, y quedaban más «90 días». Un
+  solo mecanismo para todo: `usePlazoDeLaSesion` (`formaciones/hooks`; `{ plazo, duracionDias }` de la formación de la sesión) y las frases de
+  `formaciones/utils/plazoEnFrases` (`plazoConArticulo`, `alPlazo`, `losProximos`, `diaDeLaEtapa`). Con 90 días cada texto es el de siempre. Ahora también dicen el
+  plazo de SU formación: el subtítulo del capítulo 3 (`chaptersConfig.subtitle`, `subtituloDelCapitulo`), «Ratifico mi compromiso con los 90 días de Renaser» y su
+  «Día 90» (`ChapterCompromiso`), los campos de Cuerpo y Negocio y sus ejemplos (`ChapterCuerpo`, `ChapterNegocio`: «A 3 MESES», «al Día 365»), los avisos y campos del
+  cuestionario profundo (`bloquesCuestionarioProfundo`, `textoDelAviso`, `CuestionarioProfundoScreen`), «LOS PRÓXIMOS 90 DÍAS», «90 días de compromiso…» y las etapas
+  «DÍA 01 / 30 / 60 / 90» de la bienvenida (con 365 días: 01, 122, 243 y 365, la misma proporción de las fases; `BienvenidaScreen`), «Activaste tu protocolo innegociable de
+  90 días» (`GongVictoriaScreen`) y el último compromiso del Pacto (`pactoData`).
+  **Ojo, qué se ve de verdad:** la Ficha Inicial estándar y «Tu programa empieza mañana» son las pantallas vivas. `BienvenidaScreen`, `GongVictoriaScreen`, el cuestionario
+  profundo (`CuestionarioProfundoScreen` y sus `Chapter…`) y `pactoData` **no están montados hoy** (nadie los importa): se corrigieron para que, si vuelven, no digan 90 a
+  nadie. `usePlazoDeLaSesion` no pide nada: lee el contexto de la formación que ya está en la sesión.
+* **Fuera de `onboarding/`:** los demás «90 días» de la app se corrigieron en el issue #104 (entrada de abajo).
+* **Pruebas:** `fichaPorFormacion.test.ts` (los tres plazos en los tres textos, la frase de siempre con 90 días y el cableado de `FichaInicialScreen`),
+  `plazoEnElOnboarding.test.ts` (las frases, cada pantalla con 90 días, 3 meses y 1 año, y un barrido que falla si el código de `onboarding/` vuelve a escribir «90 días»
+  o «Día 90» a mano) y `usePlazoDeLaSesion.test.ts`.
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
+
+## Corrección — 2026-11-02 — ningún «90 días» escrito a mano en lo que ve la persona (issue #104)
+
+Decisión del dueño: «ningún «90 días» para el Diplomado ni la Certificación». Completa lo de #103 en todo `src/`. El plazo se dice con el de la formación de la
+persona (`usePlazoDeLaSesion`: «90 días» en la Escuela y la Certificación, «3 meses» o «1 año» en el Diplomado), o con un texto neutro donde no hay sesión.
+Con 90 días cada frase es la de siempre. Lo que cambia y nada más:
+* **Con el plazo de la formación:** la invitación del personal sin programa («Hacer mi programa de 3 meses», `InvitacionProgramaPropio`), el aviso de la clase diaria
+  («Todavía no arrancaste tus 3 meses / tu año», `ClaseDiariaModal`, `tuPlazo`), el Pacto de Yo (la cláusula 10 «Llegar al Día 365…» y «Pacto sellado. Tu compromiso de
+  1 año está activo.»), la tarjeta «Completa tu diagnóstico» («De él nacen tus objetivos de 3 meses.», `lineaDeLaTarjetaPendiente`), los avisos «No pudimos cargar
+  tu objetivo de …» y «Primero define tus tres objetivos de …» (`useRocasMaestras`, `useRocasSemanales`: el plazo va en una referencia, así que leer la formación tarde no
+  vuelve a pedir los objetivos) y «Tu semáforo se mide cuando tienes el programa de … activado» (`SemaforoScreen`).
+* **Neutro donde no hay sesión de esa persona:** la imagen del podio sin nombre de formación dice «Renaser» (antes «Renaser · 90 días»; con formación dice la de la tabla, como
+  siempre); la tarjeta del semáforo de OTRA persona (mentor y Administración) dice «No tiene su programa activado…»; y la ficha del mentor dice «Día 12» en vez de
+  «Día 12 de 90» (esa lectura no trae la duración del aprendiz).
+* **`FormacionContext` se partió en dos** (`context/contextoDeFormacion.ts`: el contexto y `useFormacionDeLaSesion`, sin la sesión; `FormacionContext.tsx`: el
+  proveedor, que re-exporta lo anterior, así que los imports de siempre no cambian). Así leer la formación no arrastra `AuthContext` ni `AsyncStorage` a cada pantalla y a
+  cada prueba (el primer intento de #103 dejó roja `fichaPasoAPaso` por eso).
+* **Excepciones del barrido, solo dos y justificadas** (`ningunNoventaDiasEscrito.test.ts`): `PLAZO_POR_DEFECTO = '90 días'` en `nombreDelObjetivo.ts` (el valor por defecto de
+  donde salen los demás) y el respaldo `{ dias: 90, texto: '90 días' }` de `diagnosticoSchemas.ts` (un servidor que no manda la duración; ninguna pantalla lo dibuja). Los
+  comentarios no cuentan. **No se tocó** el nombre del producto «Renaser 90 días» de las páginas públicas (`public/privacidad`, `public/eliminar-cuenta`): es la marca de la app.
+* **Pruebas:** `ningunNoventaDiasEscrito.test.ts` (barre `src/` y `App.tsx`: falla con «90 días», «Día 90», «de 90» o «noventa» escritos a mano), `plazoEnLasPantallas.test.ts`
+  y las de #103; se ajustaron `subtituloDelAlumno` y `tarjetaDelPodio`.
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
+
+## Corrección — 2026-11-02 — SER: el texto de respaldo de las propuestas ya no queda encima de la tarjeta ni repetido al releer el historial (issue #105)
+
+E2E final del 2026-11-02 (capturas `B4-ser-ritual-tarjeta` y `B4-ser-historial-recargado`). El backend manda antes de cada evento un texto de respaldo para las
+apps viejas —«Propuesta: …», «Foto para registrar '…': …» y, para los rituales, «Para registrar '…' cuenta como te sientes: …»— y esta versión dibuja la tarjeta, así que
+los quita. Fallaban tres cosas, todas en `renasia/utils/propuestas` (ahora con las reglas en `respaldosDelBackend`, que `propuestas` re-exporta). Lo que cambia y nada más:
+* **Se quitan estén donde estén y aunque vengan varios seguidos.** Antes solo si iban al FINAL del mensaje: con dos respaldos seguidos (el de la foto o el del ritual
+  y después el de la propuesta) el de la propuesta quedaba como texto encima de la tarjeta. Ahora se compara línea por línea (cada respaldo es una línea) y se quita la
+  línea completa de cualquier lugar; lo que no es EXACTAMENTE esa línea no se toca (mejor repetido que borrar algo que dijo el asistente).
+* **El respaldo del ritual tiene quien lo quite** (`quitarRespaldoDeFoto` lo reconoce junto al de la foto del hábito y al de la foto de la acción del día), y el de la foto
+  ya no depende de «subela desde Hoy»: vale «desde Hoy» y «desde Training» (el servidor ahora dice Training). `destino` se acepta pero ya no distingue una forma de otra.
+* **Tolerante a las tildes** (el backend los va a corregir, #63): la comparación es sin tildes, sin mayúsculas, con los espacios juntos y con las comillas tipográficas
+  como rectas, así que «súbela», «botón», «cámara», «acción» y «cuenta cómo» valen igual que las formas sin tilde.
+* **Al releer el historial**, lo guardado trae los respaldos adentro y sin tarjeta (la propuesta ya venció o se resolvió) y una vez salió el mismo «Propuesta: …» dos
+  veces en la misma burbuja: `mapearMensajeApi` aplica `sinRespaldosRepetidos` a los mensajes del asistente, que deja UNA sola vez cada línea de respaldo. Una propuesta
+  guardada una sola vez se deja como estaba (ya sin botones, pero es lo que se dijo); lo que escribió la persona no se toca.
+* **La voz tampoco lee el del ritual** (`voz.ts` usaba un filtro propio que solo conocía «Propuesta:» y «Foto para registrar»; ahora usa `esLineaDeRespaldo`).
+* **No cambian** las tarjetas, los textos del asistente, el backend ni el stream. **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire).
+* **Pruebas:** `respaldosDelBackend.test.ts` (con los textos reales de `B4-SER-respuestas.txt`: ritual, kilómetros, última comida, dos seguidos, en medio, tildes, Hoy y
+  Training, y el historial repetido), `respaldosEnElChat.test.ts` (el hook: llegada con dos respaldos seguidos y relectura del historial) y `propuestas.test.ts`.
+
+## Corrección — 2026-11-02 — Training → Planificar: «Por semana» abre en la semana con el cambio guardado, también al volver de «Siempre» (issue #106)
+
+El dueño pidió que lo guardado por semana «salga marcado» (issue #95). Al abrir un hábito ya abría en «Por semana», en la semana con el cambio; pero al pasar de «Siempre»
+a «Por semana» con el editor abierto (`cambiarAlcance`) abría SIEMPRE en la primera semana, y si el cambio estaba en otra el punto no se veía. Hallado en el E2E del
+02/11 con `planificacion/lo-guardado-sale-marcado`. Lo que cambia y nada más:
+* **Regla única** (al abrir el hábito y al pasar de «Siempre» a «Por semana»): «Por semana» abre en **la primera semana editable que tenga un cambio guardado** de ese hábito
+  (`primeraSemanaConCambiosPropios`: las fechas con fila propia de `dateOverrides`, sin contar hoy ni lo pasado); **si no hay ninguna, en la primera editable**, como siempre.
+* **Cuenta lo guardado en la misma sesión:** tras guardar, el editor relee las preferencias, así que «Siempre» y de vuelta ya abre en esa semana.
+* **No cambia** el resto del editor, lo que se guarda ni ningún pedido al servidor (la semana se lee con la misma lectura de siempre).
+* **Pruebas:** `planificarPorSemana.test.ts` («Por semana» abre en la semana con el cambio guardado): vuelve a la semana del cambio, con varios cambios abre en el primero editable,
+  un cambio de hoy o pasado no cuenta, sin cambios abre en la primera, y lo recién guardado también cuenta. Maestro `planificacion/lo-guardado-sale-marcado` ajustado a la regla.
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
+
+## Corrección — 2026-11-02 — Training abre en MAÑANA en el Día 0 (issue #107)
+
+E2E final del 2026-11-02: a quien su programa empieza mañana, Training le abría en HOY, con la lista vacía («Hoy no tienes nada planificado.») y media pantalla en blanco, aunque ya
+tenía lo planificado para mañana. El #101 puso arriba la fila «Tu programa empieza el …»; esto hace que además abra donde hay algo que ver. Lo que cambia y nada más:
+* **En el Día 0, Training abre en mañana**, con la vista de un día que viene que ya existía (lo planificado de ese día, sin botones ni toques; las horas y las acciones se piden
+  al abrir, una vez por semana y cuenta, como al tocar cualquier día que viene). Arriba sigue la fila «Tu programa empieza el …» y la persona puede tocar hoy cuando quiera.
+* **Cuándo:** solo si el Día 1 es EXACTAMENTE mañana (`diaInicialDeTraining`, pura: la fecha de inicio que ya lee `programaQueEmpieza`). Sin fecha («Tu programa empieza pronto»),
+  con el programa ya en marcha o empezando hoy o pasado mañana, abre en hoy como siempre. **El domingo se queda en hoy:** Training muestra la semana que se VIVE (de lunes a
+  domingo) y mañana ya es de otra, que no se ve.
+* **Una sola vez por día** (`useDiaInicialDeTraining`): si la persona toca hoy, no se la vuelve a llevar a mañana; al pasar la medianoche se decide de nuevo. Si eligió otro día antes
+  de que llegara la fecha de inicio, tampoco se le cambia.
+* **No cambia** la fila, la lista de hoy, «Tus prácticas» (siguen habilitadas, D-103) ni ningún pedido nuevo al servidor.
+* **Pruebas:** `useDiaInicialDeTraining.test.ts` (la función pura, el hook y el cableado de `TrainingScreen`).
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
+
+## Corrección — 2026-11-02 — «Aceptada el …» en la ficha de Administración sale en la zona del teléfono, no en UTC (issue #108)
+
+E2E final del 2026-11-02: la ficha de la persona y la lista de «Aceptadas» de Administración decían «Aceptada por … el 3 de noviembre» para una aceptación de las 21:30 de Lima del
+2 (`2026-11-03T02:30:00Z`): entre las 19:00 y las 24:00 de Lima salía el día siguiente. Causa: `admin/utils/fechas.fechaCorta` partía el texto ISO a mano —bien para una fecha de
+calendario, mal para un INSTANTE—, así que el día era el de UTC. Lo que cambia y nada más:
+* **`fechaCorta` distingue las dos formas:** una fecha sola (`2026-11-03`, `LocalDate`) se sigue partiendo a mano, sin `Date` (que la correría un día); un instante (con hora: `…T02:30:00Z`,
+  con desfase o con espacio) se lee en la zona del TELÉFONO, como el resto de la app (`fechaDeFirma`, `fechaCortaDe` de la Caja, `fechaDeVersion`, `fechaLegible`). Arregla
+  `textoDeLaAceptada` (ficha y lista de «Aceptadas») y «Rechazada por … el …» (`SolicitudesAdminScreen`).
+* **Otros lugares revisados** (fechas de aceptación, firma, confirmación y versiones): los términos (`fechaDeVersion`, `fechaDeFirma`, «Aceptó los términos… el»), el Pacto, «Mi aceptación», «Confirmaste
+  tu cronograma el …» (`diaDeUnInstante`), la cuenta que se borra, la publicación del diagnóstico y la foto del grupo ya leían el instante en la zona del teléfono: no se tocaron. **Uno más
+  tenía el mismo fallo y se arregló:** «Nueva cohorte» proponía como fecha de inicio `new Date().toISOString().slice(0, 10)` (UTC: a las 21:30 de Lima, mañana); ahora es `hoyIso()`, el día del teléfono.
+  La bienvenida de Administración (`bienvenida.ts`) lee el instante en una zona fija de Lima a propósito.
+* **Pruebas:** `fechaDeLaAceptacionEnLima.test.ts` (con el instante de las 21:30 de Lima y el reloj fijado a esa hora: los límites 18:59, 19:00, 23:59:59 y 00:00, desfase y cruces de mes y año, la fecha
+  de calendario que no se corre, la ficha dibujada y la cohorte). Jest corre con `TZ = America/Lima`.
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
 
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
@@ -800,6 +2304,11 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     > igual: los días 1 a 7, la fila de Yo desde el día 8, el interruptor opcional, la invitación del día 8, los canales y el minuto de los avisos,
     > el formulario y las fichas (salvo su línea de resumen). **Ya no están en Yo → Mi Radar** los registros de hoy, el «Historial» ni los
     > «Patrones» (corregido el mismo día: ver «Mi Radar automático y personalizado (spec 019)»).
+    > **Corregido 2026-10-31 (spec 034, D-299, pedido del dueño: «El líder de mentores y el mentor no pueden ver el Código Renaser: un
+    > interruptor para activar y desactivar»).** Lo de las **fichas** de abajo («`CodigoRenaserDelAlumno` … la usan `AlumnoScreen` (mentor),
+    > `FichaAprendizScreen` … y `PersonaDelLiderScreen` (líder)») **ya no es incondicional**: el mentor, la guía y el líder solo ven la sección «Código
+    > Renaser» de una ficha si Administración la encendió (de fábrica está **apagada**). Administración, Alquimista y la propia persona no cambian.
+    > Ver la entrada «Código Renaser en las fichas (spec 034)», al final de las del 2026-10-31.
     * **Yo → fila «Mi Radar»** (`compass`), justo debajo de «Tuve una emergencia», **solo desde el día 8** y solo si el
       servidor la ofrece (`GET /api/v1/radar/mi-radar`; un 404 o 403 la esconde). Dice `Encendido · 09:00, 14:00 y 20:00` o
       `Apagado` y abre `MiRadarScreen` a pantalla completa. Los días 1 a 7 no hay fila: el Código Renaser se abre solo.
@@ -1290,6 +2799,8 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     * **Compatibilidad:** `GET/PUT /radar/mi-radar` devuelven los siete días ya resueltos; una respuesta de un backend anterior a la 019 (con `horas`) se
       lee como un error y la fila de Yo no aparece. **Hace falta el backend con V122 antes y un APK nuevo** (la app no se actualiza por aire).
     * **El 403 de Mi Radar dice por qué y lleva a elegir el Día 1** (último pedido del dueño sobre la spec 019: «no quiero bugs en esa parte»).
+      > **Corregido 2026-11-02 (spec 036, D-309).** Ya no se elige el Día 1: el motivo dice «Mi Radar empieza en tu día 8. **Primero empieza tu programa.**», la fila de Yo
+      > «**Primero empieza tu programa**» y el botón es «**Empezar mañana**», que abre «Tu programa empieza mañana». El 403 `PROGRAMA_NO_ACTIVADO`, "Cargando…" y el resto de lo de abajo no cambian.
       Hasta hoy un 403 de `GET/PUT /api/v1/radar/mi-radar` se leía como «no hay Mi Radar», en silencio. Ahora el cuerpo trae `codigo`
       (`PROGRAMA_NO_ACTIVADO`, `CUENTA_SUSPENDIDA` o `SIN_PERMISO`; el formato `ApiErrorConCodigo` de siempre) y la lectura
       (`useConfigDeMiRadar.lecturaDeUnError`) lo distingue; la pantalla dice lo que toca con `utils/vistaDeMiRadar` y
@@ -2039,8 +3550,13 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       «LISTO», «Código de país», «Sugerencias», «Usar «…»» (era `USAR: "…"`), «Sin resultados para
       «…».». **Sin dependencias nuevas:** el arrastre usa `PanResponder` (Gesture Handler no está
       instalado y agregarlo exige prebuild); las ruedas no usan el selector nativo de fecha.
+      > **Corregido 2026-11-02.** Los botones dorados ya no van en versales: «LISTO» es «Listo», y lo mismo «SIGUIENTE», «CONTINUAR A
+      > TÉRMINOS» y los demás de la Ficha. Ver «los botones dorados en tipo oración y sin espaciado», al final de las decisiones.
     * **Términos y Día 1:** el mismo esqueleto, con «CONTINUAR» / «CONFIRMAR MI DÍA 1» fijos abajo.
       Términos atiende el gesto atrás de Android (vuelve a la ficha).
+      > **Corregido 2026-11-02.** Los botones dicen «Continuar» y «Confirmar mi Día 1» (también «Aceptar» en Términos actualizados,
+      > «Comenzar mi viaje» en la bienvenida y «Entrar a mi Día 1 (hoy)» en el gong). Ver la entrada del 2026-11-02.
+      > **Corregido 2026-11-02 (spec 036, D-309).** «Confirmar mi Día 1» ya no existe: el último paso es «Tu programa empieza mañana» con «Entendido». Ver la entrada del 2026-11-02 (spec 036).
     * **Lo que NO cambia:** preguntas, claves y respuestas (`mapaPreguntas.ts`), el guardado por
       capítulo (mismo `POST /onboarding/answers`, mismo `avanzarEstado`, sólo al terminar cada
       capítulo), las 23 cláusulas, la firma y los avisos de validación (mismos títulos y mensajes).
@@ -2252,6 +3768,8 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
         queda sola si la foto falla, sin reintentar en cada fila (`utils/fotoDelSoporte.ts`,
         `hooks/useFotoDelSoporte.ts`; *desde D-206 se llaman `utils/fotoConSesion.ts` y
         `hooks/useFotoConSesion.ts`, porque sirven cualquier ruta*).
+      > **Corregido 2026-11-02 (spec 035).** La comunidad es el fénix solo mientras su formación no tenga una imagen propia; con ella, la del
+      > servidor (`photoPath`) y el fénix debajo. Ver la entrada «identidad por formación», arriba.
       * **La comunidad vuelve al fénix y cada integrante de la info del grupo muestra su tarjeta con
         nombre** (decisiones del dueño del mismo día, D-206 del backend). Textual: «de la plantilla
         que te pasé los 2 png […] es para el grupo con el mentor y el tema de soporte […] y chat
@@ -2526,6 +4044,8 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     (S-9 de `docs/specs/RETROALIMENTACION_2026-09-26.md` del backend, E-257).** Sin datos
     (`habitosHoy` null) la tarjeta ya no dice «Al día»: no muestra cifra (`features/home/utils/cifrasDeHabitos.ts`).
     Nada más de `Hoy` cambia.
+  > **Corregido 2026-11-02 (spec 035).** La bienvenida de abajo es ahora **una por formación**: la pantalla suma el control «Escuela · Diplomado ·
+  > Certificación» y cada una tiene sus mensajes y su portada. Lo demás de esta entrada vale para la formación elegida. Ver «identidad por formación».
   * **Excepción autorizada por el dueño del producto — 2026-09-27 — Administración (estado de `Hoy`),
     «Bienvenida»** (pedido del dueño: que Administración y Alquimista cambien desde la app la portada
     de la tarjeta de bienvenida y los mensajes; backend D-210, `/api/v1/admin/bienvenida`). En «Más
@@ -2564,6 +4084,7 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       (`training/utils/horaDelEditor.ts`).
     * **Onboarding → Términos (ONB-02).** «CONTINUAR» ya no queda apagado hasta tener la casilla y la
       firma: al tocarlo dice cuál falta, con las alertas que ya existían y nunca salían.
+      > **Corregido 2026-11-02.** El botón dice «Continuar», en tipo oración (ver la entrada del 2026-11-02 sobre los botones dorados).
     * **Administración → «¿A quién atiendo hoy?» (ADM-01).** La etiqueta del lector de pantalla ya no
       repite «Grupo» («Grupo Grupo Plan E2E», «Grupo Sin grupo»); lo que se ve no cambia
       (`admin/utils/etiquetaDeAtencion.ts`).
@@ -2717,6 +4238,9 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       sigue sin «volver» y tragándose el gesto). Está en la tarjeta de Training y, como tarjeta «Todavía no elegiste tu
       Día 1», en Hoy y Yo (`EntradaAlProgramaPropio`, que solo consulta con `inscrito` y día 0). Al elegir, el aviso se va
       solo (`useArranqueDelPrograma` acepta una `version` para volver a consultar).
+      > **Corregido 2026-11-01.** En Hoy (y en Plan) ya no es una tarjeta: es una fila compacta, «Todavía no elegiste tu Día 1 · Elige cuándo
+      > empiezas ›», y la invitación sin fila es «Haz tu programa de 90 días · Elige tu Día 1 ›» sin el párrafo «Puedes recorrerlo tú también…».
+      > Yo conserva la tarjeta. Ver la entrada del 2026-11-01.
     * **Sin fila (personal que nunca empezó):** Training muestra la invitación «Hacer mi programa de 90 días · Empezar»
       en vez de «No pudimos cargar tu entrenamiento» con el uuid. La tarjeta salió de Hoy a
       `programa/components/InvitacionProgramaPropio` (mismo texto, mismos botones); «Empezar» sigue siendo
@@ -2731,6 +4255,8 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       > APK:** con un backend anterior, el selector de quien no tiene fila muestra «No pudimos cargar las fechas…» (404).
       > Prueba: `programa/__tests__/elegirDiaUnoDelPersonal.test.ts` (la invitación abre el selector, elige con el
       > servidor y no llama a `activate-tracking`; ninguna pantalla contiene `/mentor/activate-tracking`).
+      > **Corregido 2026-11-02 (spec 036, D-309).** Nadie elige ya su Día 1: «Elegir mi Día 1» es «**Empezar mañana**», «Todavía no elegiste tu Día 1» es «**Todavía no empezaste tu programa**» y la
+      > pantalla que abre es «Tu programa empieza mañana» (sin fechas a elegir, con «Entendido»). El POST sigue creando la fila ya activada, con inicio mañana. `activate-tracking` no cambia.
     * **«Ahora no»** sigue escondiendo la invitación solo en Hoy; Yo la ofrece siempre que el servidor diga
       `canStartProgram` (`useProgramaPersonal` devuelve además `puedeActivar`, sin el pospuesto).
     * Nada depende del nombre del rol (los dos idiomas: `MENTOR_LEAD`/`LIDER_MENTORES`, `ALCHEMIST`/`ALQUIMISTA`): lo
@@ -3034,6 +4560,9 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     elección existente; una respuesta perdida permite repetir la misma fecha. La matriz E2E vive en
     `playwright.dia-uno.config.ts` y su preparación y alcance en `e2e/mapa-poder/README.md`.
     **Requiere publicar ambos proyectos:** el backend serializa la elección por usuario hasta el commit.
+    > **Corregido 2026-11-02 (spec 036, D-309).** «Ofrecen el selector», «Reintentar Día 1», «Un 400 refresca fechas» y «repetir la misma fecha» ya no son así: se ofrece «Empezar mañana» (la pantalla
+    > «Tu programa empieza mañana»), el aviso dice «No pudimos comprobar tu programa» con «Reintentar», un 400 significa que pasó la medianoche y la fecha mostrada ya no es mañana (se vuelve a leer y se avisa),
+    > y «Entendido» otra vez manda la misma fecha. El resto (nada se asigna solo, vencen a los 15 s, respuestas fuera de orden) sigue igual.
     Verificación final del 2026-10-12: 34/34 E2E de Día 1 y 5/5 mapas completos, cero reintentos,
     fallos, errores u omitidos. JUnit y persistencia SQL en `artifacts/e2e-dia-uno/` y `artifacts/e2e-mapa/`.
 
@@ -3422,6 +4951,9 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       Yo → Alarmas»), **Vibración** («El teléfono vibra»), **Voz que dice el hábito** («Una voz dice el nombre del
       hábito») y **Repetir si no la atiendo** («Vuelve a sonar a los 5 y a los 10 minutos»). Sin aviso, o con el hábito
       apagado ese día, la sección se atenúa, no se puede tocar y dice por qué («Este día no tiene aviso»).
+      > **Corregido 2026-11-02 (pedido del dueño: menos texto).** Con «Sin aviso» (o el hábito apagado ese día) «Cómo suena» **ya no se dibuja** en el editor de
+      > Planificar: ni la sección atenuada ni «Este hábito no tiene aviso / Elige un aviso en Recordatorio…». Lo que se había tocado ahí y quedó escondido no
+      > se guarda. El control de las acciones de los objetivos (Plan y Yo → Alarmas) conserva el suyo.
     * **`InterruptorGrande`** (`components/InterruptorGrande.tsx`), componente nuevo y aparte: **no reemplaza ni cambia
       a `Interruptor`**, que sigue con 51 × 31 en Yo, Plan, Training y Eventos. La fila entera es el área de toque (56 o
       más de alto), con el rótulo a 17 px y la explicación a 15; riel de 72 × 40, pulgar blanco de 34 con sombra suave,

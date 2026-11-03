@@ -106,7 +106,8 @@ async function tocarYEsperar(r: ReactTestRenderer) {
 describe('ComunidadScreen solo suma el botón', () => {
   it('monta `BotonDescargarPodio` una vez, con las filas de la tabla que se mira y la fecha del corte', () => {
     expect(COMUNIDAD.match(/<BotonDescargarPodio/g)).toHaveLength(1);
-    expect(COMUNIDAD).toMatch(/<BotonDescargarPodio entradas=\{apiRankingEntries\} tabla=\{tipoRanking\} fechaDelCorte=\{rankingData\?\.fecha\} \/>/);
+    // Spec 024: además de las filas, la tabla y la fecha del corte, recibe el nombre de la formación que se mira.
+    expect(COMUNIDAD).toMatch(/<BotonDescargarPodio\s+entradas=\{apiRankingEntries\}\s+tabla=\{tipoRanking\}\s+fechaDelCorte=\{rankingData\?\.fecha\}\s+nombreDeLaFormacion=\{formacionDeLaComunidad\.nombreDeLaQueSeMira\}\s+faltaElegirFormacion=\{formacionDeLaComunidad\.hayQueElegirParaCrear\}\s+\/>/);
   });
 
   it('no sabe de captura ni de compartir: todo eso vive en `features/ranking`', () => {
@@ -115,7 +116,7 @@ describe('ComunidadScreen solo suma el botón', () => {
   });
 
   it('el botón vive junto a la línea de lo que mide la tabla, y esa línea sigue ahí', () => {
-    expect(COMUNIDAD).toMatch(/TABLAS_DE_RANKING\.find\(tabla => tabla\.clave === tipoRanking\)\?\.explica/);
+    expect(COMUNIDAD).toMatch(/tablasDelRanking\.find\(tabla => tabla\.clave === tipoRanking\)\?\.explica/);
     const iBoton = COMUNIDAD.indexOf('<BotonDescargarPodio');
     const iExplica = COMUNIDAD.indexOf('?.explica');
     expect(iBoton).toBeGreaterThan(iExplica);

@@ -31,6 +31,9 @@ describe('dónde se pinta el nombre de un hábito', () => {
     ['«Mi agenda»', 'features/eventos/utils/miAgenda.ts', /titulo: tituloEnTipoOracion\(h\.titulo\)/],
     ['el selector de hora', 'features/habits/components/HoraPickerModal.tsx', /\{tituloEnTipoOracion\(tituloHabito\)\}/],
     ['el aviso de cambiar el nombre', 'features/habits/components/AvisoRenombrarHabito.tsx', /\{tituloEnTipoOracion\(tituloHabito\)\}/],
+    // Issue #94: «Repetir tu semana» → «Ver qué se repite» escribía el título del catálogo tal cual («ESCRITURA LIBRE NOCTURNA»).
+    ['«Qué se repite» (el hábito de la semana)', 'features/training/components/HojaDeRepetirSemana.tsx', /\{tituloEnTipoOracion\(h\.titulo\)\}/],
+    ['«Qué se repite» (los que se quedan afuera)', 'features/training/components/HojaDeRepetirSemana.tsx', /\{tituloEnTipoOracion\(x\.title\)\}: \{motivoDeExclusion/],
   ])('%s', (_donde, archivo, patron) => {
     expect(leer(archivo)).toMatch(patron);
   });

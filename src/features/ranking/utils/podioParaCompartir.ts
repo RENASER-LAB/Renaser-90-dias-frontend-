@@ -55,6 +55,11 @@ export interface PodioParaCompartir {
   total: number;
   /** El nombre del archivo que se descarga, sin carpeta. */
   nombreDelArchivo: string;
+  /**
+   * Spec 024: el nombre de la formación del podio («Diplomado Renaser»), que la imagen escribe en su cabecera. `null` si no se sabe
+   * (un backend anterior a las formaciones): la imagen conserva su cabecera de siempre.
+   */
+  formacion: string | null;
 }
 
 const TITULOS: Record<ClaveDeTabla, { titulo: string; detalle: string }> = {
@@ -128,16 +133,32 @@ function puesto(entrada: EntradaRankingDto, tabla: ClaveDeTabla, maxCaracteres: 
   };
 }
 
-/** Arma lo que dice la imagen a partir de las filas de la tabla que se está mirando. */
+/** «Diplomado Renaser» → `diplomado-renaser`: para el nombre del archivo. Sin tildes ni símbolos. */
+function paraElArchivo(nombre: string): string {
+  return nombre
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+/**
+ * Arma lo que dice la imagen a partir de las filas de la tabla que se está mirando. `formacion` (spec 024) es el nombre de la
+ * formación de esas filas: va en la cabecera de la imagen y en el nombre del archivo.
+ */
 export function podioParaCompartir(
   entradas: readonly EntradaRankingDto[],
   tabla: ClaveDeTabla,
   fechaDelCorte?: string | null,
   hoy: Date = new Date(),
+  formacion?: string | null,
 ): PodioParaCompartir {
   const primeras = entradas.slice(0, PUESTOS_EN_LA_IMAGEN);
   const [primero, segundo, tercero] = primeras;
   const fecha = fechaDeLaImagen(fechaDelCorte, hoy);
+  const nombreDeLaFormacion = formacion?.trim() || null;
+  const deLaFormacion = nombreDeLaFormacion ? paraElArchivo(nombreDeLaFormacion) : '';
   return {
     tabla,
     ...TITULOS[tabla],
@@ -150,6 +171,7 @@ export function podioParaCompartir(
     ],
     lista: primeras.slice(3).map(entrada => puesto(entrada, tabla, MAX_CARACTERES_FILA)),
     total: primeras.length,
-    nombreDelArchivo: `podio-${tabla}-${fecha.archivo}.png`,
+    nombreDelArchivo: `podio-${tabla}-${deLaFormacion ? `${deLaFormacion}-` : ''}${fecha.archivo}.png`,
+    formacion: nombreDeLaFormacion,
   };
 }

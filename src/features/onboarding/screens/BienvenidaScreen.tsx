@@ -7,21 +7,34 @@ import { useResponsive } from '../../../theme/responsive';
 import { Icon } from '../../../components/Icon';
 import { MicroLabel } from '../../../components/ui';
 import { GoldButton } from '../../../components/GoldButton';
+import { usePlazoDeLaSesion } from '../../formaciones/hooks/usePlazoDeLaSesion';
+import { diaDeLaEtapa, losProximos } from '../../formaciones/utils/plazoEnFrases';
 
 interface BienvenidaScreenProps {
   onContinue: () => void;
 }
 
+/** Las cuatro etapas, con el día de cada una en un programa de 90 días; `etapasDelProgramaDe` las lleva a la duración de la persona (issue #103). */
 const EVOLUTION_STAGES = [
-  { day: 'DÍA 01', title: 'SEMILLA', desc: 'Fundación & Consciencia', icon: 'spark' as const },
-  { day: 'DÍA 30', title: 'CRECIMIENTO', desc: 'Disciplina & Hábitos', icon: 'body' as const },
-  { day: 'DÍA 60', title: 'FORTALEZA', desc: 'Aceleración & Enfoque', icon: 'brain' as const },
-  { day: 'DÍA 90', title: 'ÁGUILA', desc: 'Identidad Renovada', icon: 'diamond' as const },
+  { dia: 1, title: 'SEMILLA', desc: 'Fundación & Consciencia', icon: 'spark' as const },
+  { dia: 30, title: 'CRECIMIENTO', desc: 'Disciplina & Hábitos', icon: 'body' as const },
+  { dia: 60, title: 'FORTALEZA', desc: 'Aceleración & Enfoque', icon: 'brain' as const },
+  { dia: 90, title: 'ÁGUILA', desc: 'Identidad Renovada', icon: 'diamond' as const },
 ];
+
+/** «DÍA 01», «DÍA 30»… en los 90 días de siempre; con 365 días, «DÍA 01», «DÍA 122», «DÍA 243» y «DÍA 365». */
+export function etapasDelProgramaDe(duracionDias: number) {
+  return EVOLUTION_STAGES.map(({ dia, ...etapa }) => ({
+    ...etapa,
+    day: `DÍA ${String(diaDeLaEtapa(dia, duracionDias)).padStart(2, '0')}`,
+  }));
+}
 
 export function BienvenidaScreen({ onContinue }: BienvenidaScreenProps) {
   const { c, t, mode, toggle } = useTheme();
   const { rs, isTablet } = useResponsive();
+  /* Issue #103: «los próximos 90 días» y el Día 90 son los del programa de la persona (3 meses, 1 año), no siempre 90. */
+  const { plazo, duracionDias } = usePlazoDeLaSesion();
 
   const ringSizes = [rs(220), rs(176), rs(132), rs(88)];
   const ringColors = [c.ring1, c.ring2, c.ring3, c.ring2];
@@ -84,12 +97,12 @@ export function BienvenidaScreen({ onContinue }: BienvenidaScreenProps) {
           <View style={{ alignItems: 'center', marginBottom: 8 }}>
             <MicroLabel>Tu mapa evolutivo</MicroLabel>
             <Text style={[t.sectionTitle, { color: c.text, marginTop: 4, fontSize: 13, letterSpacing: 2 }]}>
-              LOS PRÓXIMOS 90 DÍAS
+              {losProximos(plazo).toUpperCase()}
             </Text>
           </View>
 
           <View style={styles.stagesGrid}>
-            {EVOLUTION_STAGES.map(stage => (
+            {etapasDelProgramaDe(duracionDias).map(stage => (
               <View
                 key={stage.day}
                 style={[
@@ -116,12 +129,12 @@ export function BienvenidaScreen({ onContinue }: BienvenidaScreenProps) {
           <View style={[styles.quoteBox, { backgroundColor: c.goldWash, borderColor: c.borderStrong }]}>
             <Icon name="diamond" size={16} color={c.goldInk} />
             <Text style={[t.body, { color: c.text, flex: 1, lineHeight: 20, fontSize: 13.5 }]}>
-              90 días de compromiso, disciplina innegociable y evolución en 5 dimensiones.
+              {`${plazo.charAt(0).toUpperCase()}${plazo.slice(1)} de compromiso, disciplina innegociable y evolución en 5 dimensiones.`}
             </Text>
           </View>
 
           <GoldButton
-            label="COMENZAR MI VIAJE"
+            label="Comenzar mi viaje"
             onPress={onContinue}
             icon="arrow"
             style={{ marginTop: 6 }}

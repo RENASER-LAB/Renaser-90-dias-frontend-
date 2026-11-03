@@ -28,7 +28,7 @@ describe('Yo y Plan leen la fase del mismo lugar', () => {
   it('la fase la saca faseEnCurso, y ninguna pantalla hace su propia cuenta', () => {
     // «Fase actual» salió de Plan el 2026-10-31 (rediseño de Plan; ya está en Yo): hoy solo Yo dice la fase.
     expect(PLAN).not.toMatch(/faseEnCurso|Fase actual/);
-    expect(YO).toMatch(/faseEnCurso\(resumen\?\.fase, resumen\?\.diaPrograma\)/);
+    expect(YO).toMatch(/faseEnCurso\(resumen\?\.fase, resumen\?\.diaPrograma, resumen\?\.duracionDias\)/);
     for (const codigo of [PLAN, YO]) {
       expect(codigo).not.toMatch(/descripcionDeFase\(|diasDeLaFase\(/);
     }

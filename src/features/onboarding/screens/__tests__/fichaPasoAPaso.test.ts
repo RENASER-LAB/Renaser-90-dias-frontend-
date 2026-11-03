@@ -59,6 +59,8 @@ jest.mock('../../../../services/storage/almacenamientoLocal', () => ({
   },
 }));
 jest.mock('../../api/onboardingApi', () => ({ obtenerRespuestas: async () => ({ sections: [] }) }));
+// El plazo de la formación (issue #103) sale de la sesión; esta prueba es del paso a paso y no monta la sesión (que lee AsyncStorage).
+jest.mock('../../../formaciones/hooks/usePlazoDeLaSesion', () => ({ usePlazoDeLaSesion: () => ({ plazo: '90 días', duracionDias: 90 }) }));
 
 import { FichaInicialScreen } from '../FichaInicialScreen';
 import { PasoDocumento, PasoSobreTi, PasoWhatsapp } from '../../components/ChapterIdentidad';
@@ -95,7 +97,7 @@ function titulo(r: ReactTestRenderer): string {
 }
 
 async function siguiente(r: ReactTestRenderer) {
-  const [boton] = r.root.findAll(n => n.props.label === 'SIGUIENTE' || n.props.label === 'CONTINUAR A TÉRMINOS');
+  const [boton] = r.root.findAll(n => n.props.label === 'Siguiente' || n.props.label === 'Continuar a términos');
   await act(async () => {
     await boton.props.onPress();
   });

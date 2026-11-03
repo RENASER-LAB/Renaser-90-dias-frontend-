@@ -66,7 +66,7 @@ afterEach(() => {
 describe('qué dice un error de lectura', () => {
   it('404: un backend anterior; 403 con motivo conocido: sin programa, suspendida o sin permiso', () => {
     expect(lecturaDeUnError(new ApiError(404, 'no hay'))).toEqual({ estado: 'no-disponible' });
-    expect(lecturaDeUnError(prohibido('PROGRAMA_NO_ACTIVADO', 'Mi Radar empieza en tu día 8. Primero elige tu Día 1.'))).toEqual({ estado: 'sin-programa' });
+    expect(lecturaDeUnError(prohibido('PROGRAMA_NO_ACTIVADO', 'Mi Radar empieza en tu día 8. Primero empieza tu programa.'))).toEqual({ estado: 'sin-programa' });
     expect(lecturaDeUnError(prohibido('CUENTA_SUSPENDIDA', 'Cuenta suspendida'))).toEqual({ estado: 'bloqueada', motivo: 'suspendida' });
     expect(lecturaDeUnError(prohibido('SIN_PERMISO'))).toEqual({ estado: 'bloqueada', motivo: 'sin-permiso' });
   });

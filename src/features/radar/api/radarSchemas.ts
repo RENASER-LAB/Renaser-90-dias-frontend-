@@ -20,6 +20,9 @@ const registroRadarSchema = z
     /* Spec 012: la hora prevista (0..23). Ausente en un backend anterior y en los registros viejos. Un valor
        que no es un número se pierde SOLO él: el registro, que es lo que la persona escribió, sigue. */
     horaPrevista: z.number().nullish().catch(null),
+    /* Spec 030: «dictado» (al menos una respuesta se habló). Ausente en un backend anterior y en los registros viejos: vale
+       `false`. Un valor raro se pierde SOLO él: lo que la persona escribió sigue. */
+    dictado: z.boolean().catch(false),
   })
   .passthrough();
 

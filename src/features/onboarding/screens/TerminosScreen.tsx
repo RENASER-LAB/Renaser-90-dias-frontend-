@@ -1,15 +1,17 @@
-import { fuentes } from '../../../theme/fuentes';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Alert } from '../../../components/Alerta';
 import { useTheme } from '../../../theme/ThemeContext';
 import { useSystemBackHandler } from '../../../hooks/useSystemBackHandler';
 import { MarcoDePaso } from '../components/MarcoDePaso';
 import { tacto } from '../../../utils/tacto';
-import { TERMINOS_CLAUSULAS } from '../data/terminosData';
-import { mapearTerminos, PREGUNTA_FIRMA_TERMINOS } from '../data/mapaPreguntas';
 import { usePersistenciaOnboarding } from '../hooks/usePersistenciaOnboarding';
-import { Icon } from '../../../components/Icon';
+import { ContenidoDeLosTerminos } from '../terminos/components/ContenidoDeLosTerminos';
+import { MiAceptacion } from '../terminos/components/MiAceptacion';
+import { useMisTerminos } from '../terminos/hooks/useMisTerminos';
+import { leerAcuerdo } from '../terminos/utils/miAceptacion';
+import { avisoDeSellar, useSellarTerminos } from '../terminos/hooks/useSellarTerminos';
+import { borradorDesde, TERMINOS_DE_LA_APP } from '../terminos/utils/borradorDeTerminos';
 import {
   SignatureCanvas,
   SignatureCanvasHandle,
@@ -33,7 +35,16 @@ export function TerminosScreen({
   onSaveSignature,
 }: TerminosScreenProps) {
   const { c, t } = useTheme();
-  const { guardarCapitulo, avanzarEstado, aceptarHito, guardarFirma } = usePersistenciaOnboarding();
+  const { avanzarEstado } = usePersistenciaOnboarding();
+  const sellar = useSellarTerminos();
+  /* Spec 027: el texto lo manda el servidor (los términos vigentes de MI formación, editables por Administración). Sin él —un backend anterior, o mientras
+     llega— se usa el que la app lleva dentro (el mismo texto del Acuerdo de transformación). */
+  const { terminos, cargada, recargar } = useMisTerminos();
+  const contenido = terminos?.version ? borradorDesde(terminos.version) : TERMINOS_DE_LA_APP;
+  const versionId = terminos?.version?.id ?? null;
+  /* Spec 039: «Mi aceptación» (nombre, programa y fechas) lo llena el servidor; con un servidor anterior no llega y no se dibuja. El cronograma de pagos NO va aquí
+     (decisión 2026-11-02 pagos fuera de términos): es asíncrono, lo llena Administración después y la persona lo ve en Yo → «Mi ingreso». */
+  const acuerdo = useMemo(() => leerAcuerdo(terminos?.agreement), [terminos]);
   // Ref al lienzo para poder capturarlo como PNG al confirmar (ver SignatureCanvas.capturarComoPngBase64).
   const signatureRef = useRef<SignatureCanvasHandle>(null);
 
@@ -88,34 +99,22 @@ export function TerminosScreen({
     // persona se entera y no avanza creyendo que quedó firmado.
     setGuardando(true);
     try {
-      const resultadoRespuesta = await guardarCapitulo(mapearTerminos(accepted));
-      if (resultadoRespuesta.pendientes > 0) {
-        Alert.alert('No se pudo guardar', 'No pudimos registrar tu aceptación. Revisa tu conexión e inténtalo de nuevo.');
-        return;
-      }
-
-      // Firma con valor legal: se captura el lienzo ya dibujado como PNG y se sube a S3 con su
-      // referencia guardada en la base (ver mapaPreguntas.ts, PREGUNTA_FIRMA_TERMINOS).
-      const pngFirma = await signatureRef.current?.capturarComoPngBase64();
-      if (!pngFirma || !signature) {
-        Alert.alert('No se pudo capturar la firma', 'Vuelve a dibujar tu firma e inténtalo de nuevo.');
-        return;
-      }
-      const resultadoFirma = await guardarFirma({
-        flow: 'terminos',
-        questionKey: PREGUNTA_FIRMA_TERMINOS.clave,
-        pngBase64: pngFirma,
-        trazosOriginales: signature.data,
+      /* Firma con valor legal: se captura el lienzo ya dibujado como PNG y se sube a S3 con su referencia guardada en la base (ver mapaPreguntas.ts,
+         PREGUNTA_FIRMA_TERMINOS). La constancia de QUÉ versión leyó va al final, en la misma llamada del hito (spec 027). */
+      const resultado = await sellar({
+        capturarFirma: async () => signatureRef.current?.capturarComoPngBase64(),
+        trazos: signature?.data ?? null,
+        versionId,
+        /* Spec 039: lo que vio —el inicio de su programa—: si ya no es el de ahora, el servidor responde 409 y no registra nada. */
+        inicioVisto: acuerdo?.inicio ?? null,
       });
-      if (!resultadoFirma.ok) {
-        Alert.alert(
-          'No se pudo guardar tu firma',
-          'No pudimos respaldar tu firma en el almacenamiento. Revisa tu conexión e inténtalo de nuevo.'
-        );
+      if (resultado.tipo !== 'ok') {
+        if (resultado.tipo === 'cambiaron') await recargar();
+        const aviso = avisoDeSellar(resultado);
+        Alert.alert(aviso.titulo, aviso.mensaje);
         return;
       }
 
-      await aceptarHito('TERMINOS');
       await avanzarEstado({ flow: 'terminos', section: 'aceptacion', step: 0 });
 
       tacto.logro();
@@ -141,7 +140,7 @@ export function TerminosScreen({
            firma, al tocarlo se dice cuál («Aceptación requerida» / «Firma requerida») y el recuadro
            de la firma se marca. Antes quedaba apagado hasta tener las dos, sin decir qué faltaba, y
            esas dos alertas nunca llegaban a salir (ONB-02, e2e web del 2026-09-27). */
-        <GoldButton label="CONTINUAR" onPress={handleContinue} loading={guardando} icon="arrow" />
+        <GoldButton label="Continuar" onPress={handleContinue} loading={guardando || !cargada} icon="arrow" />
       }
     >
       {/* Encabezado: mismos textos; alineado a la izquierda y sin el medallón, como el resto del
@@ -149,38 +148,18 @@ export function TerminosScreen({
       <View style={styles.header}>
         <Text style={[t.micro, { color: c.micro, textTransform: 'uppercase' }]}>Acuerdo de transformación</Text>
         <Text accessibilityRole="header" style={[t.screenTitle, { color: c.textStrong }]}>
-          Términos y condiciones
+          {contenido.titulo}
         </Text>
         <Text style={[t.body, { color: c.textSoft }]}>
-          Lee atentamente las 23 cláusulas y sella tu aceptación
+          {`Lee atentamente las ${contenido.clausulas.length} cláusulas y sella tu aceptación.`}
         </Text>
       </View>
 
       <View style={styles.cuerpo}>
-        {/* Legal Clauses Container */}
-        <View style={[styles.termsCard, { backgroundColor: c.cardBg, borderColor: c.border }]}>
-          <View style={[styles.preambleBox, { backgroundColor: c.goldWash, borderColor: c.borderStrong }]}>
-            <Icon name="diamond" size={16} color={c.goldInk} />
-            <Text style={[t.body, { color: c.textStrong, fontFamily: fuentes.media, flex: 1, fontSize: 14, lineHeight: 21 }]}>
-              Al inscribirme en el programa Renaser, declaro que lo hago de manera libre y voluntaria, y acepto íntegramente los siguientes términos:
-            </Text>
-          </View>
+        <ContenidoDeLosTerminos introduccion={contenido.introduccion} clausulas={contenido.clausulas} />
 
-          <View style={styles.clausesList}>
-            {TERMINOS_CLAUSULAS.map(item => (
-              <View key={item.num} style={styles.clauseRow}>
-                <View style={[styles.numBadge, { borderColor: c.borderStrong, backgroundColor: c.cardBgAlt }]}>
-                  <Text style={[t.micro, { color: c.goldInk, fontSize: 10, fontFamily: fuentes.negrita }]}>
-                    {item.num < 10 ? `0${item.num}` : item.num}
-                  </Text>
-                </View>
-                <Text style={[t.body, styles.clauseText, { color: c.text, fontSize: 14, lineHeight: 22 }]}>
-                  {item.texto}
-                </Text>
-              </View>
-            ))}
-          </View>
-        </View>
+        {/* Spec 039: «Mi aceptación» al final de los términos, antes de firmar. Nunca el cronograma de pagos (decisión 2026-11-02 pagos fuera de términos). */}
+        {acuerdo ? <MiAceptacion acuerdo={acuerdo} /> : null}
 
         {/* Signature Box */}
         <View style={[styles.signatureCard, { backgroundColor: c.cardBg, borderColor: c.border }]}>
@@ -201,7 +180,7 @@ export function TerminosScreen({
             setAccepted(val);
             if (val && showError) setShowError(false);
           }}
-          title="He leído y acepto los Términos y Condiciones"
+          title={contenido.textoCasilla}
           subtitle="Este es un compromiso legal y ético entre tú y el sistema Renaser."
         />
       </View>
@@ -216,40 +195,6 @@ const styles = StyleSheet.create({
   },
   cuerpo: {
     gap: 14,
-  },
-  termsCard: {
-    borderWidth: 1,
-    borderRadius: 18,
-    padding: 16,
-    gap: 14,
-  },
-  preambleBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
-  },
-  clausesList: {
-    gap: 14,
-  },
-  clauseRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-  },
-  numBadge: {
-    width: 26,
-    height: 22,
-    borderRadius: 6,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 1,
-  },
-  clauseText: {
-    flex: 1,
   },
   signatureCard: {
     borderWidth: 1,

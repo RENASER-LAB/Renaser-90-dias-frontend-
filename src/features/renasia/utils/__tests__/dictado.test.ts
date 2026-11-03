@@ -52,6 +52,21 @@ describe('mensajeDeErrorDeVoz', () => {
   it('un código desconocido igual da un mensaje apto para mostrar', () => {
     expect(mensajeDeErrorDeVoz('algo-nuevo')).toContain('escribe tu mensaje');
   });
+
+  it('en el Código Renaser (spec 030) invita a escribir «tu respuesta», en todos los avisos que hablan de escribir', () => {
+    for (const codigo of ['network', 'language-not-supported', 'service-not-allowed', 'algo-nuevo']) {
+      expect(mensajeDeErrorDeVoz(codigo, 'respuesta')).toMatch(/escrib(e|ir)/);
+      expect(mensajeDeErrorDeVoz(codigo, 'respuesta')).toContain('tu respuesta');
+      expect(mensajeDeErrorDeVoz(codigo, 'respuesta')).not.toContain('tu mensaje');
+      expect(mensajeDeErrorDeVoz(codigo)).toContain('tu mensaje');
+    }
+  });
+
+  it('sin permiso, ocupado, cancelado o en silencio el aviso es el mismo para el chat y para el Código Renaser', () => {
+    for (const codigo of ['not-allowed', 'busy', 'aborted', 'no-speech']) {
+      expect(mensajeDeErrorDeVoz(codigo, 'respuesta')).toBe(mensajeDeErrorDeVoz(codigo));
+    }
+  });
 });
 
 describe('sumarTramo (dictado continuo, 2026-09-26)', () => {

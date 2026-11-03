@@ -30,10 +30,6 @@ jest.mock('../../sparkie/hooks/useArranqueGuiado', () => {
   const arranque = { estado: { paso: 'NINGUNO' } };
   return { useArranqueGuiado: () => arranque };
 });
-jest.mock('../../mapa-renacimiento/MapaRenacimientoContext', () => {
-  const mapa = { abierto: false };
-  return { useMapaRenacimientoAbierto: () => mapa };
-});
 jest.mock('../notificaciones/recordatoriosDeRadar', () => ({ sincronizarRecordatoriosDeRadar: async () => undefined }));
 
 type PropsDelModal = {

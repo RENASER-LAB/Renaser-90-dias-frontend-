@@ -2,10 +2,16 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { listarCohortes, listarGruposDeCohorte } from '../api/adminApi';
 import type { CohorteAdminApi, GrupoResumenApi } from '../api/adminSchemas';
+import { FORMACION_POR_DEFECTO } from '../../formaciones/types/formaciones.types';
 import type { GrupoAdmin } from '../types/admin.types';
 import { mensajeDeFallo } from '../utils/mensajes';
 
 export type FiltroGrupos = 'vigentes' | 'programados' | 'cerrados' | 'todos';
+
+/** Spec 022: un grupo sin formación dicha (backend anterior) es de la Escuela. */
+export function formacionDelGrupo(grupo: Pick<GrupoAdmin, 'formacion'>): string {
+  return grupo.formacion ?? FORMACION_POR_DEFECTO;
+}
 
 /**
  * Todos los grupos, de todas las cohortes.
@@ -18,12 +24,14 @@ export type FiltroGrupos = 'vigentes' | 'programados' | 'cerrados' | 'todos';
  * decidiera el teléfono significaría que dos administradores en husos distintos ven cerrar el
  * mismo grupo en días distintos.
  */
-export function useGruposAdmin() {
+export function useGruposAdmin(formacionAlEntrar: string | null = null) {
   const [cohortes, setCohortes] = useState<CohorteAdminApi[]>([]);
   const [grupos, setGrupos] = useState<GrupoAdmin[]>([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filtro, setFiltro] = useState<FiltroGrupos>('vigentes');
+  /* Spec 022: el filtro «Formación» (`null` = todas). Se aplica sobre `formation` de cada grupo, que manda el servidor. */
+  const [formacion, setFormacion] = useState<string | null>(formacionAlEntrar);
 
   const cargar = useCallback(async () => {
     setCargando(true);
@@ -46,6 +54,7 @@ export function useGruposAdmin() {
 
   const visibles = useMemo(() => {
     const porEstado = grupos.filter(g => {
+      if (formacion !== null && formacionDelGrupo(g) !== formacion) return false;
       if (filtro === 'todos') return true;
       if (filtro === 'vigentes') return g.estado === 'VIGENTE' || g.estado === 'SIN_PERIODO';
       if (filtro === 'programados') return g.estado === 'PROGRAMADO';
@@ -57,9 +66,9 @@ export function useGruposAdmin() {
       const fb = b.periodoFin ?? '9999-12-31';
       return fa === fb ? a.nombre.localeCompare(b.nombre) : fa.localeCompare(fb);
     });
-  }, [grupos, filtro]);
+  }, [grupos, filtro, formacion]);
 
-  return { cohortes, grupos: visibles, total: grupos.length, cargando, error, filtro, setFiltro, recargar: cargar };
+  return { cohortes, grupos: visibles, total: grupos.length, cargando, error, filtro, setFiltro, formacion, setFormacion, recargar: cargar };
 }
 
 export function aGrupoAdmin(api: GrupoResumenApi): GrupoAdmin {
@@ -75,5 +84,6 @@ export function aGrupoAdmin(api: GrupoResumenApi): GrupoAdmin {
     tipo: api.type ?? null,
     aprendices: api.learnerCount ?? api.memberCount ?? null,
     cupo: api.capacity ?? null,
+    formacion: api.formation ?? null,
   };
 }

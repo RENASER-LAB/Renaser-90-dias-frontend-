@@ -112,6 +112,8 @@ export function mapearCursoConSecciones(mc: MiCursoApi, secciones: SeccionConLec
     locked: false,
     diaDesbloqueo: null,
     diasFaltantes: undefined,
+    // Spec 024: solo si el servidor la mandó (el curso de un servidor anterior queda idéntico).
+    ...(mc.formation ? { formacion: mc.formation } : {}),
   };
 }
 
@@ -144,6 +146,7 @@ export function mapearCursoBloqueado(cb: CursoBloqueadoApi): CourseItem {
     locked: true,
     diaDesbloqueo: cb.diaDesbloqueo,
     diasFaltantes: Math.max(0, cb.diaDesbloqueo - cb.programDayActual),
+    ...(cb.formation ? { formacion: cb.formation } : {}),
   };
 }
 

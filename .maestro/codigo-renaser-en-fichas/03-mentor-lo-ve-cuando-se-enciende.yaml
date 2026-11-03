@@ -1,0 +1,31 @@
+# CF03 — Cuando Administración enciende «Código Renaser en las fichas», el mentor lo ve en la ficha de su aprendiz (la sección de
+# siempre: «Mi Radar: encendido · … y sus registros»). Se corre DESPUÉS de encenderlo (CF01 sin el último paso, o a mano) y deja
+# la ficha a la vista; al apagarlo de nuevo, CF02 vuelve a no verlo.
+# ESCRITO Y SIN CORRER. Precondición: el interruptor está ENCENDIDO, el aprendiz está en el día 10 con Mi Radar encendido en
+# Automático (Despertar 05:30, Dormir 22:30) y con un registro de esta hora (flujos 03 y 05 de `mi-radar`). Cuenta: el MENTOR del
+# grupo (ranura E2E_ADMIN_*). E2E_PERSONA = parte del nombre del aprendiz.
+# Se corre con: .maestro/correr.sh .maestro/codigo-renaser-en-fichas/03-mentor-lo-ve-cuando-se-enciende.yaml
+# cuenta: admin
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "YO"
+- scrollUntilVisible:
+    element: "Mi grupo"
+    direction: DOWN
+    timeout: 40000
+- tapOn: "Mi grupo"
+- extendedWaitUntil:
+    visible: ".*${PERSONA}.*Abrir su detalle.*"
+    timeout: 30000
+- tapOn: ".*${PERSONA}.*Abrir su detalle.*"
+- scrollUntilVisible:
+    element: "CÓDIGO RENASER"
+    direction: DOWN
+    timeout: 60000
+- scrollUntilVisible:
+    element: "Mi Radar: encendido · 05:30 a 22:30 · 17 veces"
+    direction: DOWN
+    timeout: 30000
+- assertVisible: "Mi Radar: encendido · 05:30 a 22:30 · 17 veces"
+- takeScreenshot: CF03-mentor-ve-el-codigo-renaser

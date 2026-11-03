@@ -1,0 +1,44 @@
+# AV01 — Plan → «Tu 80/20»: la hoja abre en «Hoy» como siempre y suma las vistas «Semana» y «Mes» (spec 031).
+# ESCRITO Y SIN CORRER: se corre cuando haya emulador libre, con el backend local (base clonada, nunca producción).
+# Precondición: una cuenta de aprendiz con el Mapa ACTIVO y al menos una acción agendada esta semana (hoy o antes).
+# Se corre con: .maestro/correr.sh .maestro/analisis-80-20/01-la-hoja-trae-semana-y-mes.yaml
+# cuenta: aprendiz
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "PLAN"
+- extendedWaitUntil:
+    visible: "Acciones que mueven la meta"
+    timeout: 30000
+- scrollUntilVisible:
+    element: "Tu 80/20"
+    direction: DOWN
+    timeout: 60000
+- tapOn: "Tu 80/20"
+# Abre en «Hoy»: la regla de Pareto no cambió.
+- extendedWaitUntil:
+    visible: "Prioriza lo que más acerca tu meta."
+    timeout: 30000
+- assertVisible: "Semana"
+- assertVisible: "Mes"
+- takeScreenshot: AV01a-hoja-en-hoy
+- tapOn: "Semana"
+- extendedWaitUntil:
+    visible: "Semana .*"
+    timeout: 30000
+- assertVisible: ".*acciones? cumplidas?.*"
+- assertNotVisible: "Prioriza lo que más acerca tu meta."
+- takeScreenshot: AV01b-semana
+# El periodo anterior se lee con la flecha; la siguiente está apagada en el periodo en curso.
+- tapOn: "Tu 80/20: periodo anterior"
+- extendedWaitUntil:
+    visible: "Semana .*"
+    timeout: 30000
+- takeScreenshot: AV01c-semana-anterior
+- tapOn: "Mes"
+- extendedWaitUntil:
+    visible: "Mes .*"
+    timeout: 30000
+- takeScreenshot: AV01d-mes
+- tapOn: "Hoy"
+- assertVisible: "Prioriza lo que más acerca tu meta."

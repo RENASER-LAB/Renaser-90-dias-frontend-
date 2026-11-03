@@ -74,7 +74,7 @@ function DetalleDeOtraPersona({ detalle }: { detalle: DetalleDelSemaforo }) {
   if (!detalle.aplica) {
     return (
       <Text style={cuerpo}>
-        No tiene el programa de 90 días activado: por ahora no hay nada que medir.
+        No tiene su programa activado: por ahora no hay nada que medir.
       </Text>
     );
   }

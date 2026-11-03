@@ -27,6 +27,8 @@ export const usuarioApiSchema = z
     department: z.string().nullable().optional(),
     /** Spec 002, fase 2: aditivo y tolerante (un backend anterior no lo manda). */
     rolPersonalizado: z.object({ id: z.string().nullish(), nombre: z.string().nullish() }).passthrough().nullish(),
+    /** Spec 022: la formación de la sesión. Se deja pasar tal cual y el mapper la lee con tolerancia (puede faltar). */
+    formacion: z.unknown().optional(),
   })
   .passthrough();
 

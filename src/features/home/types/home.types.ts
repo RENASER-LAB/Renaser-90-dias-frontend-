@@ -56,4 +56,8 @@ export type ResumenHomeApi = {
    * backend todavia no lo manda o si llego mal formado: en los tres casos Hoy no dibuja la tarjeta.
    */
   semaforo: SemaforoDeHoy | null;
+  /** Spec 022: los días de SU programa (90, o 365 en el Diplomado de un año). Ausente = 90, el de siempre. */
+  duracionDias?: number | null;
+  /** Spec 022: el código de su formación. Ausente = la Escuela. */
+  formacion?: string | null;
 };

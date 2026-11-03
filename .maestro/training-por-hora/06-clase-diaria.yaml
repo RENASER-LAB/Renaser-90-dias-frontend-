@@ -1,7 +1,8 @@
 # T06 — La Clase diaria desde la lista: la fila abre la hoja (con guía) y «Ver la clase»; si la lección del día ya está
 # completada abre el resumen «¿Qué entendiste de la clase?» y, al enviar, la clase sale de la lista. (Si la lección no está
 # completada, «Ver la clase» lleva a la lección en Comunidad → Cursos, como siempre.)
-# Precondición: `reset-hoy.sql` y la lección del día ya completada (en la base clonada lo está tras el E2E manual).
+# Precondición: la Clase diaria PENDIENTE (la deja la línea `# antes:`) y la lección del día ya completada (en la base clonada lo está tras el E2E manual).
+# antes: .maestro/comun/estado-de-hoy.sh PENDIENTE DAILY_CLASS
 # cuenta: aprendiz
 appId: com.renaser.app
 ---
@@ -27,7 +28,9 @@ appId: com.renaser.app
       visible: "¿Qué entendiste de la clase\\?"
     commands:
       - tapOn: "Hoy entendí que.*"
-      - inputText: "Entendi bastante"
+      # El resumen pide 15 letras o más (`RESUMEN_MIN_LENGTH`) y un `inputText` de más de ~10 letras pasa de 120 s en el dev client (#3667): dos comandos.
+      - inputText: "Entendi b"
+      - inputText: "astante"
       - hideKeyboard
       - tapOn: "Enviar y completar"
       - extendedWaitUntil:

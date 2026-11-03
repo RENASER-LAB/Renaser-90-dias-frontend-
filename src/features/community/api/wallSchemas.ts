@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { formacionTolerante } from '../../formaciones/api/formacionTolerante';
+
 /**
  * Validación en runtime de lo que responde el backend para el Muro.
  *
@@ -35,6 +37,8 @@ export const wallPostSchema = z
     // anterior, y `.nullable()` porque quien publica sin programa activo no tiene día: ahí la
     // insignia no se dibuja, en vez de pintar el "Día 0" que se mostraba en TODAS las publicaciones.
     programDay: z.number().nullable().optional(),
+    // Spec 024: la formación de la publicación. Opcional y tolerante: un servidor anterior no la manda y un valor raro no tumba el feed.
+    formation: formacionTolerante,
   })
   .passthrough();
 

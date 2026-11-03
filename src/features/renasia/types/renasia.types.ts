@@ -106,8 +106,20 @@ export type RenasiaEventoEvidencia = {
   destino?: string;
 };
 
+/**
+ * Un hábito que la propuesta confirmada cumplió (spec 038 del backend). Con eso la app hace lo mismo que cuando se cumple desde
+ * Training: apaga las alarmas de ese hábito que le quedaban a ese día (issue #33), celebra y refresca el semáforo.
+ * `fecha` es `YYYY-MM-DD`, el día del hábito en la zona de la persona (no siempre «hoy»).
+ */
+export type HabitoCumplidoPorPropuestaApi = { registroId: string; habitoId: string; fecha: string; puntos: number };
+
 /** Respuesta de `POST /api/v1/renasia/propuestas/{id}/confirmar`. */
-export type ResultadoPropuestaApi = { estado: 'CONFIRMADA' | 'FALLIDA'; mensaje: string };
+export type ResultadoPropuestaApi = {
+  estado: 'CONFIRMADA' | 'FALLIDA';
+  mensaje: string;
+  /** Solo si la propuesta cumplió un hábito (backend con la spec 038); ausente en cualquier otra. */
+  habitoCumplido?: HabitoCumplidoPorPropuestaApi | null;
+};
 
 /**
  * Cualquier evento que esta versión de la app todavía no conoce.

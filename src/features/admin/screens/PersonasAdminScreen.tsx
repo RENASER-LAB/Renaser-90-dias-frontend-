@@ -12,6 +12,9 @@ import type { AprendizAdminApi } from '../api/adminSchemas';
 import { CabeceraAdmin } from '../components/CabeceraAdmin';
 import { mensajeDeFallo } from '../utils/mensajes';
 import { etiquetaDeBorradoPendiente } from '../../cuenta/utils/eliminarCuenta';
+import { FiltroDeFormacion } from '../../formaciones/components/FiltroDeFormacion';
+import { FORMACION_POR_DEFECTO } from '../../formaciones/types/formaciones.types';
+import { nombreCortoDeFormacion } from '../../formaciones/utils/nombreDeFormacion';
 import { useOcultarBarraAlDesplazar } from '../../../navigation/barraAlDesplazar/BarraInferior';
 
 const POR_PAGINA = 20;
@@ -31,10 +34,13 @@ export function PersonasAdminScreen({
   onVolver,
   onAbrirFicha,
   soloSinGrupoAlEntrar = false,
+  formacionAlEntrar = null,
 }: {
   onVolver: () => void;
   onAbrirFicha: (aprendiz: AprendizAdminApi) => void;
   soloSinGrupoAlEntrar?: boolean;
+  /** Spec 022: desde el centro «Formaciones» se entra ya filtrado por esa formación. */
+  formacionAlEntrar?: string | null;
 }) {
   const barraAlDesplazar = useOcultarBarraAlDesplazar();
   const { c, t } = useTheme();
@@ -43,6 +49,8 @@ export function PersonasAdminScreen({
   const [busqueda, setBusqueda] = useState('');
   const [busquedaAplicada, setBusquedaAplicada] = useState('');
   const [soloSinGrupo, setSoloSinGrupo] = useState(soloSinGrupoAlEntrar);
+  /* Spec 022: el filtro «Formación» va al servidor (`?formation=`); `null` = todas. */
+  const [formacion, setFormacion] = useState<string | null>(formacionAlEntrar);
   const [personas, setPersonas] = useState<AprendizAdminApi[]>([]);
   /**
    * `null` mientras no haya una lectura REAL, y no 0.
@@ -80,6 +88,7 @@ export function PersonasAdminScreen({
         tamano: POR_PAGINA,
         busqueda: busquedaAplicada,
         soloSinGrupo,
+        formacion,
       });
       // La página 0 reemplaza; las siguientes acumulan. Reemplazar siempre haría que "Ver más"
       // pareciera no hacer nada.
@@ -90,7 +99,7 @@ export function PersonasAdminScreen({
     } finally {
       setCargando(false);
     }
-  }, [pagina, busquedaAplicada, soloSinGrupo]);
+  }, [pagina, busquedaAplicada, soloSinGrupo, formacion]);
 
   useEffect(() => {
     void cargar();
@@ -132,6 +141,14 @@ export function PersonasAdminScreen({
             estilos.buscador,
             { backgroundColor: c.cardBg, borderColor: c.border, color: c.text, fontSize: 16 },
           ]}
+        />
+
+        <FiltroDeFormacion
+          valor={formacion}
+          onCambiar={codigo => {
+            setFormacion(codigo);
+            setPagina(0);
+          }}
         />
 
         <Pressable
@@ -179,6 +196,7 @@ export function PersonasAdminScreen({
               </Text>
               <Text style={[t.body, { color: c.textSoft, fontSize: 16, marginTop: 2 }]} numberOfLines={1}>
                 {persona.cellId ? `Día ${persona.programDay}` : `Sin grupo · día ${persona.programDay}`}
+                {persona.formation && persona.formation !== FORMACION_POR_DEFECTO ? ` · ${nombreCortoDeFormacion(persona.formation)}` : ''}
                 {persona.status === 'SUSPENDED' ? ' · suspendida' : ''}
               </Text>
               {borrado ? (

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { ApiError } from '../../../services/http/apiClient';
+import { formacionDeLaLectura } from '../../formaciones/estado/formacionDeLaComunidad';
 import * as eventosApi from '../api/eventosApi';
 import {
   cancelarAlarmaDeEvento,
@@ -53,20 +54,23 @@ export function useEventos(userId: string | null, activo: boolean) {
     lectura.current = crearLecturaVigente(
       async () => {
         const ahora = Date.now();
-        return { ahora, lista: await eventosApi.listarProximos(ahora, eventosApi.DIAS_EN_LA_SECCION) };
+        /* Spec 024: la formación elegida (solo quien ve todas). La lectura filtrada NO sincroniza alarmas: los eventos de las otras
+           formaciones no están en la lista y parecerían cancelados. */
+        const formacion = formacionDeLaLectura();
+        return { ahora, formacion, lista: await eventosApi.listarProximos(ahora, eventosApi.DIAS_EN_LA_SECCION, formacion) };
       },
       resultado => {
         if (!resultado.ok) {
           setFallo(falloDe(resultado.error));
           return;
         }
-        const { ahora, lista } = resultado.valor;
+        const { ahora, lista, formacion } = resultado.valor;
         hayDatos.current = true;
         setOcurrencias(lista);
         setFallo(null);
         setYaLeido(true);
         const id = usuario.current;
-        if (id) {
+        if (id && !formacion) {
           void sincronizarAlarmasDeEventos(id, lista, {
             desdeMs: ahora - 60 * 60 * 1000,
             hastaMs: ahora + eventosApi.DIAS_EN_LA_SECCION * 24 * 60 * 60 * 1000,

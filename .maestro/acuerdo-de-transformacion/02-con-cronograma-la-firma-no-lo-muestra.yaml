@@ -1,0 +1,46 @@
+# 02 — Entra CON cronograma: la firma de los términos NO muestra el cronograma de pagos ni lo exige. Los pagos son asíncronos (decisión del dueño, 2026-11-02): los llena
+# Administración cuando quiera y la persona los ve y los confirma en Yo → «Mi ingreso» (spec 032). Reemplaza al flujo de la spec 039 que lo firmaba en el mismo acto.
+# ESCRITO Y SIN CORRER.
+# cuenta: aprendiz
+# Precondición (base local): backend con la spec 039; aprendiz de la Escuela aceptado «Con cronograma» (soles, 2 cuotas de S/ 500: 15 nov y 15 dic), con la ficha terminada,
+# los Términos SIN aceptar y su programa SIN activar. Sembrar con `PUT /api/v1/admin/pagos/personas/{id}`: { "mode": "SCHEDULE", "currency": "PEN", "installments": [
+# {"dueDate": "2026-11-15", "amount": 500}, {"dueDate": "2026-12-15", "amount": 500} ] }. Se corre una vez por cuenta.
+appId: com.renaser.app
+---
+- extendedWaitUntil:
+    visible: "Lee atentamente las 23 cláusulas y sella tu aceptación\\."
+    timeout: 60000
+- scrollUntilVisible:
+    element: "(?i)mi aceptación"
+    direction: DOWN
+    timeout: 40000
+# «Mi aceptación» sigue igual: lo que llena el servidor.
+- assertVisible: "Formación RENASER · 90 días"
+- assertVisible: "Fecha de inicio"
+- assertVisible: "Fecha de finalización"
+# Aunque tenga cuotas, la firma no las muestra ni pide la casilla del cronograma.
+- assertNotVisible: "Mi cronograma de pagos"
+- assertNotVisible: "Revisa las fechas y los montos acordados.*"
+- assertNotVisible: "S/.500"
+- assertNotVisible: "Acepto el cronograma de pagos registrado en NASER y me comprometo a cumplirlo\\."
+- takeScreenshot: A02a-la-firma-sin-cronograma
+# Con la casilla de los términos y la firma basta: no hay segunda casilla.
+- runFlow:
+    file: comun-firmar.yaml
+    env:
+      BOTON: "Continuar"
+- assertNotVisible: "Cronograma por aceptar"
+- extendedWaitUntil:
+    visible: "Tu programa empieza mañana"
+    timeout: 60000
+- tapOn: "Entendido"
+- extendedWaitUntil:
+    visible: "TRAINING"
+    timeout: 60000
+# Firmar los términos no confirmó nada del cronograma: «Mi ingreso» lo sigue pidiendo, como en la spec 032.
+- runFlow: ../pagos/comun-abrir-mi-ingreso.yaml
+- assertVisible: "Tus fechas de pago"
+- assertVisible: "S/.500"
+- assertVisible: "Revisé mis fechas y montos\\."
+- assertVisible: "Confirmar cronograma"
+- takeScreenshot: A02b-mi-ingreso-lo-sigue-pidiendo

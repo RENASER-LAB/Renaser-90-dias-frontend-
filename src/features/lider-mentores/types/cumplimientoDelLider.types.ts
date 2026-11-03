@@ -1,3 +1,4 @@
+import type { MedicionDeLaFicha } from '../../pasos/utils/medicionDeLaFicha';
 import type { ColorSemaforo } from '../../semaforo/types/semaforo.types';
 
 /**
@@ -42,6 +43,8 @@ export interface ObligacionDeLaPersona {
   evidencias: EvidenciaDeLaObligacion[];
   /** El post diario: la publicación del Muro con la que se cumplió. */
   publicacionId: string | null;
+  /** Spec 037: los km del día y de dónde salieron; `null` en un hábito que no mide nada o con un backend anterior. */
+  medicion: MedicionDeLaFicha | null;
 }
 
 /**
@@ -113,7 +116,7 @@ export interface SemanaDePersona {
   cerrada: boolean;
   /**
    * El sábado que abre la semana del Día 1 de la persona; antes de ahí no hay nada que ver. `null` mientras no
-   * eligió su Día 1: entonces la app no inventa un tope y es el servidor quien contesta cada semana.
+   * activó su programa: entonces la app no inventa un tope y es el servidor quien contesta cada semana.
    */
   primeraSemana: string | null;
   /**

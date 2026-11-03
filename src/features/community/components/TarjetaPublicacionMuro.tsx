@@ -11,6 +11,7 @@ import { useTheme } from '../../../theme/ThemeContext';
 import { space } from '../../../theme/tokens';
 import { useFuncionalidad } from '../../plataforma/estado/useFuncionalidad';
 import { CLAVES } from '../../plataforma/utils/clavesDeLaApp';
+import { RotuloDeFormacion } from '../../formaciones/components/RotuloDeFormacion';
 import type { FotoMuroNormalizada } from '../utils/normalizarImagen';
 import { PROPORCION_POR_DEFECTO } from '../utils/proporcionImagen';
 import { FotoMuro } from './FotoMuro';
@@ -145,6 +146,9 @@ function TarjetaPublicacionMuroBase({
             ) : null}
           </View>
         </View>
+
+        {/* Spec 024: la formación de la publicación, solo cuando Administración lee «Todas» (para las demás cuentas no se dibuja). */}
+        <RotuloDeFormacion formation={post.formacion} estilo={{ marginTop: 8 }} />
 
         {/* Texto del Post con "Ver más..." */}
         <View style={{ marginTop: 8 }}>

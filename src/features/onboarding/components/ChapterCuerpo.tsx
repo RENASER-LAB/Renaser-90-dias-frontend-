@@ -3,6 +3,7 @@ import { View, StyleSheet } from 'react-native';
 import { FichaCuerpoData } from '../types/onboarding.types';
 import { FormField } from '../../../components/FormField';
 import { SliderRating } from '../../../components/SliderRating';
+import { usePlazoDeLaSesion } from '../../formaciones/hooks/usePlazoDeLaSesion';
 
 interface ChapterCuerpoProps {
   data: FichaCuerpoData;
@@ -10,6 +11,8 @@ interface ChapterCuerpoProps {
 }
 
 export function ChapterCuerpo({ data, onChange }: ChapterCuerpoProps) {
+  /* Issue #103: el plazo y el último día son los del programa de la persona, no siempre 90. */
+  const { plazo, duracionDias } = usePlazoDeLaSesion();
   const updateField = (key: keyof FichaCuerpoData, value: string | number) => {
     onChange({ ...data, [key]: value });
   };
@@ -66,11 +69,11 @@ export function ChapterCuerpo({ data, onChange }: ChapterCuerpoProps) {
       />
 
       <FormField
-        label="OBJETIVO SMART DE CUERPO A 90 DÍAS"
+        label={`OBJETIVO SMART DE CUERPO A ${plazo.toUpperCase()}`}
         helperText="Qué, cuánto y para cuándo"
         value={data.smartCuerpo}
         onChangeText={val => updateField('smartCuerpo', val)}
-        placeholder='Ej. "Bajar 6 kg y correr 5 km 3 veces por semana al Día 90"'
+        placeholder={`Ej. "Bajar 6 kg y correr 5 km 3 veces por semana al Día ${duracionDias}"`}
         multiline
         numberOfLines={3}
       />

@@ -202,7 +202,7 @@ describe('useRadarDelDia: no se abre sin saber si ya se respondió', () => {
     expect(tipo()).toBe('respondido');
   });
 
-  it('si el radar se apaga un rato (el Mapa abierto) y vuelve en la misma hora, relee antes de abrir', async () => {
+  it('si el radar se apaga un rato (el arranque guiado) y vuelve en la misma hora, relee antes de abrir', async () => {
     mockObtenerUltimo.mockResolvedValueOnce(null);
     const { tipo, visto, cambiar } = montar(3);
     await vaciar();

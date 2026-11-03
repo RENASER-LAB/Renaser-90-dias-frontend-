@@ -1,4 +1,5 @@
 import { apiFetch } from '../../../services/http/apiClient';
+import { agregarLaFormacion } from '../../formaciones/estado/formacionDeLaComunidad';
 import type {
   WallCategory,
   WallComment,
@@ -38,12 +39,16 @@ import {
  *   ocultas), solo para ADMIN y ALCHEMIST: ver el bloque «Moderación» al final.
  */
 
-export async function obtenerFeedMuro(cursor?: string, category?: string): Promise<WallFeedPage> {
+/**
+ * El feed del Muro. `formation` (spec 024) solo lo pasa la Comunidad cuando Administración, Alquimista o Soporte TI eligieron una
+ * formación; sin él el servidor devuelve lo de la formación de quien pide (o todas, si ve todas). Hoy lo lee sin ese parámetro.
+ */
+export async function obtenerFeedMuro(cursor?: string, category?: string, formation?: string | null): Promise<WallFeedPage> {
   const params = new URLSearchParams();
   if (cursor) params.set('cursor', cursor);
   if (category) params.set('category', category);
   const query = params.toString();
-  const r = await apiFetch<unknown>(`/api/v1/wall${query ? `?${query}` : ''}`);
+  const r = await apiFetch<unknown>(agregarLaFormacion(`/api/v1/wall${query ? `?${query}` : ''}`, formation));
   return validarRespuesta<WallFeedPage>(wallFeedPageSchema, r, 'GET /api/v1/wall');
 }
 
@@ -184,11 +189,13 @@ export async function subirImagenAS3(uploadUrl: string, uri: string, mimeType: s
 export async function publicarEnMuro(
   text: string,
   media: { url: string; mimeType: string }[],
-  category?: string | null
+  category?: string | null,
+  /** Spec 024: solo Administración lo manda (el servidor responde 400 sin él); los demás publican en la suya. */
+  formation?: string | null
 ): Promise<WallPost> {
   const r = await apiFetch<unknown>('/api/v1/wall', {
     method: 'POST',
-    body: { text, media, category: category ?? null },
+    body: { text, media, category: category ?? null, ...(formation ? { formation } : {}) },
   });
   return validarRespuesta<WallPost>(wallPostSchema, r, 'POST /api/v1/wall');
 }
@@ -222,8 +229,8 @@ export async function eliminarPublicacionParaSiempre(postId: string): Promise<vo
 }
 
 /** Las publicaciones ocultas, paginadas por cursor; una fila que no se entiende se pierde sola. */
-export async function obtenerPublicacionesOcultas(cursor?: string): Promise<WallFeedPage> {
+export async function obtenerPublicacionesOcultas(cursor?: string, formation?: string | null): Promise<WallFeedPage> {
   const query = cursor ? `?cursor=${encodeURIComponent(cursor)}` : '';
-  const r = await apiFetch<unknown>(`/api/v1/wall/hidden${query}`);
+  const r = await apiFetch<unknown>(agregarLaFormacion(`/api/v1/wall/hidden${query}`, formation));
   return paginaDeOcultasTolerante(r, 'GET /api/v1/wall/hidden') as WallFeedPage;
 }

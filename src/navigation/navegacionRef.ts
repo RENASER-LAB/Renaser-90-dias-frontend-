@@ -33,8 +33,8 @@ export function irAPestana(nombre: string, params?: Record<string, unknown>): bo
 }
 
 /**
- * `true` si esa pestaña existe AHORA en el navegador. Mientras se ve el login, el onboarding o el Mapa
- * del Día 7 las pestañas no están montadas, y navegar a una no hace nada (solo un aviso en consola).
+ * `true` si esa pestaña existe AHORA en el navegador. Mientras se ve el login o el onboarding
+ * las pestañas no están montadas, y navegar a una no hace nada (solo un aviso en consola).
  * Quien quiera llevar a alguien a una pestaña desde afuera espera a que esto dé `true`.
  */
 export function pestanaDisponible(nombre: string): boolean {

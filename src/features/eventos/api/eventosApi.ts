@@ -1,4 +1,5 @@
 import { apiFetch } from '../../../services/http/apiClient';
+import { agregarLaFormacion } from '../../formaciones/estado/formacionDeLaComunidad';
 import type { Asistencia, Evento, Ocurrencia } from '../types/eventos.types';
 import { leerEvento, leerOcurrencias, leerUrlDePortada, type UrlDePortada } from './eventosSchemas';
 
@@ -17,10 +18,13 @@ const tramo = encodeURIComponent;
 /** Los próximos días que muestra la sección (spec E-5: «próximos 30 días»). */
 export const DIAS_A_LA_VISTA = 30;
 
-/** Las ocurrencias entre `desde` y `hasta`, ordenadas por hora. */
-export async function listarEventos(desde: Date, hasta: Date): Promise<Ocurrencia[]> {
+/**
+ * Las ocurrencias entre `desde` y `hasta`, ordenadas por hora. `formation` (spec 024) solo lo pasa la sección Eventos de la
+ * Comunidad cuando Administración, Alquimista o Soporte TI eligieron una formación; las alarmas, Training y Yo → Alarmas leen sin él.
+ */
+export async function listarEventos(desde: Date, hasta: Date, formation?: string | null): Promise<Ocurrencia[]> {
   const ruta = `${BASE}?from=${tramo(desde.toISOString())}&to=${tramo(hasta.toISOString())}`;
-  return leerOcurrencias(await apiFetch<unknown>(ruta));
+  return leerOcurrencias(await apiFetch<unknown>(agregarLaFormacion(ruta, formation)));
 }
 
 /**
@@ -31,9 +35,9 @@ export async function listarEventos(desde: Date, hasta: Date): Promise<Ocurrenci
 export const DIAS_EN_LA_SECCION = 60;
 
 /** Las ocurrencias de los próximos `dias` días, desde ahora. */
-export function listarProximos(ahoraMs: number, dias: number = DIAS_A_LA_VISTA): Promise<Ocurrencia[]> {
+export function listarProximos(ahoraMs: number, dias: number = DIAS_A_LA_VISTA, formation?: string | null): Promise<Ocurrencia[]> {
   // Desde una hora atrás: un evento que empezó hace un rato sigue siendo «al que me uno».
-  return listarEventos(new Date(ahoraMs - 60 * 60 * 1000), new Date(ahoraMs + dias * 24 * 60 * 60 * 1000));
+  return listarEventos(new Date(ahoraMs - 60 * 60 * 1000), new Date(ahoraMs + dias * 24 * 60 * 60 * 1000), formation);
 }
 
 export async function obtenerEvento(id: string): Promise<Evento> {
@@ -52,8 +56,13 @@ export async function responderAsistencia(
   });
 }
 
-export async function crearEvento(cuerpo: Record<string, unknown>): Promise<Evento> {
-  return leerEvento(await apiFetch<unknown>(BASE, { method: 'POST', body: cuerpo }));
+/**
+ * Crea un evento. `formation` (spec 024): Administración lo manda siempre —el servidor responde 400 sin él—; el evento nace en esa
+ * formación y no cambia al editarlo. Quien no ve todas no manda nada y crea en la suya.
+ */
+export async function crearEvento(cuerpo: Record<string, unknown>, formation?: string | null): Promise<Evento> {
+  const conFormacion = formation ? { ...cuerpo, formation } : cuerpo;
+  return leerEvento(await apiFetch<unknown>(BASE, { method: 'POST', body: conFormacion }));
 }
 
 export async function editarEvento(id: string, cuerpo: Record<string, unknown>): Promise<Evento> {

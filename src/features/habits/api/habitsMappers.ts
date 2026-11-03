@@ -1,5 +1,6 @@
 import type { DayMoment, DayOfWeek, PlanHabit } from '../../../screens/PlanScreen';
 import type { DesbloqueoHabitoApi, HabitoCatalogoApi, PreferenciaHabitoApi } from '../types/habits.types';
+import { categoriaDeCodigo } from '../categorias/estado/estadoDeCategorias';
 import { iconoDeHabito } from '../utils/iconosDeHabito';
 
 /**
@@ -43,7 +44,8 @@ const CATEGORIA_POR_DEFECTO = { tag: 'Hábito', tagColor: '#94A3B8', icon: '🎯
  */
 export function etiquetaDeCategoria(categoria: string | null | undefined): string | null {
   if (!categoria) return null;
-  return CATEGORIA[categoria]?.tag ?? null;
+  /* Spec 023: una categoría que Administración creó para la formación se nombra como ella la llamó. */
+  return CATEGORIA[categoria]?.tag ?? categoriaDeCodigo(categoria)?.name ?? null;
 }
 
 /** `HH:mm:ss` → `HH:mm`. Nulo o vacío quedan como cadena vacía: el diseño ya contempla ese caso. */
@@ -193,7 +195,8 @@ export function mapearPlanHabit(
   /** Fecha real de cada día de la semana mostrada, y hoy — para saber sobre qué días cae la pausa. */
   calendario?: { fechasDeLaSemana: Record<DayOfWeek, string>; hoyIso: string },
 ): PlanHabit {
-  const categoria = CATEGORIA[habito.category] ?? CATEGORIA_POR_DEFECTO;
+  const categoria = CATEGORIA[habito.category]
+    ?? { ...CATEGORIA_POR_DEFECTO, tag: categoriaDeCodigo(habito.category)?.name ?? CATEGORIA_POR_DEFECTO.tag };
   const horaDisparo = preferencia?.triggerTime ?? null;
   return {
     id: habito.id,

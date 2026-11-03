@@ -37,14 +37,16 @@ describe('una sola entrada a «Mi onboarding»', () => {
     expect(yo.match(/onPress=\{\(\) => setActiveView\('onboarding'\)\}/g)).toHaveLength(1);
     const tuProceso = vista('hub').slice(vista('hub').indexOf('<GrupoDeAjustes titulo="Tu proceso">'));
     expect(tuProceso.slice(0, tuProceso.indexOf('</GrupoDeAjustes>'))).toMatch(
-      /titulo="Mi onboarding"\s+detalle="El Pacto y tu Mapa de Renacimiento"\s+onPress=\{\(\) => setActiveView\('onboarding'\)\}/,
+      /titulo="Mi onboarding"\s+detalle="Tu Pacto de Renacimiento"\s+onPress=\{\(\) => setActiveView\('onboarding'\)\}/,
     );
   });
 
-  it('y desde ahí se llega a la ficha y al Pacto, y al Mapa', () => {
+  it('y desde ahí se llega al Pacto; el Mapa de Renacimiento se retiró (spec 026) y no tiene entrada', () => {
     const onboarding = vista('onboarding');
     expect(onboarding).toContain("setActiveView('pacto')");
-    expect(onboarding).toContain("setActiveView('mapa_renacimiento')");
+    expect(onboarding).not.toContain("setActiveView('mapa_renacimiento')");
+    expect(yo).not.toContain('mapa_renacimiento');
+    expect(yo).not.toContain('MapaRenacimientoFlow');
   });
 });
 
@@ -66,7 +68,7 @@ describe('Yo sin versales espaciadas', () => {
     // texto suelto de Yo. Los dice `TarjetaDeFase` («FASE N DE 4», «Día N de 90 en total») con la misma fase
     // y el mismo día del resumen, que Yo le pasa por props.
     expect(yo).toContain('diaDelPrograma={resumen?.diaPrograma ?? null}');
-    expect(yo).toContain('diasDelPrograma={DIAS_DEL_PROGRAMA}');
+    expect(yo).toContain('diasDelPrograma={resumen?.duracionDias ?? DIAS_DEL_PROGRAMA}'); // spec 022: los días de SU programa
     expect(yo).toContain('nombreDeLaFase={faseActual.nombre}');
   });
 

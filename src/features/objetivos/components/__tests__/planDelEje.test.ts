@@ -4,9 +4,9 @@ import TestRenderer, { act, type ReactTestInstance, type ReactTestRenderer } fro
 
 /**
  * La pantalla principal de Plan (2026-10-31, «en Plan replica este formato»): «Esta semana», «Acciones que mueven la meta»,
- * «Tu 80/20» y «Organizar mi semana ›», en sus estados: sin semana, sin acciones, con todo, el domingo y el Mapa. Los hooks de
+ * «Tu 80/20» y «Organizar mi semana ›», en sus estados: sin semana, sin acciones, con todo, el domingo y sin los tres objetivos de 90 días. Los hooks de
  * lectura se reemplazan; lo que se prueba es qué se dibuja y qué abre cada toque. El objetivo de 90 días y el selector de eje
- * son de `PlanScreen` (probados con `planRediseno` y `planEsperaAlMapa`).
+ * son de `PlanScreen` (probados con `planRediseno` y `planSinMapa`).
  */
 
 jest.mock('../../../../theme/ThemeContext', () => {
@@ -18,7 +18,6 @@ jest.mock('../../../../theme/ThemeContext', () => {
 jest.mock('../../../../context/AuthContext', () => ({ useAuth: () => ({ user: { id: 'u1' } }) }));
 const mockNavigate = jest.fn();
 jest.mock('@react-navigation/native', () => ({ useNavigation: () => ({ navigate: mockNavigate }), useFocusEffect: () => undefined }));
-jest.mock('../../../mapa-renacimiento/hooks/useAccionesDelMapa', () => ({ useAccionesDelMapa: () => ({}) }));
 // «Recordatorios de tus acciones ›» (fila + hoja) tiene su propia prueba; acá solo importa dónde y cuándo se dibuja.
 const mockRecordatorios: { userId: string; rocas?: unknown }[] = [];
 jest.mock('../RecordatoriosDeLasAcciones', () => ({
@@ -28,6 +27,8 @@ jest.mock('../RecordatoriosDeLasAcciones', () => ({
   },
 }));
 jest.mock('../../../../components/Alerta', () => ({ Alert: { alert: jest.fn() } }));
+// Las vistas «Semana» y «Mes» de la hoja «Tu 80/20» (spec 031) tienen su propia prueba (`hojaOchentaVeinte`): acá la lectura nunca llega y la hoja es la de siempre.
+jest.mock('../../../ochenta-veinte/api/ochentaVeinteApi', () => ({ obtenerOchentaVeinteDeLaPersona: () => new Promise(() => undefined) }));
 
 type PropsDeHoja = { visible?: boolean; titulo?: string; children?: React.ReactNode };
 jest.mock('../../../../components/hojaDesdeAbajo/HojaDesdeAbajo', () => {
@@ -86,12 +87,13 @@ const diaria = (extra: Record<string, unknown> = {}) => ({
   cargando: false, error: null, guardando: false, planificar: jest.fn(), recargar: jest.fn(), ...extra,
 });
 
+const alDefinirObjetivos = jest.fn();
 let raiz: ReactTestRenderer | null = null;
 function montar() {
   mockLlamadas = 0;
   act(() => {
     raiz = TestRenderer.create(
-      React.createElement(PlanDelEje, { maestras: [], numeroSemana: 3, diaPrograma: mockDiaDePrograma, ejeAbierto: 'CUERPO', objetivoSugeridoDe: () => '', onIrAlMapa: jest.fn() }),
+      React.createElement(PlanDelEje, { maestras: [], numeroSemana: 3, diaPrograma: mockDiaDePrograma, ejeAbierto: 'CUERPO', objetivoSugeridoDe: () => '', onDefinirObjetivos: alDefinirObjetivos }),
     );
   });
 }
@@ -110,6 +112,7 @@ beforeEach(() => {
   mockModalesAbiertos.length = 0;
   mockRecordatorios.length = 0;
   mockNavigate.mockReset();
+  alDefinirObjetivos.mockReset();
   mockSemanal = semanal('planificada', 'Caminar 5 días');
   mockQueEmpieza = semanal('cargando');
   mockDiaria = diaria();
@@ -211,11 +214,22 @@ describe('sin semana armada', () => {
     expect(mockRecordatorios).toHaveLength(0);
   });
 
-  it('sin los tres objetivos de 90 días (bloqueada): ofrece el Mapa, no armar', () => {
+  it('sin los tres objetivos de 90 días (bloqueada): ofrece escribirlos, no armar ni nombrar el Mapa', () => {
     mockSemanal = semanal('bloqueada');
     montar();
     expect(todo()).toContain('Primero define tus tres objetivos de 90 días');
-    expect(botonCon('Ir al Mapa de Renacimiento')).toBeDefined();
+    expect(todo()).not.toContain('Mapa');
+    expect(botonCon('Ir al Mapa')).toBeUndefined();
+    pulsar(botonCon('Escribir mis objetivos'));
+    expect(alDefinirObjetivos).toHaveBeenCalledTimes(1);
+  });
+
+  it('«Organizar mi semana» con la semana bloqueada también lleva a escribir los objetivos', () => {
+    mockSemanal = semanal('bloqueada');
+    montar();
+    pulsar(botonCon('Organizar mi semana'));
+    expect(alDefinirObjetivos).toHaveBeenCalledTimes(1);
+    expect(mockModalesAbiertos).toEqual([]);
   });
 });
 
@@ -246,5 +260,68 @@ describe('errores de lectura', () => {
     montar();
     expect(todo()).toContain('No pudimos cargar tus acciones del día.');
     expect(todo()).toContain('No pudimos cargar tu plan de la semana.');
+  });
+});
+
+describe('el pedido de «Planificar mi mes» (spec 028): organizar la semana de ahora', () => {
+  const props = (pedidoDeOrganizar: number) => ({
+    maestras: [], numeroSemana: 3, diaPrograma: mockDiaDePrograma, ejeAbierto: 'CUERPO' as const, objetivoSugeridoDe: () => '', onIrAlMapa: jest.fn(), pedidoDeOrganizar,
+  });
+  const montarConPedido = (pedido: number) => {
+    mockLlamadas = 0;
+    act(() => {
+      raiz = TestRenderer.create(React.createElement(PlanDelEje, props(pedido)));
+    });
+  };
+  const subirElPedidoA = (pedido: number) => {
+    mockLlamadas = 0;
+    act(() => raiz!.update(React.createElement(PlanDelEje, props(pedido))));
+  };
+
+  it('sin pedido (o con el contador en 0) no abre nada, como siempre', () => {
+    montarConPedido(0);
+    expect(mockModalesAbiertos).toEqual([]);
+  });
+
+  it('cada subida del contador abre lo mismo que «Organizar mi semana ›»: con el eje armado, «Agendar»', () => {
+    montarConPedido(0);
+    subirElPedidoA(1);
+    expect(mockModalesAbiertos).toEqual(['agendar']);
+  });
+
+  it('sin objetivo semanal en el eje, abre el asistente de la semana', () => {
+    mockSemanal = semanal('sin_planificar');
+    montarConPedido(0);
+    subirElPedidoA(1);
+    expect(mockModalesAbiertos).toContain('asistente');
+  });
+
+  it('sin los tres objetivos de 90 días ofrece escribirlos (spec 026: ya no hay Mapa), no armar', () => {
+    mockSemanal = semanal('bloqueada');
+    const onDefinirObjetivos = jest.fn();
+    mockLlamadas = 0;
+    act(() => {
+      raiz = TestRenderer.create(React.createElement(PlanDelEje, { ...props(0), onDefinirObjetivos }));
+    });
+    mockLlamadas = 0;
+    act(() => raiz!.update(React.createElement(PlanDelEje, { ...props(1), onDefinirObjetivos })));
+    expect(onDefinirObjetivos).toHaveBeenCalledTimes(1);
+    expect(mockModalesAbiertos).toEqual([]);
+  });
+
+  it('un contador que ya venía alto al montar no abre nada; volver a dibujar con el mismo valor tampoco', () => {
+    montarConPedido(4);
+    expect(mockModalesAbiertos).toEqual([]);
+    subirElPedidoA(4);
+    expect(mockModalesAbiertos).toEqual([]);
+  });
+
+  it('se atiende una vez por subida: la siguiente subida vuelve a abrir', () => {
+    montarConPedido(0);
+    subirElPedidoA(1);
+    subirElPedidoA(1);
+    const antes = mockModalesAbiertos.length;
+    subirElPedidoA(2);
+    expect(mockModalesAbiertos.length).toBeGreaterThan(antes);
   });
 });

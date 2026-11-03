@@ -1,0 +1,18 @@
+# Entra a Administración → Solicitudes (spec 025). Lo usan los demás flujos de esta carpeta.
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "YO"
+- scrollUntilVisible:
+    element: "Administración"
+    direction: DOWN
+    timeout: 40000
+- tapOn: "Administración"
+- scrollUntilVisible:
+    element: "Solicitudes.*"
+    direction: DOWN
+    timeout: 40000
+- tapOn: "Solicitudes.*"
+- extendedWaitUntil:
+    visible: "Solicitudes"
+    timeout: 30000

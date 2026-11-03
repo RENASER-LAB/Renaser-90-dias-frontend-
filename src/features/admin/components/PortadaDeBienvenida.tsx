@@ -6,6 +6,7 @@ import { BotonPrincipal, BotonSecundario, TituloDeSeccion } from '../../../compo
 import { getTokenSesion, notificarSesionVencida } from '../../../services/http/apiClient';
 import { useTheme } from '../../../theme/ThemeContext';
 import { elegirFotoCuadrada } from '../../auth/utils/elegirFotoDePerfil';
+import { FORMACION_POR_DEFECTO, type CodigoDeFormacion } from '../../formaciones/types/formaciones.types';
 import { subirImagenAS3 } from '../../community/api/wallApi';
 import {
   confirmarPortadaDeBienvenida,
@@ -47,8 +48,11 @@ export function PortadaDeBienvenida({
   nombre,
   entorno,
   onCambio,
+  formacion = FORMACION_POR_DEFECTO,
 }: {
   portada: PortadaDeBienvenidaApi;
+  /** La formación de esta bienvenida (spec 035): la tarjeta, la vista previa y los cambios son de ella. Por defecto, la Escuela. */
+  formacion?: CodigoDeFormacion;
   /** El nombre de ejemplo, tal como está escrito (vacío = «María»). */
   nombre: string;
   entorno: EntornoDeLaTarjeta;
@@ -56,11 +60,12 @@ export function PortadaDeBienvenida({
 }) {
   const { c, t } = useTheme();
   const [version, setVersion] = useState(0);
-  const vigente = useTarjetaDeMuestra(nombre, version, entorno);
+  const vigente = useTarjetaDeMuestra(nombre, version, entorno, formacion);
   const [flujo, setFlujo] = useState<Flujo>({ paso: 'quieto' });
   const [volviendo, setVolviendo] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const enLaEscuela = formacion === FORMACION_POR_DEFECTO;
   const acciones = accionesDeLaPortada(portada);
   const ocupado = flujo.paso === 'subiendo' || flujo.paso === 'revisando' || flujo.paso === 'usando' || volviendo;
   const cuerpo = [t.body, { color: c.textSoft, fontSize: 16, lineHeight: 23 }];
@@ -92,7 +97,7 @@ export function PortadaDeBienvenida({
       subir: subirImagenAS3,
       traerMuestra: async ruta => {
         const muestra = await traerTarjetaDeMuestra(
-          rutaDeLaTarjetaDeMuestra(nombreDeLaMuestra, ruta),
+          rutaDeLaTarjetaDeMuestra(nombreDeLaMuestra, ruta, formacion),
           getTokenSesion(),
           entorno,
         );
@@ -110,7 +115,7 @@ export function PortadaDeBienvenida({
     if (flujo.paso !== 'lista') return;
     setFlujo({ ...flujo, paso: 'usando' });
     try {
-      const nueva = await confirmarPortadaDeBienvenida(flujo.ruta);
+      const nueva = await confirmarPortadaDeBienvenida(flujo.ruta, formacion);
       setFlujo({ paso: 'quieto' });
       entorno.liberar(flujo.uri);
       setVersion(v => v + 1);
@@ -130,18 +135,20 @@ export function PortadaDeBienvenida({
 
   const volverALaOriginal = async () => {
     const acepto = await confirmar(
-      '¿Volver a la portada original?',
-      'La tarjeta de bienvenida vuelve a tener la portada de Operaciones.',
-      { ok: 'Sí, volver a la original' },
+      enLaEscuela ? '¿Volver a la portada original?' : '¿Volver a la portada de la Escuela?',
+      enLaEscuela
+        ? 'La tarjeta de bienvenida vuelve a tener la portada de Operaciones.'
+        : 'La tarjeta de bienvenida de esta formación vuelve a usar la portada de la Escuela.',
+      { ok: enLaEscuela ? 'Sí, volver a la original' : 'Sí, volver a la de la Escuela' },
     );
     if (!acepto) return;
     setVolviendo(true);
     setAviso(null);
     setError(null);
     try {
-      const nueva = await volverALaPortadaOriginal();
+      const nueva = await volverALaPortadaOriginal(formacion);
       setVersion(v => v + 1);
-      setAviso('Listo: la tarjeta volvió a la portada original.');
+      setAviso(enLaEscuela ? 'Listo: la tarjeta volvió a la portada original.' : 'Listo: la tarjeta usa la portada de la Escuela.');
       onCambio(nueva);
     } catch (e) {
       setError(mensajeDeErrorDeBienvenida(e, 'No se pudo volver a la portada original. Vuelve a intentar.'));
@@ -209,7 +216,7 @@ export function PortadaDeBienvenida({
           {acciones.aviso ? <Text style={cuerpo}>{acciones.aviso}</Text> : null}
           {acciones.puedeVolver ? (
             <BotonSecundario
-              etiqueta="Volver a la portada original"
+              etiqueta={enLaEscuela ? 'Volver a la portada original' : 'Volver a la portada de la Escuela'}
               onPress={() => void volverALaOriginal()}
               cargando={volviendo}
               deshabilitado={ocupado && !volviendo}

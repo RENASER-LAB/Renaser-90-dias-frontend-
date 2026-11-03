@@ -12,7 +12,7 @@ import { useEffect } from 'react';
  * bug». Con una capa abierta, la ruta del aviso espera (`rutaDeAviso.ts` ya la guarda) y se abre
  * cuando la capa se cierra. La capa no se cierra ni se esconde por el aviso.
  *
- * El onboarding y el Mapa del Día 7 no se anotan acá: reemplazan a las pestañas enteras
+ * El onboarding no se anota acá: reemplaza a las pestañas enteras
  * (`RootNavigator`) y quien navega ya espera a que la pestaña exista (`pestanaDisponible`).
  *
  * Un registro chico y no una lectura de los contextos de cada capa: el arranque guiado guarda si la

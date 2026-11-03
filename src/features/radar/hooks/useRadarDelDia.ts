@@ -48,7 +48,7 @@ export interface EstadoRadarDelDia {
  * y «todavía no lo leí» eran lo mismo, y el formulario innegociable se montaba y se cerraba ~300 ms
  * después cuando la hora ya estaba respondida (en Android, además, el Modal quedaba como una ventana
  * vacía y oscura encima de Hoy). Pasa en la primera lectura y en cada recarga: otra hora, otra fecha,
- * otra cuenta, o el radar que se apagó un rato (el Mapa abierto) y volvió. Si la lectura FALLA (red,
+ * otra cuenta, o el radar que se apagó un rato (el arranque guiado) y volvió. Si la lectura FALLA (red,
  * 5xx) se abre igual, como siempre —no puede quedarse sin pedirse—, pero ya sin parpadeo; un 403 apaga.
  *
  * ## Dos apagados silenciosos, a propósito
@@ -100,7 +100,7 @@ export function useRadarDelDia(
   const fechaEnCurso = ahora.toDateString();
   const claveEnCurso = claveDeLectura(usuarioId, fechaEnCurso, horaEnCurso);
 
-  /* Con el radar apagado (el Mapa abierto, el arranque guiado sin terminar) lo leído deja de valer:
+  /* Con el radar apagado (el arranque guiado sin terminar) lo leído deja de valer:
      al volver, aunque sea en la misma hora, hay que leer de nuevo ANTES de poder abrir —si en el
      intervalo se respondió desde otro teléfono, abrir con el dato viejo era el parpadeo otra vez—.
      Se hace al renderizar y no en un efecto: un efecto corre DESPUÉS de dibujar, o sea que habría un

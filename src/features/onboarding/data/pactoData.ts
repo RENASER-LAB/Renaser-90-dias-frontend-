@@ -1,4 +1,8 @@
-export const PACTO_COMPROMISOS = [
+/**
+ * Los diez compromisos del Pacto. El último nombra el último día del programa de la persona («Día 90», «Día 365»; issue #103, identidad por formación):
+ * `duracionDias` es el de su formación (`usePlazoDeLaSesion`); sin él, los 90 de siempre.
+ */
+export const compromisosDelPacto = (duracionDias = 90): string[] => [
   'Cumplir mis 3 Objetivos diarios sin negociar conmigo mismo.',
   'Subir las evidencias que el sistema me exija, en el momento que me las exija.',
   'Aceptar la disciplina como camino, no como castigo.',
@@ -8,8 +12,10 @@ export const PACTO_COMPROMISOS = [
   'Sanar mis heridas en lugar de defenderlas.',
   'Cobrar lo que valgo y dejar de subpreciarme.',
   'Decir la verdad aunque tiemble la voz.',
-  'Llegar al Día 90 transformado, no entretenido.',
+  `Llegar al Día ${duracionDias} transformado, no entretenido.`,
 ];
+
+export const PACTO_COMPROMISOS = compromisosDelPacto();
 
 export const PACTO_DECLARACION = {
   titulo: '¡BIENVENIDO/A A LA FAMILIA RENASER!',

@@ -1,0 +1,60 @@
+# Sin diagnóstico ni Mapa, la persona escribe sus objetivos de 90 días directo en Plan (spec 026). ESCRITO Y SIN CORRER: pide el
+# backend con la spec 026, un emulador libre y una cuenta sembrada en la base LOCAL (nunca producción).
+# cuenta: aprendiz  (la ranura apunta a un aprendiz con la ficha ESTÁNDAR —`NO_APLICA`— y SIN objetivos de 90 días)
+# Qué prueba: Plan no pide ningún requisito del Mapa (ni la puerta «Primero tu Mapa de Renacimiento»), deja escribir el objetivo de
+# un eje, y Yo no ofrece ninguna fila de diagnóstico. Escribir con `inputText` tarda ~10 s por letra: el objetivo es corto a propósito.
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "PLAN"
+- extendedWaitUntil:
+    visible: "Tu dirección en 90 días"
+    timeout: 30000
+# Ni la puerta ni nada del Mapa; el selector de eje y la tarjeta del objetivo se ven siempre.
+- assertNotVisible: "Primero tu Mapa de Renacimiento"
+- assertNotVisible: "Hacer mi Mapa"
+- assertNotVisible: ".*Mapa.*"
+- assertVisible: "Cuerpo"
+- assertVisible: "Negocio"
+- assertVisible: "Relaciones"
+- assertVisible: "Tu objetivo de 90 días"
+- assertVisible: "Todavía no lo definiste.*"
+# Sin diagnóstico no hay nada «por confirmar» ni prioridad: el orden es el de siempre (Cuerpo primero).
+- assertNotVisible: "Revisa tus objetivos de 90 días"
+- assertNotVisible: "Por confirmar"
+- takeScreenshot: P22a-plan-sin-diagnostico
+# Escribir el objetivo de Cuerpo.
+- tapOn: "Más opciones del objetivo"
+- extendedWaitUntil:
+    visible: "Define tu objetivo de 90 días"
+    timeout: 20000
+- tapOn: "Escribe tu objetivo aquí"
+- inputText: "Correr"
+- hideKeyboard
+- tapOn: "Guardar"
+- extendedWaitUntil:
+    visible: "Tu objetivo de 90 días quedó guardado."
+    timeout: 40000
+- takeScreenshot: P22b-objetivo-guardado
+# Con uno solo, la semana espera a los tres: lo dice y ofrece escribirlos (no el Mapa).
+- scrollUntilVisible:
+    element: "Primero define tus tres objetivos de 90 días.*"
+    direction: DOWN
+    timeout: 30000
+- assertVisible: "Escribir mis objetivos"
+- assertNotVisible: "Ir al Mapa de Renacimiento"
+- takeScreenshot: P22c-semana-espera-a-los-tres
+# Hoy lo pide con las palabras nuevas.
+- tapOn: "HOY"
+- extendedWaitUntil:
+    visible: "Tu acompañante"
+    timeout: 30000
+- assertNotVisible: "Mapa de renacimiento"
+# Yo: sin diagnóstico no hay fila, y «Mi onboarding» no tiene etapa del Mapa.
+- tapOn: "YO"
+- extendedWaitUntil:
+    visible: "Tu evolución"
+    timeout: 30000
+- assertNotVisible: "Mi diagnóstico"
+- assertNotVisible: "Completa tu diagnóstico"
+- takeScreenshot: P22d-yo-sin-diagnostico

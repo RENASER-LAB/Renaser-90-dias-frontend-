@@ -23,9 +23,25 @@ export function rangoDeFechas(inicio: string | null, fin: string | null): string
   return `${a.dia} de ${MESES[a.mes - 1]} – ${b.dia} de ${MESES[b.mes - 1]}${anio}`;
 }
 
+/**
+ * «3 de noviembre». Acepta las dos formas en que el servidor manda una fecha, y no son lo mismo (issue #108):
+ *  - una FECHA de calendario (`2026-11-03`, `LocalDate`): se parte el texto, sin `Date`, que la leería como medianoche UTC y en Lima la correría un día;
+ *  - un INSTANTE (`2026-11-03T02:30:00Z`: cuándo se aceptó, se firmó, se confirmó): se lee en la zona del TELÉFONO, como el resto de la app. Antes se partía el
+ *    texto también, así que quedaba en UTC: entre las 19:00 y las 24:00 de Lima («Aceptada el 3 de noviembre» a las 21:30 del 2) salía el día siguiente.
+ */
 export function fechaCorta(iso: string | null): string {
-  const p = iso ? partes(iso) : null;
+  if (!iso) return '—';
+  if (esUnInstante(iso)) {
+    const d = new Date(iso);
+    if (!Number.isNaN(d.getTime())) return `${d.getDate()} de ${MESES[d.getMonth()]}`;
+  }
+  const p = partes(iso);
   return p ? `${p.dia} de ${MESES[p.mes - 1]}` : '—';
+}
+
+/** ¿Trae hora (`…T02:30:00Z`)? Una fecha sola no: es un día de calendario, sin zona. */
+function esUnInstante(iso: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/.test(iso);
 }
 
 function partes(iso: string): { anio: number; mes: number; dia: number } | null {

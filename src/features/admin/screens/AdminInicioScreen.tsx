@@ -29,6 +29,8 @@ const CLAVE_DE_LA_SECCION_ADMIN: Readonly<Record<SeccionAdmin, string | null>> =
   solicitudes: CLAVES.adminSolicitudes,
   semaforo: CLAVES.semaforo,
   caja: CLAVES.caja,
+  /* Spec 022: «Formaciones» vive con las personas y los grupos (el servidor la protege con `admin.personas`). */
+  formaciones: CLAVES.adminPersonas,
   mas: null,
 };
 
@@ -104,6 +106,8 @@ export function AdminInicioScreen({
   const colas = todasLasColas.filter(cola => esDisponible(CLAVE_DE_LA_SECCION_ADMIN[cola.clave]));
 
   const todoLoDemas: Array<{ clave: SeccionAdmin; titulo: string; detalle: string }> = [
+    /* Formaciones (spec 022, FR-025): las tres, con lo importante de cada una. Dos toques desde acá hasta su detalle. */
+    { clave: 'formaciones', titulo: 'Formaciones', detalle: 'Escuela, Diplomado y Certificación' },
     /* Semáforo de cumplimiento (D-168): el resumen por grupos y, al tocar uno, su tabla con nombres. */
     { clave: 'semaforo', titulo: 'Semáforo', detalle: 'Cuánto cumplió cada grupo, semana a semana' },
     /* Caja Renaser (D-219, 28/09): armar, enviar y seguir la caja de quien pasó la Fase 1. */

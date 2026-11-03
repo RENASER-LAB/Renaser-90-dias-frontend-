@@ -1,4 +1,5 @@
-import { FASES_EN_ORDEN, type ClaveDeFase, type FaseDelPrograma } from '../hooks/useResumenHome';
+import { fasesDeLaDuracion } from '../../formaciones/utils/fasesDeLaDuracion';
+import { DIAS_DEL_PROGRAMA, FASES_EN_ORDEN, type ClaveDeFase, type FaseDelPrograma } from '../hooks/useResumenHome';
 
 export interface DiasDeLaFase {
   /** El día dentro de la fase, desde 1. */
@@ -28,10 +29,27 @@ export interface FaseEnCurso extends FaseDelPrograma {
  * > Antes Yo hacía esta cuenta aparte (`yo/utils/diasDeLaFase.ts`) y Plan la suya
  * > (`descripcionDeFase` + `arquitecturaDeTiempo`, que se borró el 2026-10-31); daban lo mismo, pero eran dos.
  */
-export function faseEnCurso(faseDelBackend: string | null | undefined, diaDelPrograma: number | null | undefined): FaseEnCurso | null {
-  const fase = FASES_EN_ORDEN.find(f => f.clave === faseDelBackend);
+export function faseEnCurso(
+  faseDelBackend: string | null | undefined,
+  diaDelPrograma: number | null | undefined,
+  duracionDias: number | null | undefined = DIAS_DEL_PROGRAMA,
+): FaseEnCurso | null {
+  const fase = fasesEnOrden(duracionDias).find(f => f.clave === faseDelBackend);
   if (!fase) return null;
   return { ...fase, diasDeLaFase: diasDentroDeLaFase(fase, diaDelPrograma) };
+}
+
+/**
+ * Las cuatro fases estiradas a la duración de la persona (spec 022): con 90 días son las de `FASES_EN_ORDEN`, tal cual; con 365, la
+ * Fase II va del día 29 al 137. Los nombres y las claves no cambian: solo el rango. Es la misma cuenta que hace el servidor.
+ */
+export function fasesEnOrden(duracionDias: number | null | undefined): ReadonlyArray<FaseDelPrograma & { clave: ClaveDeFase }> {
+  if (!duracionDias || duracionDias === DIAS_DEL_PROGRAMA) return FASES_EN_ORDEN;
+  const cortes = fasesDeLaDuracion(duracionDias);
+  return FASES_EN_ORDEN.map((fase, i) => {
+    const corte = cortes[i];
+    return { ...fase, primerDia: corte.primerDia, ultimoDia: corte.ultimoDia, rango: `Días ${corte.primerDia}–${corte.ultimoDia}` };
+  });
 }
 
 function diasDentroDeLaFase(fase: FaseDelPrograma, diaDelPrograma: number | null | undefined): DiasDeLaFase | null {

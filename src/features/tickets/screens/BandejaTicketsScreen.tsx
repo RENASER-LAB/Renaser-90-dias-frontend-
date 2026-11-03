@@ -236,7 +236,7 @@ function Fallo({ bandeja }: { bandeja: ReturnType<typeof useBandejaDeTickets> })
       ) : null}
       {!sinPermiso ? (
         <View style={{ marginTop: 16, width: '100%' }}>
-          <GoldButton label="REINTENTAR" variant="outline" onPress={bandeja.recargar} />
+          <GoldButton label="Reintentar" variant="outline" onPress={bandeja.recargar} />
         </View>
       ) : null}
     </View>

@@ -1,3 +1,4 @@
+import { LineaDeLaMedicion } from '../../pasos/components/LineaDeLaMedicion';
 import { tituloEnTipoOracion } from '../../habits/utils/tituloEnTipoOracion';
 import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
@@ -155,6 +156,8 @@ function FilaDeObligacion({ obligacion, primera }: { obligacion: ObligacionDeLaP
           <Text style={[t.body, { color: colorDelEstado(obligacion.estado, c), fontSize: 16, lineHeight: 22 }]}>{estado}</Text>
           {entrega ? <Text style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 22 }]}>{entrega}</Text> : null}
         </View>
+        {/* Spec 037 (D-310): los km del día, quién los midió y si quedaron por revisar. */}
+        {obligacion.medicion ? <LineaDeLaMedicion medicion={obligacion.medicion} /> : null}
         {abrir.evidencia ? (
           <EvidenciaDeObligacion
             titulo={tituloEnTipoOracion(obligacion.titulo)}

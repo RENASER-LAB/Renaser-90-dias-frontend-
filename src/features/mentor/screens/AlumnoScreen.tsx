@@ -19,10 +19,17 @@ import { TarjetaSemaforoDeAprendiz } from '../../semaforo/components/TarjetaSema
 import { ChipDeCaja } from '../../caja/components/ChipDeCaja';
 import { abrirConversacionDirecta } from '../../chat/api/chatApi';
 import { EvidenciaDeObligacion } from '../../lider-mentores/components/EvidenciaDeObligacion';
+import { LineaDeLaMedicionCruda } from '../../pasos/components/LineaDeLaMedicion';
 import { VerPublicacion } from '../../lider-mentores/components/VisorDePublicacion';
 import { obtenerRadarDeAlumno } from '../api/mentorApi';
 import { obtenerCierresDeAlumno } from '../../cierre/api/cierreApi';
 import { CierresDelDia } from '../../cierre/components/CierresDelDia';
+import { obtenerOchentaVeinteDeUnAlumno } from '../../ochenta-veinte/api/ochentaVeinteApi';
+import { OchentaVeinteDeLaFicha } from '../../ochenta-veinte/components/OchentaVeinteDeLaFicha';
+import type { CargarOchentaVeinte } from '../../ochenta-veinte/types/ochentaVeinte.types';
+import { lecturaParaElMentor } from '../../diagnostico/api/diagnosticoLecturaApi';
+import { SeccionDelDiagnosticoDeLaPersona } from '../../diagnostico/components/SeccionDelDiagnosticoDeLaPersona';
+import type { CargarLecturaDelDiagnostico } from '../../diagnostico/hooks/useLecturaDelDiagnostico';
 import type { CargarCierres } from '../../cierre/types/cierre.types';
 import { obtenerHuecosDeAlumno } from '../../huecos/api/huecosApi';
 import { TiempoLibreDeLaSemana } from '../../huecos/components/TiempoLibreDeLaSemana';
@@ -84,6 +91,17 @@ export function AlumnoScreen({
   /* Spec 017: lo que dijo al cerrar cada día, por la ruta del mentor. También estable por persona. */
   const cargarCierres = useMemo<CargarCierres | null>(
     () => (grupoId ? (lunes?: string | null) => obtenerCierresDeAlumno(grupoId, alumno.participanteId, lunes) : null),
+    [grupoId, alumno.participanteId],
+  );
+  /* Spec 026: su diagnóstico inicial, por la ruta del mentor (solo lectura). Estable por persona. */
+  const cargarDiagnostico = useMemo<CargarLecturaDelDiagnostico | null>(
+    () => (grupoId ? () => lecturaParaElMentor(grupoId, alumno.participanteId) : null),
+    [grupoId, alumno.participanteId],
+  );
+
+  /* Spec 031: su 80/20 y el análisis de la semana y del mes, por la ruta del mentor. También estable por persona. */
+  const cargarOchentaVeinte = useMemo<CargarOchentaVeinte | null>(
+    () => (grupoId ? (tipo, inicio) => obtenerOchentaVeinteDeUnAlumno(grupoId, alumno.participanteId, tipo, inicio) : null),
     [grupoId, alumno.participanteId],
   );
 
@@ -326,6 +344,8 @@ export function AlumnoScreen({
                                   {etiquetaDeEntrega(o.entrega, o.revision, o.publicacionId ?? null)}
                                 </Text>
                               ) : null}
+                              {/* Spec 037 (D-310): los km del día, quién los midió y si quedaron por revisar. */}
+                              <LineaDeLaMedicionCruda crudo={o.medicion} />
                               {/* La misma hoja que usa el líder: foto, audio, video y TEXTO se ven dentro de la app, sin
                                   salir al navegador. El enlace se pide al abrirla (vence a los diez minutos) y el tipo se
                                   averigua al abrir. El servidor deja leerla al mentor o la guía asignados a este aprendiz. */}
@@ -366,6 +386,10 @@ export function AlumnoScreen({
         <TiempoLibreDeLaSemana cargar={cargarHuecos} />
         {/* Spec 017: lo que dijo al cerrar cada día, de lunes a domingo (solo lectura). */}
         <CierresDelDia cargar={cargarCierres} />
+        {/* Spec 031: su 80/20 y el análisis de SER, por semana y por mes (solo lectura). */}
+        <OchentaVeinteDeLaFicha cargar={cargarOchentaVeinte} />
+        {/* Spec 026: lo que respondió en su diagnóstico inicial (solo lectura; no se dibuja si tiene la ficha estándar). */}
+        <SeccionDelDiagnosticoDeLaPersona cargar={cargarDiagnostico} />
 
       </ScrollView>
     </SafeAreaView>

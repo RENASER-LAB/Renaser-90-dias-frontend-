@@ -9,6 +9,7 @@ import {
   confirmarPortadaDeBienvenida,
   guardarTextoDeBienvenida,
   leerBienvenida,
+  conFormacion,
   rutaDeLaTarjetaDeMuestra,
   solicitarSubidaDePortada,
   volverALaPortadaOriginal,
@@ -132,3 +133,54 @@ describe('rutas, verbos y cuerpos', () => {
     );
   });
 });
+
+describe('spec 035: la bienvenida es de cada formación', () => {
+  it('la Escuela pide lo de siempre (sin query: lo entiende cualquier backend); las otras mandan ?formation=', async () => {
+    await leerBienvenida('ESCUELA');
+    expect(mockApiFetch).toHaveBeenLastCalledWith('/api/v1/admin/bienvenida', undefined);
+    await leerBienvenida('DIPLOMADO');
+    expect(mockApiFetch).toHaveBeenLastCalledWith('/api/v1/admin/bienvenida?formation=DIPLOMADO', undefined);
+    await leerBienvenida('CERTIFICACION');
+    expect(mockApiFetch).toHaveBeenLastCalledWith('/api/v1/admin/bienvenida?formation=CERTIFICACION', undefined);
+  });
+
+  it('guardar, volver, confirmar la portada y volver a la portada llevan la formación', async () => {
+    await guardarTextoDeBienvenida('GRUPO', 'Hola {nombre}, {mentor}.', 'DIPLOMADO');
+    expect(mockApiFetch).toHaveBeenLastCalledWith('/api/v1/admin/bienvenida/textos/GRUPO?formation=DIPLOMADO', {
+      method: 'PUT',
+      body: { texto: 'Hola {nombre}, {mentor}.' },
+    });
+    await volverAlTextoOriginal('SOPORTE_FORMAL', 'CERTIFICACION');
+    expect(mockApiFetch).toHaveBeenLastCalledWith('/api/v1/admin/bienvenida/textos/SOPORTE_FORMAL?formation=CERTIFICACION', {
+      method: 'DELETE',
+    });
+    await confirmarPortadaDeBienvenida('bienvenida/portadas/p-2', 'DIPLOMADO');
+    expect(mockApiFetch).toHaveBeenLastCalledWith('/api/v1/admin/bienvenida/portada/confirm?formation=DIPLOMADO', {
+      method: 'POST',
+      body: { ruta: 'bienvenida/portadas/p-2' },
+    });
+    await volverALaPortadaOriginal('DIPLOMADO');
+    expect(mockApiFetch).toHaveBeenLastCalledWith('/api/v1/admin/bienvenida/portada?formation=DIPLOMADO', { method: 'DELETE' });
+  });
+
+  it('la vista previa de la tarjeta lleva la formación al final, con o sin portada candidata', () => {
+    expect(rutaDeLaTarjetaDeMuestra('Ana', null, 'DIPLOMADO')).toBe('/api/v1/admin/bienvenida/tarjeta?nombre=Ana&formation=DIPLOMADO');
+    expect(rutaDeLaTarjetaDeMuestra('Ana', 'bienvenida/portadas/p-1', 'CERTIFICACION')).toBe(
+      '/api/v1/admin/bienvenida/tarjeta?nombre=Ana&portada=bienvenida%2Fportadas%2Fp-1&formation=CERTIFICACION',
+    );
+    expect(conFormacion('/x', 'ESCUELA')).toBe('/x');
+  });
+
+  it('el esquema acepta formation y portada.heredada, y sigue aceptando un backend anterior sin ellos', () => {
+    const nueva = bienvenidaSchema.safeParse({ ...BIENVENIDA, formation: 'DIPLOMADO', portada: { ...BIENVENIDA.portada, heredada: true } });
+    expect(nueva.success).toBe(true);
+    if (nueva.success) {
+      expect(nueva.data.formation).toBe('DIPLOMADO');
+      expect(nueva.data.portada.heredada).toBe(true);
+    }
+    const anterior = bienvenidaSchema.safeParse(BIENVENIDA);
+    expect(anterior.success).toBe(true);
+    if (anterior.success) expect(anterior.data.formation).toBeUndefined();
+  });
+});
+

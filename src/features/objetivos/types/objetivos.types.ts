@@ -40,6 +40,8 @@ export const ETIQUETA_CORTA_EJE: Record<EjeObjetivo, string> = {
  * al superar la meta) y si cada pantalla lo recalculara, dos vistas mostrarían números distintos
  * para el mismo dato.
  */
+export type OrigenDelObjetivo = 'PLAN' | 'MAPA' | 'DIAGNOSTICO';
+
 export interface RocaMaestraApi {
   id: string;
   eje: EjeObjetivo;
@@ -52,6 +54,13 @@ export interface RocaMaestraApi {
   porcentaje: number | null;
   creadoEn: string;
   actualizadoEn: string;
+  /**
+   * De dónde nació el objetivo (spec 026). Ausente en un servidor anterior: se lee como `PLAN`. Un objetivo `DIAGNOSTICO` que
+   * todavía no está `confirmed` se muestra «Por confirmar» y se puede reescribir una vez (ver `utils/objetivosPorConfirmar`).
+   */
+  origin?: OrigenDelObjetivo;
+  /** Ausente en un servidor anterior: se lee como confirmado (así nada aparece «por confirmar» sin que el servidor lo diga). */
+  confirmed?: boolean;
 }
 
 /** Cuerpo de `PUT /api/v1/rocks/master/{eje}`. Sin `eje` ni dueño: van en la ruta y en la sesión. */

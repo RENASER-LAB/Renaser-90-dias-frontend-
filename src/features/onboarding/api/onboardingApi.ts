@@ -53,9 +53,9 @@ export async function obtenerEstado(): Promise<EstadoOnboardingApi> {
  * guardia acá contra llamadas repetidas.
  */
 /**
- * GET /api/v1/onboarding/activate-program — las fechas válidas para arrancar el Día 1 (mañana,
- * +2 o +3 en la zona del aprendiz — nunca hoy, ver `ParticipacionPrograma.activarPrograma` en el
- * backend). `validStartDates` viene vacío si el programa ya está activado.
+ * GET /api/v1/onboarding/activate-program — la fecha en que empieza el programa: mañana en la zona de la persona, nunca hoy (spec 036,
+ * D-309; ver `ParticipacionPrograma.activarPrograma` en el backend). Ya no hay nada que elegir: `validStartDates` trae UNA fecha (un servidor
+ * anterior mandaba tres, mañana, +2 y +3; la primera es siempre mañana) y viene vacío si el programa ya está activado.
  */
 export async function consultarActivacionPrograma(): Promise<EstadoActivacionProgramaApi> {
   const r = await apiFetch<unknown>('/api/v1/onboarding/activate-program', { timeoutMs: 15_000 });
@@ -67,11 +67,14 @@ export async function consultarActivacionPrograma(): Promise<EstadoActivacionPro
 }
 
 /**
- * POST /api/v1/onboarding/activate-program — confirma el Día 1 con una de las fechas devueltas por
- * `consultarActivacionPrograma`. Reintentar con la MISMA fecha ya activada es un no-op (200); con
- * una fecha distinta el backend responde 409 (`ApiError.esConflicto`).
+ * POST /api/v1/onboarding/activate-program — activa el programa con la fecha que devolvió `consultarActivacionPrograma` (mañana). El servidor
+ * la valida: si ya no es mañana (pasó la medianoche con la pantalla abierta) responde 400 y no activa nada. Reintentar con la MISMA fecha
+ * ya activada es un no-op (200); con una fecha distinta el backend responde 409 (`ApiError.esConflicto`).
+ *
+ * **Sin fecha** (`{}`, el valor por defecto) el servidor pone mañana en la zona de la persona, y un programa ya activado responde 200 con su fecha
+ * (idempotente, sin 409). Así activa el onboarding al firmar los Términos (spec 036); un servidor anterior a la 036 exige la fecha y responde 400.
  */
-export async function activarPrograma(input: ActivarProgramaInput): Promise<ActivarProgramaApi> {
+export async function activarPrograma(input: ActivarProgramaInput = {}): Promise<ActivarProgramaApi> {
   const r = await apiFetch<unknown>('/api/v1/onboarding/activate-program', { method: 'POST', body: input, timeoutMs: 15_000 });
   return validarRespuesta<ActivarProgramaApi>(activarProgramaSchema, r, 'POST /api/v1/onboarding/activate-program');
 }
@@ -121,9 +124,22 @@ export async function avanzarEstado(input: AvanzarEstadoInput): Promise<EstadoOn
   return validarRespuesta<EstadoOnboardingApi>(estadoOnboardingSchema, r, 'PUT /api/v1/onboarding/state');
 }
 
+/**
+ * Lo que la persona vio y aceptó en «Mi aceptación» (spec 039): el inicio de su programa (`AAAA-MM-DD`). Si ya no es el de ahora, el servidor responde 409 y no
+ * registra nada. El cronograma de pagos ya no se firma con los términos (decisión 2026-11-02 pagos fuera de términos): no viaja ninguna huella.
+ */
+export type AcuerdoQueSeVio = { inicioVisto?: string | null };
+
 /** POST /api/v1/onboarding/milestones — marca un hito de aceptación/firma (TERMINOS, PACTO, PACTO_FIRMADO, ROCAS_SYNC). */
-export async function aceptarHito(milestone: HitoOnboarding): Promise<EstadoOnboardingApi> {
-  const r = await apiFetch<unknown>('/api/v1/onboarding/milestones', { method: 'POST', body: { milestone } });
+export async function aceptarHito(milestone: HitoOnboarding, termsVersionId?: string | null, acuerdo?: AcuerdoQueSeVio): Promise<EstadoOnboardingApi> {
+  /* Spec 027: con el hito de Términos va además la versión que la persona leyó, para dejar constancia de ella. Un servidor anterior ignora el campo.
+     Spec 039: y lo que vio en «Mi aceptación» —el inicio de su programa—. */
+  const body = {
+    milestone,
+    ...(termsVersionId ? { termsVersionId } : {}),
+    ...(acuerdo?.inicioVisto ? { agreementStartDate: acuerdo.inicioVisto } : {}),
+  };
+  const r = await apiFetch<unknown>('/api/v1/onboarding/milestones', { method: 'POST', body });
   return validarRespuesta<EstadoOnboardingApi>(estadoOnboardingSchema, r, 'POST /api/v1/onboarding/milestones');
 }
 

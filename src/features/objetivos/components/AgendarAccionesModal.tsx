@@ -7,10 +7,8 @@ import { RuedaHoraPicker } from '../../habits/components/RuedaHoraPicker';
 import { useTheme } from '../../../theme/ThemeContext';
 import type { useRocasSemanales } from '../hooks/useRocasSemanales';
 import type { EjeObjetivo, ItemPlanDiario } from '../types/objetivos.types';
-import { conAccionPropia, opcionesDelEje } from '../utils/accionesPropias';
+import { conAccionPropia, opcionesDelEje, sugeridasDelEje, type AccionOfrecida, type SugerenciaDeAccion } from '../utils/accionesPropias';
 import { EJES, ETIQUETA_EJE } from '../types/objetivos.types';
-import type { AccionDelMapa, AccionesPorEje } from '../../mapa-renacimiento/hooks/useAccionesDelMapa';
-import { diasEscritos, tocaHoy } from '../../mapa-renacimiento/hooks/useAccionesDelMapa';
 import { FilaDeDiasDelPlan } from '../../habits/components/FilaDeDiasDelPlan';
 import { DIAS_DEL_PLAN, fechasIsoDeLaSemana, type DiaDelPlan } from '../../habits/utils/semanaDelPlan';
 import { diaAgendable, diaInicialDelPlanificador, textoDeLaFilaDeDias } from '../utils/ventanasDePlanificacion';
@@ -23,9 +21,9 @@ import { tacto } from '../../../utils/tacto';
 /**
  * Elegir qué acciones críticas van hoy, y a qué hora.
  *
- * **De dónde salen las acciones.** No se escriben acá: son las que la persona declaró en el Mapa
- * el día 7. Esta pantalla solo decide **cuáles caen hoy y cuándo**, igual que con un hábito.
- * Escribir acciones nuevas acá rompería el hilo entre el objetivo de 90 días y el día.
+ * **De dónde salen las acciones.** La persona las escribe acá (hasta tres por eje) y, si completó su diagnóstico, en el eje de su
+ * prioridad principal se le ofrece su «primera acción» como **sugerida**: no se agenda sola, se elige tocándola (spec 026; antes
+ * se ofrecían las acciones del Mapa, que se retiró). Esta pantalla decide **cuáles caen en el día elegido y cuándo**.
  *
  * **Por qué máximo tres por eje.** Es el tope del backend, y también la idea: el orden en que se
  * eligen define el color (1ª VERDE, 2ª AMARILLA, 3ª ROJA), y hasta completar la VERDE de un eje las
@@ -78,8 +76,8 @@ interface AgendarAccionesModalProps {
    * fila de arriba y puede agendar cualquier día que quede de la semana.
    */
   fecha: string;
-  /** Las acciones del Mapa, por eje: de ahí sale lo que se puede agendar. Ver `disponibles`. */
-  accionesDelMapa: AccionesPorEje;
+  /** La primera acción de su diagnóstico, ofrecida en el eje de su prioridad principal. `null` = no hay sugerencia. */
+  sugerida?: SugerenciaDeAccion | null;
   guardando: boolean;
   onGuardar: (items: ItemPlanDiario[], fecha: string) => void;
   onCerrar: () => void;
@@ -89,7 +87,7 @@ export function AgendarAccionesModal({
   visible,
   semanal,
   fecha,
-  accionesDelMapa,
+  sugerida = null,
   guardando,
   onGuardar,
   onCerrar,
@@ -109,41 +107,21 @@ export function AgendarAccionesModal({
   const [horaEnCurso, setHoraEnCurso] = useState({ hora: 6, minuto: 0 });
 
   /**
-   * Al abrir vienen marcadas **las que tocan hoy**, según los días que la persona le puso a cada
-   * acción en el Mapa.
-   *
-   * Es lo mismo que hace Training: no te pregunta qué hábitos van hoy, lo sabe por su horario. Acá
-   * el horario ya estaba —`Caminar 40 minutos, 3×/semana, L·X·V`— y no lo miraba nadie; la persona
-   * tenía que acordarse y tildarlas a mano todos los días. Pedido del dueño: *"dale con lo de los
-   * días del mapa, tipo training"*.
-   *
-   * **Marcadas, no impuestas.** Se pueden destildar, y se puede agregar una que hoy no tocaba: un
-   * martes libre es un buen día para adelantar algo. Lo que cambia es de qué lado empieza el
-   * trabajo.
+   * Al abrir no viene nada marcado: la sugerida del diagnóstico se ofrece pero no se agenda sola, se elige tocándola.
+   * Cada vez que la hoja se abre arranca limpia.
    */
   useEffect(() => {
-    if (!visible) return;
-    const deHoy: AccionElegida[] = [];
-    for (const eje of EJES) {
-      for (const accion of aElegirDe(eje)) {
-        if (semanal.deEje(eje) && tocaHoy(accion) && deHoy.filter(e => e.eje === eje).length < MAXIMO_POR_EJE) {
-          deHoy.push({ eje, titulo: accion.texto, hora: '', pasos: [] });
-        }
-      }
-    }
-    setElegidas(deHoy);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible, accionesDelMapa]);
+    if (visible) setElegidas([]);
+  }, [visible]);
 
   /**
-   * Lo que se puede agendar hoy, por eje: el objetivo de la semana y las acciones entre las que
-   * elegir.
+   * Lo que se puede agendar, por eje: el objetivo de la semana y las acciones entre las que elegir.
    *
    * > **Corregido el 2026-09-22.** Las acciones salían de `roca.accionesCriticas`, las tres que se
    * > escribían el domingo. Pasaron al objetivo diario (V61), así que una semana nueva llega **sin
-   * > ninguna** y esta pantalla quedaba vacía: nadie podía planificar su día. Ahora salen del Mapa,
-   * > que es de donde la persona las sacaba igual, y las de la semana se siguen ofreciendo para los
-   * > planes viejos que las tienen.
+   * > ninguna**.
+   * > **Corregido 2026-10-31 (spec 026).** Ya no hay acciones del Mapa que ofrecer: en el eje de la prioridad principal sale la
+   * > «primera acción» del diagnóstico, como sugerida; en los demás, lo que la persona escriba a mano.
    */
   const disponibles = useMemo(
     () =>
@@ -155,29 +133,23 @@ export function AgendarAccionesModal({
            * > que se pueden escribir acciones propias eso deja de tener sentido: alcanza con tener
            * > objetivo de la semana en ese eje.
            */
-          (x): x is { eje: EjeObjetivo; roca: NonNullable<typeof x.roca>; acciones: AccionDelMapa[] } =>
+          (x): x is { eje: EjeObjetivo; roca: NonNullable<typeof x.roca>; acciones: AccionOfrecida[] } =>
             x.roca !== null
         ),
-    [semanal, accionesDelMapa]
+    [semanal, sugerida]
   );
 
-  /**
-   * Lo que se puede agendar de ese eje: las acciones que la persona escribió en el Mapa.
-   *
-   * > **Corregido el 2026-09-22.** También ofrecía las acciones críticas del plan semanal viejo,
-   * > para no dejar sin opciones a quien las tuviera. Dejó de hacer falta: la tabla
-   * > `acciones_criticas` se borró, ya vacía, y el campo dejó de venir.
-   */
-  function aElegirDe(eje: EjeObjetivo): AccionDelMapa[] {
-    return accionesDelMapa[eje] ?? [];
+  /** Lo que se sugiere de ese eje: la primera acción del diagnóstico, solo en el eje de la prioridad principal. */
+  function aElegirDe(eje: EjeObjetivo): AccionOfrecida[] {
+    return sugeridasDelEje(eje, sugerida);
   }
 
   /** Lo que se está escribiendo a mano en cada eje, antes de agregarlo. */
   const [escribiendo, setEscribiendo] = useState<Partial<Record<EjeObjetivo, string>>>({});
 
-  /** Lo del Mapa más lo escrito a mano. Las reglas y sus pruebas viven en `utils/accionesPropias`. */
-  const opcionesDe = (eje: EjeObjetivo, delMapa: AccionDelMapa[]): AccionDelMapa[] =>
-    opcionesDelEje(eje, delMapa, elegidas);
+  /** Lo sugerido más lo escrito a mano. Las reglas y sus pruebas viven en `utils/accionesPropias`. */
+  const opcionesDe = (eje: EjeObjetivo, sugeridas: AccionOfrecida[]): AccionOfrecida[] =>
+    opcionesDelEje(eje, sugeridas, elegidas);
 
   /**
    * Agrega una acción escrita a mano. Si no corresponde —vacía, repetida, o el eje ya llegó a
@@ -359,7 +331,6 @@ export function AgendarAccionesModal({
                 const hora = elegida ? elegidas[indice].hora : '';
                 const pasos = elegida ? elegidas[indice].pasos : [];
                 const tope = !elegida && cuantasDe(eje) >= MAXIMO_POR_EJE;
-                const dias = diasEscritos(accion.dias);
                 return (
                   <View key={accion.texto} style={{ gap: 6 }}>
                     <Pressable
@@ -386,11 +357,10 @@ export function AgendarAccionesModal({
                         <Text style={[t.body, { color: c.textStrong, fontSize: 15, lineHeight: 21 }]}>
                           {accion.texto}
                         </Text>
-                        {/* El ritmo que la persona le puso en el Mapa. Sin esto, "por qué viene
-                            marcada" no se puede contestar mirando la pantalla. */}
-                        {!!dias && (
-                          <Text style={[t.micro, { color: tocaHoy(accion) ? c.goldInk : c.micro, fontSize: 12, marginTop: 2 }]}>
-                            {dias}{tocaHoy(accion) ? '  ·  hoy' : ''}
+                        {/* La que sugiere su diagnóstico: se dice de dónde viene, con texto (no solo color). */}
+                        {accion.sugerida && (
+                          <Text style={[t.small, { color: c.goldInk, fontFamily: fuentes.media, fontSize: 13, marginTop: 2 }]}>
+                            Sugerida por tu diagnóstico
                           </Text>
                         )}
                       </View>

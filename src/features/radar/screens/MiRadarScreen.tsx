@@ -81,7 +81,7 @@ const OPCIONES_DE_MODO = [
  * ## Cuando todavía no hay Mi Radar, la pantalla dice POR QUÉ (el 403 del servidor lleva un motivo) y no se queda callada
  *
  * Lo decide `utils/vistaDeMiRadar` y lo dibuja `components/SinMiRadar`: sin programa activado, «Mi Radar empieza en tu día 8. Primero
- * elige tu Día 1.» con «Elegir mi Día 1»; con Día 1 pero antes del día 8, cuándo empieza; cuenta suspendida o sin permiso, una línea y
+ * elige tu Día 1.» con «Empezar mañana»; con Día 1 pero antes del día 8, cuándo empieza; cuenta suspendida o sin permiso, una línea y
  * nada más; sin red o 5xx, «No pudimos cargar Mi Radar.» con «Reintentar». Mientras llega la respuesta, «Cargando Mi Radar…»: ni el
  * motivo anterior ni la pantalla vacía.
  *

@@ -1,0 +1,60 @@
+# 03 — El personal con la fila del programa sin activar (cuenta anterior a la spec 036) ve «Todavía no empezaste tu programa · Empieza mañana ›» en
+# Hoy, «Tu plan empieza con tu programa» con «Empezar mañana» en Plan (`PlanSinPrograma`, issues #82 y #85: la misma tarjeta que valida
+# `hoy-programa-propio/01`), «Todavía no empezaste tu programa» con «Empezar mañana» en Training, y en Yo → Mi Radar «Primero empieza tu programa».
+# ESCRITO Y SIN CORRER. Precondición: backend con la spec 036; administrador CON fila y `programa_activado_en` vacío. Sigue ESTADO=antes|despues:
+# `antes` solo mira; `despues` toca «Empezar mañana» en Training y «Entendido».
+# cuenta: admin
+# spec 036 FR-010, FR-011
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "HOY"
+- extendedWaitUntil:
+    visible: ".*Todavía no empezaste tu programa.*"
+    timeout: 30000
+- assertVisible: "Empieza mañana"
+- assertNotVisible: "Todavía no elegiste tu Día 1"
+- assertNotVisible: "Elige cuándo empiezas"
+- assertNotVisible: "Ahora no. No se borra nada."
+- takeScreenshot: M03a-hoy
+# Plan no repite la fila de Hoy: sin programa activo no hay objetivos que leer, así que va una tarjeta arriba, pegada a la cabecera, con «Empezar mañana».
+- tapOn: "PLAN"
+- extendedWaitUntil:
+    visible: "Tu plan empieza con tu programa"
+    timeout: 30000
+- assertVisible: "Empezar mañana"
+- assertNotVisible: "Todavía no elegiste tu Día 1"
+- takeScreenshot: M03b-plan
+- tapOn: "TRAINING"
+- extendedWaitUntil:
+    visible: "Todavía no empezaste tu programa"
+    timeout: 30000
+- assertVisible: "Tu programa empieza mañana\\. Hasta entonces no hay evidencia que entregar\\."
+- assertVisible: "Empezar mañana"
+- takeScreenshot: M03c-training
+# Yo → Mi Radar: el motivo ya no habla de elegir.
+- tapOn: "YO"
+- scrollUntilVisible:
+    element: "Primero empieza tu programa"
+    direction: DOWN
+- assertNotVisible: "Primero elige tu Día 1"
+- tapOn: "Primero empieza tu programa"
+- extendedWaitUntil:
+    visible: "Mi Radar empieza en tu día 8\\. Primero empieza tu programa\\."
+    timeout: 20000
+- assertVisible: "Empezar mañana"
+- takeScreenshot: M03d-mi-radar
+- runFlow:
+    when:
+      true: ${ESTADO == 'despues'}
+    commands:
+      - tapOn: "Empezar mañana"
+      - extendedWaitUntil:
+          visible: "Tu programa empieza mañana"
+          timeout: 20000
+      - tapOn: "Entendido"
+      - extendedWaitUntil:
+          visible: "Mi Radar empieza en tu día 8.*"
+          timeout: 40000
+      - assertNotVisible: "Mi Radar empieza en tu día 8\\. Primero empieza tu programa\\."
+      - takeScreenshot: M03e-tras-activar

@@ -1,4 +1,4 @@
-import type { DiaDelHabitoApi } from '../../types/habits.types';
+import type { DiaDelHabitoApi, FechaDelHabitoApi } from '../../types/habits.types';
 import {
   codigoDeLaCombinacion,
   combinacionDeLaApi,
@@ -29,6 +29,18 @@ import {
  *
  * La regla de cuál esquema se usa es la del servidor («el hábito tiene al menos una fila en
  * `horario_semanal_habito`»): hora propia, aviso propio, «cómo suena» propio (spec 009) o día apagado.
+ *
+ * ## Las fechas propias: «solo esta semana» (spec 028, research R5)
+ *
+ * Una fecha concreta puede tener su propia hora, aviso o «cómo suena», o estar apagada (`dateOverrides` de
+ * `GET /habit-preferences`, `fechasPropiasDe`). Una alarma `WEEKLY` no puede saltarse una fecha —cancelarla borra las de
+ * todas las semanas y dejarla la deja sonar a la hora vieja, el mismo problema del #33—, así que el día de la semana
+ * AFECTADO (el que tiene alguna fecha propia vigente) no lleva alarma semanal: lleva alarmas de FECHA, una por aviso y por
+ * ocurrencia de ese día desde hoy hasta la última fecha propia más `SEMANAS_DE_COLA` semanas, con el valor propio donde hay
+ * fila y el de siempre donde no. Los demás días siguen semanales. Cuando ya no quedan fechas propias vigentes el plan vuelve
+ * solo al de siempre (`planDeAlarmas` sin fechas es el de antes, idéntico). El primer aviso de la primera ocurrencia de un día
+ * afectado conserva `habito-{id}-d{iso}-0` (la etiqueta del push de respaldo); el resto, `habito-{id}-f{AAAAMMDD}-{n}`.
+ * Tope: `TOPE_DE_ALARMAS_DE_FECHA` por hábito, las más próximas primero.
  *
  * ## El número del día de la semana
  *
@@ -152,6 +164,88 @@ export function diasPropiosDe(weekdays: readonly DiaDelHabitoApi[] | null | unde
   return propios.length > 0 ? propios : null;
 }
 
+/**
+ * Lo propio de una FECHA concreta (spec 028): lo que el servidor resolvió para ella y que NO es solo el plan de siempre.
+ * Cada campo `null` sigue a lo que rija ese día de la semana (la hora, el aviso, «cómo suena»): así el cambio de hora
+ * general que espera su fecha (D-91) y el aviso general que mezcla el teléfono siguen mandando donde la fecha no dice nada.
+ */
+export interface FechaPropia {
+  /** `YYYY-MM-DD`, en la zona de la persona (que es la del teléfono para las alarmas). */
+  fecha: string;
+  /** El día de la semana ISO de esa fecha. */
+  iso: DiaIso;
+  /** `false` = esa fecha el hábito no va (apagada, o el día de la semana está apagado). */
+  activo: boolean;
+  /** `HH:mm` propia de esa fecha o de su día de la semana. `null` = la que rija ese día. */
+  hora: string | null;
+  /** Antelaciones propias, en minutos. `[]` = esa fecha sin aviso. `null` = el aviso que rija ese día. */
+  avisos: number[] | null;
+  /** «Cómo suena» propio. `null` = el que rija ese día. */
+  alarma: CombinacionDeAlarma | null;
+}
+
+const FORMA_DE_UNA_FECHA = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+/** El mediodía local de `YYYY-MM-DD`, o `null` si no es una fecha del calendario. */
+function fechaDelCalendario(fecha: string): Date | null {
+  const m = FORMA_DE_UNA_FECHA.exec(fecha);
+  if (!m) return null;
+  const [a, mes, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  const f = new Date(a, mes - 1, d, 12, 0, 0, 0);
+  return f.getFullYear() === a && f.getMonth() === mes - 1 && f.getDate() === d ? f : null;
+}
+
+/**
+ * Las fechas propias a partir de lo que manda el servidor (`dateOverrides`), o `[]` si no manda nada (backend anterior) o no
+ * se entiende. Un dato roto se pierde SOLO él: una fecha que no es del calendario se ignora; si se repite una, manda la última.
+ * Ordenadas por fecha.
+ *
+ * Los valores del servidor son los RESUELTOS de esa fecha, y solo cuentan si son propios (`customTime`, `customReminder`,
+ * `customAlarm`): un valor heredado sale `null` y se resuelve contra el día de la semana, que sabe del cambio de hora que
+ * todavía no rige. Un aviso propio «activo» sin conjunto no se puede leer: se deja heredar antes que inventar uno.
+ */
+export function fechasPropiasDe(fechas: readonly FechaDelHabitoApi[] | null | undefined): FechaPropia[] {
+  if (!Array.isArray(fechas)) return [];
+  const porFecha = new Map<string, FechaPropia>();
+  for (const d of fechas) {
+    if (!d || typeof d.date !== 'string') continue;
+    const dia = fechaDelCalendario(d.date);
+    if (!dia) continue;
+    const horaPropia = (d.customTime ?? d.custom) === true ? horaCorta(d.triggerTime) : null;
+    let avisos: number[] | null = null;
+    if (d.customReminder === true) {
+      if (d.reminderEnabled === false) avisos = [];
+      else {
+        const lista: number[] = (d.reminderMinutesList ?? []).filter(
+          (a: unknown): a is number => typeof a === 'number' && Number.isFinite(a) && a >= 0,
+        );
+        avisos = lista.length > 0 ? lista : null;
+      }
+    }
+    const alarma = d.customAlarm === true ? combinacionDeLaApi(d.alarm) : null;
+    porFecha.set(d.date, {
+      fecha: d.date,
+      iso: isoDe(dia),
+      activo: d.active !== false,
+      hora: horaPropia,
+      avisos,
+      alarma,
+    });
+  }
+  return [...porFecha.values()].sort((a, b) => (a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : 0));
+}
+
+/** Las fechas propias que todavía importan: de hoy en adelante (la fecha es la local del teléfono, como las alarmas). */
+export function fechasVigentes(fechas: readonly FechaPropia[] | null | undefined, ahora: Date): FechaPropia[] {
+  const hoy = fechaLocal(ahora);
+  return (fechas ?? []).filter(f => f.fecha >= hoy);
+}
+
+/** ¿Alguna fecha propia sigue vigente? Con una, el hábito va por día y los días afectados llevan alarmas de fecha. */
+export function hayFechasVigentes(fechas: readonly FechaPropia[] | null | undefined, ahora: Date): boolean {
+  return fechasVigentes(fechas, ahora).length > 0;
+}
+
 /** La regla común con el servidor: algún día con hora propia, aviso propio, «cómo suena» propio o apagado. */
 export function usaEsquemaPorDia(dias: readonly DiaPropio[] | null | undefined): boolean {
   return (dias ?? []).some(
@@ -206,7 +300,12 @@ export interface EntradaDelPlan {
   cambio?: CambioDeHoraGeneral | null;
   /** Spec 009: cómo suena la alarma del hábito (la general). `null`/`undefined` = la de siempre. */
   alarmaGeneral?: CombinacionDeAlarma | null;
-  /** «Ahora», para el cambio con fecha. Por defecto, el reloj. */
+  /**
+   * Spec 028: las fechas con cambio «solo esta semana». Con alguna vigente el hábito va por día y los días afectados llevan
+   * alarmas de fecha (ver arriba). `null`/`undefined`/vacío = ninguna: el plan es el de siempre.
+   */
+  fechas?: readonly FechaPropia[] | null;
+  /** «Ahora», para el cambio con fecha y para saber qué fechas propias siguen vigentes. Por defecto, el reloj. */
   ahora?: Date;
 }
 
@@ -256,14 +355,165 @@ function proximaConCambio(iso: DiaIso, antes: number, cambio: CambioDeHoraGenera
 }
 
 /**
+ * Lo mínimo que hace falta para saber qué rige un día concreto. Lo comparten el plan de alarmas, el puente de un hábito
+ * cumplido (`puenteDeAlarmas.ts`) y las repeticiones (`repeticionesDeAlarma.ts`): una sola cuenta por día, para que las
+ * tres lean igual la hora, el aviso y «cómo suena» de una fecha propia.
+ */
+export interface EntradaConDias {
+  /** La hora general (`HH:mm` o `HH:mm:ss`). `null` = no tiene hora y los días sin hora propia no suenan. */
+  horaGeneral: string | null | undefined;
+  avisosGenerales: readonly number[];
+  dias: readonly DiaPropio[] | null | undefined;
+  alarmaGeneral?: CombinacionDeAlarma | null;
+  /** Un cambio de hora general que todavía no rige (D-91): hasta su fecha rige `horaDeHoy`. */
+  cambio?: CambioDeHoraGeneral | null;
+  /** Spec 028: las fechas con cambio «solo esta semana». */
+  fechas?: readonly FechaPropia[] | null;
+}
+
+/** Lo que rige un día concreto, ya mezclado: día de la semana + fecha propia. */
+export interface ValoresDelDia {
+  /** `false` = ese día el hábito no va (el día de la semana está apagado o la fecha lo está). */
+  activo: boolean;
+  /** `HH:mm`, o `null` si no hay hora (y entonces no suena). */
+  hora: string | null;
+  /** De la mayor antelación a la menor, sin repetidos. Vacío = sin aviso. */
+  avisos: number[];
+  alarma: CombinacionDeAlarma;
+}
+
+/**
+ * La hora que rige para el día `fecha` (local): la propia de la fecha o del día de la semana, o la general; con un cambio
+ * pendiente (D-91), la de esa fecha. E-642: un día sin hora propia va a la hora que el servidor resolvió para ESE día, no a
+ * la de hoy.
+ */
+export function horaDeLaFecha(
+  entrada: Pick<EntradaConDias, 'horaGeneral' | 'cambio'>,
+  propio: DiaPropio | undefined,
+  fecha: Date,
+): string | null {
+  if (propio?.hora) return horaCorta(propio.hora);
+  const resuelta = horaCorta(propio?.horaResuelta);
+  if (entrada.cambio) {
+    return fechaLocal(fecha) < entrada.cambio.desde
+      ? (resuelta ?? horaCorta(entrada.cambio.horaDeHoy))
+      : horaCorta(entrada.cambio.horaNueva);
+  }
+  return resuelta ?? horaCorta(entrada.horaGeneral);
+}
+
+/**
+ * Qué rige el día `dia` (local): lo de la fecha propia si la hay —campo por campo—, si no lo del día de la semana, si no lo
+ * general. Sin `fechas` es exactamente la cuenta de siempre.
+ */
+export function valoresDelDia(entrada: EntradaConDias, dia: Date): ValoresDelDia {
+  const propio = (entrada.dias ?? []).find(d => d.iso === isoDe(dia));
+  const hoy = fechaLocal(dia);
+  const deLaFecha = (entrada.fechas ?? []).find(f => f.fecha === hoy);
+  return {
+    activo: (propio?.activo ?? true) && (deLaFecha?.activo ?? true),
+    hora: deLaFecha?.hora ? horaCorta(deLaFecha.hora) : horaDeLaFecha(entrada, propio, dia),
+    avisos: ordenadas(deLaFecha?.avisos ?? propio?.avisos ?? entrada.avisosGenerales),
+    alarma: combinacionDelDia(entrada.alarmaGeneral, deLaFecha?.alarma ?? propio?.alarma),
+  };
+}
+
+/** Cuántas semanas de cola lleva un día afectado después de su última fecha propia (ver arriba). */
+export const SEMANAS_DE_COLA = 2;
+
+/** El máximo de alarmas de fecha que un hábito pone por esta vía: Android admite unas 500 por app. */
+export const TOPE_DE_ALARMAS_DE_FECHA = 48;
+
+const dosDigitos = (n: number) => String(n).padStart(2, '0');
+
+/** `AAAAMMDD` de una fecha local. */
+function compacta(d: Date): string {
+  return `${d.getFullYear()}${dosDigitos(d.getMonth() + 1)}${dosDigitos(d.getDate())}`;
+}
+
+/** `habito-{id}-f{AAAAMMDD}-{n}`: una alarma de fecha de un día afectado (no es la primera de su día de la semana). */
+export function identificadorDeLaFecha(habitoId: string, fecha: string, n: number): string {
+  return `habito-${habitoId}-f${fecha}-${n}`;
+}
+
+/** Un aviso de una fecha propia antes de ponerle identificador (se arma después del tope, en orden cronológico). */
+interface AvisoDeUnaFecha {
+  fecha: string;
+  iso: DiaIso;
+  n: number;
+  minutosAntes: number;
+  horaDelDia: string;
+  instanteMs: number;
+  alarma: CombinacionDeAlarma;
+}
+
+/**
+ * Las alarmas de FECHA de los días de la semana afectados por alguna fecha propia vigente: una por aviso y por ocurrencia de
+ * ese día desde hoy hasta su última fecha propia más `SEMANAS_DE_COLA` semanas, con el tope por hábito (las más próximas
+ * primero). Lo que ya sonó no entra.
+ */
+function pedidosDeLasFechasPropias(
+  entrada: EntradaConDias & { habitoId: string },
+  vigentes: readonly FechaPropia[],
+  ahora: Date,
+): PedidoDeAlarmaDelDia[] {
+  const ultimaDe = new Map<DiaIso, string>();
+  for (const f of vigentes) {
+    const antes = ultimaDe.get(f.iso);
+    if (!antes || f.fecha > antes) ultimaDe.set(f.iso, f.fecha);
+  }
+  const avisos: AvisoDeUnaFecha[] = [];
+  for (const [iso, ultima] of ultimaDe) {
+    const limite = fechaDelCalendario(ultima);
+    if (!limite) continue;
+    limite.setDate(limite.getDate() + SEMANAS_DE_COLA * 7);
+    for (let i = 0; ; i++) {
+      const dia = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate() + i, 12, 0, 0, 0);
+      if (dia.getTime() > limite.getTime()) break;
+      if (isoDe(dia) !== iso) continue;
+      const v = valoresDelDia(entrada, dia);
+      if (!v.activo || !v.hora || v.avisos.length === 0) continue;
+      const hora = v.hora;
+      const [h, m] = hora.split(':').map(Number);
+      v.avisos.forEach((antes, n) => {
+        const instanteMs = new Date(dia.getFullYear(), dia.getMonth(), dia.getDate(), h, m - antes, 0, 0).getTime();
+        if (instanteMs <= ahora.getTime()) return;
+        avisos.push({ fecha: compacta(dia), iso, n, minutosAntes: antes, horaDelDia: hora, instanteMs, alarma: v.alarma });
+      });
+    }
+  }
+  avisos.sort((a, b) => a.instanteMs - b.instanteMs);
+  // Etiqueta del push de respaldo (`-d{iso}-0`) para el primer aviso n=0 de cada día afectado; el resto lleva su fecha.
+  const yaTienenElCero = new Set<DiaIso>();
+  return avisos.slice(0, TOPE_DE_ALARMAS_DE_FECHA).map(a => {
+    const conLaEtiqueta = a.n === 0 && !yaTienenElCero.has(a.iso);
+    if (conLaEtiqueta) yaTienenElCero.add(a.iso);
+    return {
+      identificador: conLaEtiqueta
+        ? identificadorDelAvisoDelDia(entrada.habitoId, a.iso, 0)
+        : identificadorDeLaFecha(entrada.habitoId, a.fecha, a.n),
+      diaIso: a.iso,
+      minutosAntes: a.minutosAntes,
+      horaDelDia: a.horaDelDia,
+      disparo: { tipo: 'fecha', instanteMs: a.instanteMs },
+      alarma: a.alarma,
+    };
+  });
+}
+
+/**
  * El plan de alarmas del hábito. `{ esquema: 'diario' }` si ningún día es distinto (el llamador sigue como
  * siempre); si no, una alarma por día encendido y por antelación.
+ *
+ * Spec 028: con alguna fecha propia vigente el hábito también va por día, y los días afectados llevan alarmas de fecha.
  */
 export function planDeAlarmas(entrada: EntradaDelPlan): PlanDeAlarmas {
-  if (!usaEsquemaPorDia(entrada.dias)) return { esquema: 'diario' };
+  const ahora = entrada.ahora ?? new Date();
+  const vigentes = fechasVigentes(entrada.fechas, ahora);
+  if (!usaEsquemaPorDia(entrada.dias) && vigentes.length === 0) return { esquema: 'diario' };
 
   const propios = new Map<DiaIso, DiaPropio>((entrada.dias ?? []).map(d => [d.iso, d]));
-  const ahora = entrada.ahora ?? new Date();
+  const afectados = new Set<DiaIso>(vigentes.map(f => f.iso));
   const cambio = entrada.cambio && esHoraHHmm(entrada.cambio.horaDeHoy) && esHoraHHmm(entrada.cambio.horaNueva)
     ? entrada.cambio
     : null;
@@ -278,6 +528,9 @@ export function planDeAlarmas(entrada: EntradaDelPlan): PlanDeAlarmas {
 
   const pedidos: PedidoDeAlarmaDelDia[] = [];
   for (const iso of DIAS_ISO) {
+    // Spec 028: un día afectado por una fecha propia no lleva alarma semanal (una semanal no puede saltarse una fecha): lleva
+    // alarmas de fecha, que se arman aparte (`pedidosDeLasFechasPropias`).
+    if (afectados.has(iso)) continue;
     const propio = propios.get(iso);
     if (propio && !propio.activo) continue;
     const horaPropia = propio?.hora ? horaCorta(propio.hora) : null;
@@ -315,6 +568,7 @@ export function planDeAlarmas(entrada: EntradaDelPlan): PlanDeAlarmas {
       });
     });
   }
+  if (afectados.size > 0) pedidos.push(...pedidosDeLasFechasPropias({ ...entrada, cambio }, vigentes, ahora));
   return { esquema: 'porDia', pedidos };
 }
 

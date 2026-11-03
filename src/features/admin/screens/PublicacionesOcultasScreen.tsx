@@ -14,6 +14,8 @@ import { FotoMuro } from '../../community/components/FotoMuro';
 import type { WallPost } from '../../community/types/community.types';
 import { SIN_PERMISO_PARA_MODERAR, fechaDeLaPublicacion } from '../../community/utils/moderacionDelMuro';
 import { ESPACIO_PARA_LANZADOR } from '../../renasia/components/RenasiaLauncher';
+import { RotuloDeFormacion } from '../../formaciones/components/RotuloDeFormacion';
+import { SelectorDeFormacionDeLaComunidad } from '../../formaciones/components/SelectorDeFormacionDeLaComunidad';
 import { CabeceraAdmin } from '../components/CabeceraAdmin';
 import { usePublicacionesOcultas } from '../hooks/usePublicacionesOcultas';
 import { fuentes } from '../../../theme/fuentes';
@@ -58,6 +60,9 @@ export function PublicacionesOcultasScreen({ onVolver }: { onVolver: () => void 
             gap: 12,
           }}
         >
+          {/* Spec 024: quien ve las tres formaciones elige cuál cola mirar (la misma elección de Comunidad). Las demás cuentas no lo ven. */}
+          <SelectorDeFormacionDeLaComunidad />
+
           {cargando && !filas ? <Text style={cuerpo}>Cargando las publicaciones ocultas…</Text> : null}
 
           {!cargando && fallo && !filas ? (
@@ -128,6 +133,8 @@ function FilaOculta({
 
   return (
     <View style={[estilos.tarjeta, { backgroundColor: c.cardBg, borderColor: c.border }]}>
+      {/* Spec 024: la formación de la publicación, solo cuando se lee «Todas». */}
+      <RotuloDeFormacion formation={post.formation} />
       <View style={estilos.autor}>
         <AvatarPersona nombre={autor} avatarUrl={post.authorAvatarUrl} size={36} />
         <View style={{ flex: 1, flexShrink: 1 }}>

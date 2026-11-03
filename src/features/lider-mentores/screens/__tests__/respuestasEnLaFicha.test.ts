@@ -55,6 +55,7 @@ function obligacion(entrega: 'ENTREGADA' | 'SIN_ENTREGA', cambios: Partial<Oblig
     respuestaTexto: null,
     evidencias: [],
     publicacionId: null,
+    medicion: null,
     ...cambios,
   };
 }

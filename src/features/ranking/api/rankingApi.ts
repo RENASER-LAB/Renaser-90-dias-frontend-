@@ -1,10 +1,16 @@
 import { apiFetch } from '../../../services/http/apiClient';
+import { agregarLaFormacion } from '../../formaciones/estado/formacionDeLaComunidad';
 
 export interface EntradaRankingDto {
   participanteId: string;
   fullName: string;
   posicion: number;
   puntaje: number;
+  /**
+   * Spec 024: la formación de la fila. Cada formación compara solo a los suyos y `posicion` es DENTRO de su formación. Opcional: un
+   * backend anterior no la manda (todo es de la Escuela).
+   */
+  formation?: string | null;
 }
 
 export interface CelulaResumenDto {
@@ -29,13 +35,19 @@ export interface RankingAgregadoDto {
   kilometros?: EntradaRankingDto[];
   /** D-266 del backend: días de gimnasio desde el Día 1 (`puntaje` son días). Opcional: un backend anterior no lo manda. */
   gimnasio?: EntradaRankingDto[];
+  /**
+   * Spec 037 (D-310): ids de quienes salen en `kilometros` y tienen algún día de km leído por el teléfono (Health Connect). La
+   * tabla los marca «auto» junto a su total; no cambia ninguna cifra. Opcional: un backend anterior no lo manda.
+   */
+  kilometrosAutomaticos?: string[];
 }
 
 /**
  * Consulta el ranking agregado desde el backend Java (GET /api/v1/ranking).
  * Contiene el ranking general, liga, coherencia individual y el resumen de la célula.
  */
-export async function obtenerRankingAgregado(fecha?: string): Promise<RankingAgregadoDto> {
+export async function obtenerRankingAgregado(fecha?: string, formation?: string | null): Promise<RankingAgregadoDto> {
   const query = fecha ? `?fecha=${fecha}` : '';
-  return apiFetch<RankingAgregadoDto>(`/api/v1/ranking${query}`);
+  // Spec 024: `formation` solo lo pasa quien ve todas las formaciones y eligió una; sin él, «Todas» (cada fila con la suya).
+  return apiFetch<RankingAgregadoDto>(agregarLaFormacion(`/api/v1/ranking${query}`, formation));
 }

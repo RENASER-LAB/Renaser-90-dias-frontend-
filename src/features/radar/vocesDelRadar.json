@@ -1,0 +1,8 @@
+{
+  "preguntas": [
+    { "campo": "whatAmIDoing", "archivo": "voz_radar_que_hago.mp3", "dice": "¿Qué hago? Lo que estás haciendo en este momento, sin adornos." },
+    { "campo": "whatAmIThinking", "archivo": "voz_radar_que_pienso.mp3", "dice": "¿Qué pienso? El pensamiento que te está ocupando ahora." },
+    { "campo": "whatAmIFeeling", "archivo": "voz_radar_que_siento.mp3", "dice": "¿Qué siento? La emoción, no la interpretación." },
+    { "campo": "whatAmIAvoiding", "archivo": "voz_radar_que_evito.mp3", "dice": "¿Qué evito? Eso que sabes que toca y estás postergando." }
+  ]
+}

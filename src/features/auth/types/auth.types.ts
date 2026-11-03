@@ -4,6 +4,8 @@
  * un campo, el cambio se absorbe en `api/usuarioMapper` y ninguna pantalla se entera.
  */
 
+import type { FormacionDeLaSesion } from '../../formaciones/types/formaciones.types';
+
 /** Espejo de `UserResponse` del backend (proyección, no la entidad). */
 export type UsuarioApi = {
   id: string;
@@ -16,6 +18,11 @@ export type UsuarioApi = {
   department: string | null;
   /** Spec 002, fase 2: su rol personalizado, solo si está activo y hereda de `role` (que sigue siendo el base). */
   rolPersonalizado?: { id?: string | null; nombre?: string | null } | null;
+  /**
+   * Spec 022: la formación de la sesión (cuál, entre cuáles elige el personal, las fases según su duración). Llega sin
+   * validar: el mapper la lee con tolerancia, y un backend anterior no la manda (se trata como la Escuela).
+   */
+  formacion?: unknown;
 };
 
 export type ProveedorSocial = 'GOOGLE' | 'APPLE' | 'FACEBOOK';
@@ -84,4 +91,6 @@ export type User = {
   department?: string | null;
   /** Spec 002, fase 2: su rol personalizado, si tiene (para mostrar su nombre donde se muestre el rol). */
   rolPersonalizado?: { id: string; nombre: string } | null;
+  /** Spec 022: su formación. `null`/ausente = el servidor no la dijo (backend anterior): la persona es de la Escuela. */
+  formacion?: FormacionDeLaSesion | null;
 };

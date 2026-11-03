@@ -1,0 +1,400 @@
+import React, { useCallback, useMemo, useState } from 'react';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { AvisoDeAbajo } from '../../../components/AvisoDeAbajo';
+import { BotonSecundario } from '../../../components/Legible';
+import { useSystemBackHandler } from '../../../hooks/useSystemBackHandler';
+import { useOcultarBarraAlDesplazar } from '../../../navigation/barraAlDesplazar/BarraInferior';
+import { useResponsive } from '../../../theme/responsive';
+import { useTheme } from '../../../theme/ThemeContext';
+import { tacto } from '../../../utils/tacto';
+import { ESPACIO_PARA_LANZADOR } from '../../renasia/components/lugarDelLanzador';
+import { CabeceraAdmin } from '../../admin/components/CabeceraAdmin';
+import { avisar, confirmar } from '../../admin/utils/dialogo';
+import {
+  borrarSeccion,
+  confirmarImportacion,
+  crearPregunta,
+  crearSeccion,
+  duplicarPregunta,
+  editarPregunta,
+  editarSeccion,
+  moverPregunta,
+  ordenarSecciones,
+  publicarDiagnostico,
+  quitarPreguntas,
+  restaurarPregunta,
+} from '../api/diagnosticoAdminApi';
+import { BarraDeQuitar } from '../components/BarraDeQuitar';
+import { HojaDeImportar } from '../components/HojaDeImportar';
+import { EditorDePreguntaSheet } from '../components/EditorDePreguntaSheet';
+import { EditorDeSeccionSheet } from '../components/EditorDeSeccionSheet';
+import { HojaDeVersiones } from '../components/HojaDeVersiones';
+import { HojaDeVistaPrevia } from '../components/HojaDeVistaPrevia';
+import { PanelDePublicar } from '../components/PanelDePublicar';
+import { Aviso, BotonDeAccion } from '../components/piezas';
+import { PreguntasRetiradas } from '../components/PreguntasRetiradas';
+import { PortadaDelEditor, SeccionDelEditor } from '../components/SeccionDelEditor';
+import { ARCHIVO_DE_LA_FICHA, useDescargaDeFicha } from '../hooks/useDescargaDeFicha';
+import type { EstadoDelDiagnosticoAdmin } from '../hooks/useDiagnosticoAdmin';
+import type { PreguntaAdmin, PreguntaRequest, SeccionAdmin } from '../types/diagnosticoAdmin.types';
+import { textoDelResultado as textoDelResultadoDeImportar } from '../utils/importacion';
+import { destinoAlMover, ordenNuevoDeSecciones, puedeMoverPregunta, puedeMoverSeccion, type Direccion } from '../utils/reordenar';
+import { AVISO_OTRA_PERSONA_PUBLICO, CONFIRMACION_DE_PUBLICAR, textoDeLaPublicacion } from '../utils/publicar';
+import {
+  alternarMarca,
+  resumenDeLaSeleccion,
+  sePuedeMarcar,
+  textoDeLaConfirmacion,
+  textoDelResultado,
+  textoDeLosDependientes,
+  textoDeQuitarSeccion,
+} from '../utils/quitarPreguntas';
+import { cantidad, codigoDelError, dependientesDelError, mensajeDeGuardar, motivosDelError, textoDelFallo } from '../utils/textos';
+import type { ParametrosDeLaVistaPrevia } from '../utils/vistaPrevia';
+import { VistaPreviaDelDiagnosticoScreen } from './VistaPreviaDelDiagnosticoScreen';
+
+/**
+ * El editor del diagnóstico (Administración → Fichas → Diagnóstico inicial; spec 026): la portada y los pasos con sus preguntas, en el
+ * orden en que las ve la persona. Crear, editar, duplicar y reordenar preguntas y secciones; todo toca el BORRADOR, y las personas
+ * solo ven lo que se publica.
+ *
+ * - Cada cambio se manda al servidor y se relee el borrador antes de avisarlo (`ejecutar`): lo que se ve es lo que el servidor tiene.
+ * - Subir y bajar son botones de 48, sin arrastre; una pregunta que llega al borde de su sección pasa a la de al lado.
+ * - Un solo scroll. El aviso de lo guardado es el de abajo (`AvisoDeAbajo`), que se ve sin importar dónde se hizo el cambio en una
+ *   lista larga.
+ * - El atrás del sistema sube un nivel: de aquí a la lista de fichas.
+ *
+ * Movimiento (`emil-design-eng`): es una pantalla de trabajo que se usa seguido; solo responde al dedo (`Presionable`) y las hojas
+ * son las de siempre. Nada se anima por su cuenta.
+ */
+export function DiagnosticoEditorScreen({ estado, onVolver }: { estado: EstadoDelDiagnosticoAdmin; onVolver: () => void }) {
+  const barraAlDesplazar = useOcultarBarraAlDesplazar();
+  const { c, t } = useTheme();
+  const { horizontalPadding, contentMaxWidth } = useResponsive();
+  const { borrador, cargando, fallo, desactualizado, otraPersona, versionBase, recargar, ejecutar } = estado;
+
+  const [pregunta, setPregunta] = useState<{ pregunta: PreguntaAdmin | null; seccionId: number }>({ pregunta: null, seccionId: 0 });
+  const [preguntaAbierta, setPreguntaAbierta] = useState(false);
+  const [seccion, setSeccion] = useState<SeccionAdmin | null>(null);
+  const [seccionAbierta, setSeccionAbierta] = useState(false);
+  const [aviso, setAviso] = useState<{ clave: number; texto: string } | null>(null);
+  const [ocupado, setOcupado] = useState(false);
+  const [modoQuitar, setModoQuitar] = useState(false);
+  const [marcadas, setMarcadas] = useState<number[]>([]);
+  const [hojaDeVistaPrevia, setHojaDeVistaPrevia] = useState(false);
+  const [vistaPrevia, setVistaPrevia] = useState<ParametrosDeLaVistaPrevia | null>(null);
+  const [hojaDeVersiones, setHojaDeVersiones] = useState(false);
+  const [hojaDeImportar, setHojaDeImportar] = useState(false);
+  const descarga = useDescargaDeFicha();
+
+  const hojaAbierta = preguntaAbierta || seccionAbierta || hojaDeVistaPrevia || hojaDeVersiones || hojaDeImportar;
+  const salirDelModo = useCallback(() => {
+    setModoQuitar(false);
+    setMarcadas([]);
+  }, []);
+  /* El atrás sube un nivel: del modo «Quitar preguntas» al editor, y del editor a la lista de fichas. */
+  const atras = useCallback(() => {
+    if (vistaPrevia) setVistaPrevia(null);
+    else if (modoQuitar) salirDelModo();
+    else onVolver();
+    return true;
+  }, [modoQuitar, onVolver, salirDelModo, vistaPrevia]);
+  useSystemBackHandler(atras, !hojaAbierta);
+
+  const secciones = useMemo(() => borrador?.secciones ?? [], [borrador]);
+  const retiradas = useMemo(() => borrador?.retiradas ?? [], [borrador]);
+  const portada = secciones.find(s => s.esPortada) ?? null;
+  const pasos = secciones.filter(s => !s.esPortada);
+
+  const avisarListo = (texto: string) => {
+    tacto.logro();
+    setAviso({ clave: Date.now(), texto });
+  };
+
+  /** Un cambio suelto de la lista (mover, quitar una sección): ocupa la pantalla un instante y dice el motivo si falla. */
+  const correr = async (titulo: string, alFallar: string, accion: () => Promise<void>) => {
+    if (ocupado) return;
+    setOcupado(true);
+    try {
+      await accion();
+    } catch (e) {
+      tacto.error();
+      avisar(titulo, mensajeDeGuardar(e, alFallar));
+    } finally {
+      setOcupado(false);
+    }
+  };
+
+  const abrirPregunta = (p: PreguntaAdmin | null, seccionId: number) => {
+    setPregunta({ pregunta: p, seccionId });
+    setPreguntaAbierta(true);
+  };
+
+  const guardarPregunta = async (cuerpo: PreguntaRequest, original: PreguntaAdmin | null) => {
+    await ejecutar(() => (original ? editarPregunta(original.id, cuerpo) : crearPregunta(cuerpo)));
+    setPreguntaAbierta(false);
+    avisarListo(original ? 'Pregunta guardada.' : 'Pregunta creada.');
+  };
+
+  const duplicar = async (p: PreguntaAdmin) => {
+    await ejecutar(() => duplicarPregunta(p.id));
+    setPreguntaAbierta(false);
+    avisarListo('Pregunta duplicada. La copia quedó debajo.');
+  };
+
+  const mover = (p: PreguntaAdmin, direccion: Direccion) => {
+    const destino = destinoAlMover(secciones, p.id, direccion);
+    if (!destino) return;
+    void correr('No se pudo mover la pregunta', 'No se pudo mover la pregunta. Vuelve a intentar.', () =>
+      ejecutar(() => moverPregunta(p.id, destino)),
+    );
+  };
+
+  const abrirSeccion = (s: SeccionAdmin | null) => {
+    setSeccion(s);
+    setSeccionAbierta(true);
+  };
+
+  const guardarSeccion = async (cuerpo: { titulo: string; descripcion: string | null }) => {
+    const existente = seccion;
+    await ejecutar(() => (existente ? editarSeccion(existente.id, cuerpo) : crearSeccion(cuerpo)));
+    setSeccionAbierta(false);
+    avisarListo(existente?.esPortada ? 'Portada guardada.' : existente ? 'Sección guardada.' : 'Sección creada.');
+  };
+
+  const moverSeccion = (s: SeccionAdmin, direccion: Direccion) => {
+    const orden = ordenNuevoDeSecciones(secciones, s.id, direccion);
+    if (!orden) return;
+    void correr('No se pudo mover la sección', 'No se pudo mover la sección. Vuelve a intentar.', () => ejecutar(() => ordenarSecciones(orden)));
+  };
+
+  const quitarSeccion = async (s: SeccionAdmin) => {
+    const texto = textoDeQuitarSeccion(s);
+    if (!(await confirmar(texto.titulo, texto.mensaje, { ok: 'Quitar', destructivo: true }))) return;
+    await correr('No se pudo quitar la sección', 'No se pudo quitar la sección. Vuelve a intentar.', async () => {
+      const resultado = await ejecutar(() => borrarSeccion(s.id));
+      avisarListo(`Sección quitada · ${textoDelResultado(resultado)}`);
+    });
+  };
+
+  const resumenDeQuitar = resumenDeLaSeleccion(marcadas, secciones);
+
+  const quitarLasMarcadas = async () => {
+    if (!borrador || resumenDeQuitar.marcadas === 0 || ocupado) return;
+    const texto = textoDeLaConfirmacion(resumenDeQuitar, borrador.publicada !== null);
+    if (!(await confirmar(texto.titulo, texto.mensaje, { ok: 'Quitar', destructivo: true }))) return;
+    await correr('No se pudieron quitar', 'No se pudieron quitar las preguntas. Vuelve a intentar.', async () => {
+      const ids = marcadas;
+      let resultado;
+      try {
+        resultado = await ejecutar(() => quitarPreguntas(ids, false));
+      } catch (e) {
+        if (codigoDelError(e) !== 'TIENE_DEPENDIENTES') throw e;
+        const aviso = textoDeLosDependientes(ids, secciones, dependientesDelError(e));
+        const plural = ids.length > 1;
+        const tambien = await confirmar('Otras preguntas dependen de ' + (plural ? 'estas' : 'esta'), aviso, {
+          ok: `Quitar también las que dependen de ${plural ? 'ellas' : 'ella'}`,
+          destructivo: true,
+        });
+        if (!tambien) return;
+        resultado = await ejecutar(() => quitarPreguntas(ids, true));
+      }
+      salirDelModo();
+      avisarListo(textoDelResultado(resultado));
+    });
+  };
+
+  const publicar = async () => {
+    if (!borrador || ocupado) return;
+    const siguiente = versionBase + 1;
+    if (!(await confirmar(`¿Publicar la versión ${siguiente}?`, CONFIRMACION_DE_PUBLICAR, { ok: 'Publicar' }))) return;
+    if (ocupado) return;
+    setOcupado(true);
+    try {
+      const publicada = await ejecutar(() => publicarDiagnostico(versionBase), { reiniciarBase: true });
+      avisarListo(`Publicada la versión ${publicada?.version ?? siguiente}.`);
+    } catch (e) {
+      tacto.error();
+      const codigo = codigoDelError(e);
+      if (codigo === 'OTRA_PERSONA_PUBLICO') {
+        // Se carga lo vigente (y se toma como nueva base) antes de decirlo: lo que se ve ya es lo que hay que revisar.
+        await recargar();
+        avisar('Otra persona publicó cambios mientras editabas', AVISO_OTRA_PERSONA_PUBLICO);
+      } else if (codigo === 'NO_SE_PUEDE_PUBLICAR') {
+        await recargar();
+        const motivos = motivosDelError(e);
+        avisar('Todavía no se puede publicar', motivos.length > 0 ? motivos.join('\n') : mensajeDeGuardar(e, 'Revisa la ficha y vuelve a intentar.'));
+      } else {
+        avisar('No se pudo publicar', mensajeDeGuardar(e, 'No se pudo publicar. Vuelve a intentar.'));
+      }
+    } finally {
+      setOcupado(false);
+    }
+  };
+
+  const restaurar = (p: PreguntaAdmin) => {
+    void correr('No se pudo restaurar', 'No se pudo restaurar la pregunta. Vuelve a intentar.', async () => {
+      await ejecutar(() => restaurarPregunta(p.id));
+      avisarListo('Pregunta restaurada.');
+    });
+  };
+
+  const cuerpo = [t.body, { color: c.textSoft, fontSize: 16, lineHeight: 23 }];
+
+  if (vistaPrevia) return <VistaPreviaDelDiagnosticoScreen parametros={vistaPrevia} onSalir={() => setVistaPrevia(null)} />;
+
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
+      <CabeceraAdmin
+        titulo={modoQuitar ? 'Quitar preguntas' : 'Diagnóstico inicial'}
+        subtitulo={modoQuitar ? 'Marca las que ya no quieres' : borrador ? textoDeLaPublicacion(borrador.publicada) : null}
+        onVolver={atras}
+      />
+      {modoQuitar ? (
+        <View style={{ paddingHorizontal: horizontalPadding, width: '100%', maxWidth: contentMaxWidth, alignSelf: 'center' }}>
+          <BarraDeQuitar resumen={resumenDeQuitar} ocupado={ocupado} onCancelar={salirDelModo} onQuitar={() => void quitarLasMarcadas()} />
+        </View>
+      ) : null}
+      <View style={{ flex: 1 }}>
+        <ScrollView
+          {...barraAlDesplazar}
+          style={{ flex: 1 }}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{
+            flexGrow: 1,
+            paddingHorizontal: horizontalPadding,
+            paddingBottom: 36 + ESPACIO_PARA_LANZADOR + 56,
+            maxWidth: contentMaxWidth,
+            width: '100%',
+            alignSelf: 'center',
+            gap: 14,
+          }}
+        >
+          {cargando && !borrador ? <Text style={cuerpo}>Cargando la ficha…</Text> : null}
+          {!cargando && fallo && !borrador ? (
+            <View style={{ gap: 10 }}>
+              <Text accessibilityRole="alert" style={[t.body, { color: c.danger, fontSize: 16, lineHeight: 23 }]}>
+                {textoDelFallo(fallo, 'No se pudo cargar el diagnóstico.')}
+              </Text>
+              {fallo !== 'sin_permiso' && fallo !== 'no_disponible' ? <BotonSecundario etiqueta="Reintentar" onPress={() => void recargar()} /> : null}
+            </View>
+          ) : null}
+
+          {borrador ? (
+            <>
+              {otraPersona ? (
+                <Aviso texto="Otra persona publicó cambios mientras editabas. Lo que ves es tu borrador; para ver lo vigente, actualiza.">
+                  <View style={estilos.acciones}>
+                    <BotonDeAccion etiqueta="Actualizar" icono="rotateCcw" onPress={() => void recargar()} />
+                  </View>
+                </Aviso>
+              ) : null}
+              {desactualizado ? (
+                <Aviso texto="Tu último cambio quedó guardado, pero no pudimos actualizar la lista.">
+                  <View style={estilos.acciones}>
+                    <BotonDeAccion etiqueta="Actualizar" icono="rotateCcw" onPress={() => void recargar()} />
+                  </View>
+                </Aviso>
+              ) : null}
+              {borrador.noEntendidas > 0 ? (
+                <Aviso
+                  texto={`${cantidad(borrador.noEntendidas, 'pregunta es de un tipo', 'preguntas son de un tipo')} que esta versión de la app todavía no sabe mostrar: no aparece${borrador.noEntendidas === 1 ? '' : 'n'} acá, pero la ficha las conserva.`}
+                />
+              ) : null}
+
+              {modoQuitar ? null : (
+                <>
+                  <PanelDePublicar borrador={borrador} ocupado={ocupado} onPublicar={() => void publicar()} />
+                  <View style={estilos.acciones}>
+                    <BotonDeAccion etiqueta="Vista previa" icono="eye" onPress={() => setHojaDeVistaPrevia(true)} />
+                    <BotonDeAccion etiqueta="Versiones" icono="clock" onPress={() => setHojaDeVersiones(true)} />
+                    <BotonDeAccion etiqueta="Importar preguntas" icono="fileText" onPress={() => setHojaDeImportar(true)} />
+                    <BotonDeAccion
+                      etiqueta={descarga.descargando ? 'Preparando…' : 'Descargar la ficha'}
+                      icono="share"
+                      deshabilitado={descarga.descargando}
+                      onPress={() => void descarga.descargar(ARCHIVO_DE_LA_FICHA)}
+                    />
+                    <BotonDeAccion etiqueta="Quitar preguntas" icono="trash" peligro onPress={() => setModoQuitar(true)} deshabilitado={ocupado} />
+                  </View>
+                </>
+              )}
+
+              {portada ? <PortadaDelEditor seccion={portada} onEditar={() => abrirSeccion(portada)} /> : null}
+
+              {pasos.map(s => (
+                <SeccionDelEditor
+                  key={s.id}
+                  seccion={s}
+                  secciones={secciones}
+                  retiradas={retiradas}
+                  puedeSubir={puedeMoverSeccion(secciones, s.id, 'arriba')}
+                  puedeBajar={puedeMoverSeccion(secciones, s.id, 'abajo')}
+                  puedeMoverPregunta={(id, direccion) => !ocupado && puedeMoverPregunta(secciones, id, direccion)}
+                  modoQuitar={modoQuitar}
+                  marcadas={marcadas}
+                  onEditar={() => abrirSeccion(s)}
+                  onMover={direccion => moverSeccion(s, direccion)}
+                  onQuitar={() => void quitarSeccion(s)}
+                  onAnadirPregunta={() => abrirPregunta(null, s.id)}
+                  onAbrirPregunta={p => abrirPregunta(p, s.id)}
+                  onMoverPregunta={mover}
+                  onMarcar={p => sePuedeMarcar(p) && setMarcadas(m => alternarMarca(m, p.id))}
+                />
+              ))}
+
+              {pasos.length === 0 ? <Text style={cuerpo}>La ficha todavía no tiene pasos. Añade una sección para empezar.</Text> : null}
+
+              {modoQuitar ? null : (
+                <View style={estilos.acciones}>
+                  <BotonDeAccion etiqueta="Añadir sección" icono="plus" onPress={() => abrirSeccion(null)} />
+                </View>
+              )}
+
+              {modoQuitar ? null : <PreguntasRetiradas retiradas={retiradas} secciones={secciones} ocupado={ocupado} onRestaurar={restaurar} />}
+            </>
+          ) : null}
+        </ScrollView>
+
+        <AvisoDeAbajo aviso={aviso} onTerminar={() => setAviso(null)} />
+      </View>
+
+      <EditorDePreguntaSheet
+        visible={preguntaAbierta}
+        pregunta={pregunta.pregunta}
+        seccionId={pregunta.seccionId}
+        secciones={secciones}
+        alCerrar={() => setPreguntaAbierta(false)}
+        alGuardar={guardarPregunta}
+        alDuplicar={duplicar}
+      />
+      <HojaDeVistaPrevia
+        visible={hojaDeVistaPrevia}
+        alCerrar={() => setHojaDeVistaPrevia(false)}
+        alVer={parametros => {
+          setHojaDeVistaPrevia(false);
+          setVistaPrevia(parametros);
+        }}
+      />
+      <HojaDeImportar
+        visible={hojaDeImportar}
+        hayPublicada={borrador?.publicada != null}
+        alCerrar={() => setHojaDeImportar(false)}
+        alImportar={async (modo, texto) => {
+          const resultado = await ejecutar(() => confirmarImportacion(texto, modo));
+          setHojaDeImportar(false);
+          avisarListo(textoDelResultadoDeImportar(resultado));
+          return resultado;
+        }}
+      />
+      <HojaDeVersiones visible={hojaDeVersiones} versionVigente={borrador?.publicada?.version ?? null} alCerrar={() => setHojaDeVersiones(false)} />
+      <EditorDeSeccionSheet visible={seccionAbierta} seccion={seccion} alCerrar={() => setSeccionAbierta(false)} alGuardar={guardarSeccion} />
+    </SafeAreaView>
+  );
+}
+
+const estilos = StyleSheet.create({
+  acciones: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+});

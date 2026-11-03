@@ -1,4 +1,6 @@
 import type { IconName } from '../../../components/Icon';
+import type { CategoriaAdmin } from '../../habits/categorias/types/categorias.types';
+import { iconoDeCategoria } from '../../habits/categorias/utils/iconosDeCategoria';
 import { iconoDeLaDimension } from '../../training/utils/iconoDeLaDimension';
 import { dimensionDeCategoria } from '../../training/utils/dimensionDelHabito';
 import type {
@@ -40,10 +42,46 @@ export const etiquetaDeDimension = (categoria: string) => etiquetaDe(DIMENSIONES
 export const etiquetaDeTipo = (tipo: string) => etiquetaDe(TIPOS, tipo);
 export const etiquetaDeEvidencia = (evidencia: string) => etiquetaDe(EVIDENCIAS, evidencia);
 
-/** El ícono de la dimensión, el mismo de Training; uno neutro si la categoría es nueva. */
-export function iconoDelHabito(categoria: string): IconName {
+/**
+ * El ícono de la dimensión, el mismo de Training; con las categorías de la formación a la mano (spec 023), el que Administración le puso a
+ * la categoría; uno neutro si es nueva y no tiene.
+ */
+export function iconoDelHabito(categoria: string, categorias: readonly CategoriaAdmin[] = []): IconName {
+  const propia = categorias.find(c => c.code === categoria);
+  if (propia) return iconoDeCategoria(propia.icon);
   const dimension = dimensionDeCategoria(categoria);
   return dimension ? iconoDeLaDimension(dimension) : 'listChecks';
+}
+
+/** El nombre de la categoría de un hábito: el que le puso Administración, o el de siempre si la lista no la trae. */
+export function nombreDeLaCategoria(categoria: string, categorias: readonly CategoriaAdmin[] = []): string {
+  return categorias.find(c => c.code === categoria)?.name ?? etiquetaDeDimension(categoria);
+}
+
+/** Una categoría que se puede elegir en el formulario. `code` es lo que viaja en `category`. */
+export interface OpcionDeCategoria {
+  code: string;
+  name: string;
+}
+
+/**
+ * Las categorías que ofrece el formulario de un hábito de UNA formación (spec 023): las ACTIVAS de esa formación, en su orden, más la que el
+ * hábito ya tiene aunque esté desactivada (para que el formulario no la pierda). Contra un backend anterior (sin categorías) y solo en la
+ * Escuela, las cuatro de siempre.
+ */
+export function categoriasParaElegir(
+  formacion: string,
+  categorias: readonly CategoriaAdmin[],
+  categoriasDelServidor: boolean,
+  actual?: string | null,
+): OpcionDeCategoria[] {
+  if (!categoriasDelServidor) {
+    return formacion === 'ESCUELA' ? DIMENSIONES.map(d => ({ code: d.valor, name: d.etiqueta })) : [];
+  }
+  return categorias
+    .filter(c => c.formation === formacion && (c.isActive || c.code === actual))
+    .sort((a, b) => a.order - b.order)
+    .map(c => ({ code: c.code, name: c.name }));
 }
 
 export const rolesDe = (habito: HabitoDelProgramaApi): string[] => habito.targetRoles ?? [];
@@ -94,12 +132,12 @@ export interface FormularioDeHabito {
   roles: string[];
 }
 
-export function formularioDesde(habito: HabitoDelProgramaApi | null): FormularioDeHabito {
+export function formularioDesde(habito: HabitoDelProgramaApi | null, categoriaPorDefecto = ''): FormularioDeHabito {
   const roles = habito ? rolesDe(habito) : [];
   return {
     titulo: habito?.title ?? '',
     descripcion: habito?.description ?? '',
-    categoria: habito?.category ?? 'BODY',
+    categoria: habito?.category ?? categoriaPorDefecto,
     tipo: habito?.habitType ?? 'CHECKBOX',
     evidencia: habito?.evidenceRequirement ?? 'OPTIONAL',
     esOpcional: habito?.isOptional ?? false,
@@ -115,6 +153,7 @@ export function faltaEnElFormulario(formulario: FormularioDeHabito, esNuevo: boo
   if (esNuevo && formulario.titulo.trim().length > LARGO_MAXIMO_DEL_TITULO) {
     return `El nombre puede tener hasta ${LARGO_MAXIMO_DEL_TITULO} caracteres.`;
   }
+  if (!formulario.categoria) return 'Elige la categoría del hábito.';
   if (!formulario.paraTodos && formulario.roles.length === 0) {
     return 'Elige al menos un rol, o vuelve a encender «Para todos los roles».';
   }
@@ -122,10 +161,10 @@ export function faltaEnElFormulario(formulario: FormularioDeHabito, esNuevo: boo
 }
 
 /** Con el interruptor encendido viaja `[]`: para todos, también los roles que se agreguen después. */
-export function cuerpoDesde(formulario: FormularioDeHabito, esNuevo: boolean): CuerpoHabitoDelPrograma {
+export function cuerpoDesde(formulario: FormularioDeHabito, esNuevo: boolean, formacion?: string): CuerpoHabitoDelPrograma {
   const descripcion = formulario.descripcion.trim();
   return {
-    ...(esNuevo ? { title: formulario.titulo.trim(), habitType: formulario.tipo } : {}),
+    ...(esNuevo ? { title: formulario.titulo.trim(), habitType: formulario.tipo, ...(formacion ? { formation: formacion } : {}) } : {}),
     description: descripcion ? descripcion : null,
     category: formulario.categoria,
     evidenceRequirement: formulario.evidencia,

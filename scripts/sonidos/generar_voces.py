@@ -50,7 +50,7 @@ from misaki import espeak  # noqa: E402
 
 import sintetizar_alarmas as alarmas  # noqa: E402
 import terminar_audio as ta  # noqa: E402
-from tabla_de_voces import frases_por_archivo  # noqa: E402
+from tabla_de_voces import archivos_del_radar, frases_por_archivo  # noqa: E402
 
 REPO = "hexgrad/Kokoro-82M"
 # Commit fijo del repo oficial en Hugging Face (el de los candidatos del 2026-09-27).
@@ -78,6 +78,12 @@ def decir(pipeline: KPipeline, voz: str, texto: str) -> np.ndarray:
     return np.concatenate(trozos).astype(np.float64)
 
 
+def sin_campanita(voz: np.ndarray) -> tuple[np.ndarray, dict]:
+    """La pregunta del Código Renaser: solo la voz, con 30 ms de aire antes y 250 ms después (sin corte seco)."""
+    mezcla = np.concatenate([np.zeros(int(0.03 * ta.FS)), voz, np.zeros(int(0.25 * ta.FS))])
+    return ta.normalizar(mezcla, ta.LUFS_OBJETIVO)
+
+
 def main() -> None:
     carpeta_wav, carpeta_mp3 = Path(sys.argv[1]), Path(sys.argv[2])
     # Reproducible byte a byte (trampa 4): un hilo y sin oneDNN.
@@ -90,10 +96,15 @@ def main() -> None:
     if pedidas:
         frases = {archivo: frases[archivo] for archivo in pedidas}
     campanita = alarmas.campanita(np.random.default_rng(alarmas.SEMILLA_CAMPANITA))
+    del_radar = archivos_del_radar()
     pipeline, voz = cargar_kokoro()
     # Una frase por vez (el modelo queda cargado: ~1,3 GB de RAM en CPU).
     for archivo, texto in frases.items():
-        audio, datos = ta.con_campanita(ta.terminar_voz(decir(pipeline, voz, texto), 24000), campanita)
+        hablada = ta.terminar_voz(decir(pipeline, voz, texto), 24000)
+        if archivo in del_radar:
+            audio, datos = sin_campanita(hablada)
+        else:
+            audio, datos = ta.con_campanita(hablada, campanita)
         nombre = archivo.removesuffix(".mp3")
         escrito = ta.escribir(audio, carpeta_wav / f"{nombre}.wav", carpeta_mp3 / archivo, ta.KBPS_VOCES)
         print(f"{archivo}\t{escrito['duracion_s']:.2f} s\t{escrito['peso_kb']} KB\t{datos['lufs']} LUFS\t"

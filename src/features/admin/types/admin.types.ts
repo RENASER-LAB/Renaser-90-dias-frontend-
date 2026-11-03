@@ -1,5 +1,5 @@
 /** Las vistas de Administración. No son rutas del navegador: los cinco tabs no se tocan. */
-export type SeccionAdmin = 'inicio' | 'grupos' | 'personas' | 'solicitudes' | 'semaforo' | 'caja' | 'mas';
+export type SeccionAdmin = 'inicio' | 'grupos' | 'personas' | 'solicitudes' | 'semaforo' | 'caja' | 'formaciones' | 'mas';
 
 /** Un grupo tal como lo muestra la lista, ya traducido del contrato HTTP. */
 export type GrupoAdmin = {
@@ -14,6 +14,8 @@ export type GrupoAdmin = {
   tipo: string | null;
   aprendices: number | null;
   cupo: number | null;
+  /** Spec 022: el código de su formación; `null` = el servidor no lo dijo (backend anterior): es de la Escuela. */
+  formacion: string | null;
 };
 
 /**

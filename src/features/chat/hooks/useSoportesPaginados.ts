@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { ChatConversation } from '../../../screens/ComunidadScreen';
 import { mensajeDeError } from '../../../services/http/apiClient';
+import { formacionDeLaLectura } from '../../formaciones/estado/formacionDeLaComunidad';
 import * as chatApi from '../api/chatApi';
 import { mapearResumenConversacion } from '../api/chatMappers';
 import { agregarPagina, ESPERA_DE_BUSQUEDA_MS, TAMANO_DE_PAGINA } from '../utils/seccionDeSoportes';
@@ -44,7 +45,7 @@ export function useSoportesPaginados(activo: boolean, actorId: string | null | u
     // Una página pedida antes de esta búsqueda ya no cuenta: su «Cargando más…» tampoco.
     setCargandoMas(false);
     try {
-      const pagina = await chatApi.obtenerSoportes({ texto: buscado, tamano: TAMANO_DE_PAGINA });
+      const pagina = await chatApi.obtenerSoportes({ texto: buscado, tamano: TAMANO_DE_PAGINA, formation: formacionDeLaLectura() });
       if (mio !== turno.current) return;
       setFilas(agregarPagina([], pagina.conversations.map(r => mapearResumenConversacion(r, actor.current, {}))));
       setCursor(pagina.nextCursor);
@@ -72,7 +73,7 @@ export function useSoportesPaginados(activo: boolean, actorId: string | null | u
     enVuelo.current = true;
     setCargandoMas(true);
     try {
-      const pagina = await chatApi.obtenerSoportes({ texto: buscado, cursor: desde, tamano: TAMANO_DE_PAGINA });
+      const pagina = await chatApi.obtenerSoportes({ texto: buscado, cursor: desde, tamano: TAMANO_DE_PAGINA, formation: formacionDeLaLectura() });
       if (mio !== turno.current) return;
       setFilas(previas => agregarPagina(previas, pagina.conversations.map(r => mapearResumenConversacion(r, actor.current, {}))));
       setCursor(pagina.nextCursor);

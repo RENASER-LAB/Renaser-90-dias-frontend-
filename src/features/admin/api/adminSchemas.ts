@@ -40,6 +40,8 @@ export const grupoResumenSchema = z
     learnerCount: z.number().nullish(),
     /** `null` en recepción: no tiene tope comercial. */
     capacity: z.number().nullish(),
+    /** Spec 022: la formación del grupo (código). Un backend anterior no la manda: es de la Escuela. */
+    formation: z.string().nullish(),
   })
   .passthrough();
 
@@ -134,6 +136,9 @@ export const aprendizAdminSchema = z
      */
     deletionScheduledFor: z.string().nullish(),
     rolPersonalizado: rolPersonalizadoDeLaPersonaSchema,
+    /** Spec 022: su formación (código) y los días de su programa. Un backend anterior no los manda: Escuela y 90. */
+    formation: z.string().nullish(),
+    programDuration: z.number().nullish(),
   })
   .passthrough();
 
@@ -146,6 +151,23 @@ export const paginaAprendicesSchema = z
   })
   .passthrough();
 
+/**
+ * Lo que se eligió al aceptar una solicitud (spec 025, backend D-302): formaciones, duración, rol y si fue con diagnóstico. Todo es
+ * tolerante: un backend anterior no lo manda y un campo de más no rompe nada. Las aceptadas antes de las formaciones traen «Escuela,
+ * sin diagnóstico» y sin rol ni duración.
+ */
+export const aceptacionDeSolicitudSchema = z
+  .object({
+    formations: z.array(z.string()).catch([]),
+    durationDays: z.number().nullish().catch(null),
+    role: z.string().nullish().catch(null),
+    /** V142: el rol personalizado con el que entró y cómo se llamaba ese día. Un backend anterior no lo manda. */
+    customRoleId: z.string().nullish().catch(null),
+    customRoleName: z.string().nullish().catch(null),
+    withDiagnosis: z.boolean().catch(false),
+  })
+  .passthrough();
+
 export const solicitudSchema = z
   .object({
     id: z.string(),
@@ -154,6 +176,38 @@ export const solicitudSchema = z
     status: z.string(),
     createdAt: z.string().nullish(),
     phone: z.string().nullish(),
+    reviewedAt: z.string().nullish(),
+    reviewedByName: z.string().nullish(),
+    rejectionReason: z.string().nullish(),
+    acceptance: aceptacionDeSolicitudSchema.nullish().catch(null),
+  })
+  .passthrough();
+
+/**
+ * `GET /api/v1/account-requests/acceptance-options` (spec 025): las formaciones que reciben personas nuevas, con sus duraciones y cómo se
+ * dicen, y si «Con diagnóstico» se puede ofrecer. Una respuesta rara se lee como «el servidor no lo ofrece» y la hoja queda sin esos bloques.
+ */
+export const opcionesDeAceptacionSchema = z
+  .object({
+    formations: z
+      .array(
+        z
+          .object({
+            code: z.string(),
+            name: z.string(),
+            description: z.string().nullish(),
+            durationsDays: z.array(z.number()).min(1),
+            durationLabels: z.array(z.string()).catch([]),
+            defaultDurationDays: z.number().nullish(),
+            /** Spec 027: `false` = la formación todavía no publicó sus términos y no recibe personas nuevas. Sin el campo (backend anterior) se asume que sí. */
+            termsPublished: z.boolean().catch(true),
+          })
+          .passthrough(),
+      )
+      .min(1),
+    diagnosisAvailable: z.boolean().catch(false),
+    /** Spec 032: este servidor sabe anotar el pago al aceptar (la hoja ofrece el bloque «Pago»). Sin el campo (backend anterior) no se ofrece. */
+    paymentScheduleAvailable: z.boolean().nullish(),
   })
   .passthrough();
 
@@ -236,6 +290,8 @@ export type AprendizCandidatoApi = z.infer<typeof aprendizCandidatoSchema>;
 export type AprendizAdminApi = z.infer<typeof aprendizAdminSchema>;
 export type PaginaAprendicesApi = z.infer<typeof paginaAprendicesSchema>;
 export type SolicitudApi = z.infer<typeof solicitudSchema>;
+export type AceptacionDeSolicitudApi = z.infer<typeof aceptacionDeSolicitudSchema>;
+export type OpcionesDeAceptacionApi = z.infer<typeof opcionesDeAceptacionSchema>;
 export type PaginaSolicitudesApi = z.infer<typeof paginaSolicitudesSchema>;
 export type UsuarioStaffApi = z.infer<typeof usuarioStaffSchema>;
 export type PaginaStaffApi = z.infer<typeof paginaStaffSchema>;
@@ -253,6 +309,9 @@ export const ultimoAjusteDiaSchema = z
     motivo: z.string().nullish(),
     adjustedBy: z.string().nullish(),
     adjustedAt: z.string().nullish(),
+    /** Spec 025: solo cuando el ajuste cambió la duración del programa (el día no se movió). */
+    previousDuration: z.number().nullish(),
+    newDuration: z.number().nullish(),
   })
   .passthrough();
 
@@ -280,6 +339,13 @@ export const detalleAprendizSchema = z
     /** D-243: cerró su cuenta y se borra en esa fecha (ISO). Ausente o `null` = nada pendiente. */
     deletionScheduledFor: z.string().nullish(),
     rolPersonalizado: rolPersonalizadoDeLaPersonaSchema,
+    /** Spec 022: su formación (código) y los días de su programa. Un backend anterior no los manda: Escuela y 90. */
+    formation: z.string().nullish(),
+    programDuration: z.number().nullish(),
+    /** Spec 025: lo que se decidió al aceptar a la persona (la misma forma que en la lista de solicitudes), quién y cuándo. Ausente = no entró por una solicitud. */
+    acceptance: aceptacionDeSolicitudSchema.nullish().catch(null),
+    acceptedByName: z.string().nullish(),
+    acceptedAt: z.string().nullish(),
   })
   .passthrough();
 

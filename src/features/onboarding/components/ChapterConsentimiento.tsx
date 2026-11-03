@@ -6,10 +6,14 @@ import { FichaConsentimientoData } from '../types/onboarding.types';
 import { Icon } from '../../../components/Icon';
 import { Presionable } from '../../../components/Presionable';
 import { tacto } from '../../../utils/tacto';
+import { PLAZO_POR_DEFECTO } from '../../objetivos/utils/nombreDelObjetivo';
+import { alPlazo } from '../../formaciones/utils/plazoEnFrases';
 
 interface ChapterConsentimientoProps {
   data: FichaConsentimientoData;
   onChange: (data: FichaConsentimientoData) => void;
+  /** El plazo del programa de la persona («90 días», «3 meses», «1 año»; `plazoDelObjetivo`). Sin él, el de siempre. */
+  plazo?: string;
 }
 
 /**
@@ -20,7 +24,7 @@ interface ChapterConsentimientoProps {
  * encima del dorado. Antes, marcada, era un cuadrado BLANCO con borde blanco sobre una tarjeta
  * blanca (modo claro): sólo se veía el tilde, flotando.
  */
-export function ChapterConsentimiento({ data, onChange }: ChapterConsentimientoProps) {
+export function ChapterConsentimiento({ data, onChange, plazo = PLAZO_POR_DEFECTO }: ChapterConsentimientoProps) {
   const { c, t } = useTheme();
 
   const isChecked = Boolean(data.compromiso90Dias || data.autorizaUsoDatos);
@@ -42,11 +46,11 @@ export function ChapterConsentimiento({ data, onChange }: ChapterConsentimientoP
         Autorizo el uso responsable de mis datos para fines de seguimiento, mejora continua del proceso y envío de información relevante relacionada al acompañamiento dentro del ecosistema RENASER.
       </Text>
 
-      {/* Tarjeta de Consentimiento y Compromiso a 90 Días */}
+      {/* Tarjeta de Consentimiento y Compromiso: el plazo es el del programa de la persona, no siempre 90 días (issue #103). */}
       <Presionable
         accessibilityRole="checkbox"
         accessibilityState={{ checked: isChecked }}
-        accessibilityLabel="Consentimiento y compromiso de 90 días"
+        accessibilityLabel={`Consentimiento y compromiso de ${plazo}`}
         onPress={handleToggle}
         style={[
           styles.consentCard,
@@ -72,7 +76,7 @@ export function ChapterConsentimiento({ data, onChange }: ChapterConsentimientoP
         {/* Textos de la tarjeta */}
         <View style={styles.textColumn}>
           <Text style={[t.body, { color: c.textStrong, fontSize: 15, fontFamily: fuentes.negrita, lineHeight: 21 }]}>
-            Autorizo el uso de mis datos y me comprometo a los 90 días
+            {`Autorizo el uso de mis datos y me comprometo ${alPlazo(plazo)}`}
           </Text>
           <Text style={[t.small, { color: c.textSoft, fontSize: 13.5, lineHeight: 19, marginTop: 2 }]}>
             Acepto las exigencias del sistema y respeto el código de honor del grupo.

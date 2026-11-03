@@ -27,6 +27,8 @@ export interface SharePostSheetProps {
   onClose: () => void;
   onShareExternal: () => Promise<void> | void;
   onShareToConversation: (conv: ChatConversation) => Promise<void> | void;
+  /** El rótulo de la sección de chats de la formación (spec 035): «Formación Renaser» en la Escuela, «Diplomado Renaser»… en las otras. */
+  rotuloDeLaSeccion?: string;
 }
 
 /**
@@ -53,6 +55,7 @@ export function SharePostSheet({
   onClose,
   onShareExternal,
   onShareToConversation,
+  rotuloDeLaSeccion = 'Formación Renaser',
 }: SharePostSheetProps) {
   const { c, t } = useTheme();
   const insets = useSafeAreaInsets();
@@ -105,7 +108,7 @@ export function SharePostSheet({
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.rotulo}>
-          <MicroLabel>Formación Renaser</MicroLabel>
+          <MicroLabel>{rotuloDeLaSeccion}</MicroLabel>
         </View>
         <DestinoDeCompartir
           tipo="global"

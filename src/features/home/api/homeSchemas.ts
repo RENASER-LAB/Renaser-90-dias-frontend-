@@ -87,6 +87,9 @@ const resumenHomeSchema = z
     notificacionesNoLeidas: z.number().nullable(),
     bloqueos: z.array(z.string()),
     semaforo: semaforoDeHoyTolerante,
+    /** Spec 022: cuántos días dura SU programa y en qué formación está. Un backend anterior no los manda (90 y la Escuela). */
+    duracionDias: z.number().int().positive().nullish(),
+    formacion: z.string().nullish(),
   })
   .passthrough();
 

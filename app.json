@@ -23,7 +23,9 @@
         "android.permission.MODIFY_AUDIO_SETTINGS",
         "android.permission.FOREGROUND_SERVICE",
         "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
-        "android.permission.SCHEDULE_EXACT_ALARM"
+        "android.permission.SCHEDULE_EXACT_ALARM",
+        "android.permission.health.READ_STEPS",
+        "android.permission.health.READ_DISTANCE"
       ],
       "package": "com.renaser.app"
     },
@@ -34,6 +36,14 @@
       "expo-font",
       "expo-web-browser",
       "expo-secure-store",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 26
+          }
+        }
+      ],
       [
         "expo-image-picker",
         {
@@ -84,6 +94,10 @@
             "./assets/sonidos/voz_habito_agua_hidratacion.mp3",
             "./assets/sonidos/voz_habito_kilometros_diarios.mp3",
             "./assets/sonidos/voz_habito_gimnasio.mp3",
+            "./assets/sonidos/voz_radar_que_hago.mp3",
+            "./assets/sonidos/voz_radar_que_pienso.mp3",
+            "./assets/sonidos/voz_radar_que_siento.mp3",
+            "./assets/sonidos/voz_radar_que_evito.mp3",
             "./assets/sonidos/alertar_amanecer.mp3",
             "./assets/sonidos/alertar_marimba.mp3",
             "./assets/sonidos/alertar_campana.mp3",
@@ -106,7 +120,8 @@
           "resizeMode": "contain",
           "backgroundColor": "#FFFFFF"
         }
-      ]
+      ],
+      "./plugins/withHealthConnect"
     ],
     "extra": {
       "eas": {

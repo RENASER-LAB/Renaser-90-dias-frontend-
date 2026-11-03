@@ -12,6 +12,7 @@ import { indiceIsoDeLaFecha } from './semanaDeTraining';
 import { minutosDeLaHora, type ItemBase } from './listaDelDia';
 import { horaLocal } from './tarjetaDelHabito';
 import { estaVencido } from './registroConFotoEnTraining';
+import { detalleDeLosKm } from '../../pasos/utils/textosDePasos';
 
 /**
  * Lo que dibuja una fila de Training (spec 014): un hábito, una acción del día o un evento, de HOY, de un día
@@ -25,6 +26,8 @@ export interface DatosDeCumplido {
   hora: string | null;
   puntos: number | null;
   escrito: string | null;
+  /** Spec 037: «5,4 km · Health Connect · Galaxy Watch» en «Kilómetros diarios»; ausente en los demás. */
+  detalle?: string | null;
 }
 
 export interface ItemDelDia extends ItemBase {
@@ -96,6 +99,14 @@ export function itemsDeEventos(ocurrencias: Ocurrencia[], fechaIso: string, zona
  * HOY
  * ---------------------------------------------------------------------------------------------- */
 
+/** Spec 037: lo registrado en «Kilómetros diarios» (cuántos km y de dónde salieron), solo en ese hábito y solo si ya se cumplió. */
+function detalleDelCumplido(h: HabitItem): { detalle?: string } {
+  const medicion = h.medicion;
+  if (!medicion) return {};
+  const detalle = detalleDeLosKm(medicion.valorDelDia, medicion.origenDelDia, medicion.fuenteDelDia);
+  return detalle ? { detalle } : {};
+}
+
 export interface ContextoDeHoy {
   hoyIso: string;
   zona: string | null;
@@ -133,7 +144,12 @@ export function itemsDeHoy(habits: HabitItem[], ocurrencias: Ocurrencia[], conte
         guia: h.guia ?? null,
         habit: h,
         cumplido: hecho
-          ? { hora: horaLocal(h.completadoEn), puntos: h.puntosOtorgados ?? null, escrito: h.respuestaTexto?.trim() || null }
+          ? {
+              hora: horaLocal(h.completadoEn),
+              puntos: h.puntosOtorgados ?? null,
+              escrito: h.respuestaTexto?.trim() || null,
+              ...detalleDelCumplido(h),
+            }
           : null,
       };
     });

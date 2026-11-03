@@ -1,6 +1,9 @@
 import type { IconName } from '../../../components/Icon';
 import { ICONO_DEL_EJE } from '../../objetivos/utils/iconoDelEje';
-import type { DimensionDeTraining } from './dimensionDelHabito';
+import { dimensionPorClave } from '../../habits/categorias/estado/estadoDeCategorias';
+import { ICONO_GENERICO_DE_CATEGORIA } from '../../habits/categorias/utils/iconosDeCategoria';
+import { ICONO_MIS_HABITOS } from '../../habits/categorias/utils/dimensionesDeCategorias';
+import { DIMENSION_MIS_HABITOS, DIMENSION_VIDA_Y_NEGOCIO, type DimensionDeTraining } from './dimensionDelHabito';
 
 /**
  * El ícono de cada dimensión de Training: la fuente única (pedido del dueño, 2026-10-05: mejorar
@@ -25,9 +28,14 @@ export const ICONO_DE_LA_DIMENSION: Readonly<Record<DimensionDeTraining, IconNam
   MENTE: 'brain',
   EMOCIONES: 'heart',
   'ESPÍRITU': 'sparkles',
-  'VIDA Y NEGOCIO': ICONO_DEL_EJE.TRABAJO,
+  [DIMENSION_VIDA_Y_NEGOCIO]: ICONO_DEL_EJE.TRABAJO,
+  [DIMENSION_MIS_HABITOS]: ICONO_MIS_HABITOS,
 };
 
+/**
+ * El ícono de una dimensión: el de las seis de siempre (las cuatro de la Escuela, Vida y negocio y «Mis hábitos») o, en las categorías
+ * que Administración crea por formación (spec 023), el que ella eligió; sin ninguno, el genérico.
+ */
 export function iconoDeLaDimension(dimension: DimensionDeTraining): IconName {
-  return ICONO_DE_LA_DIMENSION[dimension];
+  return ICONO_DE_LA_DIMENSION[dimension] ?? dimensionPorClave(dimension)?.icono ?? ICONO_GENERICO_DE_CATEGORIA;
 }

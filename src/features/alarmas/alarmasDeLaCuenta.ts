@@ -55,6 +55,9 @@ const PREFIJOS_DE_ALARMAS = [
   'renaser.objetivos.recordatorios.diario.',
   // Spec 010: qué repeticiones de las acciones y del recordatorio diario ya se atendieron. Sin sus alarmas no sirven.
   'renaser.objetivos.recordatorios.atendidas',
+  // Spec 032: qué alarmas de pago se programaron (identificador → firma). Sin las alarmas no sirve. Las PREFERENCIAS de pago
+  // (`renaser.pagos.preferencias.`) quedan: son por persona y no suenan solas.
+  'renaser.pagos.alarmas.',
   // 2026-10-31: la hoja «Tu teléfono cerró Renaser» y la guía preventiva (spec 007) se retiraron y ya nada escribe estas
   // tres claves. Se siguen borrando al cerrar sesión solo para no dejar restos en los teléfonos que ya las tenían.
   'renaser.alarmas.detencionRevisada.',

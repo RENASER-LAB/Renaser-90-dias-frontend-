@@ -44,7 +44,7 @@ describe('la fila «Mi Radar» de Yo', () => {
       expect(veLaFilaDeMiRadar(SIN_PROGRAMA, dia)).toBe(true);
       expect(miRadarEnMarcha(SIN_PROGRAMA, dia)).toBe(false);
     }
-    expect(DETALLE_DE_LA_FILA_SIN_PROGRAMA).toBe('Primero elige tu Día 1');
+    expect(DETALLE_DE_LA_FILA_SIN_PROGRAMA).toBe('Primero empieza tu programa');
   });
 
   it('mientras el servidor no lo confirma NO hay fila: ni pendiente, ni un backend anterior (404 o 403 sin motivo), ni un fallo', () => {

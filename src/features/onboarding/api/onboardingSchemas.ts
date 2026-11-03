@@ -26,6 +26,11 @@ export const estadoOnboardingSchema = z
     // el aprendiz ya completó el flujo o todavía tiene que verlo.
     completed: z.boolean(),
     completedAt: z.string().nullable(),
+    // Spec 026: qué ficha le toca a la persona. Ausente (un backend anterior) o cualquier otro valor = la ficha estándar de siempre.
+    ficha: z
+      .string()
+      .nullish()
+      .transform((valor): 'ESTANDAR' | 'CON_DIAGNOSTICO' => (valor === 'CON_DIAGNOSTICO' ? 'CON_DIAGNOSTICO' : 'ESTANDAR')),
   })
   .passthrough();
 
@@ -148,10 +153,10 @@ export const firmaDelPactoSchema = z
 export const estadoActivacionProgramaSchema = z
   .object({
     activated: z.boolean(),
-    // Formato `yyyy-MM-dd` (LocalDate del backend, ver ActivarProgramaRequest). Vacío cuando
-    // `activated` es `true` — no queda nada por elegir.
+    // Formato `yyyy-MM-dd` (LocalDate del backend, ver ActivarProgramaRequest). Una sola fecha —mañana— desde la
+    // spec 036; vacío cuando `activated` es `true` — no queda nada por activar.
     validStartDates: z.array(z.string()),
-    // D-84: el Día 1 ya elegido, `yyyy-MM-dd`. Ausente/null mientras no eligió. Lo necesita
+    // D-84: el Día 1 ya activado, `yyyy-MM-dd`. Ausente/null mientras no se activó. Lo necesita
     // Plan para poder decir "arrancás el 5 de septiembre" en vez de mostrar un plan vacío sin
     // explicación. `.nullish()` y no `.string()` a secas: los clientes viejos que hablan con un
     // backend nuevo no deben romperse, y al revés tampoco.

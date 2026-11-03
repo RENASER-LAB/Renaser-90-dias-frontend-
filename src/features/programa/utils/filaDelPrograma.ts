@@ -1,0 +1,79 @@
+import { formatearFechaLarga } from '../hooks/useArranqueDelPrograma';
+import type { EntradaAlProgramaPropio } from './entradaAlProgramaPropio';
+
+/** Lo que dice la segunda línea de las dos filas que abren «Tu programa empieza mañana» (spec 036). */
+export const LINEA_EMPIEZA_MANANA = 'Empieza mañana';
+
+/**
+ * Qué dice la fila compacta del programa propio, en Hoy y en Plan (2026-11-01, pedido del dueño: «ese de los 90 días con menos texto, el
+ * tamaño que antes de coherencia y racha»). Lógica pura, sin React ni red: una sola función para las dos pantallas.
+ *
+ * Tres casos, todos con el mismo esqueleto (`FilaCompacta`: ícono, título en negrita, una línea corta, chevron; sin botón dorado):
+ *
+ *  - `empezar`: no tiene fila en el programa y el servidor dice que puede empezar (`canStartProgram`, solo personal).
+ *    «Haz tu programa de 90 días · Empieza mañana ›». Es la invitación de siempre, sin el párrafo «Puedes recorrerlo tú también…».
+ *    Es la única que lleva «Ahora no» (una ✕ chica a la derecha).
+ *  - `elegir`: tiene fila pero nunca activó su programa (`activated: false`). «Todavía no empezaste tu programa · Empieza mañana ›».
+ *    (El tipo se sigue llamando `elegir` por el nombre histórico; ya no hay nada que elegir: spec 036, D-309, el programa empieza mañana.)
+ *  - `esperando` (issue #72): ya activó su programa y la fecha todavía no llega (día 0). «Tu programa empieza el martes 3 de noviembre», sin
+ *    chevron porque no lleva a nada. El Día 1 nunca puede ser hoy, así que todo aprendiz recién activado pasa por aquí al menos un día. Si el
+ *    servidor no mandó la fecha: «Tu programa empieza pronto» (no se inventa ninguna).
+ *
+ * `empezar` y `elegir` abren la MISMA pantalla «Tu programa empieza mañana» (`ActivarProgramaScreen`) que abre el botón «Empezar mañana».
+ *
+ * `plazo` es el de SU programa («90 días», «3 meses», «1 año»; `plazoDelObjetivo`), el mismo con que se nombra el objetivo grande.
+ * Qué entrada corresponde (`entrada`) lo decide `entradaAlProgramaPropio`; esto solo redacta.
+ */
+export type VistaDeLaFilaDelPrograma = {
+  tipo: 'empezar' | 'elegir' | 'esperando';
+  titulo: string;
+  /** Una línea corta debajo del título. */
+  linea: string | null;
+  /** Toda la fila abre «Tu programa empieza mañana». */
+  abreElSelector: boolean;
+  /** «Ahora no» (la ✕): solo la invitación a quien todavía no tiene programa. */
+  conAhoraNo: boolean;
+  /** Lo que oye el lector de pantalla: el título y la línea juntos. */
+  etiquetaAccesible: string;
+};
+
+function vista(
+  tipo: VistaDeLaFilaDelPrograma['tipo'],
+  titulo: string,
+  linea: string | null,
+  extra: Pick<VistaDeLaFilaDelPrograma, 'abreElSelector' | 'conAhoraNo'>,
+): VistaDeLaFilaDelPrograma {
+  return { tipo, titulo, linea, ...extra, etiquetaAccesible: linea ? `${titulo}. ${linea}.` : titulo };
+}
+
+/**
+ * La fila de quien ya activó su programa y todavía no llega su Día 1 (`esperando`, issue #72): «Tu programa empieza el martes 3 de noviembre».
+ * Es UNA sola frase para todas las pantallas que lo dicen —Hoy y Plan (por `vistaDeLaFilaDelPrograma`), Training y Yo (issues #101 y #102)—:
+ * así el texto, la fecha y el «pronto» sin fecha no pueden divergir. Sin fecha (el servidor no la mandó) no se inventa ninguna.
+ */
+export function vistaDelProgramaQueEmpieza(fechaInicio?: string | null): VistaDeLaFilaDelPrograma {
+  const titulo = fechaInicio ? `Tu programa empieza el ${formatearFechaLarga(fechaInicio)}` : 'Tu programa empieza pronto';
+  return vista('esperando', titulo, null, { abreElSelector: false, conAhoraNo: false });
+}
+
+export function vistaDeLaFilaDelPrograma({
+  entrada,
+  plazo,
+  fechaInicio,
+}: {
+  entrada: EntradaAlProgramaPropio;
+  plazo: string;
+  /** `YYYY-MM-DD`, el Día 1 que eligió. Solo importa con `ESPERANDO_INICIO`. */
+  fechaInicio?: string | null;
+}): VistaDeLaFilaDelPrograma | null {
+  switch (entrada) {
+    case 'ESPERANDO_INICIO':
+      return vistaDelProgramaQueEmpieza(fechaInicio);
+    case 'ELEGIR_DIA_UNO':
+      return vista('elegir', 'Todavía no empezaste tu programa', LINEA_EMPIEZA_MANANA, { abreElSelector: true, conAhoraNo: false });
+    case 'EMPEZAR':
+      return vista('empezar', `Haz tu programa de ${plazo}`, LINEA_EMPIEZA_MANANA, { abreElSelector: true, conAhoraNo: true });
+    default:
+      return null;
+  }
+}

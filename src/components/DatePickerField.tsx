@@ -135,7 +135,7 @@ export function DatePickerField({ label, value, onChange, helperText, error }: D
         titulo="Fecha de nacimiento"
         subtitulo={fechaEnPalabras(borrador)}
         etiquetaCerrar="Cerrar sin cambiar la fecha"
-        pie={<GoldButton label="LISTO" onPress={confirmar} />}
+        pie={<GoldButton label="Listo" onPress={confirmar} />}
       >
         <View style={styles.ruedas}>
           <View style={[styles.franja, { backgroundColor: c.goldWash }]} />

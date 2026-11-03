@@ -14,8 +14,8 @@ import { miRadarCorresponde } from '../utils/miRadar';
  * - `pendiente`: todavía no se leyó, o no corresponde leerlo (antes del día 8, sin sesión).
  * - `no-disponible`: el servidor no lo ofrece (404: backend anterior) o respondió un 403 **sin motivo que la app reconozca**
  *   (un backend anterior a la 019). La fila de Yo no aparece y no suena ningún aviso de Mi Radar.
- * - `sin-programa`: **403 `PROGRAMA_NO_ACTIVADO`** — el personal que todavía no eligió su Día 1 (FR-019). La pantalla lo dice y
- *   ofrece «Elegir mi Día 1»; Yo muestra la fila.
+ * - `sin-programa`: **403 `PROGRAMA_NO_ACTIVADO`** — el personal que todavía no empezó su programa (FR-019). La pantalla lo dice y
+ *   ofrece «Empezar mañana»; Yo muestra la fila.
  * - `bloqueada`: **403 `CUENTA_SUSPENDIDA` o `SIN_PERMISO`** — la pantalla dice el motivo en una línea y nada más. El texto lo pone la
  *   app (nunca el del servidor): el código basta.
  * - `fallo`: no se pudo leer (sin red, 5xx). **No se sabe**, y por eso no se toca nada de lo programado: una red caída
@@ -72,7 +72,7 @@ export function lecturaDeUnError(error: unknown): LecturaDeMiRadar | null {
  *
  * **Se lee sola desde el día 8.** Los días 1 a 7 no se pide nada: ahí el Código Renaser es el de siempre y este
  * endpoint no tiene nada que decir (FR-001). Antes del día 8 solo se lee si alguien lo pide (`solicitar`, `reiniciar`): el
- * personal que todavía no eligió su Día 1 necesita que el servidor le diga POR QUÉ no hay Mi Radar (403 con motivo).
+ * personal que todavía no empezó su programa necesita que el servidor le diga POR QUÉ no hay Mi Radar (403 con motivo).
  *
  * **Se vuelve a leer al volver la app al frente** (con 10 minutos de por medio): las horas salen del Despertar y el Dormir
  * que la persona programa en Training, y es así como las alarmas se rehacen cuando cambian (spec 019).
@@ -80,7 +80,7 @@ export function lecturaDeUnError(error: unknown): LecturaDeMiRadar | null {
  * Tres maneras de pedir una lectura, para que la pantalla nunca muestre lo anterior mientras llega lo nuevo:
  * - `solicitar`: «averigua si hay Mi Radar» antes del día 8. Una vez por cuenta; no vacía nada.
  * - `recargar`: lee de nuevo **sin vaciar** lo que se ve (al abrir la pantalla, al volver a Hoy tras un fallo).
- * - `reiniciar`: olvida un motivo o un fallo (queda `pendiente`: «Cargando…») y lee. Para «Reintentar» y para después de elegir el Día 1.
+ * - `reiniciar`: olvida un motivo o un fallo (queda `pendiente`: «Cargando…») y lee. Para «Reintentar» y para después de empezar el programa.
  */
 const MINUTOS_ENTRE_LECTURAS = 10;
 

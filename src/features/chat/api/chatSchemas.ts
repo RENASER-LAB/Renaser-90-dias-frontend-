@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { formacionTolerante } from '../../formaciones/api/formacionTolerante';
+
 /**
  * Validación en runtime de lo que responde el backend para Chat (Atención Personalizada).
  *
@@ -38,9 +40,14 @@ export const wireConversacionSchema = z
     /* D-205: la ruta de la foto de un chat de soporte. `nullish`: los demás chats y un backend
        anterior no la mandan, y una ausencia no puede dejar a nadie sin bandeja. */
     photoPath: z.string().nullish(),
+    /* Spec 035: solo en un GRUPO, si esa foto es la propia del grupo (`true`) o la de su formación (`false`). `nullish`: un backend anterior no
+       lo manda (y ahí `photoPath` solo existe si la foto es propia). */
+    ownPhoto: z.boolean().nullish(),
     /* D-244: en un soporte, el aprendiz de ese chat. Quien atiende lo usa para ver su pedido de
        emergencia. `nullish` por lo mismo que `photoPath`. */
     supportTraineeId: z.string().nullish(),
+    /* Spec 024: la formación de la conversación. Opcional y tolerante: un backend anterior no la manda y un valor raro no deja sin bandeja. */
+    formation: formacionTolerante,
   })
   .passthrough();
 

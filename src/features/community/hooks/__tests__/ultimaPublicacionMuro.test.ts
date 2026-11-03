@@ -1,6 +1,8 @@
 import { describe, expect, it, jest } from '@jest/globals';
 
 jest.mock('../../../../services/http/apiClient', () => ({ apiFetch: jest.fn() }));
+// La formación de la sesión viene del contexto de autenticación, que no hace falta para probar la vigencia.
+jest.mock('../../../formaciones/context/FormacionContext', () => ({ useFormacionDeLaSesion: () => ({ formacion: null }) }));
 
 import { lecturaVigente, VIGENCIA_ULTIMA_PUBLICACION_MS } from '../useUltimaPublicacionMuro';
 

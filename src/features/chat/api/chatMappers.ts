@@ -176,6 +176,20 @@ function textoPorTipo(wire: WireMensaje): string | undefined {
  */
 export const FIRMA_DEL_PROGRAMA = 'Formación Renaser';
 
+/** Las firmas que el servidor puede mandar (`NombreDelChat.delPrograma`): una por institución. */
+const FIRMAS_DEL_PROGRAMA = [FIRMA_DEL_PROGRAMA, 'Diplomado Renaser', 'Certificación Renaser'];
+
+/**
+ * Con qué nombre firma el programa un mensaje (spec 035): el que manda el servidor —«Formación Renaser» en la Escuela, «Diplomado Renaser» o
+ * «Certificación Renaser» en las otras, el de la formación de la conversación—; sin él (un backend anterior, o una respuesta de enviar, que no
+ * lo resuelve) la firma de siempre. Solo se acepta una de las firmas del programa: el mensaje puede estar guardado a nombre de una cuenta de
+ * staff (D-199) y su nombre no es la firma.
+ */
+export function firmaDelProgramaDe(senderName: string | null | undefined): string {
+  const nombre = senderName?.trim();
+  return nombre && FIRMAS_DEL_PROGRAMA.includes(nombre) ? nombre : FIRMA_DEL_PROGRAMA;
+}
+
 /**
  * Si el adjunto de un mensaje es una imagen. Sin MIME se toma como imagen: lo único que el
  * programa adjunta hoy es la tarjeta de bienvenida (`image/png`).
@@ -215,7 +229,7 @@ function mapearMensajeDelPrograma(wire: WireMensaje): ChatMessage {
   const conImagen = traeImagen(wire);
   return {
     id: wire.id,
-    sender: FIRMA_DEL_PROGRAMA,
+    sender: firmaDelProgramaDe(wire.senderName),
     avatar: '',
     isMe: false,
     esDelPrograma: true,
@@ -462,8 +476,13 @@ export function mapearResumenConversacion(
     // pide con la sesión (`utils/fotoConSesion.ts`, antes `fotoDelSoporte.ts`); sin ella, la tarjeta
     // sin nombre de siempre.
     fotoPath: resumen.conversation.photoPath?.trim() || null,
+    // Spec 035: si la foto del grupo es la PROPIA (`true`) o la de su formación (`false`). Ausente con un backend anterior, donde `fotoPath` solo
+    // existe cuando es propia (ver `grupoTieneFotoPropia`).
+    ...(typeof resumen.conversation.ownPhoto === 'boolean' ? { fotoPropia: resumen.conversation.ownPhoto } : {}),
     // D-244: de quién es el soporte, para el aviso de emergencia que ve quien atiende.
     aprendizDelSoporte: resumen.conversation.supportTraineeId?.trim() || null,
+    // Spec 024: la formación de la conversación, solo si el servidor la mandó (el rótulo de la fila, cuando se leen «Todas»).
+    ...(resumen.conversation.formation ? { formacion: resumen.conversation.formation } : {}),
     // El rol del otro en palabras, el mismo dato del subtítulo, para la info del contacto. `null`
     // si no se conoce: la info muestra entonces el genérico, nunca un rol supuesto.
     rolDelOtro: otro?.role ? traducirRol(otro.role) : null,

@@ -3,8 +3,8 @@
  * no hay Mi Radar— el motivo en una línea. Puro, sin pantalla ni red: la pantalla solo dibuja lo que esto decide.
  *
  * Reglas (las del dueño, 2026-10-30):
- *  - **Sin programa activado** (el personal que no eligió su Día 1): «Mi Radar empieza en tu día 8. Primero elige tu Día 1.» y el
- *    botón «Elegir mi Día 1».
+ *  - **Sin programa activado** (el personal que no empezó su programa): «Mi Radar empieza en tu día 8. Primero empieza tu programa.» y el
+ *    botón «Empezar mañana» (spec 036: ya no se elige el Día 1).
  *  - **Con Día 1 y antes del día 8**: «Mi Radar empieza en tu día 8, el domingo 1 de noviembre.» Sin botón: no hay nada que hacer.
  *  - **Cuenta suspendida o sin permiso**: una línea con el motivo y nada más. Ningún botón que no lleva a nada.
  *  - **Sin red o 5xx**: «No pudimos cargar Mi Radar.» con «Reintentar».
@@ -14,7 +14,7 @@ import { MI_RADAR } from '../config/configRadar';
 import type { LecturaDeMiRadar } from '../hooks/useConfigDeMiRadar';
 import { miRadarCorresponde } from './miRadar';
 
-export const MENSAJE_SIN_PROGRAMA = 'Mi Radar empieza en tu día 8. Primero elige tu Día 1.';
+export const MENSAJE_SIN_PROGRAMA = 'Mi Radar empieza en tu día 8. Primero empieza tu programa.';
 export const MENSAJE_CARGANDO = 'Cargando Mi Radar…';
 export const MENSAJE_NO_SE_PUDO_CARGAR = 'No pudimos cargar Mi Radar.';
 export const MENSAJE_CUENTA_SUSPENDIDA = 'Tu cuenta está suspendida: Mi Radar no está disponible.';

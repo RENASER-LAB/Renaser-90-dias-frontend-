@@ -55,6 +55,16 @@ export function anotarRutaDeAviso(ruta: unknown): boolean {
 }
 
 /**
+ * Vuelve a dejar esperando un destino que ya se había consumido (spec 024): el aviso de un chat de OTRA formación cambia primero la
+ * formación activa del personal —lo que arma de nuevo las pestañas— y recién después se puede abrir. Se anota de nuevo con lo que ya
+ * se sabe (por ejemplo, la línea «Cambiamos a Diplomado Renaser.») y avisa a quien escucha, igual que un toque nuevo.
+ */
+export function anotarDestinoDeAviso(destino: DestinoDeAviso): void {
+  pendiente = destino;
+  oyentes.forEach(oyente => oyente(destino));
+}
+
+/**
  * Se suscribe a las aperturas. Entrega de inmediato la que ya estuviera esperando: la pantalla
  * puede montarse *después* del toque —es lo normal en un arranque en frío— y sin esto ese primer
  * aviso se perdería en silencio.

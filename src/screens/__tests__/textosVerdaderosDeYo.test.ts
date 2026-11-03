@@ -43,9 +43,11 @@ describe('los textos del Centro de Perfil y Ajustes de Yo', () => {
   it('cuenta las fases del método de su lista, y la fila de onboarding no lleva un número escrito', () => {
     expect(codigo).toContain('titulo="Mi onboarding"');
     expect(codigo).not.toMatch(/Mi [Oo]nboarding \(\d/);
-    expect(codigo).toContain('detalle="El Pacto y tu Mapa de Renacimiento"');
+    expect(codigo).toContain('detalle="Tu Pacto de Renacimiento"');
     expect(codigo).toContain('`${METODO_FASES.length} fases para comprenderte y sostener tu transformación`');
-    expect(codigo).toMatch(/ONBOARDING_STAGES = \[\s*\{ id: 'st1'[^\n]*\n\s*\{ id: 'st2'[^\n]*\n\] as const/);
+    // Spec 026: el Mapa de Renacimiento (la segunda etapa) se retiró; queda el Pacto.
+    expect(codigo).toMatch(/ONBOARDING_STAGES = \[\s*\{ id: 'st1'[^\n]*\n\] as const/);
+    expect(codigo).not.toContain("id: 'st2'");
   });
 
   it('la fila de evidencias sale de los datos reales', () => {

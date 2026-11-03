@@ -34,11 +34,10 @@ describe('volver en Yo', () => {
     expect(vistaDeRegreso('notificaciones', recorrer(['main', 'hub', 'notificaciones']))).toBe('hub');
   });
 
-  it('el Pacto y el Mapa vuelven a la lista de etapas, y la lista no pierde de dónde se vino', () => {
+  it('el Pacto vuelve a la lista de etapas, y la lista no pierde de dónde se vino', () => {
     expect(vistaDeRegreso('pacto', 'hub')).toBe('onboarding');
-    expect(vistaDeRegreso('mapa_renacimiento', 'hub')).toBe('onboarding');
-    // Ajustes → Mi onboarding → el Pacto → la lista → el Mapa → la lista: «volver» lleva a Ajustes.
-    const origen = recorrer(['main', 'hub', 'onboarding', 'pacto', 'onboarding', 'mapa_renacimiento', 'onboarding']);
+    // Ajustes → Mi onboarding → el Pacto → la lista: «volver» lleva a Ajustes.
+    const origen = recorrer(['main', 'hub', 'onboarding', 'pacto', 'onboarding']);
     expect(vistaDeRegreso('onboarding', origen)).toBe('hub');
   });
 

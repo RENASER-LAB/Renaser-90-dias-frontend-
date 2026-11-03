@@ -1,0 +1,41 @@
+# Aceptar a un aprendiz «Con cronograma» SIN armar las cuotas (decisión del dueño del 2026-11-02: los pagos son asíncronos, Administración los llena después). ESCRITO Y SIN CORRER.
+# cuenta: admin  (Administración o Alquimista)
+# Precondición (base local, nunca producción): una solicitud PENDIENTE de «Sol-Pagos Dos»; la Escuela tiene una recepción abierta y términos publicados.
+# Se corre con: .maestro/correr.sh .maestro/pagos/10-aceptar-con-cronograma-sin-cuotas.yaml
+appId: com.renaser.app
+---
+- runFlow: ../solicitud-con-formacion/comun-abrir-solicitudes.yaml
+- extendedWaitUntil:
+    visible: "Sol-Pagos Dos"
+    timeout: 30000
+- tapOn: "Aceptar a Sol-Pagos Dos"
+- extendedWaitUntil:
+    visible: "Aceptar solicitud"
+    timeout: 15000
+- tapOn: "Pago"
+- tapOn: "Con cronograma"
+# Solo la moneda es obligatoria: sin ella, la hoja la pide; con ella, ya no pide cuotas.
+- assertVisible: "Elige la moneda del cronograma."
+- scrollUntilVisible:
+    element: "Soles.*"
+    direction: DOWN
+    timeout: 20000
+- tapOn: "Soles.*"
+- assertNotVisible: "Agrega al menos una cuota."
+- assertNotVisible: "Elige la moneda del cronograma."
+- scrollUntilVisible:
+    element: "Todavía no hay cuotas\\."
+    direction: DOWN
+    timeout: 20000
+# El resumen del bloque y la frase de la aceptación no hablan de cuotas que no hay.
+- scrollUntilVisible:
+    element: "Sol-Pagos Dos entrará a la Escuela Renaser como Aprendiz, sin diagnóstico y con cronograma\\."
+    direction: UP
+    timeout: 20000
+- takeScreenshot: P10a-con-cronograma-sin-cuotas
+- tapOn: "Aceptar"
+- extendedWaitUntil:
+    visible: "Sol-Pagos Dos entró a la Escuela Renaser como Aprendiz.*"
+    timeout: 20000
+- assertNotVisible: "Aceptar a Sol-Pagos Dos"
+- takeScreenshot: P10b-aceptada-sin-cuotas

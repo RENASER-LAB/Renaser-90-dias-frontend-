@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { formacionDeLaLectura } from '../../formaciones/estado/formacionDeLaComunidad';
 import * as rankingApi from '../api/rankingApi';
 import type { RankingAgregadoDto } from '../api/rankingApi';
 import { mensajeDeError } from '../../../services/http/apiClient';
@@ -18,7 +19,7 @@ export function useRanking(activo = true) {
     setLoading(true);
     setError(null);
     try {
-      const data = await rankingApi.obtenerRankingAgregado();
+      const data = await rankingApi.obtenerRankingAgregado(undefined, formacionDeLaLectura());
       setRankingData(data);
     } catch (e) {
       setError(mensajeDeError(e, 'No pudimos cargar el ranking.'));

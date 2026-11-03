@@ -6,6 +6,7 @@ import { Icon } from '../../../components/Icon';
 import { LogoDeMarca } from '../../../components/LogoDeMarca';
 import { useTheme } from '../../../theme/ThemeContext';
 import { CursoPortada } from '../../academy/components/CursoPortada';
+import { RotuloDeFormacion } from '../../formaciones/components/RotuloDeFormacion';
 import type { Ocurrencia } from '../types/eventos.types';
 import { agruparPorMes, soloElMes } from '../utils/calendarioDelMes';
 import { rotuloDelTipo } from '../utils/formularioDeEvento';
@@ -103,6 +104,8 @@ function TarjetaComoCurso({
       </View>
 
       <View style={{ padding: space.cardPad, gap: 10 }}>
+        {/* Spec 024: la formación del evento, solo cuando Administración lee «Todas». */}
+        <RotuloDeFormacion formation={oc.evento.formacion} />
         <View style={{ gap: 2 }}>
           <Text style={[estilos.dia, { color: c.goldInk }]}>{dia}</Text>
           <Text style={[estilos.hora, { color: c.textStrong }]}>

@@ -14,7 +14,8 @@ appId: com.renaser.app
     element: ".*· Registrado"
     direction: DOWN
     timeout: 20000
-- assertVisible: "Listo por esta hora.*"
+# Desde el 31/10 la mitad del Radar de Hoy ya no trae la línea de detalle («Listo por esta hora. El siguiente a las …»): queda el estado, que se vio arriba.
+- assertNotVisible: "Listo por esta hora.*"
 # Al bajar, la barra de pestañas se esconde (D-246): un deslizamiento hacia arriba la devuelve antes de tocar PLAN.
 - swipe:
     start: 50%,30%

@@ -187,6 +187,24 @@ describe('«Mis mentores»', () => {
     expect(textos(await montar(mentores(lectura(GRUPOS))))).toContain('Nada sin responder');
   });
 
+  it('«Hábitos de todos» es la última fila, solo con el permiso del servidor, y abre su pantalla (spec 029)', async () => {
+    const onAbrirHabitos = jest.fn();
+    const sin = await montar(mentores(lectura(GRUPOS), { onAbrirTodos: jest.fn(), verTodos: true, onAbrirHabitos }));
+    expect(botones(sin).some(b => b.startsWith('Hábitos de todos'))).toBe(false);
+    expect(textos(sin)).not.toContain('Hábitos de todos');
+
+    const con = await montar(mentores(lectura(GRUPOS), { onAbrirTodos: jest.fn(), verTodos: true, verHabitos: true, onAbrirHabitos }));
+    const filas = botones(con).filter(b => /^(Consultas de mentores|Mentores y reporte del mes|Todos los aprendices|Hábitos de todos)/.test(b));
+    expect(filas.map(f => f.split('.')[0])).toEqual(['Consultas de mentores', 'Mentores y reporte del mes', 'Todos los aprendices', 'Hábitos de todos']);
+    await tocar(con, 'Hábitos de todos');
+    expect(onAbrirHabitos).toHaveBeenCalledTimes(1);
+  });
+
+  it('«Hábitos de todos» sola también se dibuja (las demás filas están apagadas por Soporte TI)', async () => {
+    const r = await montar(mentores(lectura(GRUPOS), { verConsultas: false, verMentores: false, verHabitos: true, onAbrirHabitos: jest.fn() }));
+    expect(textos(r)).toContain('Hábitos de todos');
+  });
+
   it('el padrón de mentores y el reporte del mes siguen a un toque', async () => {
     const onAbrirMentores = jest.fn();
     const r = await montar(mentores(lectura(GRUPOS), { onAbrirMentores }));

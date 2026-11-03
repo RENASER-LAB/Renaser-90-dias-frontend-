@@ -1,5 +1,11 @@
-import { fechaLocal, horaCorta, isoDe, type CambioDeHoraGeneral, type DiaPropio } from './alarmasPorDia';
-import { combinacionDelDia, type CombinacionDeAlarma } from './combinacionDeAlarma';
+import {
+  horaDeLaFecha,
+  valoresDelDia,
+  type CambioDeHoraGeneral,
+  type DiaPropio,
+  type FechaPropia,
+} from './alarmasPorDia';
+import { type CombinacionDeAlarma } from './combinacionDeAlarma';
 
 /**
  * «Repetir si no la atiendo» (spec 009, research R2): qué alarmas de repetición lleva un hábito. Pura: no toca la
@@ -50,6 +56,11 @@ export interface EntradaDeRepeticiones {
   alarmaGeneral: CombinacionDeAlarma | null | undefined;
   /** Un cambio de hora general que todavía no rige (D-91): hasta su fecha rige `horaDeHoy`. */
   cambio?: CambioDeHoraGeneral | null;
+  /**
+   * Spec 028: las fechas con cambio «solo esta semana». Su hora, su aviso y su «cómo suena» mandan ese día, igual que para
+   * la alarma principal: la repetición cuelga de la hora que rija.
+   */
+  fechas?: readonly FechaPropia[] | null;
 }
 
 export interface PedidoDeRepeticion {
@@ -107,18 +118,11 @@ export function habitoDeLaRuta(ruta: unknown): string | null {
 
 /**
  * La hora que rige para el día `fecha` (local): la propia, o la general; con un cambio pendiente, la de esa fecha.
- * Se exporta para el puente de un hábito cumplido (`puenteDeAlarmas.ts`), que necesita la misma cuenta por día.
+ * Se exporta para el puente de un hábito cumplido (`puenteDeAlarmas.ts`), que necesita la misma cuenta por día. La cuenta
+ * vive en `alarmasPorDia.horaDeLaFecha`, que comparten las tres.
  */
 export function horaDelDia(entrada: EntradaDeRepeticiones, propio: DiaPropio | undefined, fecha: Date): string | null {
-  if (propio?.hora) return horaCorta(propio.hora);
-  // E-642: un día sin hora propia va a la hora que el servidor resolvió para ESE día, no a la de hoy.
-  const resuelta = horaCorta(propio?.horaResuelta);
-  if (entrada.cambio) {
-    return fechaLocal(fecha) < entrada.cambio.desde
-      ? (resuelta ?? horaCorta(entrada.cambio.horaDeHoy))
-      : horaCorta(entrada.cambio.horaNueva);
-  }
-  return resuelta ?? horaCorta(entrada.horaGeneral);
+  return horaDeLaFecha(entrada, propio, fecha);
 }
 
 /**
@@ -130,17 +134,14 @@ export function planDeRepeticiones(
   ahora: Date,
   atendidas: ReadonlySet<string> = new Set(),
 ): PedidoDeRepeticion[] {
-  const propios = new Map((entrada.dias ?? []).map(d => [d.iso, d]));
   const pedidos: PedidoDeRepeticion[] = [];
   for (let i = 0; i < DIAS_DE_LA_VENTANA; i++) {
     const dia = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate() + i, 12, 0, 0, 0);
-    const propio = propios.get(isoDe(dia));
-    if (propio && !propio.activo) continue;
-    const avisos = propio?.avisos ?? entrada.avisosGenerales;
+    // Spec 028: la cuenta del día mezcla el día de la semana con la fecha propia, si la hay.
+    const { activo, avisos, alarma, hora } = valoresDelDia(entrada, dia);
+    if (!activo) continue;
     if (avisos.length === 0) continue;
-    const alarma = combinacionDelDia(entrada.alarmaGeneral, propio?.alarma);
     if (!alarma.repetir) continue;
-    const hora = horaDelDia(entrada, propio, dia);
     if (!hora) continue;
     const fecha = fechaCompacta(dia);
     if (atendidas.has(fecha)) continue;

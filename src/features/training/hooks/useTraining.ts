@@ -8,7 +8,8 @@ import { mensajeDeError } from '../../../services/http/apiClient';
 import type { HabitoCatalogoApi, TrackDelDiaApi } from '../../habits/types/habits.types';
 import { cargarEntrenamiento, type DatosEntrenamiento } from '../api/cargarEntrenamiento';
 import type { RocaDiariaApi } from '../types/training.types';
-import { DIMENSION_POR_CATEGORIA } from '../utils/dimensionDelHabito';
+import { useCategoriasDeHabito } from '../../habits/categorias/hooks/useCategoriasDeHabito';
+import { dimensionDelHabito } from '../utils/dimensionDelHabito';
 import { guiaDelHabito } from '../utils/guiaDelHabito';
 import { milisegundosDelDia } from '../../habits/api/diaDeHabitosApi';
 import { escucharDiaDeHabitosCambiado } from '../../habits/eventos/diaDeHabitosCambiado';
@@ -47,6 +48,9 @@ const SIN_ROCAS: RocaDiariaApi[] = [];
 const SIN_EVIDENCIA: Set<string> = new Set();
 
 export function useTraining(activa = true) {
+  /* Spec 023: las dimensiones son las categorías de la formación de la persona. Se lee aquí para que la lista se arme otra vez cuando
+     llegan, y para no dibujar hábitos de una categoría nueva como si no existieran mientras todavía no se sabe cuáles son. */
+  const categorias = useCategoriasDeHabito();
   const [datos, setDatos] = useState<DatosEntrenamiento | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -125,7 +129,7 @@ export function useTraining(activa = true) {
 
   /** Inventario completo para la hoja Planificar, incluidos hábitos sin track de hoy. */
   const planHabits = useMemo(() => {
-    const categoriaPorHabito = new Map(catalogo.map(h => [h.id, h.category]));
+    const dimensionPorHabito = new Map(catalogo.map(h => [h.id, dimensionDelHabito(h)]));
     const claveSistemaPorHabito = new Map(catalogo.map(h => [h.id, h.systemKey ?? null]));
     const exigenciaPorHabito = new Map(catalogo.map(h => [h.id, h.evidenceRequirement]));
     // El ícono de línea sale del CATÁLOGO (clave del ícono + clave de sistema), no del emoji que arma
@@ -138,7 +142,8 @@ export function useTraining(activa = true) {
 
     return inventario
       .map((habito): HabitItem | null => {
-        const dimension = DIMENSION_POR_CATEGORIA[categoriaPorHabito.get(habito.id) ?? ''];
+        // Spec 023: la dimensión es la categoría de la formación vigente; un hábito PROPIO con una categoría ajena va a «Mis hábitos».
+        const dimension = dimensionPorHabito.get(habito.id);
         if (!dimension) {
           return null;
         }
@@ -172,7 +177,8 @@ export function useTraining(activa = true) {
         };
       })
       .filter((h): h is HabitItem => h !== null);
-  }, [inventario, catalogo]);
+    // `categorias.dimensiones` cambia cuando llegan las de la formación: la lista se arma otra vez con ellas.
+  }, [inventario, catalogo, categorias.dimensiones]);
 
   // `useMemo` y no estado propio: se deriva de UNA sola lectura (`datos`), así el inventario y los
   // tracks cambian juntos y nunca se cruza un plan nuevo con tracks viejos. Los tracks son la
@@ -263,7 +269,7 @@ export function useTraining(activa = true) {
   return {
     habits,
     planHabits,
-    loading: loading || diaVencido,
+    loading: loading || diaVencido || !categorias.listo,
     error,
     recargar,
     /**

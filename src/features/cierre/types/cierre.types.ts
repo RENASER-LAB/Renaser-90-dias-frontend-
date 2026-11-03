@@ -83,7 +83,7 @@ export interface ResumenDeLosCierres {
 export interface CierresDeLaSemana {
   /** El lunes (`yyyy-MM-dd`). */
   semana: string;
-  /** El lunes de la primera semana de su programa; `null` = todavía no eligió su Día 1. Tope de ‹. */
+  /** El lunes de la primera semana de su programa; `null` = todavía no empezó su programa. Tope de ‹. */
   primeraSemana: string | null;
   /** Del Día 1 (o el lunes) a hoy (o el domingo), en orden. Nunca un día que viene. */
   dias: DiaDelCierre[];

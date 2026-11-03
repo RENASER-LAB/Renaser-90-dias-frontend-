@@ -16,13 +16,15 @@ import { escucharDiaUnoElegido } from '../events/avisoDiaUnoElegido';
 export const DIAS_DEL_PROGRAMA = 90;
 
 type EstadoPrograma = {
+  /** Spec 022: los días de SU programa (90, o 365 en el Diplomado de un año). */
+  duracionDias: number;
   diaPrograma: number;
   fase: string | null;
   inscrito: boolean;
 };
 
 export function useProgramaDia() {
-  const [estado, setEstado] = useState<EstadoPrograma>({ diaPrograma: 0, fase: null, inscrito: false });
+  const [estado, setEstado] = useState<EstadoPrograma>({ duracionDias: DIAS_DEL_PROGRAMA, diaPrograma: 0, fase: null, inscrito: false });
   const [loading, setLoading] = useState(true);
   const consultaActual = useRef(0);
 
@@ -30,9 +32,10 @@ export function useProgramaDia() {
     const consulta = ++consultaActual.current;
     setLoading(true);
     try {
-      const r = await apiFetch<{ diaPrograma?: number; fase?: string; inscrito?: boolean }>('/api/v1/home', { timeoutMs: 15_000 });
+      const r = await apiFetch<{ diaPrograma?: number; fase?: string; inscrito?: boolean; duracionDias?: number }>('/api/v1/home', { timeoutMs: 15_000 });
       if (consulta !== consultaActual.current) return;
       setEstado({
+        duracionDias: typeof r?.duracionDias === 'number' && r.duracionDias > 0 ? r.duracionDias : DIAS_DEL_PROGRAMA,
         diaPrograma: typeof r?.diaPrograma === 'number' ? r.diaPrograma : 0,
         fase: r?.fase ?? null,
         inscrito: Boolean(r?.inscrito),
@@ -40,7 +43,7 @@ export function useProgramaDia() {
     } catch {
       // Sin datos se deja el día en 0: es el estado "todavía no arrancó", que la pantalla ya sabe
       // representar. Nunca inventar un día para que el medidor se vea lleno.
-      if (consulta === consultaActual.current) setEstado({ diaPrograma: 0, fase: null, inscrito: false });
+      if (consulta === consultaActual.current) setEstado({ duracionDias: DIAS_DEL_PROGRAMA, diaPrograma: 0, fase: null, inscrito: false });
     } finally {
       if (consulta === consultaActual.current) setLoading(false);
     }

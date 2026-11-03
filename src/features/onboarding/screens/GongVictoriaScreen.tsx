@@ -7,21 +7,25 @@ import { useResponsive } from '../../../theme/responsive';
 import { Icon } from '../../../components/Icon';
 import { MicroLabel } from '../../../components/ui';
 import { GoldButton } from '../../../components/GoldButton';
+import { usePlazoDeLaSesion } from '../../formaciones/hooks/usePlazoDeLaSesion';
 
 interface GongVictoriaScreenProps {
   onEnterApp: () => void;
 }
 
-const MILESTONES = [
+/** Los hitos de la victoria; el último nombra el plazo del programa de la persona («90 días», «3 meses», «1 año»; issue #103). */
+export const hitosDeLaVictoria = (plazo: string): string[] => [
   'Completaste tu Ficha Inicial oficial (Identidad, Salud y Consentimiento)',
   'Aceptaste los Términos y Condiciones del ecosistema',
   'Firmaste y sellaste el Código I de Renaser: VERDAD',
-  'Activaste tu protocolo innegociable de 90 días',
+  `Activaste tu protocolo innegociable de ${plazo}`,
 ];
 
 export function GongVictoriaScreen({ onEnterApp }: GongVictoriaScreenProps) {
   const { c, t } = useTheme();
   const { rs, isTablet } = useResponsive();
+  const { plazo } = usePlazoDeLaSesion();
+  const MILESTONES = hitosDeLaVictoria(plazo);
 
   const ringSizes = [rs(220), rs(176), rs(132), rs(88)];
   const ringColors = [c.ring1, c.ring2, c.ring3, c.ring2];
@@ -90,7 +94,7 @@ export function GongVictoriaScreen({ onEnterApp }: GongVictoriaScreenProps) {
           </View>
 
           <GoldButton
-            label="ENTRAR A MI DÍA 01 (HOY)"
+            label="Entrar a mi Día 1 (hoy)"
             onPress={onEnterApp}
             icon="arrow"
             style={{ marginTop: 8 }}

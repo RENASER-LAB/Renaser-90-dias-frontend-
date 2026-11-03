@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { mensajeDeError } from '../../../services/http/apiClient';
+import { mensajeDeObjetivos } from '../utils/mensajeDeObjetivos';
 import * as planMensualApi from '../api/planMensualApi';
 import { cifraEscrita } from '../api/planMensualApi';
 import type { MesDelPlan, PlanMensualDelEje } from '../api/planMensualApi';
@@ -27,7 +27,7 @@ export function usePlanMensual() {
     try {
       setPlanes(await planMensualApi.obtenerPlanMensual());
     } catch (e) {
-      setError(mensajeDeError(e, 'No pudimos cargar tu objetivo de este mes.'));
+      setError(mensajeDeObjetivos(e, 'No pudimos cargar tu objetivo de este mes.'));
     } finally {
       setCargando(false);
     }
@@ -65,7 +65,7 @@ export function usePlanMensual() {
         await cargar();
         return { ok: true as const };
       } catch (e) {
-        return { ok: false as const, mensaje: mensajeDeError(e, 'No pudimos guardar el objetivo del mes.') };
+        return { ok: false as const, mensaje: mensajeDeObjetivos(e, 'No pudimos guardar el objetivo del mes.') };
       } finally {
         setGuardando(false);
       }

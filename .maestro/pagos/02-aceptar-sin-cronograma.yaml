@@ -1,0 +1,36 @@
+# Aceptar a un aprendiz SIN cronograma (pagó completo) y a un mentor con «Sin cronograma» por defecto (spec 032). ESCRITO Y SIN CORRER.
+# cuenta: admin
+# Precondición (base local): dos solicitudes PENDIENTES, «Sol-Pagos Dos» (aprendiz) y «Sol-Pagos Tres» (mentor).
+appId: com.renaser.app
+---
+- runFlow: ../solicitud-con-formacion/comun-abrir-solicitudes.yaml
+- extendedWaitUntil:
+    visible: "Sol-Pagos Dos"
+    timeout: 30000
+- tapOn: "Aceptar a Sol-Pagos Dos"
+- extendedWaitUntil:
+    visible: "Aceptar solicitud"
+    timeout: 15000
+# El aprendiz tiene que elegir: no se anota «pagó completo» por descuido.
+- assertVisible: "Elige cómo paga: sin cronograma o con cronograma."
+- tapOn: "Pago"
+- tapOn: "Sin cronograma \\(pagó completo\\)"
+- assertVisible: "Verá «Tu pago fue cancelado» en Yo."
+- assertVisible: "Sol-Pagos Dos entrará a la Escuela Renaser como Aprendiz, sin diagnóstico y pagó completo."
+- takeScreenshot: P02a-sin-cronograma
+# Hay un solo «Aceptar»: el del pie fijo de la hoja.
+- tapOn: "Aceptar"
+- extendedWaitUntil:
+    visible: "Sol-Pagos Dos entró a la Escuela Renaser como Aprendiz.*"
+    timeout: 20000
+# El personal viene con «Sin cronograma» y no se anota nada: la frase no habla de pago.
+- tapOn: "Aceptar a Sol-Pagos Tres"
+- extendedWaitUntil:
+    visible: "Aceptar solicitud"
+    timeout: 15000
+- tapOn: "Rol"
+- tapOn: "Mentor"
+- assertVisible: "Sin cronograma"
+- assertNotVisible: "Elige cómo paga.*"
+- assertNotVisible: ".*pagó completo.*"
+- takeScreenshot: P02b-el-personal-sin-cronograma

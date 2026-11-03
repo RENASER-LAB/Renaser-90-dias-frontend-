@@ -4,6 +4,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { useDisponibilidad } from '../../plataforma/estado/useFuncionalidad';
 import { CLAVES } from '../../plataforma/utils/clavesDeLaApp';
 import { useAprendicesDisponibles } from '../../lider-mentores/hooks/useAprendicesDisponibles';
+import { useHabitosDeTodosDisponibles } from '../../lider-mentores/hooks/useHabitosDeTodosDisponibles';
 import { useCelulaQueAcompano } from '../../mentor/hooks/useCelulaQueAcompano';
 import { useEsMentor } from '../../mentor/hooks/useEsMentor';
 import { esLiderDeMentores } from '../../mentor/utils/entradaAlGrupo';
@@ -59,6 +60,8 @@ export function usePanelesDeRol({
   const { elegirGrupo } = celula;
   const semaforoGrupos = useResumenPorGrupos(esLider);
   const aprendicesDisponibles = useAprendicesDisponibles(esLider && esDisponible(CLAVES.lider));
+  /* Spec 029: la fila «Hábitos de todos» existe solo si el servidor respondió 200 a la lectura de hoy; misma puerta que «Todos los aprendices». */
+  const habitosDisponibles = useHabitosDeTodosDisponibles(esLider && esDisponible(CLAVES.lider));
 
   const filas = filasDeRolEnYo({
     esMentor,
@@ -80,7 +83,7 @@ export function usePanelesDeRol({
     setVista(actual => {
       const delGrupo = actual.tipo === 'miGrupo' || actual.tipo === 'alumno';
       if (delGrupo && !esMentor) return SIN_VISTA;
-      const delLider = ['misMentores', 'consultas', 'mentores', 'todos', 'cumplimiento'].includes(actual.tipo);
+      const delLider = ['misMentores', 'consultas', 'mentores', 'todos', 'habitosDeTodos', 'cumplimiento'].includes(actual.tipo);
       if (delLider && !esLider) return SIN_VISTA;
       return actual;
     });
@@ -147,9 +150,10 @@ export function usePanelesDeRol({
       celula,
       semaforoGrupos,
       aprendicesDisponibles,
+      habitosDisponibles,
       esDisponible,
     }),
-    [filas, vista, volver, cerrarTodo, celula, semaforoGrupos, aprendicesDisponibles, esDisponible],
+    [filas, vista, volver, cerrarTodo, celula, semaforoGrupos, aprendicesDisponibles, habitosDisponibles, esDisponible],
   );
 }
 

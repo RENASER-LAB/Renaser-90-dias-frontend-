@@ -1,0 +1,38 @@
+# Ranking de Administración en «Todas» (spec 024). ESCRITO Y SIN CORRER.
+# cuenta: admin
+# Precondición: aprendices con puntos en la Escuela y en el Diplomado. Cada formación compara solo a los suyos: el primero de cada una es el 1.
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "COMUNIDAD"
+- extendedWaitUntil:
+    visible: "Todas"
+    timeout: 30000
+- tapOn: "Todas"
+- tapOn: "Ranking"
+# Una sección por formación, cada una con su tabla.
+# La ficha «Escuela» del selector también se lee «Escuela Renaser» para el lector de pantalla: los encabezados de cada sección se buscan debajo de las pestañas
+# de la tabla (General / Coherencia / Kilómetros).
+- extendedWaitUntil:
+    visible:
+      text: "Escuela Renaser"
+      below: "Kilómetros"
+    timeout: 30000
+# La sección del Escuela ocupa la primera pantalla (su podio es alto): la del Diplomado queda debajo y se baja hasta ella.
+- scrollUntilVisible:
+    element:
+      text: "Diplomado Renaser"
+      below: "Kilómetros"
+    direction: DOWN
+    timeout: 30000
+- takeScreenshot: C04a-ranking-por-formacion
+# Elegir una sola formación deja la tabla de siempre, sin encabezados por formación.
+- tapOn: "Diplomado"
+# La tarjeta dice «Tu posición (nombre)» (`ComunidadScreen`); Maestro no distingue mayúsculas, y lleva el nombre detrás: por eso «.*».
+- extendedWaitUntil:
+    visible: "(?i)Tu posición.*"
+    timeout: 30000
+- assertNotVisible:
+    text: "Escuela Renaser"
+    below: "Kilómetros"
+- takeScreenshot: C04b-ranking-del-diplomado

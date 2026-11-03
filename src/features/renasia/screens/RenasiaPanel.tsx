@@ -24,7 +24,15 @@ import { useRenasiaChat } from '../hooks/useRenasiaChat';
 import { useDictado } from '../hooks/useDictado';
 import { useFrasesDeHabitos } from '../hooks/useFrasesDeHabitos';
 import { LARGO_MAXIMO_PREGUNTA, recortarPregunta, unirDictado } from '../utils/dictado';
-import { cambioAlRegistrar, cambioTrasIniciar, estadoVisibleDelPedido, solicitudDelPedido } from '../utils/pedidosDeFoto';
+import {
+  cambioAlRegistrar,
+  cambioTrasIniciar,
+  estadoVisibleDelPedido,
+  seRegistraEscribiendoElPedido,
+  solicitudDelPedido,
+} from '../utils/pedidosDeFoto';
+import { RegistroDeRitualConTexto } from '../../training/components/RegistroDeRitualConTexto';
+import { useRitualPorTexto } from '../hooks/useRitualPorTexto';
 import { REGLAS_DE_ACCION } from '../../objetivos/utils/registroDeAccionConFoto';
 import { useRegistroConFoto } from '../../habits/hooks/useRegistroConFoto';
 import { RegistroConFotoModal } from '../../habits/components/RegistroConFotoModal';
@@ -123,9 +131,24 @@ export function RenasiaPanel({ agent, visible, onClose, contexto }: RenasiaPanel
     // D-178: la tarjeta de una acción del día sube a los endpoints de rocas.
     destinos: { roca: REGLAS_DE_ACCION },
   });
+  /**
+   * Spec 038: un ritual no se registra con la cámara sino ESCRIBIENDO, como en Training. La tarjeta abre la misma hoja
+   * («¿Cómo te sientes después de realizar el ritual?»), montada aquí por la misma razón que el modal de la foto.
+   */
+  const ritual = useRitualPorTexto({
+    alCompletar: registroId => {
+      tacto.logro();
+      cambiarPedidoDeFoto(registroId, cambioAlRegistrar('habito', true));
+    },
+    alCambiarElDia: registroId => cambiarPedidoDeFoto(registroId, cambioTrasIniciar('vencido', 'habito')),
+  });
   const tomarFoto = async (pedido: PedidoDeFotoUI) => {
     if (estadoVisibleDelPedido(pedido, Date.now()) !== 'pendiente') return;
     if (dictado.escuchando) dictado.detener();
+    if (seRegistraEscribiendoElPedido(pedido)) {
+      ritual.abrir(pedido);
+      return;
+    }
     cambiarPedidoDeFoto(pedido.registroId, { estado: 'abriendo' });
     const resultado = await registroConFoto.iniciar(solicitudDelPedido(pedido));
     cambiarPedidoDeFoto(pedido.registroId, cambioTrasIniciar(resultado, pedido.destino));
@@ -379,6 +402,7 @@ export function RenasiaPanel({ agent, visible, onClose, contexto }: RenasiaPanel
       </SafeAreaView>
 
       <RegistroConFotoModal {...registroConFoto.modal} />
+      <RegistroDeRitualConTexto {...ritual.modal} />
     </Modal>
   );
 }

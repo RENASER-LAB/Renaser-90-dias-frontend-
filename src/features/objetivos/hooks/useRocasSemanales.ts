@@ -1,6 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { ApiError, mensajeDeError } from '../../../services/http/apiClient';
+import { ApiError } from '../../../services/http/apiClient';
+import { usePlazoDeLaSesion } from '../../formaciones/hooks/usePlazoDeLaSesion';
+import { mensajeDeObjetivos } from '../utils/mensajeDeObjetivos';
 import * as objetivosApi from '../api/objetivosApi';
 import type {
   CierreRocaSemanal,
@@ -56,6 +58,10 @@ export function useRocasSemanales(maestras: RocaMaestraApi[], semana?: number, a
   const [bloqueada, setBloqueada] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
+  /* Issue #104: el aviso nombra el plazo del programa de la persona. En una referencia para que `planificar` no cambie si la formación se lee tarde. */
+  const { plazo } = usePlazoDeLaSesion();
+  const plazoRef = useRef(plazo);
+  plazoRef.current = plazo;
 
   const cargar = useCallback(async () => {
     if (!activo) {
@@ -71,12 +77,12 @@ export function useRocasSemanales(maestras: RocaMaestraApi[], semana?: number, a
     } catch (e) {
       // Un 403 acá no es "algo falló": es el estado normal de quien todavía no definió sus tres
       // objetivos de 90 días. Mostrarlo como error rojo mandaría a la persona a soporte en vez de
-      // al Mapa, que es lo que le falta hacer.
+      // a escribir sus objetivos, que es lo que le falta hacer.
       if (e instanceof ApiError && e.esProhibido) {
         setBloqueada(true);
         setRocas([]);
       } else {
-        setError(mensajeDeError(e, 'No pudimos cargar tu plan de la semana.'));
+        setError(mensajeDeObjetivos(e, 'No pudimos cargar tu plan de la semana.'));
       }
     } finally {
       setCargando(false);
@@ -134,13 +140,13 @@ export function useRocasSemanales(maestras: RocaMaestraApi[], semana?: number, a
         return {
           ok: false as const,
           motivo: 'sin_objetivos' as const,
-          mensaje: 'Primero define tus tres objetivos de 90 días.',
+          mensaje: `Primero define tus tres objetivos de ${plazoRef.current}.`,
         };
       }
       return {
         ok: false as const,
         motivo: 'error' as const,
-        mensaje: mensajeDeError(e, 'No pudimos guardar tu plan de la semana.'),
+        mensaje: mensajeDeObjetivos(e, 'No pudimos guardar tu plan de la semana.'),
       };
     } finally {
       setGuardando(false);
@@ -165,7 +171,7 @@ export function useRocasSemanales(maestras: RocaMaestraApi[], semana?: number, a
           mensaje: 'La ventana para corregir esta semana ya cerró. Vas a poder replanificar el domingo.',
         };
       }
-      return { ok: false as const, motivo: 'error' as const, mensaje: mensajeDeError(e, 'No pudimos guardar el cambio.') };
+      return { ok: false as const, motivo: 'error' as const, mensaje: mensajeDeObjetivos(e, 'No pudimos guardar el cambio.') };
     } finally {
       setGuardando(false);
     }
@@ -178,7 +184,7 @@ export function useRocasSemanales(maestras: RocaMaestraApi[], semana?: number, a
       reemplazar(await objetivosApi.cerrarSemana(id, cierre));
       return { ok: true as const };
     } catch (e) {
-      return { ok: false as const, mensaje: mensajeDeError(e, 'No pudimos guardar tu revisión.') };
+      return { ok: false as const, mensaje: mensajeDeObjetivos(e, 'No pudimos guardar tu revisión.') };
     } finally {
       setGuardando(false);
     }

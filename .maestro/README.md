@@ -26,6 +26,17 @@ local (nunca contra producción).
   escribe con `inputText`, que tarda ~10 s por letra (ver abajo). 37 y 38 dejan todo como estaba; 39 y 40 necesitan el
   backend con «ver como» (B3).
 
+- `formaciones/` (2026-10-31, spec 022): las tres formaciones y su aislamiento (aprendiz de la Escuela y del Diplomado de 1 año, personal con dos
+  formaciones o sin ninguna, Administración → Formaciones y el traslado). **Escritos y sin correr**; ver su `README.md`.
+- `planificacion/` (spec 028, 2026-10-31; «Siempre | Por semana» el 2026-11-02): lo que se planifica por semana. `solo-esta-semana` (el editor de
+  Planificar con «Siempre» | «Por semana», el aviso por semana, el punto del día cambiado y «Volver al plan de siempre»), `repetir-la-semana`
+  (la oferta «Repetir tu semana» en «Tus prácticas»: «Ver qué se repite», repetir en un toque, «Deshacer» y «Ahora no»),
+  `por-semana-con-flechas-y-deslizando` (‹ › y deslizar la fila de días, hasta la última semana del programa, guardar solo la semana que
+  se ve) y `lo-guardado-sale-marcado` (issue #95: el hábito reabre en «Por semana», en la semana guardada, con el día marcado). **Escritos y
+  sin correr**; piden el backend con la spec 028 (V130 y V131) y un hábito sin cambios por semana: por defecto «Escritura libre nocturna»
+  de «Mente» (`-e HABITO=… -e DIMENSION=…` para otro). Los avisos de ~3 s («Queda con aviso nuevo…») no se esperan: se comprueba el
+  estado que queda guardado. `repetir-la-semana` pide además que hoy no sea sábado ni domingo (lo dice arriba de cada archivo).
+- `planificacion/planificar-el-mes.yaml` (spec 028, 2026-10-31): Plan → «Planificar mi mes» (el plan de objetivos: los tres meses del programa, el objetivo del mes del eje abierto, sus semanas, corregir el de cualquier mes y organizar la semana de ahora). **Escrito y sin correr**; pide el Mapa activo y la semana armada (lo dice arriba del archivo).
 - `diseno-31/` (2026-10-31): los cambios de diseño del día (Hoy con la tarjeta de acciones y sin la frase ni Coherencia / Racha,
   Plan con el formato de la referencia, Training con la cabecera sin fase, los nombres en tipo oración, los rituales con texto y la
   última comida con círculo, Yo con el semáforo y sin la tira «Evidencia», y —`06-roles-en-yo`— Hoy solo con el programa propio y las
@@ -34,9 +45,36 @@ local (nunca contra producción).
   `mi-radar/11–12` y `lider-ve-a-todos/01` ya entran por ahí). Los nombres de los hábitos ahora se ven en tipo oración: los flujos viejos que los buscaban en mayúsculas usan
   `(?i)` desde ese día.
 
+- `hoy-programa-propio/` (2026-11-01, issue #72): la frase del día siempre y la fila compacta del programa propio en Hoy y Plan, con sus tres
+  estados (`ESTADO` = `sin-programa` | `sin-dia-1` | `esperando`, este último el de «Tu programa empieza el …»). **Escrito y sin correr**; cada estado
+  pide su cuenta (lo dice arriba del archivo).
+
 - `cierre-en-plan/` (spec 033, 2026-10-31): «Cierra tu día» ya no está en Training; vive en una tarjeta de Plan, bajo «Acciones que
   mueven la meta», con «Ver mañana en Plan» y los cierres de los días anteriores en la misma tarjeta (solo lectura). **Escritos y
   sin correr**; cada archivo dice su precondición. Reemplaza a la carpeta `cierre/` (que probaba la fila de Training).
+- `codigo-renaser-en-fichas/` (spec 034, 2026-10-31): Administración enciende y apaga si el mentor, la guía y el líder ven el Código
+  Renaser (Más opciones → «Código Renaser en las fichas»); apagado de fábrica. **Escritos y sin correr**: piden el backend con la
+  spec 034 y, además de la cuenta de Administración, la de un mentor con un aprendiz que ya respondió el Radar; ver su `README.md`.
+
+- `empieza-manana/` (spec 036, 2026-11-02): el programa empieza al día siguiente y la persona ya no elige su Día 1. «Tu programa empieza mañana … Entendido»
+  en el onboarding, donde el programa se activa solo al firmar (01), la misma pantalla desde Hoy y Plan para el personal sin fila (02) y con la fila sin activar, Training y Mi Radar (03), y la línea del
+  plazo según la formación (04). **Escritos y sin correr**; cada archivo dice su cuenta y su precondición (activar no se deshace: una vez por cuenta).
+
+## El estado de los datos de cada flujo (`# antes:`)
+
+Un flujo que cumple un hábito lo deja cumplido, y el flujo que sigue puede pedir justo lo contrario (`training-por-hora/01` quiere Agua tibia hecha;
+`diseno-31/04`, pendiente). Maestro no puede deshacer un hábito cumplido desde la app, así que **cada flujo que depende de ese estado lo dice arriba
+con una línea `# antes: <comando>`** y `correr.sh` la corre (desde la raíz del repo, contra la base LOCAL de pruebas) antes de entrar. Otro corredor que no
+pase por `correr.sh` llama a `.maestro/comun/antes-del-flujo.sh <flujo.yaml>` antes de cada flujo.
+
+- `comun/estado-de-hoy.sh PENDIENTE|COMPLETADO <clave o título>…` deja los registros de hoy de una cuenta (por omisión `ef-aprendiz-escuela@renaser.test`, base
+  `renaser_e2e_final`, contenedor `renaser-db`; se cambian con `E2E_CORREO`, `E2E_BASE`, `E2E_CONTENEDOR`) en ese estado. Usa la clave de sistema del hábito
+  (`WAKE_UP`, `SLEEP`, `WARM_LEMON_WATER`, `RITUAL_MORNING`, `GYM`, `DAILY_KM`, `PASTILLA_RENACER`, `DAILY_CLASS`, `PHONE_FREE_DAY`…) o, si no tiene, su título
+  exacto del catálogo (en mayúsculas). Con `accion:<título>` es una acción del día de los objetivos. Se niega a tocar una base que no empiece con `renaser_e2e`.
+- `comun/evento-de-prueba.sh "<título>" <minutos>` pone el comienzo de un evento de prueba a tantos minutos desde ahora (los eventos terminados salen de la lista de
+  hoy, así que el evento sembrado dejaría de verse pasada su hora).
+- Lo que ningún comando puede deshacer queda dicho en la cabecera del flujo (por ejemplo, `training-por-hora/10` deja «Meditar 10 minutos» en pausa «solo hoy»).
+
 ## Cómo correrla
 
 1. Backend local (worktree propio, base clonada) con las fotos en local (`docs/DESPLIEGUE_Y_CI.md` §1.3 del backend).
@@ -77,3 +115,33 @@ a un teléfono de verdad: `killApp` (`adb shell am kill`, la muerte de proceso q
 mata la app si está en segundo plano, y lo está porque la cámara está al frente) y `setAirplaneMode` (se corta la red del
 emulador, no `adb reverse`). El 12 deja la pantalla partida de kilómetros a medias y el 13 el error con «REINTENTAR»: si un
 paso falla, mira `adb logcat -s ReactNativeJS` (las líneas `[evidencia] falló el paso …` dicen cuál fue).
+- `ficha-con-diagnostico/` (2026-10-31, spec 026): el diagnóstico de la persona (01–04), Administración → Fichas (10–13) y Plan/Hoy sin el Mapa (20–22). **Escritos y sin correr**; ver su `README.md`.
+
+## El lote del 02/11/2026 (E2E final): 13 flujos fallaron, qué se ajustó y qué es de datos
+
+Corrida contra la base local `renaser_e2e_final` (resultados en `~/Imágenes/e2e-2026-11-02-final/emulador/resultados.md`). **Los ajustes no se volvieron a correr.**
+
+**Ajustados (el flujo estaba viejo, la app estaba bien):**
+
+| Flujo | Qué pasaba | Qué se cambió |
+|---|---|---|
+| `empieza-manana/03` | esperaba en Plan la fila de Hoy; a quien tiene la fila sin activar, Plan le dibuja «Tu plan empieza con tu programa» + «Empezar mañana» (`PlanSinPrograma`) | espera ese texto |
+| `acuerdo-de-transformacion/03` | esperaba «Formación RENASER · 90 días» y solo servía con la Escuela | comprueba el patrón `PROGRAMA` (se puede fijar con `-e`) |
+| `planificacion/lo-guardado-sale-marcado` | al pasar de «Siempre» a «Por semana» el editor abría en la primera semana y no en la del cambio guardado (era un bug de la app, issue #106) | ya no toca las flechas: espera «Volver al plan de siempre…» al volver a «Por semana» |
+| `comunidad-por-formacion/04` | la sección del Diplomado quedaba debajo de la pantalla (el podio de la Escuela es alto) | `scrollUntilVisible` hasta ella |
+| `comunidad-por-formacion/01` | «Tu posición» exacto; la tarjeta dice «Tu posición (nombre)» | «Tu posición.*» |
+| `semaforo-podio/31` | en «Todas» el botón dice «Elige una formación arriba para descargar el podio.» (spec 024) | elige la Escuela antes de descargar |
+| `cierre-en-plan/01` | pedía el Mapa y la hora «20:30» | pide los objetivos confirmados (el Mapa ya no existe) y comprueba «Era a las .* · quedó pendiente» |
+| `diseno-31/06`, `mi-radar/16` | el ancla «Tu evolución» ya no existe antes del Día 1 ni sin programa (issue #102) | ancla «Coherencia» (y, en `mi-radar/16`, «Tu programa empieza…») |
+| `pagos/08` | `index: 1` no tocaba el interruptor | toca el elemento `checked` (el interruptor) |
+| `pagos/09` | SER abrió su panel solo (aviso proactivo) y tapó Yo | cierra el panel si está y vuelve a tocar Yo |
+| `identidad-por-formacion/01` | al volver a la Escuela, el texto de los mensajes queda debajo de la tarjeta | `scrollUntilVisible` |
+
+**De datos o de precondición (no se tocó el flujo; hay que preparar la base o la cuenta):**
+
+- `diseno-31/04`: las precondiciones van en su `# antes:` (Agua tibia, ritual y Última comida PENDIENTES); el lote no las aplicó y Ana ya había hecho esos hábitos (están bajo «8 hechos hoy»).
+- `diseno-31/06`: pide la cuenta del **líder de mentores** con un grupo; el lote lo corrió con `ef-admin` (Administración no tiene «Mis mentores»).
+- `cierre-en-plan/01`: necesita exactamente dos acciones de hoy sin cumplir (una con hora ya pasada y otra sin hora); la base de Ana tiene tres (05:00, 10:00 y sin hora).
+- `guia-de-ser/01`: Ana ya firmó el Pacto; la guía solo existe sin Pacto ni primer post.
+- `identidad-por-formacion/03`: la bienvenida del soporte no se envió porque «las bienvenidas automáticas están apagadas» en esa base (precondición `BIENVENIDA_ACTIVA`).
+- `semaforo-podio/31`: aun eligiendo la formación, la hoja de compartir del sistema puede no salir en el emulador (límite del emulador).

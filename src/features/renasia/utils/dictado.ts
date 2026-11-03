@@ -39,10 +39,17 @@ export function unirDictado(textoActual: string, dictado: string): string {
 }
 
 /**
+ * Qué se está dictando: el chat de SER dicta un «mensaje»; el Código Renaser (spec 030), una «respuesta». Solo cambia
+ * la palabra con que se invita a escribir si la voz falla.
+ */
+export type DestinoDelDictado = 'mensaje' | 'respuesta';
+
+/**
  * Qué decirle a la persona si el dictado falla. `null` = no mostrar nada (lo canceló ella, o no
  * habló: no es un error que haya que explicar).
  */
-export function mensajeDeErrorDeVoz(codigo: string): string | null {
+export function mensajeDeErrorDeVoz(codigo: string, destino: DestinoDelDictado = 'mensaje'): string | null {
+  const suTexto = destino === 'respuesta' ? 'tu respuesta' : 'tu mensaje';
   switch (codigo) {
     case 'aborted':
     case 'no-speech':
@@ -50,14 +57,14 @@ export function mensajeDeErrorDeVoz(codigo: string): string | null {
     case 'not-allowed':
       return 'Para dictar necesito permiso del micrófono. Puedes activarlo en los ajustes del teléfono.';
     case 'network':
-      return 'No hay conexión para reconocer tu voz. Intenta de nuevo o escribe tu mensaje.';
+      return `No hay conexión para reconocer tu voz. Intenta de nuevo o escribe ${suTexto}.`;
     case 'language-not-supported':
     case 'service-not-allowed':
-      return 'Tu teléfono no tiene el reconocimiento de voz en español disponible. Puedes escribir tu mensaje.';
+      return `Tu teléfono no tiene el reconocimiento de voz en español disponible. Puedes escribir ${suTexto}.`;
     case 'busy':
       return 'El reconocimiento de voz está ocupado. Intenta de nuevo en un momento.';
     default:
-      return 'No pude entender el audio. Intenta de nuevo o escribe tu mensaje.';
+      return `No pude entender el audio. Intenta de nuevo o escribe ${suTexto}.`;
   }
 }
 

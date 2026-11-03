@@ -16,6 +16,7 @@ import { EspacioSobreFlotantes } from './asistencia/EspacioSobreFlotantes';
 import { HojaQuienRespondio } from './asistencia/HojaQuienRespondio';
 import { TarjetaDeAsistencia } from './asistencia/TarjetaDeAsistencia';
 import { BotonVolver, EtiquetaAsistencia, LETRA, Parrafo } from './piezas';
+import { RotuloDeFormacion } from '../../formaciones/components/RotuloDeFormacion';
 
 /**
  * El detalle de un evento (E-5): cuándo, dónde, «Unirme» si hay link, y «Voy» / «No voy». Para
@@ -89,6 +90,8 @@ export function DetalleDelEvento({
       <BotonVolver etiqueta="Volver a Eventos" onPress={onVolver} />
 
       <View style={{ gap: 6 }}>
+        {/* Spec 024: la formación del evento, solo cuando Administración lee «Todas». */}
+        <RotuloDeFormacion formation={evento.formacion} />
         <Text accessibilityRole="header" style={[estilos.titulo, { color: c.textStrong }]}>
           {oc.titulo}
         </Text>

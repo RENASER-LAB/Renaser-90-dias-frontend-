@@ -1,0 +1,93 @@
+# Administración edita los términos de la Escuela, mira la vista previa, guarda el borrador y publica sin pedir aceptar de nuevo (spec 027, historia 1). ESCRITO Y SIN CORRER.
+# cuenta: admin
+# Precondición (base local): la migración V148–V150 aplicada (la Escuela con al menos una versión publicada; en la base local de hoy la vigente es la 2).
+# Cada corrida publica una versión más, sin pedir aceptar de nuevo.
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "YO"
+- scrollUntilVisible:
+    element: "Administración"
+    direction: DOWN
+    timeout: 40000
+- tapOn: "Administración"
+- scrollUntilVisible:
+    element: "Más opciones.*"
+    direction: DOWN
+    timeout: 40000
+- tapOn: "Más opciones.*"
+- scrollUntilVisible:
+    element: "Términos y condiciones"
+    direction: DOWN
+    timeout: 40000
+- tapOn: "Términos y condiciones"
+- extendedWaitUntil:
+    visible: "Escuela Renaser"
+    timeout: 30000
+- assertVisible: "Versión [0-9]+.*"
+- assertVisible: "Diplomado Renaser"
+# «Por revisar» es el Diplomado recién creado, sin versión publicada: en la base local de hoy ya tiene versiones, así que no siempre sale.
+- assertVisible:
+    text: "Por revisar"
+    optional: true
+- takeScreenshot: T01a-las-tres-formaciones
+- tapOn: "Escuela Renaser.*"
+- extendedWaitUntil:
+    visible: "Versión [0-9]+ · vigente"
+    timeout: 20000
+# El número de la vigente cambia con cada corrida (la base local ya va por la 2): se lee y se espera la siguiente al publicar.
+- copyTextFrom:
+    text: "Versión [0-9]+ · vigente"
+- evalScript: ${output.siguiente = 'Versión ' + (parseInt(maestro.copiedText.replace(/[^0-9]/g, ''), 10) + 1) + ' · vigente'}
+- tapOn: "Editar"
+- extendedWaitUntil:
+    visible: "Cláusula 1"
+    timeout: 20000
+# Sin cambios no se publica. El aviso queda al final del editor (23 cláusulas): se baja hasta él.
+- scrollUntilVisible:
+    element: "No hay cambios respecto de la versión vigente."
+    direction: DOWN
+    timeout: 60000
+- tapOn: "Agregar una cláusula"
+# Cada corrida publica una cláusula más (la base ya va por la 24): el número de la nueva se lee del aviso «La cláusula N está vacía.».
+- assertVisible: "La cláusula [0-9]+ está vacía."
+- copyTextFrom:
+    text: "La cláusula [0-9]+ está vacía."
+- evalScript: ${output.n = maestro.copiedText.replace(/[^0-9]/g, '')}
+# Ya abajo del todo: la cláusula nueva queda arriba del botón; se sube hasta verla entera.
+- scrollUntilVisible:
+    element: "Cláusula ${output.n}"
+    direction: UP
+    timeout: 20000
+- tapOn: "Texto de la cláusula ${output.n}"
+# Textos cortos y sin tildes: `inputText` con el dev client tarda ~7 a 10 s por letra y pasa de 120 s con más de ~10 (Maestro #3667), y Maestro no escribe bien
+# los caracteres que no son ASCII. La cláusula se escribe en dos comandos.
+- inputText: "Prueba "
+- inputText: "E2E"
+- takeScreenshot: T01b-editando
+- tapOn: "Vista previa"
+- extendedWaitUntil:
+    visible: "Prueba E2E"
+    timeout: 15000
+- takeScreenshot: T01c-vista-previa
+- tapOn: "Cerrar"
+- tapOn: "Guardar borrador"
+- extendedWaitUntil:
+    visible: "Borrador guardado"
+    timeout: 10000
+- tapOn: "Publicar"
+- extendedWaitUntil:
+    visible: "Lo verán las personas que entren desde ahora"
+    timeout: 15000
+- tapOn: "Nota del cambio"
+- inputText: "Nota E2E"
+- takeScreenshot: T01d-publicar
+- tapOn:
+    text: "Publicar"
+    index: 1
+- extendedWaitUntil:
+    visible: "${output.siguiente}"
+    timeout: 30000
+- assertVisible: "Historial"
+- assertVisible: "Versión [0-9]+.*"
+- takeScreenshot: T01e-historial

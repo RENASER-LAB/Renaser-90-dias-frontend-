@@ -42,6 +42,8 @@
  * tocar el backend.
  */
 import type { IconName } from '../../../components/Icon';
+import { categoriaDeCodigo } from '../categorias/estado/estadoDeCategorias';
+import { iconoDeCategoria } from '../categorias/utils/iconosDeCategoria';
 import { DIMENSION_POR_CATEGORIA } from '../../training/utils/dimensionDelHabito';
 import { ICONO_DE_LA_DIMENSION } from '../../training/utils/iconoDeLaDimension';
 
@@ -92,6 +94,12 @@ export const ICONO_DE_LINEA_POR_CATEGORIA: Readonly<Record<string, IconName>> = 
 
 const ICONO_DE_LINEA_POR_DEFECTO: IconName = 'target';
 
+/** Spec 023: el ícono que Administración le puso a la categoría (las que no son de la Escuela). Sin ícono propio, el de siempre. */
+function iconoDeLaCategoriaVigente(categoria: string | null | undefined): IconName | undefined {
+  const icono = categoria ? categoriaDeCodigo(categoria)?.icon : null;
+  return icono ? iconoDeCategoria(icono) : undefined;
+}
+
 /**
  * El ícono de línea que corresponde a un hábito.
  *
@@ -110,6 +118,7 @@ export function iconoDeLineaDeHabito(
   if (propio) return propio;
   return porDefecto
     ?? (habito.category ? ICONO_DE_LINEA_POR_CATEGORIA[habito.category] : undefined)
+    ?? iconoDeLaCategoriaVigente(habito.category)
     ?? ICONO_DE_LINEA_POR_DEFECTO;
 }
 

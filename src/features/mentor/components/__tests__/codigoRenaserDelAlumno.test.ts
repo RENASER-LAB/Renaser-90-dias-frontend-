@@ -109,6 +109,23 @@ describe('CodigoRenaserDelAlumno en la ficha', () => {
     expect(estiloDe('Energía').flexShrink).toBe(0);
   });
 
+  it('un registro dictado lo dice en una línea de texto; uno escrito, no (spec 030, decisión 030-2)', async () => {
+    const r = await dibujar(async () => ({
+      entries: [registro('a', 25, 14, { dictado: true }), registro('b', 25, 11), registro('c', 24, 9, { dictado: false })],
+      nextCursor: null,
+    }));
+    const t = textos(r);
+    expect(t.match(/Dictado por voz\. Puede haber errores de transcripción\./g)).toHaveLength(1);
+    // Lo dictado es texto de la persona, sin tocar: la línea no cambia ni la hora ni lo que escribió.
+    expect(t).toContain('haciendo a');
+    expect(t).toContain('14:06');
+  });
+
+  it('un backend anterior (sin `dictado` en los registros) no muestra la línea', async () => {
+    const r = await dibujar(async () => ({ entries: [registro('a', 25, 14)], nextCursor: null }));
+    expect(textos(r)).not.toContain('Dictado por voz');
+  });
+
   it('apagado también se dice, y sin registros dice «Sin registros.»', async () => {
     const r = await dibujar(async () => ({ entries: [], nextCursor: null, miRadar: { ...deHoy(), encendido: false } }));
     const t = textos(r);

@@ -21,6 +21,7 @@ import { linkParaUnirme, marcaDelLink, nombreDelLink } from '../utils/linkDelEve
 import { diaEnPalabras } from '../utils/textosDeFecha';
 import { horaEnZona } from '../utils/zonaHoraria';
 import { EtiquetaAsistencia, LETRA, Parrafo } from './piezas';
+import { RotuloDeFormacion } from '../../formaciones/components/RotuloDeFormacion';
 
 /**
  * La vista «Calendario» de Eventos (pedido del dueño del 2026-09-26): la grilla del mes, de lunes a
@@ -210,6 +211,8 @@ function TarjetaDelDia({ oc, zona, onPress }: { oc: Ocurrencia; zona: string; on
     >
       <Text style={[estilos.hora, { color: c.goldInk }]}>{hora}</Text>
       <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
+        {/* Spec 024: la formación del evento, solo cuando Administración lee «Todas». */}
+        <RotuloDeFormacion formation={oc.evento.formacion} />
         <Text style={[estilos.tituloTarjeta, { color: c.textStrong }]} numberOfLines={2}>
           {oc.titulo}
         </Text>

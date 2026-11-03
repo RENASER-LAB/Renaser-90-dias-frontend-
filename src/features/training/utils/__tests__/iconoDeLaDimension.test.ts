@@ -46,6 +46,8 @@ describe('ICONO_DE_LA_DIMENSION: la fuente única', () => {
       EMOCIONES: 'heart',
       'ESPÍRITU': 'sparkles',
       'VIDA Y NEGOCIO': 'briefcase',
+      // Spec 023: «Mis hábitos» (los propios con una categoría ajena a la formación) no es una categoría del servidor.
+      MIS_HABITOS: 'listChecks',
     });
     expect(iconoDeLaDimension('ESPÍRITU')).toBe('sparkles');
   });
@@ -56,7 +58,8 @@ describe('ICONO_DE_LA_DIMENSION: la fuente única', () => {
   });
 
   it('son cinco dibujos distintos, ninguno el monigote ni el asterisco de antes', () => {
-    const iconos = Object.values(ICONO_DE_LA_DIMENSION);
+    // «Mis hábitos» (spec 023) no cuenta: no es una de las cinco de Training sino la de los hábitos propios sin categoría.
+    const iconos = Object.entries(ICONO_DE_LA_DIMENSION).filter(([clave]) => clave !== 'MIS_HABITOS').map(([, icono]) => icono);
     expect(new Set(iconos).size).toBe(5);
     expect(iconos).not.toContain('body');
     expect(iconos).not.toContain('spark');
@@ -76,12 +79,6 @@ describe('ICONO_DE_LA_DIMENSION: la fuente única', () => {
     expect(training).not.toMatch(/\bicon:\s*'/);
     expect(practicas).not.toMatch(/\bicon:\s*'/);
     expect((practicas.match(/<Icon name=\{iconoDeLaDimension\(d\.key\)\}/g) ?? []).length).toBe(1);
-  });
-
-  it('el paso «Hitos» del Mapa usa el ícono del eje, no una tabla propia', () => {
-    const hitos = sinComentarios(leer('features/mapa-renacimiento/screens/HitosScreen.tsx'));
-    expect(hitos).not.toMatch(/const ICONO\b/);
-    expect(hitos).toContain('<Icon name={iconoDelEje(EJE_POR_AREA[area])}');
   });
 });
 

@@ -10,8 +10,10 @@ import { DIAS_DEL_PROGRAMA } from '../hooks/useResumenHome';
  * > (90 − 7, de cuando el Mapa vivía en el Día 7). Una cuenta en el día 15 leía 75 en Hoy y 83 al
  * > tocar la tarjeta. Una sola cuenta, en un solo lugar.
  */
-export function diasQueQuedan(diaPrograma: number): number {
-  return Math.max(1, DIAS_DEL_PROGRAMA - diaPrograma);
+export function diasQueQuedan(diaPrograma: number, duracionDias: number | null | undefined = DIAS_DEL_PROGRAMA): number {
+  /* Spec 022: cada persona tiene SU duración (90, o 365 en el Diplomado de un año); sin ella, la de siempre. */
+  const duracion = typeof duracionDias === 'number' && duracionDias > 0 ? duracionDias : DIAS_DEL_PROGRAMA;
+  return Math.max(1, duracion - diaPrograma);
 }
 
 /** Lo que se sabe del día del programa: el `GET /api/v1/home` de Hoy o el de `useProgramaDia`. */
@@ -19,6 +21,8 @@ export type DiaQueSeSabe = {
   diaPrograma: number | null | undefined;
   inscrito: boolean | null | undefined;
   cargando: boolean;
+  /** Spec 022: los días de su programa; sin ellos, 90. */
+  duracionDias?: number | null;
 };
 
 /**
@@ -28,9 +32,9 @@ export type DiaQueSeSabe = {
  * con un día inventado (el «DÍA 1 DE 90» de Hoy, corregido el 2026-09-07; el `?? 0` con el que la
  * tarjeta del Mapa de Hoy decía «los próximos 90 días» con `/home` caído).
  */
-export function diasQueQuedanSiSeSabe({ diaPrograma, inscrito, cargando }: DiaQueSeSabe): number | null {
+export function diasQueQuedanSiSeSabe({ diaPrograma, inscrito, cargando, duracionDias }: DiaQueSeSabe): number | null {
   if (cargando || !inscrito || typeof diaPrograma !== 'number') return null;
-  return diasQueQuedan(diaPrograma);
+  return diasQueQuedan(diaPrograma, duracionDias);
 }
 
 /**

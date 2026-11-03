@@ -127,6 +127,8 @@ describe('lastDayAdjustment', () => {
       motivo: 'Viajó',
       ajustadoPor: 'admin-1',
       ajustadoEn: '2026-09-26T15:00:00Z',
+      duracionAnterior: null,
+      duracionNueva: null,
     });
   });
 
@@ -140,6 +142,8 @@ describe('lastDayAdjustment', () => {
       motivo: null,
       ajustadoPor: null,
       ajustadoEn: null,
+      duracionAnterior: null,
+      duracionNueva: null,
     });
   });
 

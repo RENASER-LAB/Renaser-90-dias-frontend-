@@ -10,7 +10,7 @@ import { escucharDiaUnoElegido } from '../events/avisoDiaUnoElegido';
  * `diaPrograma === 0` esconde DOS situaciones que en pantalla se veían idénticas — un plan
  * vacío, sin una palabra — y que para el aprendiz son muy distintas:
  *
- *  - `PENDIENTE_ELEGIR`: nunca eligió su Día 1. Hay algo que hacer, y la app tiene que
+ *  - `PENDIENTE_ELEGIR`: nunca empezó su programa. Hay algo que hacer, y la app tiene que
  *    llevarlo ahí.
  *  - `ESPERANDO_INICIO`: ya eligió, la fecha todavía no llegó. No hay nada que hacer más que
  *    esperar, y saber la fecha exacta es justamente lo que calma.
@@ -25,7 +25,12 @@ import { escucharDiaUnoElegido } from '../events/avisoDiaUnoElegido';
 export type ArranquePrograma =
   | { estado: 'CARGANDO' }
   | { estado: 'ERROR'; reintentar: () => void; mensaje?: string }
-  | { estado: 'EN_CURSO' }
+  /**
+   * `fechaInicio` (2026-11-01, issue #72): el programa está activado y todavía no llegó su Día 1, pero empieza HOY o MAÑANA, así que a efectos
+   * de planificar ya está «en curso» (D-103). Sin este dato Hoy no podía decirle a esa persona cuándo empieza. Solo viene si la fecha
+   * es posterior a hoy; una fecha de hoy o pasada no significa «todavía no arrancó» (D-90), y entonces no hay nada que decir.
+   */
+  | { estado: 'EN_CURSO'; fechaInicio?: string }
   | { estado: 'PENDIENTE_ELEGIR' }
   | { estado: 'ESPERANDO_INICIO'; fechaInicio: string };
 
@@ -48,6 +53,11 @@ function empiezaDespuesDeManana(yyyyMmDd: string): boolean {
   return yyyyMmDd > fechaCivil(manana);
 }
 
+/** `true` si `yyyyMmDd` es posterior a hoy en el día civil del dispositivo (misma comparación de cadenas que arriba). */
+function empiezaDespuesDeHoy(yyyyMmDd: string): boolean {
+  return yyyyMmDd > fechaCivil(new Date());
+}
+
 /** Fecha civil del dispositivo como `YYYY-MM-DD`, sin pasar por UTC (ver `formatearFechaLarga`). */
 function fechaCivil(fecha: Date): string {
   return `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}-${String(
@@ -56,8 +66,8 @@ function fechaCivil(fecha: Date): string {
 }
 
 /**
- * `version` (D-260): cambiarla vuelve a consultar. La usa quien acaba de elegir su Día 1 desde
- * «Elegir mi Día 1» (Training, Hoy, Yo): sin esto el aviso «Todavía no elegiste tu Día 1» seguía en
+ * `version` (D-260): cambiarla vuelve a consultar. La usa quien acaba de empezar su programa desde
+ * «Empezar mañana» (Training, Hoy, Yo): sin esto el aviso «Todavía no empezaste tu programa» seguía en
  * pantalla después de elegirlo, porque `habilitado` no cambia (el día sigue en 0 hasta que llega).
  */
 export function useArranqueDelPrograma(habilitado: boolean, version = 0, usuarioId?: string | null): ArranquePrograma {
@@ -90,8 +100,11 @@ export function useArranqueDelPrograma(habilitado: boolean, version = 0, usuario
           poner({ estado: 'ESPERANDO_INICIO', fechaInicio: estado.startDate });
         } else if (estado.activated) {
           // Activado pero sin fecha: backend viejo, o staff con seguimiento personal. No hay
-          // nada que explicarle al aprendiz, así que no se lo bloquea.
-          poner({ estado: 'EN_CURSO' });
+          // nada que explicarle al aprendiz, así que no se lo bloquea. Si la fecha es MAÑANA se
+          // guarda: no bloquea nada, pero Hoy la dice (issue #72).
+          poner(estado.startDate && empiezaDespuesDeHoy(estado.startDate)
+            ? { estado: 'EN_CURSO', fechaInicio: estado.startDate }
+            : { estado: 'EN_CURSO' });
         } else {
           poner({ estado: 'PENDIENTE_ELEGIR' });
         }

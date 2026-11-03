@@ -1,0 +1,45 @@
+# Pasar a un aprendiz que terminó a otra formación (spec 022, historia 7). ESCRITO Y SIN CORRER.
+# cuenta: admin
+# PERSONA_QUE_TERMINO = parte del nombre de un aprendiz de la ESCUELA con programa_completado = true (la búsqueda es del servidor).
+# Cambia datos: usar una base clonada. Después de este flujo la persona queda en el Diplomado, día 0, sin grupo, con su historial.
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "YO"
+- scrollUntilVisible:
+    element: "Administración"
+    direction: DOWN
+    timeout: 40000
+- tapOn: "Administración"
+- tapOn: "Personas"
+- extendedWaitUntil:
+    visible: "Buscar por nombre o correo"
+    timeout: 30000
+- tapOn: "Buscar por nombre o correo"
+- inputText: "${PERSONA_QUE_TERMINO}"
+- hideKeyboard
+- tapOn: ".*${PERSONA_QUE_TERMINO}.*"
+- extendedWaitUntil:
+    visible: "Formación"
+    timeout: 30000
+- assertVisible: "Escuela Renaser · 3 meses"
+- takeScreenshot: F06a-ficha-con-su-formacion
+- tapOn: "Pasar a otra formación"
+- extendedWaitUntil:
+    visible: "¿A cuál pasa?"
+    timeout: 30000
+- tapOn: "Diplomado Renaser"
+- tapOn: "1 año \\(365 días\\)"
+- takeScreenshot: F06b-hoja-de-traslado
+- tapOn: "Pasar de formación"
+# La confirmación dice que empieza de cero allí.
+- extendedWaitUntil:
+    visible: ".*empieza de cero.*"
+    timeout: 20000
+- tapOn: "Pasar de formación"
+- extendedWaitUntil:
+    visible: "Diplomado Renaser · 1 año"
+    timeout: 30000
+- assertVisible: "Antes cursó"
+- assertVisible: "Escuela Renaser · 3 meses"
+- takeScreenshot: F06c-ficha-tras-el-traslado

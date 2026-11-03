@@ -29,12 +29,12 @@ const accion = (extra: Partial<RocaDiariaApi> = {}): RocaDiariaApi => ({
 });
 
 const alEmpezar = jest.fn();
-const alHacerElMapa = jest.fn();
+const alIrAPlan = jest.fn();
 const alAgendar = jest.fn();
 let raiz: ReactTestRenderer | null = null;
 function montar(vista: VistaDeLaAccionDeHoy, meta: string | null = null) {
   act(() => {
-    raiz = TestRenderer.create(React.createElement(TarjetaAccionDeHoy, { vista, meta, alEmpezar, alHacerElMapa, alAgendar }));
+    raiz = TestRenderer.create(React.createElement(TarjetaAccionDeHoy, { vista, meta, alEmpezar, alIrAPlan, alAgendar }));
   });
 }
 const textosDe = (): string[] =>
@@ -48,7 +48,7 @@ afterEach(() => {
   act(() => raiz?.unmount());
   raiz = null;
   alEmpezar.mockReset();
-  alHacerElMapa.mockReset();
+  alIrAPlan.mockReset();
   alAgendar.mockReset();
 });
 
@@ -107,14 +107,40 @@ describe('la acción que sigue', () => {
 });
 
 describe('los otros contenidos, con el mismo esqueleto', () => {
-  it('sin Mapa activo: una fila compacta «Haz tu Mapa de Renacimiento», toda tocable, sin botón dorado', () => {
-    montar({ tipo: 'mapa' });
-    expect(textosDe()).toContain('Haz tu Mapa de Renacimiento');
-    expect(textosDe()).toContain('De ahí nace tu objetivo de 90 días.');
-    expect(iconos()).toEqual(expect.arrayContaining(['map', 'chevron']));
-    expect(textosDe().some(x => x.includes('Hacer mi Mapa'))).toBe(false);
+  it('sin objetivos de 90 días: una fila compacta «Define tu objetivo de 90 días en Plan», toda tocable, sin botón dorado', () => {
+    montar({ tipo: 'sin-objetivos' });
+    expect(textosDe()).toContain('Define tu objetivo de 90 días en Plan');
+    expect(textosDe()).toContain('Escribir mi objetivo');
+    expect(iconos()).toEqual(expect.arrayContaining(['flag', 'chevron']));
+    // Sin el botón dorado de las otras tarjetas (su degradado): la fila entera es el botón.
+    expect(raiz!.root.findAll(x => Array.isArray(x.props.colors)).length).toBe(0);
     act(() => botones()[0].props.onPress());
-    expect(alHacerElMapa).toHaveBeenCalledTimes(1);
+    expect(alIrAPlan).toHaveBeenCalledTimes(1);
+    expect(alAgendar).not.toHaveBeenCalled();
+  });
+
+  it('con objetivos del diagnóstico por confirmar: «Confirma tus objetivos de 90 días», con «Confirmar», que lleva a Plan', () => {
+    montar({ tipo: 'por-confirmar', cantidad: 3 });
+    expect(textosDe()).toContain('Confirma tus objetivos de 90 días');
+    expect(textosDe()).toContain('Confirmar');
+    act(() => botones()[0].props.onPress());
+    expect(alIrAPlan).toHaveBeenCalledTimes(1);
+  });
+
+  it('las dos filas compactas dicen el título y la acción también al lector de pantalla, y no nombran el Mapa', () => {
+    for (const vista of [{ tipo: 'sin-objetivos' }, { tipo: 'por-confirmar', cantidad: 2 }] as const) {
+      montar(vista);
+      expect(botones()[0].props.accessibilityLabel).toMatch(/^(Define tu objetivo de 90 días en Plan\. Escribir mi objetivo\.|Confirma tus objetivos de 90 días\. Confirmar\.)$/);
+      expect(textosDe().join(' ')).not.toContain('Mapa');
+      expect(iconos()).not.toContain('map');
+      act(() => raiz?.unmount());
+    }
+  });
+
+  it('la fila compacta no crece: del mismo alto que la de Coherencia / Racha (72 de mínimo), no la tarjeta grande', () => {
+    montar({ tipo: 'sin-objetivos' });
+    const estilo = StyleSheet.flatten(botones()[0].props.style);
+    expect(estilo.minHeight).toBe(72);
   });
 
   it('sin acciones hoy: «Hoy no tienes acciones agendadas», con «Agendar en Plan»', () => {

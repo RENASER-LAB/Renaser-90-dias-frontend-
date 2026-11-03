@@ -4,6 +4,7 @@ import { Alert } from '../../../components/Alerta';
 import { mensajeDeError } from '../../../services/http/apiClient';
 import { tacto } from '../../../utils/tacto';
 import * as wallApi from '../../community/api/wallApi';
+import { useFormacionDeLaComunidad } from '../../formaciones/hooks/useFormacionDeLaComunidad';
 import { avisarMuroModerado } from '../../community/events/muroModerado';
 import type { WallPost } from '../../community/types/community.types';
 import {
@@ -35,6 +36,9 @@ type Accion = 'devolver' | 'eliminar';
  *   Leer la cola falla aparte (`fallo`) y se reintenta; traer más no borra lo que ya se ve (`falloAlTraerMas`).
  */
 export function usePublicacionesOcultas() {
+  /* Spec 024: Administración, Alquimista y Soporte TI leen la cola de la formación que eligieron (el selector está en la propia
+     pantalla); las demás cuentas no mandan nada. Al cambiar la elección se lee de nuevo. */
+  const { formation, listo: formacionLista } = useFormacionDeLaComunidad();
   const [filas, setFilas] = useState<WallPost[] | null>(null);
   const [cursor, setCursor] = useState<string | null>(null);
   const [cargando, setCargando] = useState(true);
@@ -49,12 +53,13 @@ export function usePublicacionesOcultas() {
   const pidiendoMas = useRef(false);
 
   const cargar = useCallback(async () => {
+    if (!formacionLista) return;
     const lectura = ++lecturaActual.current;
     setCargando(true);
     setFallo(null);
     setFalloAlTraerMas(false);
     try {
-      const pagina = await wallApi.obtenerPublicacionesOcultas();
+      const pagina = await wallApi.obtenerPublicacionesOcultas(undefined, formation);
       if (lectura !== lecturaActual.current) return;
       setFilas(pagina.posts);
       setCursor(pagina.nextCursor);
@@ -64,7 +69,7 @@ export function usePublicacionesOcultas() {
     } finally {
       if (lectura === lecturaActual.current) setCargando(false);
     }
-  }, []);
+  }, [formation, formacionLista]);
 
   useEffect(() => {
     void cargar();
@@ -80,7 +85,7 @@ export function usePublicacionesOcultas() {
     setFalloAlTraerMas(false);
     const lectura = lecturaActual.current;
     try {
-      const pagina = await wallApi.obtenerPublicacionesOcultas(cursor);
+      const pagina = await wallApi.obtenerPublicacionesOcultas(cursor, formation);
       if (lectura !== lecturaActual.current) return;
       setFilas(previas => {
         const yaEstan = new Set((previas ?? []).map(p => p.id));
@@ -93,7 +98,7 @@ export function usePublicacionesOcultas() {
       pidiendoMas.current = false;
       setCargandoMas(false);
     }
-  }, [cursor]);
+  }, [cursor, formation]);
 
   const terminar = useCallback((resultado: ResultadoDeModeracion, id: string, accion: Accion) => {
     const quitar = () => setFilas(previas => (previas ? previas.filter(p => p.id !== id) : previas));

@@ -3,7 +3,7 @@
  * por eje en lugar del arco. Se lee el código fuente sin comentarios —estas pantallas montan medio app—; los
  * comportamientos están en las pruebas de cada pieza.
  *
- * Contra el código anterior falla: Hoy dibujaba la tarjeta aparte del Código Renaser antes del Mapa y una tarjeta de hábitos
+ * Contra el código anterior falla: Hoy dibujaba la tarjeta aparte del Código Renaser antes de las demás y una tarjeta de hábitos
  * propia, y Plan abría con el arco «Día 20 de 90» (`ArcoDelDia`).
  */
 import { describe, expect, it } from '@jest/globals';
@@ -18,10 +18,10 @@ const leer = (relativo: string) => sinComentarios(fs.readFileSync(path.join(RAIZ
 describe('Hoy: hábitos y Radar en una tarjeta', () => {
   const HOY = leer('screens/HoyScreen.tsx');
 
-  it('una sola tarjeta con las dos mitades, después del Mapa; ya no hay tarjeta aparte del Código Renaser', () => {
+  it('una sola tarjeta con las dos mitades, después de la del diagnóstico pendiente; ya no hay tarjeta aparte del Código Renaser', () => {
     expect(HOY).toMatch(/<TarjetaHabitoYRadar\b/);
     expect(HOY).not.toContain('TarjetaCodigoRenaser');
-    expect(HOY.indexOf('<TarjetaHabitoYRadar')).toBeGreaterThan(HOY.indexOf('{tituloMapa}'));
+    expect(HOY.indexOf('<TarjetaHabitoYRadar')).toBeGreaterThan(HOY.indexOf('<TarjetaDelDiagnosticoPendiente'));
     // La tarjeta de hábitos de antes ya no está suelta en la pantalla.
     expect(HOY).not.toMatch(/<MicroLabel>Hábitos de hoy<\/MicroLabel>/);
   });

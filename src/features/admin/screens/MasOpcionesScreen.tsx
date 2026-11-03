@@ -31,7 +31,10 @@ export function MasOpcionesScreen({
   onAbrirBienvenida,
   onAbrirImagenesDeFases,
   onAbrirHabitosDelPrograma,
+  onAbrirFichas,
   onAbrirPublicacionesOcultas,
+  onAbrirCodigoRenaserEnFichas,
+  onAbrirTerminos,
 }: {
   onVolver: () => void;
   onAbrirStaff: () => void;
@@ -39,7 +42,10 @@ export function MasOpcionesScreen({
   onAbrirBienvenida: () => void;
   onAbrirImagenesDeFases: () => void;
   onAbrirHabitosDelPrograma: () => void;
+  onAbrirFichas: () => void;
   onAbrirPublicacionesOcultas: () => void;
+  onAbrirCodigoRenaserEnFichas: () => void;
+  onAbrirTerminos: () => void;
 }) {
   const barraAlDesplazar = useOcultarBarraAlDesplazar();
   const { c, t } = useTheme();
@@ -76,6 +82,14 @@ export function MasOpcionesScreen({
       onPress: onAbrirHabitosDelPrograma,
       clave: CLAVES.adminHabitos,
     },
+    /* Las fichas de ingreso: el diagnóstico (armarlo, publicarlo y asignarlo) y la estándar, que solo se nombra (spec 026). Sigue la
+       disponibilidad de las personas: asignar una ficha es decidir cómo entra alguien. */
+    {
+      titulo: 'Fichas',
+      detalle: 'El diagnóstico inicial: armarlo, publicarlo y asignarlo a las personas',
+      onPress: onAbrirFichas,
+      clave: CLAVES.adminPersonas,
+    },
     /* Lo que se ocultó del Muro, para devolverlo o eliminarlo para siempre (pedido del dueño del 31/10). Sigue al Muro:
        si el Muro no le toca a esta cuenta, la fila tampoco. */
     {
@@ -83,6 +97,21 @@ export function MasOpcionesScreen({
       detalle: 'Devolver al Muro lo que se ocultó, o eliminarlo para siempre',
       onPress: onAbrirPublicacionesOcultas,
       clave: CLAVES.muro,
+    },
+    /* Quién ve el Código Renaser en las fichas: un solo interruptor para el mentor, la guía y el líder (pedido del dueño del
+       31/10, backend D-299, spec 034). Apagado de fábrica. */
+    {
+      titulo: 'Código Renaser en las fichas',
+      detalle: 'Si el mentor y el líder ven el Código Renaser de los aprendices',
+      onPress: onAbrirCodigoRenaserEnFichas,
+      clave: CLAVES.admin,
+    },
+    /* El texto legal que firma cada persona al entrar, editable y con versiones, uno por formación (pedido del dueño del 31/10, backend D-304). */
+    {
+      titulo: 'Términos y condiciones',
+      detalle: 'Editar y publicar los términos de cada formación, con su historial',
+      onPress: onAbrirTerminos,
+      clave: CLAVES.adminPersonas,
     },
     {
       titulo: 'Equipo y roles',

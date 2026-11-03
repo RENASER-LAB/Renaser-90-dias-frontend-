@@ -17,7 +17,12 @@ export type EstadoOnboardingApi = {
   lastActivityAt: string | null;
   completed: boolean;
   completedAt: string | null;
+  /** Spec 026: la ficha de ingreso que le toca. Siempre viene resuelta (sin el campo, `ESTANDAR`). */
+  ficha: FichaDeIngreso;
 };
+
+/** La ficha de ingreso de una persona: la estándar de siempre o el diagnóstico (spec 026). */
+export type FichaDeIngreso = 'ESTANDAR' | 'CON_DIAGNOSTICO';
 
 /**
  * Espejo de `AceptarHitoRequest.milestone` (backend, enum `HitoOnboarding`, SOLO LECTURA). Los 4
@@ -27,9 +32,9 @@ export type HitoOnboarding = 'TERMINOS' | 'PACTO' | 'PACTO_FIRMADO' | 'ROCAS_SYN
 
 /**
  * Espejo de `EstadoActivacionProgramaResponse` (backend, `GET /onboarding/activate-program`,
- * SOLO LECTURA). `validStartDates` en formato `yyyy-MM-dd`, siempre mañana/+2/+3 en la zona del
- * aprendiz — nunca hoy (ver `ParticipacionPrograma.activarPrograma`, backend). Vacío cuando
- * `activated` ya es `true`.
+ * SOLO LECTURA). `validStartDates` en formato `yyyy-MM-dd`: desde la spec 036 (D-309) es UNA fecha, mañana en la
+ * zona de la persona — nunca hoy (un servidor anterior mandaba tres: mañana, +2 y +3; la primera es siempre mañana). Ver
+ * `ParticipacionPrograma.activarPrograma`, backend. Vacío cuando `activated` ya es `true`.
  */
 export type EstadoActivacionProgramaApi = {
   activated: boolean;
@@ -40,8 +45,11 @@ export type EstadoActivacionProgramaApi = {
 
 /** Espejo de `ActivarProgramaRequest` (backend, `POST /onboarding/activate-program`). */
 export type ActivarProgramaInput = {
-  /** Formato `yyyy-MM-dd`, una de las fechas devueltas por `EstadoActivacionProgramaApi`. */
-  startDate: string;
+  /**
+   * Formato `yyyy-MM-dd`: la que devolvió `EstadoActivacionProgramaApi` (mañana). Si ya no es mañana el servidor responde 400. Opcional desde la
+   * spec 036: ausente significa «mañana en tu zona» (así activa el onboarding al firmar); un servidor anterior la exige.
+   */
+  startDate?: string;
 };
 
 /** Espejo de `ActivarProgramaResponse` (backend, respuesta de `POST /onboarding/activate-program`). */

@@ -10,7 +10,7 @@
 export function subtituloDelAlumno(diaPrograma: number | null, diasSinActividad: number | null): string | null {
   const partes: string[] = [];
   if (diaPrograma !== null) {
-    partes.push(diaPrograma <= 0 ? 'Todavía no arrancó su programa' : `Día ${diaPrograma} de 90`);
+    partes.push(diaPrograma <= 0 ? 'Todavía no arrancó su programa' : `Día ${diaPrograma}`);
   }
   if (diasSinActividad !== null) {
     partes.push(

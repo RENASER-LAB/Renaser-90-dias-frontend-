@@ -11,6 +11,12 @@
         "buildType": "apk"
       }
     },
+    "debug-pasos": {
+      "distribution": "internal",
+      "android": {
+        "gradleCommand": ":app:assembleDebug"
+      }
+    },
     "preview": {
       "distribution": "internal",
       "autoIncrement": true,

@@ -1,0 +1,42 @@
+# «Hábitos de todos» (spec 029): un día a la vez. ‹ lleva a ayer (con un rótulo distinto de «Hoy»), › vuelve a hoy y se apaga ahí;
+# en el día más antiguo (7 atrás) ‹ se apaga. Nada se anima: cambiar de día es instantáneo.
+# ESCRITO Y SIN CORRER. cuenta: admin (el LÍDER DE MENTORES).
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "YO"
+- scrollUntilVisible:
+    element: "Mis mentores"
+    direction: DOWN
+    timeout: 40000
+- tapOn: "Mis mentores"
+- scrollUntilVisible:
+    element: "Hábitos de todos"
+    direction: DOWN
+    timeout: 60000
+- tapOn: "Hábitos de todos"
+- extendedWaitUntil:
+    visible: "Hoy"
+    timeout: 30000
+# Ayer: el rótulo cambia y la flecha de «Día siguiente» se enciende.
+- tapOn: "Día anterior"
+- extendedWaitUntil:
+    visible: "Ayer"
+    timeout: 30000
+- takeScreenshot: H02a-ayer
+# De vuelta a hoy.
+- tapOn: "Día siguiente"
+- extendedWaitUntil:
+    visible: "Hoy"
+    timeout: 30000
+# Siete días atrás (el límite que dice el servidor): después de la séptima, ‹ no hace nada y el rótulo no cambia.
+- repeat:
+    times: 8
+    commands:
+      - tapOn: "Día anterior"
+- takeScreenshot: H02b-el-dia-mas-antiguo
+- assertNotVisible: "Hoy"
+- back
+- extendedWaitUntil:
+    visible: "Resultado por grupo"
+    timeout: 20000

@@ -43,8 +43,12 @@ jest.mock('../../hooks/usePersistenciaOnboarding', () => ({
     guardarCapitulo: (respuestas: unknown) => mockGuardarCapitulo(respuestas),
     guardarFirma: (firma: unknown) => mockGuardarFirma(firma),
     aceptarHito: async () => undefined,
+    aceptarTerminos: async () => ({ ok: true }),
     avanzarEstado: async () => undefined,
   }),
+}));
+jest.mock('../../terminos/hooks/useMisTerminos', () => ({
+  useMisTerminos: () => ({ terminos: null, cargada: true, recargar: async () => null }),
 }));
 
 import { TerminosScreen } from '../TerminosScreen';
@@ -62,7 +66,7 @@ function montar(): ReactTestRenderer {
   return r;
 }
 
-const continuar = (r: ReactTestRenderer) => r.root.findAll(n => n.props.label === 'CONTINUAR')[0];
+const continuar = (r: ReactTestRenderer) => r.root.findAll(n => n.props.label === 'Continuar')[0];
 
 /** Como en la pantalla: un botón apagado (o guardando) no responde al toque. */
 async function tocarContinuar(r: ReactTestRenderer) {

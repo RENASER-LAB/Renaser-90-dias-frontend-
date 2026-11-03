@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { formacionDeLaLectura } from '../../formaciones/estado/formacionDeLaComunidad';
 import * as eventosApi from '../api/eventosApi';
 import type { Asistencia, Ocurrencia } from '../types/eventos.types';
 import { rangoDelPedido, type Mes } from '../utils/calendarioDelMes';
@@ -31,7 +32,7 @@ export function useEventosDelMes(mes: Mes, zona: string, activo: boolean) {
     lectura.current = crearLecturaVigente(
       () => {
         const { desde, hasta } = rangoDelPedido(mesPedido.current, zona);
-        return eventosApi.listarEventos(desde, hasta);
+        return eventosApi.listarEventos(desde, hasta, formacionDeLaLectura());
       },
       resultado => {
         if (!resultado.ok) {

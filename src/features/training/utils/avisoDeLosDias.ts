@@ -200,6 +200,11 @@ export interface DiaDelEditor {
   alarma?: CombinacionDeAlarma | null;
   /** Spec 009: `true` si «cómo suena» es propio de ese día. */
   alarmaPropia?: boolean;
+  /**
+   * Spec 028: `true` si esa FECHA tiene cambio «solo esta semana» (fila propia de la fecha). Solo lo trae la lectura de la
+   * semana (`diasDelEditorDeLaSemana`); en «Todas las semanas» no existe.
+   */
+  propioDeLaFecha?: boolean;
 }
 
 /**

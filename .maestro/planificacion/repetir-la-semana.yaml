@@ -1,0 +1,111 @@
+# Repetir la semana (spec 028, decisiones del dueño 028-1 A y 028-3): con un cambio de la semana en curso («Por semana»), «Tus
+# prácticas» ofrece «Repetir tu semana» (la en curso, en la siguiente) con «Repetir», «Ahora no» y «Ver qué se repite»; repetir la deja
+# igual en un toque y se puede «Deshacer». «Ahora no» no vuelve mientras la semana modelo no cambie.
+# ESCRITO Y SIN CORRER (2026-11-02: adaptado a «Siempre | Por semana»). Precondición: backend con la spec 028; aprendiz con el Día 1
+# elegido y un hábito de la dimensión `DIMENSION` SIN cambios por semana (por defecto «Escritura libre nocturna» de «Mente», que existe
+# en la base de prueba de Ana; otro: `-e HABITO="Jugo verde" -e DIMENSION=Cuerpo`), la semana siguiente sin cambios propios, y que hoy no
+# sea sábado ni domingo (con un cambio solo en la semana en curso hace falta al menos un día por delante). Los avisos que se van solos a
+# los 3 s («Queda con aviso nuevo…», «volvió al plan de siempre») NO se esperan: se comprueba lo que queda en pantalla.
+# cuenta: aprendiz
+appId: com.renaser.app
+env:
+  HABITO: "Escritura libre nocturna"
+  DIMENSION: "Mente"
+---
+- runFlow: ../comun/ya-adentro.yaml
+- runFlow: ../comun/abrir-training.yaml
+- tapOn: "Tus prácticas: planificar"
+- extendedWaitUntil:
+    visible: "Tus prácticas"
+    timeout: 15000
+# Sin cambios por semana no hay oferta.
+- assertNotVisible: "Repetir tu semana"
+# Se hace un cambio en la semana en curso (un aviso «A la hora» en el hábito).
+- tapOn: "${DIMENSION}: .* de .* cumplidos hoy"
+- extendedWaitUntil:
+    visible: "Toca uno para cambiarle la hora\\."
+    timeout: 15000
+- tapOn: "${HABITO}, .*"
+- extendedWaitUntil:
+    visible: "Guardar .*"
+    timeout: 15000
+- tapOn: "El cambio vale solo para la semana que elijas"
+- extendedWaitUntil:
+    visible: "Semana del .* al .*"
+    timeout: 15000
+- tapOn: "A la hora exacta"
+- tapOn: "Guardar aviso · .*semana .*"
+# El estado que queda guardado (el aviso de confirmación se va solo y no se espera).
+- extendedWaitUntil:
+    visible: "Volver al plan de siempre los .*"
+    timeout: 20000
+- assertVisible: ".*cambiado solo esta semana.*"
+# Cerrar la hoja: «Tus prácticas» vuelve a leer y ofrece repetir.
+- back
+- back
+- extendedWaitUntil:
+    visible: "Repetir tu semana"
+    timeout: 20000
+- assertVisible: "Tu semana del .* al .*, en la del .* al .*"
+- assertVisible: "Ver qué se repite"
+- assertVisible: "Ahora no"
+- takeScreenshot: R01a-oferta
+# Ver qué se repite: el resumen por hábito (en tipo oración, no en mayúsculas: #94), sin enviar nada.
+- tapOn: "Ver qué se repite"
+- extendedWaitUntil:
+    visible: "Qué se repite"
+    timeout: 15000
+- assertVisible: "${HABITO}"
+- assertVisible: ".*aviso a la hora.*"
+- takeScreenshot: R01b-que-se-repite
+- back
+- extendedWaitUntil:
+    visible: "Repetir tu semana"
+    timeout: 15000
+# Repetir en un toque: la semana siguiente queda como esta y se puede deshacer (el texto de la tarjeta se queda hasta salir).
+- tapOn: "Repetir"
+- extendedWaitUntil:
+    visible: "Tu semana del .* quedó como esta"
+    timeout: 20000
+- assertVisible: "Deshacer"
+- assertNotVisible: "Repetir tu semana"
+- takeScreenshot: R01c-repetida
+- tapOn: "Deshacer: volver al plan de siempre"
+# «Tu semana del … volvió al plan de siempre» dura ~3 s: no se espera. Lo que queda: la tarjeta de «quedó como esta» se fue.
+- extendedWaitUntil:
+    visible: "Tu semana del .* volvió al plan de siempre"
+    timeout: 20000
+    optional: true
+- assertNotVisible: "Tu semana del .* quedó como esta"
+# La semana modelo sigue con su cambio, así que la oferta vuelve a salir.
+- extendedWaitUntil:
+    visible: "Repetir tu semana"
+    timeout: 20000
+# «Ahora no» no vuelve mientras la semana modelo no cambie.
+- tapOn: "Ahora no repetir la semana"
+- assertNotVisible: "Repetir tu semana"
+- takeScreenshot: R01d-ahora-no
+- back
+- extendedWaitUntil:
+    visible: "Tus prácticas: planificar"
+    timeout: 20000
+- tapOn: "Tus prácticas: planificar"
+- extendedWaitUntil:
+    visible: "Tus prácticas"
+    timeout: 15000
+- assertNotVisible: "Repetir tu semana"
+# Limpieza: el cambio de la semana en curso vuelve al plan de siempre. El hábito abre solo en «Por semana», en esa semana (issue #95).
+- tapOn: "${DIMENSION}: .* de .* cumplidos hoy"
+- extendedWaitUntil:
+    visible: "Toca uno para cambiarle la hora\\."
+    timeout: 15000
+- tapOn: "${HABITO}, .*"
+- extendedWaitUntil:
+    visible: "Volver al plan de siempre los .*"
+    timeout: 20000
+- tapOn: "Volver al plan de siempre los .*"
+- extendedWaitUntil:
+    notVisible: "Volver al plan de siempre los .*"
+    timeout: 20000
+- back
+- back

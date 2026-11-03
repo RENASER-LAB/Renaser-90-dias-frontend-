@@ -26,22 +26,26 @@ export function MisMentoresEnYo({
   verConsultas,
   verMentores,
   verTodos,
+  verHabitos,
   onVolver,
   onAbrirGrupo,
   onAbrirConsultas,
   onAbrirMentores,
   onAbrirTodos,
+  onAbrirHabitos,
 }: {
   lectura: LecturaDeGrupos;
   verGrupos: boolean;
   verConsultas: boolean;
   verMentores: boolean;
   verTodos: boolean;
+  verHabitos: boolean;
   onVolver: () => void;
   onAbrirGrupo: (grupo: GrupoDelResumen, inicio: InicioSemanal) => void;
   onAbrirConsultas: () => void;
   onAbrirMentores: () => void;
   onAbrirTodos: () => void;
+  onAbrirHabitos: () => void;
 }) {
   const barraAlDesplazar = useOcultarBarraAlDesplazar();
   const { c } = useTheme();
@@ -76,10 +80,12 @@ export function MisMentoresEnYo({
           verConsultas={verConsultas}
           verMentores={verMentores}
           verTodos={verTodos}
+          verHabitos={verHabitos}
           onAbrirGrupo={onAbrirGrupo}
           onAbrirConsultas={onAbrirConsultas}
           onAbrirMentores={onAbrirMentores}
           onAbrirTodos={onAbrirTodos}
+          onAbrirHabitos={onAbrirHabitos}
         />
       </ScrollView>
     </SafeAreaView>

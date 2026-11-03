@@ -3,6 +3,7 @@
 # lista y queda en «N hechos hoy».
 # Precondición: el aprendiz tiene el hábito en su día de hoy y sin registrar; fotos en local (fotos-local + adb reverse).
 # Lo de días anteriores no importa: el flujo mide cuánto sube el total.
+# antes: .maestro/comun/estado-de-hoy.sh PENDIENTE DAILY_KM
 # cuenta: aprendiz
 appId: com.renaser.app
 ---
@@ -17,11 +18,7 @@ appId: com.renaser.app
 - tapOn: "(?i).*KILÓMETROS DIARIOS.*"
 # Con guía cargada, la fila abre la hoja del hábito con «Tomar foto» (la etiqueta es solo esas dos palabras); sin guía,
 # abre directo la hoja de origen.
-- runFlow:
-    when:
-      visible: "Tomar foto"
-    commands:
-      - tapOn: "Tomar foto"
+# La fila de Kilómetros abre DIRECTO la hoja de origen («Tomar foto» / «Elegir de la galería»): no hay una hoja del hábito antes. (Antes este bloque tocaba «Tomar foto» de la hoja del hábito; hoy ese texto es el de la propia hoja de origen y saltaba la comprobación.)
 # #41: solo este hábito pregunta de dónde sale la foto (la galería es para la captura de la app de actividad). Los demás
 # hábitos con foto abren la cámara directo (flujo 10). La fila se anuncia «Tomar foto. Con la cámara del teléfono».
 - extendedWaitUntil:
@@ -47,7 +44,7 @@ appId: com.renaser.app
     condition: ${Math.abs(parseFloat(maestro.copiedText.replace(/[^0-9,]/g, '').replace(',', '.')) - (output.totalAntes + 3.5)) < 0.01}
     label: "El total sube 3,5 km"
 - takeScreenshot: 01a-kilometros-escritos
-- tapOn: "REGISTRAR"
+- tapOn: "Registrar"
 - runFlow: ../comun/cerrar-aviso-dev.yaml
 - extendedWaitUntil:
     notVisible: "(?i)[0-9:]+, KILÓMETROS DIARIOS(, Te toca ahora|, Lo que sigue)?"

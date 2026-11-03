@@ -12,14 +12,18 @@ import { useResponsive } from '../../../theme/responsive';
 import { useTheme } from '../../../theme/ThemeContext';
 import { tacto } from '../../../utils/tacto';
 import { ESPACIO_PARA_LANZADOR } from '../../renasia/components/RenasiaLauncher';
+import { FiltroDeFormacion } from '../../formaciones/components/FiltroDeFormacion';
+import { nombreCortoDeFormacion, nombreLargoDeFormacion } from '../../formaciones/utils/nombreDeFormacion';
+import type { CategoriaAdmin } from '../../habits/categorias/types/categorias.types';
+import { TODAS_LAS_FORMACIONES } from '../api/habitosProgramaApi';
 import type { HabitoDelProgramaApi, RolElegibleApi } from '../api/habitosProgramaSchemas';
 import { CabeceraAdmin } from '../components/CabeceraAdmin';
 import { ChipDeOpcion } from '../components/ChipDeOpcion';
 import type { useHabitosProgramaAdmin } from '../hooks/useHabitosProgramaAdmin';
 import {
   aplicaAlRol,
-  etiquetaDeDimension,
   iconoDelHabito,
+  nombreDeLaCategoria,
   rigeDesdeManana,
   rolesDe,
   SIN_PERMISO_DE_HABITOS,
@@ -31,6 +35,11 @@ import {
  * a quién llega cada hábito, filtrable por rol, y desde acá crear o abrir uno para editarlo. Solo llegan
  * ADMIN y ALCHEMIST (Administración se muestra por `canAdminister`); un 403 igual se dice con palabras.
  *
+ * **Spec 023 (2026-10-31): el catálogo es POR FORMACIÓN.** Arriba, el filtro «Formación» (Todas + las tres): la lista, los filtros por
+ * rol y los activos/inactivos son los de la formación elegida, y la cabecera dice cuál es. En «Todas» solo se lee: cada fila lleva el
+ * nombre de su formación y no se crea nada (crear y editar ocurren siempre dentro de una formación concreta). De aquí también se entra a
+ * las categorías de la formación.
+ *
  * Movimiento (`emil-design-eng`): el filtro se toca seguido, así que cambia al instante, sin animación;
  * las filas solo responden al apretar (`Presionable`).
  */
@@ -38,17 +47,20 @@ export function HabitosProgramaAdminScreen({
   estado,
   onAbrir,
   onNuevo,
+  onCategorias,
   onVolver,
 }: {
   estado: ReturnType<typeof useHabitosProgramaAdmin>;
   onAbrir: (id: string) => void;
   onNuevo: () => void;
+  onCategorias: () => void;
   onVolver: () => void;
 }) {
   const barraAlDesplazar = useOcultarBarraAlDesplazar();
   const { c, t } = useTheme();
   const { horizontalPadding, contentMaxWidth } = useResponsive();
-  const { habitos, roles, cargando, fallo, recargar } = estado;
+  const { habitos, roles, cargando, fallo, recargar, formacion, elegirFormacion, categorias } = estado;
+  const enTodas = formacion === TODAS_LAS_FORMACIONES;
   const [rol, setRol] = useState<string | null>(null);
 
   useSystemBackHandler(() => {
@@ -61,6 +73,12 @@ export function HabitosProgramaAdminScreen({
   const inactivos = visibles.filter(h => !h.isActive);
   const cuerpo = [t.body, { color: c.textSoft, fontSize: 16, lineHeight: 23 }];
 
+  /* El filtro «Todas» del componente es `null`; aquí «Todas» es `ALL` para el servidor. */
+  const alElegirFormacion = (codigo: string | null) => {
+    setRol(null);
+    elegirFormacion(codigo ?? TODAS_LAS_FORMACIONES);
+  };
+
   const elegirRol = (codigo: string | null) => {
     if (codigo === rol) return;
     tacto.seleccion();
@@ -71,9 +89,9 @@ export function HabitosProgramaAdminScreen({
     <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
       <CabeceraAdmin
         titulo="Hábitos del programa"
-        subtitulo="Qué hábito le llega a cada rol"
+        subtitulo={enTodas ? 'Las tres formaciones · solo lectura' : nombreLargoDeFormacion(formacion)}
         onVolver={onVolver}
-        accion={habitos ? { etiqueta: 'Nuevo', onPress: onNuevo } : undefined}
+        accion={habitos && !enTodas ? { etiqueta: 'Nuevo', onPress: onNuevo } : undefined}
       />
       <ScrollView
         {...barraAlDesplazar}
@@ -88,6 +106,29 @@ export function HabitosProgramaAdminScreen({
           gap: 12,
         }}
       >
+        <View style={{ gap: 8 }}>
+          <Text style={[t.body, { color: c.textStrong, fontSize: 16, fontFamily: fuentes.media }]}>Formación</Text>
+          <FiltroDeFormacion valor={enTodas ? null : formacion} onCambiar={alElegirFormacion} />
+        </View>
+        {enTodas ? (
+          <Text style={cuerpo}>Para crear o cambiar hábitos y categorías, elige una formación. Cada formación tiene los suyos.</Text>
+        ) : (
+          <Presionable
+            onPress={onCategorias}
+            accessibilityRole="button"
+            accessibilityLabel={`Categorías de ${nombreCortoDeFormacion(formacion)}`}
+            style={[estilos.fila, { backgroundColor: c.cardBg, borderColor: c.border }]}
+          >
+            <View style={[estilos.baldosa, { backgroundColor: c.goldWash }]}>
+              <Icon name="layoutGrid" size={20} color={c.gold} />
+            </View>
+            <View style={{ flex: 1, flexShrink: 1, gap: 2 }}>
+              <Text style={[t.body, { color: c.textStrong, fontSize: 16, fontFamily: fuentes.media }]}>Categorías</Text>
+              <Text style={cuerpo}>Las dimensiones que ve esta formación en Training</Text>
+            </View>
+            <Icon name="chevron" size={16} color={c.chevron} />
+          </Presionable>
+        )}
         {cargando && !habitos ? <Text style={cuerpo}>Cargando los hábitos…</Text> : null}
         {!cargando && fallo && !habitos ? (
           <View style={{ gap: 10 }}>
@@ -119,19 +160,25 @@ export function HabitosProgramaAdminScreen({
             ) : null}
 
             {visibles.length === 0 ? (
-              <Text style={cuerpo}>{rol ? 'Ningún hábito llega a este rol.' : 'Todavía no hay hábitos en el programa.'}</Text>
+              <Text style={cuerpo}>
+                {rol
+                  ? 'Ningún hábito llega a este rol.'
+                  : enTodas
+                    ? 'Todavía no hay hábitos en ninguna formación.'
+                    : 'Esta formación todavía no tiene hábitos. Crea una categoría y el primer hábito.'}
+              </Text>
             ) : null}
             {activos.length > 0 ? (
               <Grupo titulo={`Activos · ${activos.length}`}>
                 {activos.map(h => (
-                  <FilaDeHabito key={h.id} habito={h} roles={roles} onPress={() => onAbrir(h.id)} />
+                  <FilaDeHabito key={h.id} habito={h} roles={roles} categorias={categorias} conFormacion={enTodas} onPress={() => onAbrir(h.id)} />
                 ))}
               </Grupo>
             ) : null}
             {inactivos.length > 0 ? (
               <Grupo titulo={`Inactivos · ${inactivos.length}`} detalle="No le llegan a nadie hasta que los actives.">
                 {inactivos.map(h => (
-                  <FilaDeHabito key={h.id} habito={h} roles={roles} onPress={() => onAbrir(h.id)} />
+                  <FilaDeHabito key={h.id} habito={h} roles={roles} categorias={categorias} conFormacion={enTodas} onPress={() => onAbrir(h.id)} />
                 ))}
               </Grupo>
             ) : null}
@@ -154,29 +201,41 @@ function Grupo({ titulo, detalle, children }: { titulo: string; detalle?: string
 function FilaDeHabito({
   habito,
   roles,
+  categorias,
+  conFormacion,
   onPress,
 }: {
   habito: HabitoDelProgramaApi;
   roles: readonly RolElegibleApi[];
+  categorias: readonly CategoriaAdmin[];
+  /** En «Todas» cada fila dice de qué formación es. */
+  conFormacion: boolean;
   onPress: () => void;
 }) {
   const { c, t } = useTheme();
   const audiencia = textoDeAudiencia(rolesDe(habito), roles);
   const pendiente = rigeDesdeManana(habito);
+  const deLaFormacion = habito.formation ?? 'ESCUELA';
+  const categoria = nombreDeLaCategoria(habito.category, categorias.filter(x => x.formation === deLaFormacion));
   return (
     <Presionable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`${habito.title}. ${etiquetaDeDimension(habito.category)}. ${audiencia}${pendiente ? '. Rige desde mañana' : ''}`}
+      accessibilityLabel={`${habito.title}. ${conFormacion ? `${nombreLargoDeFormacion(deLaFormacion)}. ` : ''}${categoria}. ${audiencia}${pendiente ? '. Rige desde mañana' : ''}`}
       style={[estilos.fila, { backgroundColor: c.cardBg, borderColor: c.border, opacity: habito.isActive ? 1 : 0.72 }]}
     >
       <View style={[estilos.baldosa, { backgroundColor: c.goldWash }]}>
-        <Icon name={iconoDelHabito(habito.category)} size={20} color={c.gold} />
+        <Icon name={iconoDelHabito(habito.category, categorias.filter(x => x.formation === deLaFormacion))} size={20} color={c.gold} />
       </View>
       <View style={{ flex: 1, flexShrink: 1, gap: 2 }}>
         <Text numberOfLines={2} style={[t.body, { color: c.textStrong, fontSize: 16, fontFamily: fuentes.media }]}>
           {habito.title}
         </Text>
+        {conFormacion ? (
+          <Text numberOfLines={1} style={[t.body, { color: c.goldInk, fontSize: 16, fontFamily: fuentes.media }]}>
+            {nombreLargoDeFormacion(deLaFormacion)}
+          </Text>
+        ) : null}
         <Text numberOfLines={2} style={[t.body, { color: c.textSoft, fontSize: 16 }]}>
           {audiencia}
         </Text>

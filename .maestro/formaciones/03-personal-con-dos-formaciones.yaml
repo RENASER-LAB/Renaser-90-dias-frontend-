@@ -1,0 +1,41 @@
+# El personal asignado a dos formaciones (spec 022, historia 5). ESCRITO Y SIN CORRER.
+# cuenta: aprendiz  (la ranura apunta a un MENTOR con filas en formaciones_personal para ESCUELA y DIPLOMADO, que NO eligió
+#                   todavía en este teléfono: sin `renaser.formacion.eligio.<id>` en AsyncStorage → `correr.sh` limpia la app)
+# Entra, elige el Diplomado, ve su nombre fijo; desde Yo cambia a la Escuela y ya no queda nada del Diplomado.
+appId: com.renaser.app
+---
+# La pregunta corta de la primera vez (antes de las pestañas, así que no usa ya-adentro).
+- extendedWaitUntil:
+    visible: "¿En qué formación vas a trabajar hoy?"
+    timeout: 60000
+- assertVisible: "Puedes cambiarla después desde Yo."
+- assertVisible: "Escuela Renaser.*"
+- takeScreenshot: F03a-pregunta-de-la-primera-vez
+- tapOn: "Diplomado Renaser"
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "HOY"
+- extendedWaitUntil:
+    visible: "Diplomado Renaser"
+    timeout: 30000
+- takeScreenshot: F03b-hoy-en-el-diplomado
+# Cambiar de formación desde Yo: la fila dice cuál está activa.
+- tapOn: "YO"
+- scrollUntilVisible:
+    element: "Cambiar de formación"
+    direction: DOWN
+    timeout: 40000
+- assertVisible: "Diplomado Renaser"
+- tapOn: "Cambiar de formación"
+- extendedWaitUntil:
+    visible: "Verás solo lo de la formación que elijas"
+    timeout: 20000
+- takeScreenshot: F03c-selector-de-formacion
+- tapOn: "Escuela Renaser"
+# Las vistas se arman de nuevo con la formación nueva: en Hoy ya no está el Diplomado.
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "HOY"
+- extendedWaitUntil:
+    visible: "Escuela Renaser"
+    timeout: 30000
+- assertNotVisible: "Diplomado Renaser"
+- takeScreenshot: F03d-hoy-vuelve-a-la-escuela

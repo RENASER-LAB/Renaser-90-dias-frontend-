@@ -1,11 +1,12 @@
 import { describe, expect, it } from '@jest/globals';
 
+import type { ObjetivosParaHoy } from '../../../objetivos/hooks/useObjetivosDeNoventaDias';
 import type { RocaDiariaApi } from '../../../objetivos/types/objetivos.types';
-import { vistaDeLaAccionDeHoy, type LecturaDelMapaParaHoy } from '../vistaDeLaAccionDeHoy';
+import { vistaDeLaAccionDeHoy } from '../vistaDeLaAccionDeHoy';
 
 /**
- * La tarjeta de acciones de Hoy (2026-10-31): qué muestra en cada estado. `null` = todavía no se sabe, y la tarjeta no se dibuja
- * (sin parpadeo).
+ * La tarjeta de acciones de Hoy (2026-10-31; spec 026 cambió lo que decía cuando no hay acciones): qué muestra en cada estado.
+ * `null` = todavía no se sabe, y la tarjeta no se dibuja (sin parpadeo).
  */
 
 let n = 0;
@@ -17,43 +18,54 @@ function roca(extra: Partial<RocaDiariaApi> = {}): RocaDiariaApi {
     puntosOtorgados: 0, bloqueada: false, acciones: [], ...extra,
   };
 }
-const MAPA_ACTIVO: LecturaDelMapaParaHoy = { habilitado: true, estado: 'activo', confirmado: true };
-const SIN_MAPA: LecturaDelMapaParaHoy = { habilitado: true, estado: 'no_iniciado', confirmado: true };
+const CON_TODOS: ObjetivosParaHoy = { estado: 'listo', total: 3, porConfirmar: 0 };
+const SIN_NINGUNO: ObjetivosParaHoy = { estado: 'listo', total: 0, porConfirmar: 0 };
 const AHORA = 8 * 60;
 
 describe('vistaDeLaAccionDeHoy', () => {
   it('mientras no se leyeron las acciones, nada (cargando)', () => {
-    expect(vistaDeLaAccionDeHoy({ rocas: null, mapa: SIN_MAPA, ahoraMin: AHORA })).toBeNull();
+    expect(vistaDeLaAccionDeHoy({ rocas: null, objetivos: SIN_NINGUNO, ahoraMin: AHORA })).toBeNull();
   });
 
-  it('con acciones sin cumplir muestra la que sigue, aunque el Mapa no esté activo', () => {
+  it('con acciones sin cumplir muestra la que sigue, aunque no haya objetivos o estén por confirmar', () => {
     const a = roca({ titulo: 'Caminar 40 minutos', horaInicio: '08:30:00' });
     const b = roca({ titulo: 'Facturar', horaInicio: '10:00:00', eje: 'TRABAJO' });
-    expect(vistaDeLaAccionDeHoy({ rocas: [b, a], mapa: SIN_MAPA, ahoraMin: AHORA })).toEqual({ tipo: 'accion', accion: a });
+    for (const objetivos of [SIN_NINGUNO, { estado: 'listo', total: 3, porConfirmar: 3 } as const, { estado: 'cargando', total: 0, porConfirmar: 0 } as const]) {
+      expect(vistaDeLaAccionDeHoy({ rocas: [b, a], objetivos, ahoraMin: AHORA })).toEqual({ tipo: 'accion', accion: a });
+    }
   });
 
   it('con todo cumplido dice que cumplió', () => {
     const rocas = [roca({ completada: true }), roca({ completada: true })];
-    expect(vistaDeLaAccionDeHoy({ rocas, mapa: MAPA_ACTIVO, ahoraMin: AHORA })).toEqual({ tipo: 'todo-cumplido' });
+    expect(vistaDeLaAccionDeHoy({ rocas, objetivos: CON_TODOS, ahoraMin: AHORA })).toEqual({ tipo: 'todo-cumplido' });
   });
 
-  it('sin acciones hoy y con el Mapa activo: «sin acciones»', () => {
-    expect(vistaDeLaAccionDeHoy({ rocas: [], mapa: MAPA_ACTIVO, ahoraMin: AHORA })).toEqual({ tipo: 'sin-acciones' });
+  it('sin acciones hoy y con sus tres objetivos: «sin acciones» (agendar en Plan)', () => {
+    expect(vistaDeLaAccionDeHoy({ rocas: [], objetivos: CON_TODOS, ahoraMin: AHORA })).toEqual({ tipo: 'sin-acciones' });
   });
 
-  it('sin acciones y sin Mapa activo (confirmado): el objetivo nace del Mapa', () => {
-    expect(vistaDeLaAccionDeHoy({ rocas: [], mapa: SIN_MAPA, ahoraMin: AHORA })).toEqual({ tipo: 'mapa' });
-    for (const estado of ['en_progreso', 'listo_para_revision'] as const) {
-      expect(vistaDeLaAccionDeHoy({ rocas: [], mapa: { habilitado: true, estado, confirmado: true }, ahoraMin: AHORA })).toEqual({ tipo: 'mapa' });
-    }
+  it('sin acciones y sin objetivos de 90 días: «define tu objetivo en Plan» (sin Mapa ni diagnóstico se escriben ahí)', () => {
+    expect(vistaDeLaAccionDeHoy({ rocas: [], objetivos: SIN_NINGUNO, ahoraMin: AHORA })).toEqual({ tipo: 'sin-objetivos' });
   });
 
-  it('no afirma «sin Mapa» mientras el servidor no lo confirmó (un teléfono nuevo dice «no iniciado» de quien ya lo hizo)', () => {
-    expect(vistaDeLaAccionDeHoy({ rocas: [], mapa: { habilitado: true, estado: 'no_iniciado', confirmado: false }, ahoraMin: AHORA })).toBeNull();
-    expect(vistaDeLaAccionDeHoy({ rocas: [], mapa: { habilitado: true, estado: null, confirmado: false }, ahoraMin: AHORA })).toBeNull();
+  it('con objetivos a medias (la semana espera a los tres) también pide definirlos', () => {
+    expect(vistaDeLaAccionDeHoy({ rocas: [], objetivos: { estado: 'listo', total: 2, porConfirmar: 0 }, ahoraMin: AHORA })).toEqual({ tipo: 'sin-objetivos' });
   });
 
-  it('en un build sin el Mapa no se lo pide a nadie: «sin acciones»', () => {
-    expect(vistaDeLaAccionDeHoy({ rocas: [], mapa: { habilitado: false, estado: null, confirmado: false }, ahoraMin: AHORA })).toEqual({ tipo: 'sin-acciones' });
+  it('sin acciones y con objetivos del diagnóstico por confirmar: «confirma tus objetivos», con cuántos', () => {
+    expect(vistaDeLaAccionDeHoy({ rocas: [], objetivos: { estado: 'listo', total: 3, porConfirmar: 3 }, ahoraMin: AHORA })).toEqual({ tipo: 'por-confirmar', cantidad: 3 });
+    expect(vistaDeLaAccionDeHoy({ rocas: [], objetivos: { estado: 'listo', total: 3, porConfirmar: 1 }, ahoraMin: AHORA })).toEqual({ tipo: 'por-confirmar', cantidad: 1 });
+  });
+
+  it('por confirmar manda sobre «sin objetivos» (lo que falta confirmar es lo primero)', () => {
+    expect(vistaDeLaAccionDeHoy({ rocas: [], objetivos: { estado: 'listo', total: 1, porConfirmar: 1 }, ahoraMin: AHORA })).toEqual({ tipo: 'por-confirmar', cantidad: 1 });
+  });
+
+  it('no afirma nada de los objetivos mientras no se leyeron (sin parpadeo)', () => {
+    expect(vistaDeLaAccionDeHoy({ rocas: [], objetivos: { estado: 'cargando', total: 0, porConfirmar: 0 }, ahoraMin: AHORA })).toBeNull();
+  });
+
+  it('si la lectura de los objetivos falló (sin red, servidor anterior) no afirma nada: «sin acciones»', () => {
+    expect(vistaDeLaAccionDeHoy({ rocas: [], objetivos: { estado: 'error', total: 0, porConfirmar: 0 }, ahoraMin: AHORA })).toEqual({ tipo: 'sin-acciones' });
   });
 });

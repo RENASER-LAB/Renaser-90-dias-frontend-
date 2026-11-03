@@ -1,4 +1,4 @@
-import type { DestinoDeAviso } from '../features/mentor/api/avisosApi';
+import type { DestinoDeAviso, DestinoDelChat } from '../features/mentor/api/avisosApi';
 
 /**
  * Adónde lleva tocar un aviso que abre una pestaña, y cuándo se puede ir (D-218, 2026-09-28).
@@ -12,7 +12,7 @@ import type { DestinoDeAviso } from '../features/mentor/api/avisosApi';
  * 1. Si es un hábito, una acción, la Caja Renaser (D-219) o un chat (D-221) y hay una capa obligatoria abierta (el Código Renaser, el arranque
  *    guiado o el Pacto, `capasObligatorias.ts`), **no se va**: la ruta queda esperando y se vuelve a
  *    intentar al cerrarse. La capa no se toca. El evento no espera (decisión del dueño del 28/09).
- * 2. Si la pestaña todavía no existe (login, onboarding, Mapa del Día 7), tampoco: se reintenta cuando
+ * 2. Si la pestaña todavía no existe (login, onboarding), tampoco: se reintenta cuando
  *    cambia la navegación.
  * 3. Si no, se consume la ruta y se navega. Consumirla recién ahí es lo que hace que la espera no la
  *    pierda.
@@ -28,12 +28,14 @@ export type TipoQueAbreUnaPestana =
   | 'objetivo'
   | 'caja'
   | 'miRadar'
+  | 'miIngreso'
   | 'cajaAdmin'
   | 'chat'
   | 'semaforo'
   | 'alumno'
   | 'semaforoGrupo'
-  | 'semaforoGrupos';
+  | 'semaforoGrupos'
+  | 'ochentaVeinte';
 
 export const TIPOS_QUE_ABREN_UNA_PESTANA: readonly TipoQueAbreUnaPestana[] = [
   'evento',
@@ -41,6 +43,8 @@ export const TIPOS_QUE_ABREN_UNA_PESTANA: readonly TipoQueAbreUnaPestana[] = [
   'objetivo',
   'caja',
   'miRadar',
+  // Spec 032: el recordatorio de pago abre Yo → Mi ingreso.
+  'miIngreso',
   'cajaAdmin',
   'chat',
   // 2026-10-31: los paneles de rol viven en Yo, así que sus avisos también entran por acá (antes los atendía Hoy).
@@ -48,6 +52,8 @@ export const TIPOS_QUE_ABREN_UNA_PESTANA: readonly TipoQueAbreUnaPestana[] = [
   'alumno',
   'semaforoGrupo',
   'semaforoGrupos',
+  // Spec 031: el aviso de «tu análisis está listo» abre Plan con la hoja «Tu 80/20».
+  'ochentaVeinte',
 ];
 
 /**
@@ -65,6 +71,7 @@ const PESTANA: Record<TipoQueAbreUnaPestana, string> = {
   caja: 'Yo',
   // Spec 012: el aviso de Mi Radar abre Yo → Mi Radar, con el mismo estilo de parámetro que la Caja.
   miRadar: 'Yo',
+  miIngreso: 'Yo',
   cajaAdmin: 'Yo',
   // D-221 (2026-09-29): el aviso de un mensaje abre esa conversación en Comunidad → Tribu, con el
   // mismo parámetro que ya usa «Escribirle» desde la ficha de un aprendiz.
@@ -73,6 +80,7 @@ const PESTANA: Record<TipoQueAbreUnaPestana, string> = {
   alumno: 'Yo',
   semaforoGrupo: 'Yo',
   semaforoGrupos: 'Yo',
+  ochentaVeinte: 'Plan',
 };
 
 /** La pestaña y los parámetros que cada pantalla ya sabe consumir una vez. */
@@ -90,10 +98,16 @@ export function pestanaDelDestino(
       return { pestana: PESTANA.caja, params: { abrirCaja: true } };
     case 'miRadar':
       return { pestana: PESTANA.miRadar, params: { abrirMiRadar: true } };
+    case 'miIngreso':
+      return { pestana: PESTANA.miIngreso, params: { abrirMiIngreso: true } };
     case 'cajaAdmin':
       return { pestana: PESTANA.cajaAdmin, params: { abrirCajaAprendizId: destino.aprendizId } };
     case 'chat':
-      return { pestana: PESTANA.chat, params: { abrirChatConversacionId: destino.conversacionId } };
+      return {
+        pestana: PESTANA.chat,
+        // Spec 024: si hubo que cambiar de formación para abrirlo, Comunidad lo dice en una línea (`abrirChatAviso`).
+        params: { abrirChatConversacionId: destino.conversacionId, ...(destino.aviso ? { abrirChatAviso: destino.aviso } : {}) },
+      };
     case 'semaforo':
       return { pestana: PESTANA.semaforo, params: { abrirSemaforo: true } };
     case 'alumno':
@@ -102,6 +116,8 @@ export function pestanaDelDestino(
       return { pestana: PESTANA.semaforoGrupo, params: { abrirSemaforoDelGrupo: destino.grupoId } };
     case 'semaforoGrupos':
       return { pestana: PESTANA.semaforoGrupos, params: { abrirSemaforoPorGrupos: true } };
+    case 'ochentaVeinte':
+      return { pestana: PESTANA.ochentaVeinte, params: { abrirOchentaVeinte: destino.periodo } };
   }
 }
 
@@ -110,7 +126,22 @@ export interface DependenciasDeApertura {
   pestanaDisponible: (nombre: string) => boolean;
   consumir: (tipo: TipoQueAbreUnaPestana) => Extract<DestinoDeAviso, { tipo: TipoQueAbreUnaPestana }> | null;
   irAPestana: (nombre: string, params: Record<string, unknown>) => boolean;
+  /**
+   * Spec 024 (FR-032): la formación del chat que abre el aviso. Opcional: sin esto (las pruebas de siempre) el chat se abre como antes.
+   * `seguir` lo abre, `descartar` lo suelta sin abrir nada, y `cambiar` pide cambiar de formación primero.
+   */
+  decidirFormacionDelChat?: (destino: DestinoDelChat) => DecisionDeApertura;
+  /** Hace el cambio de formación (activa o elección de la Comunidad). `false` si no se pudo: el aviso se descarta. */
+  cambiarDeFormacion?: (decision: Extract<DecisionDeApertura, { accion: 'cambiar' }>) => Promise<boolean>;
+  /** Vuelve a dejar esperando el destino, ya con la línea de aviso, cuando el cambio terminó. */
+  volverAAnotar?: (destino: DestinoDelChat) => void;
 }
+
+/** Lo que `decidirFormacionDelChat` entrega: la decisión de `formaciones/utils/avisoDeFormacion` ya reducida a lo que importa acá. */
+export type DecisionDeApertura =
+  | { accion: 'seguir' }
+  | { accion: 'descartar' }
+  | { accion: 'cambiar'; codigo: string; aviso: string; sobre: 'activa' | 'eleccion' };
 
 /** `abierto` si navegó; `esperando` si hay algo que la frena (capa o pestaña); `nada` si no había ruta. */
 export type ResultadoDeApertura = 'abierto' | 'esperando' | 'nada';
@@ -121,7 +152,7 @@ export type ResultadoDeApertura = 'abierto' | 'esperando' | 'nada';
  * Código Renaser ni el Pacto.
  */
 /* D-221: el chat también espera. Un mensaje del grupo no puede tapar el Código Renaser ni el Pacto. */
-const ESPERAN_A_LAS_CAPAS: ReadonlySet<TipoQueAbreUnaPestana> = new Set(['habito', 'objetivo', 'caja', 'miRadar', 'cajaAdmin', 'chat']);
+const ESPERAN_A_LAS_CAPAS: ReadonlySet<TipoQueAbreUnaPestana> = new Set(['habito', 'objetivo', 'caja', 'miRadar', 'miIngreso', 'cajaAdmin', 'chat', 'ochentaVeinte']);
 // Los de rol y el semáforo del sábado NO esperan: no esperaban cuando los atendía Hoy.
 
 export function intentarAbrirAvisoPendiente(deps: DependenciasDeApertura): ResultadoDeApertura {
@@ -134,6 +165,21 @@ export function intentarAbrirAvisoPendiente(deps: DependenciasDeApertura): Resul
     if (!deps.pestanaDisponible(PESTANA[tipo])) continue;
     const destino = deps.consumir(tipo);
     if (!destino) continue;
+    /* Spec 024: un chat de otra formación. El destino que vuelve de un cambio ya trae su línea de aviso (`aviso`): no se vuelve a decidir. */
+    if (destino.tipo === 'chat' && !destino.aviso && deps.decidirFormacionDelChat) {
+      const decision = deps.decidirFormacionDelChat(destino);
+      if (decision.accion === 'descartar') return 'nada';
+      if (decision.accion === 'cambiar') {
+        const chat = destino;
+        void (deps.cambiarDeFormacion?.(decision) ?? Promise.resolve(false)).then(
+          cambio => {
+            if (cambio) deps.volverAAnotar?.({ ...chat, aviso: decision.aviso });
+          },
+          () => undefined,
+        );
+        return 'esperando';
+      }
+    }
     const { pestana, params } = pestanaDelDestino(destino);
     return deps.irAPestana(pestana, params) ? 'abierto' : 'esperando';
   }
@@ -146,7 +192,7 @@ export interface FuentesDeApertura {
   alAbrirAviso: (oyente: () => void) => () => void;
   /** Se abrió o se cerró una capa obligatoria. */
   alCambiarLasCapas: (oyente: () => void) => () => void;
-  /** Cambió la navegación: aparecieron las pestañas al salir del login, del onboarding o del Mapa. */
+  /** Cambió la navegación: aparecieron las pestañas al salir del login o del onboarding. */
   alCambiarLaNavegacion: (oyente: () => void) => () => void;
 }
 

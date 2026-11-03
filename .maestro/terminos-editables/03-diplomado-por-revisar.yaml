@@ -1,0 +1,16 @@
+# El Diplomado recién creado dice «Por revisar» y no se puede aceptar a nadie ahí hasta publicar sus términos (spec 027, historia 5, FR-021). ESCRITO Y SIN CORRER.
+# cuenta: admin
+# Precondición (base local): el Diplomado SIN versión publicada (solo su borrador de la migración) y una solicitud PENDIENTE de «Sol-Terminos Uno».
+appId: com.renaser.app
+---
+- runFlow: ../solicitud-con-formacion/comun-abrir-solicitudes.yaml
+- extendedWaitUntil:
+    visible: "Sol-Terminos Uno"
+    timeout: 30000
+- tapOn: "Aceptar a Sol-Terminos Uno"
+- extendedWaitUntil:
+    visible: "Aceptar solicitud"
+    timeout: 15000
+- tapOn: "1. Formación.*"
+- assertVisible: "Todavía no tiene términos publicados."
+- takeScreenshot: T03a-el-diplomado-apagado

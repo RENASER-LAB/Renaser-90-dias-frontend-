@@ -1,0 +1,30 @@
+# CF02 — Con «Código Renaser en las fichas» APAGADO (de fábrica) el mentor NO ve la sección «CÓDIGO RENASER» en la ficha de su
+# aprendiz: ni respuestas, ni horas, ni «Mi Radar: encendido…», ni un indicador, y sin hueco ni aviso de mantenimiento.
+# ESCRITO Y SIN CORRER. Precondición: el interruptor está APAGADO y ese aprendiz ya respondió el Radar (así, si la sección saliera, se
+# vería). La cuenta es el MENTOR del grupo (la ranura E2E_ADMIN_* apunta al mentor, como en `mi-radar/10`).
+# E2E_PERSONA = parte del nombre del aprendiz (por defecto «a»).
+# Se corre con: .maestro/correr.sh .maestro/codigo-renaser-en-fichas/02-mentor-con-el-interruptor-apagado.yaml
+# cuenta: admin
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "YO"
+- scrollUntilVisible:
+    element: "Mi grupo"
+    direction: DOWN
+    timeout: 40000
+- tapOn: "Mi grupo"
+- extendedWaitUntil:
+    visible: ".*${PERSONA}.*Abrir su detalle.*"
+    timeout: 30000
+- tapOn: ".*${PERSONA}.*Abrir su detalle.*"
+# La ficha cargó (otra sección de siempre a la vista) …
+- scrollUntilVisible:
+    element: "Detalle de hábitos.*"
+    direction: DOWN
+    timeout: 60000
+- takeScreenshot: CF02a-ficha-sin-codigo-renaser
+# … y no hay Código Renaser, ni hueco ni mantenimiento.
+- assertNotVisible: "CÓDIGO RENASER"
+- assertNotVisible: "Mi Radar: .*"
+- assertNotVisible: "Esta función está en mantenimiento.*"

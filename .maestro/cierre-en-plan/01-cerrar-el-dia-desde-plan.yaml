@@ -2,9 +2,10 @@
 # meta», la hoja pregunta solo por lo que ya llegó a su hora (y por lo que no tiene hora), guardar deja la tarjeta en verde y
 # «Ver mañana en Plan» lleva a las acciones que Plan muestra de mañana.
 # ESCRITO Y SIN CORRER: se corre cuando haya emulador libre, con el backend local (base clonada, nunca producción).
-# Precondición: una cuenta con el Mapa de Renacimiento ACTIVO, el día SIN cerrar y dos acciones de hoy sin cumplir:
-# «Revisar las facturas» (con hora ya pasada) y «Llamar a mi mentor» (sin hora). Si el servidor no las da por llegadas
-# (reloj de prueba), el flujo falla a propósito: es lo que prueba.
+# Precondición: una cuenta con sus objetivos de 90 días ya confirmados (el Mapa de Renacimiento ya no existe: spec 026), el día SIN cerrar
+# y dos acciones de hoy sin cumplir: «Revisar las facturas» (con una hora que ya pasó; la que sea) y «Llamar a mi mentor» (sin hora), y NINGUNA
+# otra acción de hoy sin cumplir. Si la cuenta trae más (la base del E2E del 02/11 deja tres: 05:00, 10:00 y sin hora), «Guardar mi cierre»
+# sigue apagado y el flujo falla por datos, no por la app. Si el servidor no da por llegada la hora (reloj de prueba), el flujo falla a propósito: es lo que prueba.
 # Se corre con: .maestro/correr.sh .maestro/cierre-en-plan/01-cerrar-el-dia-desde-plan.yaml
 # cuenta: aprendiz
 appId: com.renaser.app
@@ -26,7 +27,8 @@ appId: com.renaser.app
     visible: "Guardar mi cierre"
     timeout: 30000
 - assertVisible: "¿Qué pasó?"
-- assertVisible: "Era a las 20:30 · quedó pendiente"
+# La hora de la acción es la que sembró la base: se comprueba la forma, no «20:30».
+- assertVisible: "Era a las .* · quedó pendiente"
 # Primera tarjeta («Revisar las facturas»)…
 - tapOn:
     text: "No me alcanzó el tiempo"

@@ -333,7 +333,7 @@ describe('las pantallas esconden lo no disponible (código)', () => {
     // «Eliminar mi cuenta» nunca se esconde (Google Play): sin la pantalla de la app, abre la página pública.
     expect(yo).not.toMatch(/\{esDisponible\(CLAVES\.cuentaEliminar\) \? \(\s*<FilaDeAjuste/);
     expect(yo).toMatch(/esDisponible\(CLAVES\.cuentaEliminar\) \? setEliminandoCuenta\(true\) : void abrirEliminarCuentaEnLaWeb\(\)/);
-    expect(leer('src/features/renasia/components/RenasiaLauncher.tsx')).toMatch(/!hayChatEnPantalla && !mapaAbierto && chatDeSer\.disponible &&/);
+    expect(leer('src/features/renasia/components/RenasiaLauncher.tsx')).toMatch(/!hayChatEnPantalla && chatDeSer\.disponible &&/);
     expect(leer('src/features/renasia/screens/RenasiaPanel.tsx')).toMatch(/if \(visible && !serDisponible\) onClose\(\);/);
     expect(leer('src/features/admin/screens/MasOpcionesScreen.tsx')).toMatch(/enLaApp\.filter\(item => esDisponible\(item\.clave\)\)/);
   });

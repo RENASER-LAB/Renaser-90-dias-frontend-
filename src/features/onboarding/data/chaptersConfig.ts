@@ -1,11 +1,18 @@
 import { IconName } from '../../../components/Icon';
 import { FichaInicialData } from '../types/onboarding.types';
+import { PLAZO_POR_DEFECTO } from '../../objetivos/utils/nombreDelObjetivo';
 
 export interface ChapterConfig {
   id: number;
   title: string;
-  subtitle: string;
+  /** Una función del plazo si nombra el programa («Capítulo 3 · … decisión a 90 días»): es el de cada formación (issue #103). Se lee con `subtituloDelCapitulo`. */
+  subtitle: string | ((plazo: string) => string);
   icon: IconName;
+}
+
+/** El subtítulo de un capítulo con el plazo del programa de la persona («90 días», «3 meses», «1 año»; sin plazo, el de siempre). */
+export function subtituloDelCapitulo(capitulo: ChapterConfig, plazo: string = PLAZO_POR_DEFECTO): string {
+  return typeof capitulo.subtitle === 'function' ? capitulo.subtitle(plazo) : capitulo.subtitle;
 }
 
 export const CHAPTERS_CONFIG: ChapterConfig[] = [
@@ -24,7 +31,7 @@ export const CHAPTERS_CONFIG: ChapterConfig[] = [
   {
     id: 3,
     title: 'CONSENTIMIENTO Y COMPROMISO',
-    subtitle: 'Capítulo 3 · Autorización de datos y decisión a 90 días',
+    subtitle: plazo => `Capítulo 3 · Autorización de datos y decisión a ${plazo}`,
     icon: 'spark',
   },
 ];

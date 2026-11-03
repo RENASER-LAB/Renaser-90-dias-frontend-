@@ -133,7 +133,7 @@ describe('el Pacto ya firmado (decisión 12)', () => {
 
 describe('El Método', () => {
   it('se desliza con el dedo, sin el giro 3D del `Animated` de React Native', () => {
-    expect(yo).toContain('<MetodoEnPaginas fases={METODO_FASES} margenLateral={horizontalPadding} />');
+    expect(yo).toContain('<MetodoEnPaginas fases={metodoFases} margenLateral={horizontalPadding} />');
     expect(yo).not.toMatch(/Animated\.(timing|sequence|Value)|rotateY|useNativeDriver/);
   });
 

@@ -1,3 +1,4 @@
+import { medicionDeLaFichaSchema } from '../../pasos/utils/medicionDeLaFicha';
 import { z } from 'zod';
 
 import { radarSchemas } from '../../radar/api/radarSchemas';
@@ -136,6 +137,12 @@ export const semanaAlumnoSchema = z
                  * tolerante: un backend anterior no lo manda, y un valor raro pierde el botón, no la semana.
                  */
                 publicacionId: z.string().nullish().catch(null),
+                /**
+                 * Spec 037 (D-310): los km del día y de dónde salieron (la captura o los pasos del teléfono, con su fuente y si
+                 * quedó «por revisar»). Opcional y tolerante: un backend anterior no lo manda y un valor raro pierde la línea
+                 * de los km, no la semana.
+                 */
+                medicion: medicionDeLaFichaSchema.nullish().catch(null),
               })
               .passthrough(),
           ),

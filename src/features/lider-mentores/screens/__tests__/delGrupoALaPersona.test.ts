@@ -175,6 +175,7 @@ function semana(cambios: Partial<SemanaDePersona> = {}): SemanaDePersona {
             respuestaTexto: null,
             evidencias: [],
             publicacionId: null,
+            medicion: null,
           },
           {
             registroId: 'r2',
@@ -188,6 +189,7 @@ function semana(cambios: Partial<SemanaDePersona> = {}): SemanaDePersona {
             respuestaTexto: null,
             evidencias: [],
             publicacionId: null,
+            medicion: null,
           },
         ],
         acciones: [],

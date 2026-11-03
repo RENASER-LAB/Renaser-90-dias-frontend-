@@ -1,0 +1,40 @@
+# P05 — Administración cambia la meta diaria de km y rige (spec 037, FR-012). Precondición: una cuenta ADMIN o ALQUIMISTA.
+# El flujo la deja en 8 km y la devuelve a la del programa (5 km) al final.
+# cuenta: admin
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- runFlow: ../comun/abrir-consola.yaml
+- tapOn: "Más opciones"
+- tapOn: "Hábitos del programa"
+- extendedWaitUntil:
+    visible: "(?i)kilómetros diarios"
+    timeout: 20000
+- tapOn: "(?i)kilómetros diarios"
+- scrollUntilVisible:
+    element: "Meta diaria de km"
+    timeout: 20000
+- assertVisible: "Ahora: 5 km · la del programa\\. Rige desde ya\\."
+- takeScreenshot: P05a-meta-del-programa
+- tapOn: "Km por día"
+- eraseText: 10
+- inputText: "8"
+- hideKeyboard
+- tapOn: "Guardar meta"
+- extendedWaitUntil:
+    visible: "Meta guardada"
+    timeout: 15000
+- assertVisible: "Ahora: 8 km\\. Rige desde ya\\."
+- takeScreenshot: P05b-meta-guardada
+# Una meta fuera de rango se dice con palabras y no se guarda.
+- tapOn: "Km por día"
+- eraseText: 10
+- inputText: "80"
+- hideKeyboard
+- tapOn: "Guardar meta"
+- assertVisible: "La meta tiene que estar entre 0,5 y 50 km\\."
+# Se deja como estaba.
+- tapOn: "Volver a la del programa"
+- extendedWaitUntil:
+    visible: "Ahora: 5 km · la del programa.*"
+    timeout: 15000

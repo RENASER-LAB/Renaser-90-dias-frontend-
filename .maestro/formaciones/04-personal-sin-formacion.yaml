@@ -1,0 +1,16 @@
+# El personal sin ninguna formación asignada (spec 022, historia 5, escenario 6). ESCRITO Y SIN CORRER.
+# cuenta: aprendiz  (la ranura apunta a un MENTOR sin ninguna fila en formaciones_personal)
+# Ve el aviso y nada más: ni pestañas ni datos de ninguna formación. Puede volver a revisar y cerrar sesión.
+appId: com.renaser.app
+---
+- extendedWaitUntil:
+    visible: "Todavía no tienes formación"
+    timeout: 60000
+- assertVisible: "Administración todavía no te asignó una formación."
+- assertVisible: "Volver a revisar"
+- assertVisible: "Cerrar sesión"
+- assertNotVisible: "TRAINING"
+- takeScreenshot: F04a-sin-formacion
+# Volver a revisar relee la sesión: sigue sin formación.
+- tapOn: "Volver a revisar"
+- assertVisible: "Administración todavía no te asignó una formación."

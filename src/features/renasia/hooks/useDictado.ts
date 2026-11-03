@@ -3,7 +3,13 @@ import type * as ModuloDeVoz from 'expo-speech-recognition';
 
 import { Platform } from 'react-native';
 
-import { ESPERA_SIN_HABLA_MS, mensajeDeErrorDeVoz, SILENCIO_PARA_TERMINAR_MS, sumarTramo } from '../utils/dictado';
+import {
+  type DestinoDelDictado,
+  ESPERA_SIN_HABLA_MS,
+  mensajeDeErrorDeVoz,
+  SILENCIO_PARA_TERMINAR_MS,
+  sumarTramo,
+} from '../utils/dictado';
 
 /**
  * Español latinoamericano. `es-PE` no está garantizado en todos los motores del sistema; `es-419`
@@ -69,11 +75,27 @@ export type EstadoDictado = {
  * de voz hay que evitarlo al transcribir, porque después ya es tarde.
  *
  * El audio no se guarda ni se sube por esta vía: el reconocedor del sistema devuelve solo texto.
+ *
+ * ## Cada instancia atiende SOLO su micrófono (spec 030, 2026-10-31)
+ *
+ * `expo-speech-recognition` manda sus eventos a TODOS los que escuchan, y este hook vive en el chat de SER, en el orbe de Hoy y,
+ * desde la spec 030, en el Código Renaser. Sin un seguro, dictar el Código Renaser ponía al orbe «escuchando» y Hoy mostraba
+ * «Tú: <lo que dictaste>» bajo el fénix: texto íntimo de «¿qué evito?» en otra pantalla. Ahora un evento solo cuenta si ESTA
+ * instancia abrió el micrófono (`sesionPropiaRef`, de `start()` hasta `end`/`error`), y `detener`/el cierre al desmontar solo
+ * tocan lo propio. Con una sola instancia el comportamiento es el de siempre.
+ *
+ * `opciones.destino` solo cambia la palabra del aviso de error («escribe tu mensaje» / «escribe tu respuesta»).
  */
-export function useDictado(frasesDeContexto: readonly string[], alTerminar: (texto: string) => void): EstadoDictado {
+export function useDictado(
+  frasesDeContexto: readonly string[],
+  alTerminar: (texto: string) => void,
+  opciones: { destino?: DestinoDelDictado } = {}
+): EstadoDictado {
+  const destino = opciones.destino ?? 'mensaje';
   const [escuchando, setEscuchando] = useState(false);
   const [parcial, setParcial] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [codigoDeError, setCodigoDeError] = useState<string | null>(null);
+  const error = codigoDeError ? mensajeDeErrorDeVoz(codigoDeError, destino) : null;
   const [disponible] = useState(() => {
     try {
       return modulo?.isRecognitionAvailable() ?? false;
@@ -90,6 +112,10 @@ export function useDictado(frasesDeContexto: readonly string[], alTerminar: (tex
   /** Lo dicho se entrega UNA vez por sesión de micrófono, cuando se cierra. */
   const entregadoRef = useRef(true);
   const relojRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** El micrófono lo abrió ESTA instancia y todavía no se cerró: solo entonces atiende los eventos del reconocedor. */
+  const sesionPropiaRef = useRef(false);
+  /** Está pidiendo el permiso del micrófono: un segundo toque no abre otro pedido. */
+  const abriendoRef = useRef(false);
 
   const limpiarReloj = useCallback(() => {
     if (relojRef.current) clearTimeout(relojRef.current);
@@ -115,8 +141,12 @@ export function useDictado(frasesDeContexto: readonly string[], alTerminar: (tex
     if (texto) alTerminarRef.current(texto);
   }, [limpiarReloj]);
 
-  escucharEvento('start', () => setEscuchando(true));
+  escucharEvento('start', () => {
+    if (sesionPropiaRef.current) setEscuchando(true);
+  });
   escucharEvento('end', () => {
+    if (!sesionPropiaRef.current) return;
+    sesionPropiaRef.current = false;
     // El micrófono se cerró (pausa de 1,5 s, toque para detener o el propio reconocedor): recién
     // ahí se entrega TODO lo dicho, no el primer tramo.
     entregar();
@@ -124,6 +154,7 @@ export function useDictado(frasesDeContexto: readonly string[], alTerminar: (tex
     setParcial('');
   });
   escucharEvento('result', evento => {
+    if (!sesionPropiaRef.current) return;
     const transcripcion = evento.results[0]?.transcript ?? '';
     if (evento.isFinal) {
       acumuladoRef.current = sumarTramo(acumuladoRef.current, transcripcion);
@@ -135,9 +166,11 @@ export function useDictado(frasesDeContexto: readonly string[], alTerminar: (tex
     cerrarSiNadaEn(SILENCIO_PARA_TERMINAR_MS);
   });
   escucharEvento('error', evento => {
+    if (!sesionPropiaRef.current) return;
+    sesionPropiaRef.current = false;
     setEscuchando(false);
     setParcial('');
-    setError(mensajeDeErrorDeVoz(evento.error));
+    setCodigoDeError(evento.error);
     // Lo que alcanzó a decir antes del error no se tira.
     entregar();
   });
@@ -148,41 +181,57 @@ export function useDictado(frasesDeContexto: readonly string[], alTerminar: (tex
     () => () => {
       entregadoRef.current = true;
       limpiarReloj();
-      modulo?.abort();
+      if (sesionPropiaRef.current) modulo?.abort();
+      sesionPropiaRef.current = false;
     },
     [limpiarReloj]
   );
 
   const empezar = useCallback(async () => {
-    setError(null);
-    if (!modulo) return;
-    const permiso = await modulo.requestPermissionsAsync();
-    if (!permiso.granted) {
-      setError(mensajeDeErrorDeVoz('not-allowed'));
-      return;
+    setCodigoDeError(null);
+    if (!modulo || sesionPropiaRef.current || abriendoRef.current) return;
+    abriendoRef.current = true;
+    try {
+      const permiso = await modulo.requestPermissionsAsync();
+      if (!permiso.granted) {
+        setCodigoDeError('not-allowed');
+        return;
+      }
+      acumuladoRef.current = '';
+      tramoRef.current = '';
+      entregadoRef.current = false;
+      sesionPropiaRef.current = true;
+      modulo.start({
+        lang: IDIOMA,
+        interimResults: true,
+        // Continuo: el reconocedor no corta en la primera pausa; el cierre lo decide este hook
+        // (1,5 s sin habla nueva, o el toque para detener). Ver `SILENCIO_PARA_TERMINAR_MS`.
+        continuous: CONTINUO,
+        maxAlternatives: 1,
+        addsPunctuation: true,
+        contextualStrings: [...frasesDeContexto],
+        // Android: que el propio reconocedor tampoco dé por terminado antes de esa misma pausa.
+        androidIntentOptions: {
+          EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS: SILENCIO_PARA_TERMINAR_MS,
+          EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS: SILENCIO_PARA_TERMINAR_MS,
+        },
+      });
+      cerrarSiNadaEn(ESPERA_SIN_HABLA_MS);
+    } catch {
+      // El motor no pudo abrirse: no queda una sesión «propia» fantasma que bloquee el próximo toque.
+      sesionPropiaRef.current = false;
+      entregadoRef.current = true;
+      limpiarReloj();
+      setCodigoDeError('audio-capture');
+    } finally {
+      abriendoRef.current = false;
     }
-    acumuladoRef.current = '';
-    tramoRef.current = '';
-    entregadoRef.current = false;
-    modulo.start({
-      lang: IDIOMA,
-      interimResults: true,
-      // Continuo: el reconocedor no corta en la primera pausa; el cierre lo decide este hook
-      // (1,5 s sin habla nueva, o el toque para detener). Ver `SILENCIO_PARA_TERMINAR_MS`.
-      continuous: CONTINUO,
-      maxAlternatives: 1,
-      addsPunctuation: true,
-      contextualStrings: [...frasesDeContexto],
-      // Android: que el propio reconocedor tampoco dé por terminado antes de esa misma pausa.
-      androidIntentOptions: {
-        EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS: SILENCIO_PARA_TERMINAR_MS,
-        EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS: SILENCIO_PARA_TERMINAR_MS,
-      },
-    });
-    cerrarSiNadaEn(ESPERA_SIN_HABLA_MS);
-  }, [frasesDeContexto, cerrarSiNadaEn]);
+  }, [frasesDeContexto, cerrarSiNadaEn, limpiarReloj]);
 
-  const detener = useCallback(() => modulo?.stop(), []);
+  // Detener solo cierra el micrófono de ESTA instancia: `stop()` es global y pararía el de otra.
+  const detener = useCallback(() => {
+    if (sesionPropiaRef.current) modulo?.stop();
+  }, []);
 
   return { escuchando, parcial, error, disponible, empezar, detener };
 }

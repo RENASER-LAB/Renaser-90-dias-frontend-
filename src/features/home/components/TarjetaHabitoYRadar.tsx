@@ -48,6 +48,7 @@ export function TarjetaHabitoYRadar({
   diaPrograma,
   inscrito,
   onAbrirMiRadar,
+  sinHabitos = false,
 }: {
   habitos: DatosDeLaMitadDeHabitos;
   onAbrirTraining: () => void;
@@ -56,6 +57,11 @@ export function TarjetaHabitoYRadar({
   inscrito: boolean | null | undefined;
   /** Yo → Mi Radar (`abrirMiRadar`), para planificarlo o cambiar las horas. */
   onAbrirMiRadar: () => void;
+  /**
+   * Spec 023, FR-014: la formación de la persona todavía no tiene hábitos. La mitad de hábitos no se dibuja (queda la del Radar, a todo
+   * el ancho; sin Radar, ninguna). Por defecto `false`: la tarjeta es la de siempre.
+   */
+  sinHabitos?: boolean;
 }) {
   const { c } = useTheme();
   const { fontScale } = useWindowDimensions();
@@ -118,22 +124,27 @@ export function TarjetaHabitoYRadar({
 
   return (
     <>
+      {sinHabitos && !mitad ? null : (
       <View style={[estilos.tarjeta, { borderColor: c.border, backgroundColor: c.cardBg }]}>
         <View style={{ flexDirection: apilar ? 'column' : 'row' }}>
-          <Mitad
-            apilada={apilar}
-            icono="listChecks"
-            etiqueta="Hábitos de hoy"
-            estado={habitos.cifra}
-            tono="dorado"
-            titulo={habitos.titulo}
-            destacada={false}
-            onPress={onAbrirTraining}
-            accesibilidad={habitos.etiquetaAccesible}
-          />
+          {sinHabitos ? null : (
+            <Mitad
+              apilada={apilar}
+              icono="listChecks"
+              etiqueta="Hábitos de hoy"
+              estado={habitos.cifra}
+              tono="dorado"
+              titulo={habitos.titulo}
+              destacada={false}
+              onPress={onAbrirTraining}
+              accesibilidad={habitos.etiquetaAccesible}
+            />
+          )}
           {mitad ? (
             <>
-              <View style={apilar ? [estilos.divisorHorizontal, { backgroundColor: c.border }] : [estilos.divisorVertical, { backgroundColor: c.border }]} />
+              {sinHabitos ? null : (
+                <View style={apilar ? [estilos.divisorHorizontal, { backgroundColor: c.border }] : [estilos.divisorVertical, { backgroundColor: c.border }]} />
+              )}
               <Mitad
                 apilada={apilar}
                 icono={mitad.icono}
@@ -149,6 +160,7 @@ export function TarjetaHabitoYRadar({
           ) : null}
         </View>
       </View>
+      )}
 
       <HojaDelRegistroDeEstaHora
         visible={hoja === 'resumen'}

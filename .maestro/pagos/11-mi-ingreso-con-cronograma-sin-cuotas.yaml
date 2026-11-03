@@ -1,0 +1,23 @@
+# Yo → «Mi ingreso» con cronograma pero SIN cuotas todavía (decisión del dueño del 2026-11-02: Administración las registra después): una tarjeta corta, sin hueco en
+# blanco, sin lista, sin casilla ni botón de confirmar. ESCRITO Y SIN CORRER.
+# cuenta: aprendiz
+# Precondición (base local): la cuenta tiene «con cronograma» y ninguna cuota: `PUT /admin/pagos/personas/{id}` con
+# {"mode":"SCHEDULE","currency":"PEN","installments":[]}  (o aceptada así con 10-aceptar-con-cronograma-sin-cuotas).
+appId: com.renaser.app
+---
+- runFlow: comun-abrir-mi-ingreso.yaml
+- assertVisible: "Tu cronograma de pagos"
+- assertVisible: "Tu cronograma de pagos aparecerá aquí cuando Administración lo registre\\."
+- assertNotVisible: "Tus fechas de pago"
+- assertNotVisible: "Pendiente"
+- assertNotVisible: "Confirmar cronograma"
+- assertNotVisible: "Revisé mis fechas y montos\\."
+- assertNotVisible: "Recordatorios de pago"
+- takeScreenshot: P11-cronograma-sin-cuotas
+- back
+- assertVisible: "Coherencia"
+# La fila de Yo lo dice corto, sin hablar de cuotas pagadas ni pendientes.
+- scrollUntilVisible:
+    element: "Aún no hay cuotas registradas"
+    direction: DOWN
+    timeout: 30000

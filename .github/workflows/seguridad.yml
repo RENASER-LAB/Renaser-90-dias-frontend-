@@ -1,0 +1,154 @@
+# Seguridad del frontend: secretos, dependencias vulnerables y análisis estático del código.
+#
+# Workflow aparte del de `ci.yml` (tipos y pruebas) a propósito: el de pruebas corre en cada push de
+# cualquier rama y este solo cuando hay algo que revisar (PR, master) o cuando pasa el tiempo. Una
+# dependencia sin cambios puede volverse vulnerable de un día para otro, así que además corre una vez
+# por semana aunque nadie toque el repositorio.
+#
+# Qué hay y por qué:
+#   * gitleaks   : secretos en TODO el historial de Git, no solo en el último commit. El repositorio es
+#                  público: una clave que llegó a un commit ya se considera filtrada aunque se borre después.
+#   * trivy      : dependencias vulnerables según `package-lock.json`. Falla con severidad ALTA o CRÍTICA
+#                  que tenga arreglo publicado. Lo medio y lo bajo se imprime pero no frena nada.
+#   * CodeQL     : análisis estático de JavaScript/TypeScript. No frena el CI: sube los hallazgos a la
+#                  pestaña Security → Code scanning del repositorio.
+#
+# Las herramientas se bajan como binarios desde la página de releases y se comprueban contra un SHA-256 fijo
+# escrito acá (nunca desde un script de instalación ni una acción de terceros): si alguien reemplaza el archivo
+# publicado, la suma no coincide y el job falla antes de ejecutar nada. Para subir de versión hay que cambiar la
+# versión y la suma JUNTAS; la suma sale del archivo `*_checksums.txt` de ese mismo release.
+#
+# Cómo se aceptan excepciones:
+#   * Una vulnerabilidad que no se puede arreglar todavía (sin versión corregida) ya no frena: trivy la ignora
+#     con `--ignore-unfixed`.
+#   * Una con arreglo que no se puede aplicar (por ejemplo, exige un salto mayor de Expo) se anota en
+#     `.trivyignore.yaml` con su motivo y una fecha `expired_at`; al vencer, el job vuelve a fallar para
+#     obligar a mirarla de nuevo. El archivo trae el formato y un ejemplo. (Hay que pasárselo a trivy con
+#     `--ignorefile`: la versión que fijamos no busca el `.yaml` por su cuenta.)
+#   * Un secreto falso (una clave de prueba) se anota en `.gitleaksignore` con su huella, o se marca la línea
+#     con un comentario `gitleaks:allow`. Un secreto de verdad se rota primero; ocultarlo no lo arregla.
+name: Seguridad
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  schedule:
+    # Lunes 05:23 en Lima (10:23 UTC). Minuto raro a propósito: a las horas en punto GitHub encola de más.
+    - cron: '23 10 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: seguridad-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  GITLEAKS_VERSION: '8.30.1'
+  GITLEAKS_SHA256: '551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb'
+  TRIVY_VERSION: '0.76.1'
+  TRIVY_SHA256: 'c7cbe3137fb8a48a17574bede3dd6beb16742d1e9772929940fc90082c39d9c0'
+
+jobs:
+  secretos:
+    name: Secretos (gitleaks)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      # `fetch-depth: 0`: gitleaks recorre los commits; con el checkout superficial de siempre solo vería el último.
+      - name: Descargar el código con todo el historial
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Instalar gitleaks
+        run: |
+          set -euo pipefail
+          archivo="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl --fail --silent --show-error --location --retry 3 \
+            --output "${RUNNER_TEMP}/${archivo}" \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/${archivo}"
+          echo "${GITLEAKS_SHA256}  ${RUNNER_TEMP}/${archivo}" | sha256sum --check --strict
+          mkdir "${RUNNER_TEMP}/gitleaks"
+          tar --extract --gzip --file "${RUNNER_TEMP}/${archivo}" --directory "${RUNNER_TEMP}/gitleaks" gitleaks
+          echo "${RUNNER_TEMP}/gitleaks" >> "${GITHUB_PATH}"
+
+      # `--redact`: el registro de este job es público, así que un hallazgo nunca imprime el secreto completo.
+      - name: Buscar secretos en todo el historial
+        run: gitleaks git --redact --verbose --no-banner --exit-code 1 .
+
+  dependencias:
+    name: Dependencias vulnerables (trivy)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Instalar trivy
+        run: |
+          set -euo pipefail
+          archivo="trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
+          curl --fail --silent --show-error --location --retry 3 \
+            --output "${RUNNER_TEMP}/${archivo}" \
+            "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/${archivo}"
+          echo "${TRIVY_SHA256}  ${RUNNER_TEMP}/${archivo}" | sha256sum --check --strict
+          mkdir "${RUNNER_TEMP}/trivy"
+          tar --extract --gzip --file "${RUNNER_TEMP}/${archivo}" --directory "${RUNNER_TEMP}/trivy" trivy
+          echo "${RUNNER_TEMP}/trivy" >> "${GITHUB_PATH}"
+
+      # Todo lo que trivy ve, de cualquier severidad y también las de desarrollo, para que quede a la vista en el
+      # registro. No falla nunca: es el informe, no la puerta. Descarga además la base de vulnerabilidades, que el
+      # paso siguiente reutiliza.
+      - name: Informe de dependencias (no frena)
+        run: trivy fs --scanners vuln --include-dev-deps --no-progress --exit-code 0 .
+
+      # La puerta. `--ignore-unfixed`: sin versión corregida no hay nada que hacer salvo esperar. `--include-dev-deps`:
+      # Playwright y Jest no viajan en la app, pero corren en las máquinas del equipo y en este mismo CI.
+      - name: Frenar con severidad alta o crítica que ya tiene arreglo
+        run: >
+          trivy fs
+          --scanners vuln
+          --include-dev-deps
+          --severity HIGH,CRITICAL
+          --ignore-unfixed
+          --ignorefile .trivyignore.yaml
+          --skip-db-update
+          --no-progress
+          --exit-code 1
+          .
+
+  codeql:
+    name: Análisis estático (CodeQL)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      actions: read
+      # Para subir los hallazgos a la pestaña Security → Code scanning.
+      security-events: write
+
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      # JavaScript y TypeScript no se compilan: `build-mode: none` analiza el código fuente tal cual.
+      - name: Preparar CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: javascript-typescript
+          build-mode: none
+
+      - name: Analizar
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: /language:javascript-typescript

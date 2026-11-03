@@ -1,3 +1,4 @@
+import { useDuracionDelPrograma } from '../hooks/useDuracionDelPrograma';
 import { fuentes } from '../../../theme/fuentes';
 import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -12,13 +13,13 @@ import { ESPACIO_PARA_LANZADOR } from '../../renasia/components/RenasiaLauncher'
 import { cambiarDiaDelPrograma } from '../api/adminApi';
 import { CabeceraAdmin } from '../components/CabeceraAdmin';
 import {
-  DIA_MAXIMO,
   DIA_MINIMO,
   MOTIVO_MAXIMO,
   detalleDelCambioDeDia,
   leerDiaEscrito,
   mensajeDelErrorDeCambio,
   moverDia,
+  ultimoDiaAjustable,
   preguntaDelCambioDeDia,
   validarCambioDeDia,
 } from '../utils/diaDelPrograma';
@@ -46,6 +47,7 @@ export function CambiarDiaScreen({
   onCambiado,
   diaSugerido,
   motivoSugerido,
+  duracionDias,
 }: {
   aprendizId: string;
   nombre: string;
@@ -54,6 +56,11 @@ export function CambiarDiaScreen({
   onCambiado: (diaNuevo: number) => void;
   diaSugerido?: number;
   motivoSugerido?: string;
+  /**
+   * Los días de SU programa (spec 022: 90 en la Escuela, 365 en el Diplomado de un año). La ficha los trae con el detalle; si no se
+   * pasan (el aviso de emergencia del chat), se leen una vez del detalle de la persona.
+   */
+  duracionDias?: number | null;
 }) {
   const barraAlDesplazar = useOcultarBarraAlDesplazar();
   const { c, t } = useTheme();
@@ -68,11 +75,14 @@ export function CambiarDiaScreen({
     return true;
   });
 
+  const duracion = useDuracionDelPrograma(aprendizId, duracionDias);
+  /* El último día que se puede fijar en SU programa: el penúltimo (el último gradúa y no se fija a mano). */
+  const diaMaximo = ultimoDiaAjustable(duracion);
   const diaEscrito = leerDiaEscrito(texto);
-  const fueraDeRango = diaEscrito !== null && (diaEscrito < DIA_MINIMO || diaEscrito > DIA_MAXIMO);
+  const fueraDeRango = diaEscrito !== null && (diaEscrito < DIA_MINIMO || diaEscrito > diaMaximo);
   const base = diaEscrito ?? diaActual;
   const mover = (delta: number) => {
-    setTexto(String(moverDia(base, delta)));
+    setTexto(String(moverDia(base, delta, diaMaximo)));
     setError(null);
   };
 
@@ -82,14 +92,14 @@ export function CambiarDiaScreen({
       await cambiarDiaDelPrograma(aprendizId, cuerpo);
       onCambiado(cuerpo.programDay);
     } catch (e) {
-      setError(mensajeDelErrorDeCambio(e));
+      setError(mensajeDelErrorDeCambio(e, diaMaximo));
     } finally {
       setEnviando(false);
     }
   };
 
   const pedirConfirmacion = () => {
-    const revisado = validarCambioDeDia({ diaActual, diaNuevo: diaEscrito, motivo });
+    const revisado = validarCambioDeDia({ diaActual, diaNuevo: diaEscrito, motivo, diaMaximo });
     if (!revisado.ok) {
       setError(revisado.error);
       return;
@@ -121,7 +131,7 @@ export function CambiarDiaScreen({
         }}
       >
         <Text style={[t.body, { color: c.textStrong, fontSize: 20, lineHeight: 28 }]}>
-          Hoy está en el día {diaActual} de 90.
+          {`Hoy está en el día ${diaActual} de ${duracion}.`}
         </Text>
 
         <View style={{ gap: 10 }}>
@@ -145,7 +155,7 @@ export function CambiarDiaScreen({
               keyboardType="number-pad"
               maxLength={3}
               editable={!enviando}
-              accessibilityLabel={`Día nuevo, de ${DIA_MINIMO} a ${DIA_MAXIMO}`}
+              accessibilityLabel={`Día nuevo, de ${DIA_MINIMO} a ${diaMaximo}`}
               style={[...campo, estilos.numero]}
             />
             <Pressable
@@ -161,9 +171,9 @@ export function CambiarDiaScreen({
           <View style={estilos.fila}>
             <BotonSecundario
               etiqueta="−1 día"
-              accessibilityLabel={`Retroceder un día: al día ${moverDia(diaActual, -1)}`}
+              accessibilityLabel={`Retroceder un día: al día ${moverDia(diaActual, -1, diaMaximo)}`}
               onPress={() => {
-                setTexto(String(moverDia(diaActual, -1)));
+                setTexto(String(moverDia(diaActual, -1, diaMaximo)));
                 setError(null);
               }}
               deshabilitado={enviando}
@@ -171,9 +181,9 @@ export function CambiarDiaScreen({
             />
             <BotonSecundario
               etiqueta="+1 día"
-              accessibilityLabel={`Adelantar un día: al día ${moverDia(diaActual, 1)}`}
+              accessibilityLabel={`Adelantar un día: al día ${moverDia(diaActual, 1, diaMaximo)}`}
               onPress={() => {
-                setTexto(String(moverDia(diaActual, 1)));
+                setTexto(String(moverDia(diaActual, 1, diaMaximo)));
                 setError(null);
               }}
               deshabilitado={enviando}
@@ -213,7 +223,7 @@ export function CambiarDiaScreen({
 
         {error || fueraDeRango ? (
           <Text accessibilityRole="alert" style={[t.body, { color: c.danger, fontSize: 16, lineHeight: 23 }]}>
-            {error ?? `Escribe un día entre ${DIA_MINIMO} y ${DIA_MAXIMO}.`}
+            {error ?? `Escribe un día entre ${DIA_MINIMO} y ${diaMaximo}.`}
           </Text>
         ) : null}
 

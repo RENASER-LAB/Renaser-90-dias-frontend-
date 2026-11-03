@@ -1,0 +1,51 @@
+# P01 — Conectar los pasos (spec 037, maqueta 1.1 a 1.4). Precondición: emulador Android 14+, backend con V161, pasos sembrados
+# (README), un aprendiz con «Kilómetros diarios» hoy y SIN conexión en este teléfono (cerrar sesión y volver a entrar la borra).
+# Textos cortos a propósito (ver ../README.md).
+# cuenta: aprendiz
+# spec 037 FR-002, FR-003
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- runFlow: ../comun/abrir-training.yaml
+- extendedWaitUntil:
+    visible: "Kilómetros diarios"
+    timeout: 20000
+- assertVisible: "Cuenta tus pasos solo"
+- takeScreenshot: P01a-sin-conectar
+
+# 1. El enlace abre la hoja: qué se lee y quién lo ve. No ofrece instalar nada.
+- tapOn: "Cuenta tus pasos solo"
+- extendedWaitUntil:
+    visible: "Cuenta tus km solo"
+    timeout: 10000
+- assertVisible: "Con Health Connect, de Google\\."
+- assertVisible: "Renaser solo lee pasos y distancia\\."
+- assertVisible: "Tu mentor y el ranking ven tu total de km\\."
+- assertNotVisible: "Instalar.*"
+- takeScreenshot: P01b-hoja-para-conectar
+
+# 2. «Ahora no» no pide nada.
+- tapOn: "Ahora no"
+- assertNotVisible: "Cuenta tus km solo"
+- assertVisible: "Cuenta tus pasos solo"
+
+# 3. «Conectar» abre la pantalla de permisos de Health Connect (Pasos y Distancia, solo lectura).
+- tapOn: "Cuenta tus pasos solo"
+- tapOn: "Conectar"
+- extendedWaitUntil:
+    visible: "Renaser quiere leer.*|Permitir"
+    timeout: 15000
+- takeScreenshot: P01c-permiso-del-sistema
+- tapOn: "Permitir"
+- extendedWaitUntil:
+    visible: "Ya contamos tus pasos"
+    timeout: 20000
+- takeScreenshot: P01d-conectado
+- tapOn: "Listo"
+
+# 4. La fila muestra el avance: ya no hay enlace.
+- extendedWaitUntil:
+    visible: ".* de .* km|.* km · ¡Meta lista!"
+    timeout: 20000
+- assertNotVisible: "Cuenta tus pasos solo"
+- takeScreenshot: P01e-fila-con-avance

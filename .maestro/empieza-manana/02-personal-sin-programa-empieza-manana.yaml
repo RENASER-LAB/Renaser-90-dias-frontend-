@@ -1,0 +1,50 @@
+# 02 — El personal SIN fila en el programa ve en Hoy y en Plan «Haz tu programa de 90 días · Empieza mañana ›», la toca y se abre la misma
+# pantalla «Tu programa empieza mañana»; volver no activa nada y «Entendido» le crea la fila con inicio mañana (spec 036, D-261 + D-309).
+# ESCRITO Y SIN CORRER. Precondición: backend con la spec 036; administrador (o mentor, líder o alquimista) SIN fila en `participantes_programa` y sin
+# «Ahora no» guardado. Activar CREA la fila: se corre una vez por cuenta (otra cuenta sin fila o volver a clonar la base).
+# cuenta: admin
+# spec 036 FR-010
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "HOY"
+- extendedWaitUntil:
+    visible: ".*Haz tu programa de 90 días.*"
+    timeout: 30000
+- assertVisible: "Empieza mañana"
+- assertNotVisible: "Elige tu Día 1"
+- takeScreenshot: M02a-hoy-fila-empieza-manana
+# Toda la fila abre la pantalla; volver no activa nada.
+- tapOn: ".*Haz tu programa de 90 días.*"
+- extendedWaitUntil:
+    visible: "Tu programa empieza mañana"
+    timeout: 20000
+- assertVisible: "Son tus 90 días\\."
+- takeScreenshot: M02b-la-pantalla
+- tapOn:
+    text: "Volver sin empezar"
+- assertVisible: ".*Haz tu programa de 90 días.*"
+# Plan muestra su estado vacío con el mismo botón.
+- tapOn: "PLAN"
+- extendedWaitUntil:
+    visible: "Tu plan empieza con tu programa"
+    timeout: 30000
+- assertVisible: "Cuando empiece tu programa podrás escribir tus objetivos y agendar tus acciones aquí\\."
+- assertVisible: "Empezar mañana"
+- takeScreenshot: M02c-plan-sin-programa
+- tapOn: "Empezar mañana"
+- extendedWaitUntil:
+    visible: "Tu programa empieza mañana"
+    timeout: 20000
+- tapOn: "Entendido"
+# Ya tiene fila y programa activado: Hoy y Plan dicen cuándo empieza, sin la invitación.
+- extendedWaitUntil:
+    visible: ".*Tu programa empieza el .* de .*"
+    timeout: 40000
+- assertNotVisible: "Empezar mañana"
+- tapOn: "HOY"
+- extendedWaitUntil:
+    visible: ".*Tu programa empieza el .* de .*"
+    timeout: 30000
+- assertNotVisible: ".*Haz tu programa de 90 días.*"
+- takeScreenshot: M02d-hoy-tras-activar

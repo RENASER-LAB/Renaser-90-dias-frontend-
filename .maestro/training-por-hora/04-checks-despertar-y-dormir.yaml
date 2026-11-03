@@ -1,5 +1,6 @@
 # T04 — El ✓ de la fila marca sin abrir nada: DESPERTAR (sin hora) y DORMIR registran la hora y salen de la lista.
-# Precondición: `reset-hoy.sql`.
+# Precondición: Despertar y Dormir PENDIENTES (los deja la línea `# antes:`: este flujo los cumple; training-por-hora/01 pide Despertar pendiente).
+# antes: .maestro/comun/estado-de-hoy.sh PENDIENTE WAKE_UP SLEEP
 # cuenta: aprendiz
 appId: com.renaser.app
 ---

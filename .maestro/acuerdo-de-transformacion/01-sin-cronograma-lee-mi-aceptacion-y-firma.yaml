@@ -1,0 +1,54 @@
+# 01 — Entra SIN cronograma (pagó completo): lee el Acuerdo de transformación, ve «Mi aceptación» con SUS datos y firma como siempre; no hay sección de cronograma
+# (spec 039, D-312). ESCRITO Y SIN CORRER.
+# cuenta: aprendiz
+# Precondición (base local, nunca producción): backend con la spec 039 (V162); aprendiz de la Escuela aceptado «Sin cronograma (pagó completo)», con la ficha terminada,
+# los Términos SIN aceptar y su programa SIN activar. Se corre una vez por cuenta (firmar activa el programa).
+appId: com.renaser.app
+---
+- extendedWaitUntil:
+    visible: "Lee atentamente las 23 cláusulas y sella tu aceptación\\."
+    timeout: 60000
+- assertVisible: "Términos y condiciones"
+# El texto del dueño: la introducción con el nombre del programa y las cláusulas numeradas.
+- assertVisible: "Al inscribirme en Formación RENASER.*"
+- scrollUntilVisible:
+    element: "Declaro haber leído y comprendido los presentes términos y condiciones.*"
+    direction: DOWN
+    timeout: 40000
+# «MI ACEPTACIÓN» (el rótulo se dibuja en mayúsculas): las dos frases fijas y los cinco datos que llena el sistema.
+- scrollUntilVisible:
+    element: "(?i)mi aceptación"
+    direction: DOWN
+    timeout: 30000
+- assertVisible: "He decidido formar parte de RENASER.*"
+- assertVisible: "Declaro que he leído, comprendido y aceptado los términos y condiciones del programa al que ingreso\\."
+- assertVisible: "Participante"
+- assertVisible: "Programa"
+- assertVisible: "Formación RENASER · 90 días"
+- assertVisible: "Fecha de inicio"
+- assertVisible: "Fecha de finalización"
+- assertVisible: "Fecha de aceptación"
+# Ningún marcador de la plantilla.
+- assertNotVisible: ".*\\[.*\\].*"
+- assertNotVisible: ".*PROGRAMA.*"
+# Sin cronograma: la firma de siempre.
+- assertNotVisible: "Mi cronograma de pagos"
+- assertNotVisible: "Acepto el cronograma de pagos registrado en NASER.*"
+- takeScreenshot: A01a-mi-aceptacion-sin-cronograma
+# Sin casilla ni firma no avanza y dice qué falta (como siempre).
+- tapOn: "Continuar"
+- assertVisible: "Aceptación requerida"
+- tapOn: "OK"
+- runFlow:
+    file: comun-firmar.yaml
+    env:
+      BOTON: "Continuar"
+# Las fechas de «Mi aceptación» son las de «Tu programa empieza mañana» (la del inicio de la captura A01a es la de esta pantalla).
+- extendedWaitUntil:
+    visible: "Tu programa empieza mañana"
+    timeout: 60000
+- extendedWaitUntil:
+    visible: "(Lunes|Martes|Miércoles|Jueves|Viernes|Sábado|Domingo) [0-9]+ de [a-z]+"
+    timeout: 30000
+- assertVisible: "Son tus 90 días\\."
+- takeScreenshot: A01b-tu-programa-empieza-manana
