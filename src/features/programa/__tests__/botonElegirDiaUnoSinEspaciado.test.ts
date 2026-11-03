@@ -19,7 +19,7 @@ describe('«Empezar mañana» sin letras espaciadas', () => {
   });
 
   it('es el mismo ajuste que los demás botones dorados en tipo oración del rediseño', () => {
-    expect(TARJETA_HOY).toMatch(/textoDelBoton: \{ fontSize: 16, letterSpacing: 0 \}/);
+    expect(TARJETA_HOY).toMatch(/textoDelBoton: \{ fontSize: 15, letterSpacing: 0 \}/);
     // Desde el 2026-11-02 el botón dorado trae él mismo el estilo nuevo (16 px, sin espaciado): el `textStyle` de arriba queda
     // como estaba y ya no corrige nada (botonesDoradosEnTipoOracion vigila el estilo por defecto).
     expect(GOLD).not.toMatch(/letterSpacing: 2\.2/);

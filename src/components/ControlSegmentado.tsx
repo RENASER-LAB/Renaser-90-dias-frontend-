@@ -55,6 +55,11 @@ interface ControlSegmentadoProps<T extends string> {
    * día no se anima. Apagado por defecto: los demás controles conservan sus 250 ms.
    */
   sinAnimacion?: boolean;
+  /**
+   * Letra de 14 y segmentos de 40 de alto (2026-11-03, el selector de formación de Comunidad: «Redúcele el tamaño de texto, es
+   * muy grande»). El área táctil sigue en 44: el segmento suma 2 de `hitSlop` por arriba y por abajo. Apagado por defecto.
+   */
+  compacto?: boolean;
 }
 
 /** Aire entre la pista y la píldora. */
@@ -68,6 +73,7 @@ export function ControlSegmentado<T extends string>({
   accessibilityLabel,
   achicarTexto = false,
   sinAnimacion = false,
+  compacto = false,
 }: ControlSegmentadoProps<T>) {
   const { c, t } = useTheme();
   const [anchoPista, setAnchoPista] = useState(0);
@@ -131,6 +137,7 @@ export function ControlSegmentado<T extends string>({
             style={[
               t.body,
               styles.etiqueta,
+              compacto && styles.etiquetaCompacta,
               {
                 color: elegida ? c.textStrong : c.textSoft,
                 fontFamily: elegida ? fuentes.media : fuentes.regular,
@@ -152,7 +159,8 @@ export function ControlSegmentado<T extends string>({
               onCambiar(opcion.valor);
             }}
             pressRetentionOffset={16}
-            style={[styles.segmento, achicarTexto ? styles.segmentoApretado : null]}
+            hitSlop={compacto ? { top: 2, bottom: 2 } : undefined}
+            style={[styles.segmento, compacto && styles.segmentoCompacto, achicarTexto ? styles.segmentoApretado : null]}
           >
             {opcion.icono ? (
               <View style={styles.conIcono} importantForAccessibility="no-hide-descendants">
@@ -210,4 +218,6 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     letterSpacing: 0,
   },
+  segmentoCompacto: { minHeight: 40 },
+  etiquetaCompacta: { fontSize: 14, lineHeight: 18 },
 });

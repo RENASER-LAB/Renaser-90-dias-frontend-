@@ -15,6 +15,12 @@ interface GoldButtonProps {
   style?: ViewStyle;
   textStyle?: TextStyle;
   variant?: 'primary' | 'secondary' | 'outline';
+  /**
+   * Botón dorado de 44 de alto (2026-11-03, pedido del dueño: «Redúcele el tamaño de texto, es muy grande»; la tarjeta de acciones
+   * de Hoy). Solo cambia el alto y el relleno del degradado: la letra la pone quien lo usa con `textStyle`. Apagado por
+   * defecto: el botón dorado es el de 52 de siempre.
+   */
+  compacto?: boolean;
 }
 
 export function GoldButton({
@@ -27,6 +33,7 @@ export function GoldButton({
   style,
   textStyle,
   variant = 'primary',
+  compacto = false,
 }: GoldButtonProps) {
   const { c } = useTheme();
 
@@ -118,7 +125,7 @@ export function GoldButton({
         colors={c.goldGrad}
         start={{ x: 0.1, y: 0 }}
         end={{ x: 0.9, y: 1 }}
-        style={styles.gradient}
+        style={[styles.gradient, compacto && styles.gradientCompacto]}
       >
         {loading ? (
           <ActivityIndicator color={c.onGold} size="small" />
@@ -155,6 +162,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 10,
   },
+  /* 44 de alto: el mínimo táctil de AGENTS.md para un botón de apoyo dentro de una tarjeta. */
+  gradientCompacto: { minHeight: 44, paddingVertical: 10, paddingHorizontal: 16 },
   /* El texto de TODO botón dorado: tipo oración, 16 px y sin espaciar (decisión del dueño, 2026-11-02:
      «unificar al estilo nuevo»). Era `t.micro` en versales: 11 px y `letterSpacing` 2,2 / 1,6, que en tipo
      oración se leía «G u a r d a r». Nada aquí pasa el texto a mayúsculas: el botón dice lo que dice su

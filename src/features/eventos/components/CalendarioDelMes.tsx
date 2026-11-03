@@ -66,7 +66,7 @@ export function CalendarioDelMes({
   const delDia = diaElegido ? porDia[diaElegido] ?? [] : [];
 
   return (
-    <View style={{ gap: 14 }}>
+    <View style={{ gap: 10 }}>
       <View style={estilos.cabecera}>
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text
@@ -80,9 +80,9 @@ export function CalendarioDelMes({
           </Text>
           <Text style={[estilos.anio, { color: c.textSoft }]}>{mes.anio}</Text>
         </View>
-        <BotonSecundario etiqueta="Hoy" onPress={onHoy} estilo={estilos.botonHoy} accessibilityLabel="Ir a hoy" />
-        <BotonSecundario etiqueta="‹" onPress={() => onCambiarMes(-1)} estilo={estilos.flecha} accessibilityLabel="Mes anterior" />
-        <BotonSecundario etiqueta="›" onPress={() => onCambiarMes(1)} estilo={estilos.flecha} accessibilityLabel="Mes siguiente" />
+        <BotonSecundario etiqueta="Hoy" compacto onPress={onHoy} estilo={estilos.botonHoy} accessibilityLabel="Ir a hoy" />
+        <BotonSecundario etiqueta="‹" compacto onPress={() => onCambiarMes(-1)} estilo={estilos.flecha} accessibilityLabel="Mes anterior" />
+        <BotonSecundario etiqueta="›" compacto onPress={() => onCambiarMes(1)} estilo={estilos.flecha} accessibilityLabel="Mes siguiente" />
       </View>
 
       <View style={[estilos.grilla, { borderColor: c.border, backgroundColor: c.cardBg, borderRadius: space.radius }]}>
@@ -114,12 +114,18 @@ export function CalendarioDelMes({
         ))}
       </View>
 
+      {/* La leyenda de los puntos (2026-11-03, el dueño: «El lenguaje se fue, hay que ponerle allí, por ejemplo, Actividad programada /
+          Confirmé asistencia»). Cada pieza es un punto con su palabra; si las dos no caben en un renglón, la segunda baja a otro, y
+          ninguna se corta (sin `numberOfLines`). */}
       <View style={estilos.leyenda}>
-        <Punto color={c.gold} />
-        <Text style={[estilos.leyendaTexto, { color: c.textSoft }]}>Hay evento</Text>
-        <View style={{ width: 12 }} />
-        <Punto color={c.success} />
-        <Text style={[estilos.leyendaTexto, { color: c.textSoft }]}>Vas</Text>
+        <View style={estilos.leyendaPieza}>
+          <Punto color={c.gold} />
+          <Text style={[estilos.leyendaTexto, { color: c.textSoft }]}>{LEYENDA_ACTIVIDAD_PROGRAMADA}</Text>
+        </View>
+        <View style={estilos.leyendaPieza}>
+          <Punto color={c.success} />
+          <Text style={[estilos.leyendaTexto, { color: c.textSoft }]}>{LEYENDA_ASISTENCIA_CONFIRMADA}</Text>
+        </View>
       </View>
 
       {cargando ? <Parrafo>Buscando eventos…</Parrafo> : null}
@@ -147,6 +153,10 @@ export function CalendarioDelMes({
   );
 }
 
+/** Lo que dice la leyenda bajo el mes: el punto dorado y el punto verde. */
+export const LEYENDA_ACTIVIDAD_PROGRAMADA = 'Actividad programada';
+export const LEYENDA_ASISTENCIA_CONFIRMADA = 'Confirmé asistencia';
+
 function Punto({ color }: { color: string }) {
   return <View style={[estilos.punto, { backgroundColor: color }]} />;
 }
@@ -168,13 +178,15 @@ function Celda({
 }) {
   const { c } = useTheme();
   const colorDelNumero = elegida ? c.onGold : !celda.delMes ? c.tabInactive : hoy ? c.goldInk : c.textStrong;
-  const eventos = cuantos === 0 ? 'sin eventos' : cuantos === 1 ? '1 evento' : `${cuantos} eventos`;
+  /* Lo que oye el lector de pantalla usa las mismas palabras que la leyenda: «actividad programada» y «confirmaste asistencia». */
+  const eventos =
+    cuantos === 0 ? 'sin actividad programada' : cuantos === 1 ? '1 actividad programada' : `${cuantos} actividades programadas`;
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
       accessibilityState={{ selected: elegida }}
-      accessibilityLabel={`${hoy ? 'Hoy, ' : ''}${diaEnPalabras(celda.fecha)}, ${eventos}${marca === 'vas' ? ', vas' : ''}`}
+      accessibilityLabel={`${hoy ? 'Hoy, ' : ''}${diaEnPalabras(celda.fecha)}, ${eventos}${marca === 'vas' ? ', confirmaste asistencia' : ''}`}
       style={({ pressed }) => [estilos.celda, { opacity: pressed ? 0.7 : celda.delMes ? 1 : 0.55 }]}
     >
       <View
@@ -233,10 +245,11 @@ function TarjetaDelDia({ oc, zona, onPress }: { oc: Ocurrencia; zona: string; on
 
 const estilos = StyleSheet.create({
   cabecera: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  mes: { fontFamily: fuentes.display, fontSize: 24, letterSpacing: -0.4, lineHeight: 29 },
-  anio: { fontFamily: fuentes.media, fontSize: LETRA.cuerpo },
-  botonHoy: { minWidth: 64, paddingHorizontal: 12 },
-  flecha: { width: 48, paddingHorizontal: 0 },
+  /* El mes a 20 (era 24) y el año a 14 (era 16): 2026-11-03, «Redúcele el tamaño de texto, es muy grande». */
+  mes: { fontFamily: fuentes.display, fontSize: 20, letterSpacing: -0.3, lineHeight: 24 },
+  anio: { fontFamily: fuentes.media, fontSize: 14, lineHeight: 18 },
+  botonHoy: { minWidth: 60, paddingHorizontal: 12 },
+  flecha: { width: 44, paddingHorizontal: 0 },
   grilla: { borderWidth: 1, paddingVertical: 8, paddingHorizontal: 4 },
   semana: { flexDirection: 'row' },
   inicial: { flex: 1, textAlign: 'center', fontFamily: fuentes.negrita, fontSize: LETRA.cuerpo, paddingVertical: 6 },
@@ -244,8 +257,9 @@ const estilos = StyleSheet.create({
   circulo: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   numero: { fontSize: 17 },
   punto: { width: 7, height: 7, borderRadius: 3.5 },
-  leyenda: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 4 },
-  leyendaTexto: { fontFamily: fuentes.regular, fontSize: LETRA.cuerpo },
+  leyenda: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: 14, rowGap: 4, paddingHorizontal: 4 },
+  leyendaPieza: { flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 },
+  leyendaTexto: { fontFamily: fuentes.regular, fontSize: 14, lineHeight: 20, flexShrink: 1 },
   tituloDelDia: { fontFamily: fuentes.media, fontSize: LETRA.titulo + 1, lineHeight: 26, marginTop: 4 },
   tarjeta: {
     flexDirection: 'row',

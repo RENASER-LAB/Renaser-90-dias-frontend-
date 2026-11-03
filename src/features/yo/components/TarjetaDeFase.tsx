@@ -5,6 +5,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { ReduceMotion, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useTheme } from '../../../theme/ThemeContext';
+import { escalaDeLetra } from '../../../theme/topeDeLetra';
 import type { Palette } from '../../../theme/tokens';
 import { tacto } from '../../../utils/tacto';
 import type { AnimalParaLaTarjeta } from '../utils/animalConfigurado';
@@ -70,7 +71,11 @@ export function TarjetaDeFase({
   const ventana = useWindowDimensions();
   /* Hasta el primer `onLayout` se estima con la ventana (Yo deja 18 px por lado); después manda el ancho real. */
   const [ancho, setAncho] = useState<number | null>(null);
-  const { ladoDelAnimal, reservaDerecha } = medidasDeLaTarjetaDeFase(ancho ?? ventana.width - 36, ventana.fontScale);
+  const { ladoDelAnimal, reservaDerecha } = medidasDeLaTarjetaDeFase(
+    ancho ?? ventana.width - 36,
+    // La letra de la app no crece más que el tope global: reservar más sería quitarle sitio al animal sin necesidad.
+    escalaDeLetra(ventana.fontScale),
+  );
   const escala = useSharedValue(1);
 
   useEffect(() => setFallo(false), [animal.imagen]);

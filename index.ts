@@ -1,3 +1,6 @@
+// Primero de todo: el tope de la letra del sistema (ver src/theme/topeDeLetra.ts).
+import './src/theme/topeDeLetraGlobal';
+
 import { registerRootComponent } from 'expo';
 
 import App from './App';

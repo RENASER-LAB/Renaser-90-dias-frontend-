@@ -83,6 +83,12 @@ interface PropsBoton {
   accessibilityLabel?: string;
   testID?: string;
   estilo?: ViewStyle;
+  /**
+   * Botón de 44 de alto con la etiqueta a 15 px y SIEMPRE en un renglón (2026-11-03, pedido del dueño: «Redúcele el tamaño de
+   * texto, es muy grande»; Eventos). Si la etiqueta no cabe se achica hasta un 85 % antes de bajar de renglón. Apagado por
+   * defecto: los demás botones son los de 52 y 17 px de siempre.
+   */
+  compacto?: boolean;
 }
 
 /** La acción principal de la pantalla: rellena, dorada, 52 px. */
@@ -112,6 +118,7 @@ function BotonBase({
   accessibilityLabel,
   testID,
   estilo,
+  compacto = false,
   fondo,
   borde,
   tinta,
@@ -127,13 +134,21 @@ function BotonBase({
       accessibilityState={{ disabled: inactivo, busy: cargando }}
       style={({ pressed }) => [
         estilos.boton,
+        compacto && estilos.botonCompacto,
         { backgroundColor: fondo, borderColor: borde, opacity: inactivo ? 0.6 : pressed ? 0.85 : 1 },
         estilo,
       ]}
     >
       {cargando ? <ActivityIndicator color={tinta} size="small" /> : null}
-      {!cargando && icono ? <Icon name={icono} size={18} color={tinta} /> : null}
-      <Text style={[estilos.etiqueta, { color: tinta }]}>{etiqueta}</Text>
+      {!cargando && icono ? <Icon name={icono} size={compacto ? 16 : 18} color={tinta} /> : null}
+      <Text
+        style={[estilos.etiqueta, compacto && estilos.etiquetaCompacta, { color: tinta }]}
+        numberOfLines={compacto ? 1 : undefined}
+        adjustsFontSizeToFit={compacto}
+        minimumFontScale={compacto ? 0.85 : undefined}
+      >
+        {etiqueta}
+      </Text>
     </Pressable>
   );
 }
@@ -169,6 +184,8 @@ const estilos = StyleSheet.create({
     justifyContent: 'center',
     gap: 10,
   },
+  /* 44 de alto (el mínimo táctil de AGENTS.md), 15 px y un solo renglón. */
+  botonCompacto: { minHeight: 44, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 6, gap: 8 },
   plegable: { borderWidth: 1, borderRadius: 16 },
   cabeceraPlegable: { minHeight: 56, flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 12 },
   cuerpoPlegable: { paddingHorizontal: 16, paddingBottom: 16 },
@@ -180,4 +197,5 @@ const estilos = StyleSheet.create({
     flexShrink: 1,
     ...PADDING_QUE_PISA_EL_RECICLADO,
   },
+  etiquetaCompacta: { fontSize: 15 /* compacto */, lineHeight: 20 },
 });

@@ -3,6 +3,7 @@ import React from 'react';
 import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { useTheme } from '../../../theme/ThemeContext';
+import { escalaDeLetra } from '../../../theme/topeDeLetra';
 import type { BloqueOcupado, HuecoDelDia, VentanaDelDia } from '../types/huecos.types';
 import {
   acomodarEnCarriles,
@@ -21,8 +22,6 @@ import { tramoEnPalabras } from '../utils/textosDeHuecos';
 /** Lo que se agrega arriba y abajo para que la primera y la última marca de hora no queden cortadas. */
 const AIRE_VERTICAL = 10;
 const SEPARACION_ENTRE_CARRILES = 3;
-/** El tamaño de la letra del sistema que la línea sigue: más allá de 1,6 el día se alargaría sin ganar legibilidad. */
-const ESCALA_MAXIMA = 1.6;
 
 /**
  * La agenda de UN día, como una línea de tiempo vertical (spec 015, corregido 2026-10-29): de la hora de Despertar a la de
@@ -30,7 +29,7 @@ const ESCALA_MAXIMA = 1.6;
  * Cada hueco de 30 minutos o más va en dorado con su duración y su rango.
  *
  * - **Se dibuja con vistas posicionadas**, no con SVG: un minuto mide {@link DP_POR_MINUTO} dp por la escala de la letra del
- *   sistema, así que un bloque de 30 minutos siempre tiene el alto de una línea de texto, también con la letra al 130 %.
+ *   sistema, así que un bloque de 30 minutos siempre tiene el alto de una línea de texto, también con la letra del sistema grande (la app la deja crecer hasta 1,2).
  * - **Los bloques que se cruzan** se reparten en columnas, como una agenda (`acomodarEnCarriles`): dos cosas a la misma hora
  *   se ven las dos.
  * - **`ocupados === null`** (un día de una semana cerrada, que no guarda nombres) dibuja solo los huecos sobre un fondo
@@ -49,7 +48,8 @@ export function LineaDeTiempoDelDia({
 }) {
   const { c, t, mode } = useTheme();
   const { fontScale } = useWindowDimensions();
-  const escala = Math.min(Math.max(fontScale, 1), ESCALA_MAXIMA);
+  /* La letra de la app nunca crece más que `TOPE_DE_LETRA` (1,2): seguir una escala mayor alargaría el día sin ganar legibilidad. */
+  const escala = escalaDeLetra(fontScale);
   const minutos = minutosDeLaVentana(ventana);
   if (minutos === null) return null;
 
