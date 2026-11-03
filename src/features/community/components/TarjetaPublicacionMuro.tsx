@@ -11,7 +11,6 @@ import { useTheme } from '../../../theme/ThemeContext';
 import { space } from '../../../theme/tokens';
 import { useFuncionalidad } from '../../plataforma/estado/useFuncionalidad';
 import { CLAVES } from '../../plataforma/utils/clavesDeLaApp';
-import { RotuloDeFormacion } from '../../formaciones/components/RotuloDeFormacion';
 import type { FotoMuroNormalizada } from '../utils/normalizarImagen';
 import { PROPORCION_POR_DEFECTO } from '../utils/proporcionImagen';
 import { FotoMuro } from './FotoMuro';
@@ -110,19 +109,23 @@ function TarjetaPublicacionMuroBase({
           post.pendiente && { opacity: 0.55 },
         ]}
       >
-        {/* Header del Post */}
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+        {/* Header del Post. Es una fila de tres piezas: el autor (que CEDE), y a la derecha la insignia del día y el «…»
+            (que NO ceden). Antes el autor era una caja sin tope: un nombre largo («Lisette Pierina Camones Aparicio»)
+            medía lo que midiera su texto en una línea, empujaba la insignia y el «…» fuera de la tarjeta y de la
+            pantalla, y el «…» —el último de la fila— era lo primero que dejaba de verse. */}
+        <View style={styles.cabecera}>
+          <View style={styles.autor}>
             {/* Su foto o sus iniciales (2026-10-05). Antes era el emoji 👤, el mismo para todos. */}
             <AvatarPersona nombre={post.author} avatarUrl={post.avatarUrl} size={36} />
-            <View>
-              <Text style={[t.cardTitle, { color: c.textStrong }]}>{post.author}</Text>
-              <Text style={[t.small, { color: c.micro }]}>
+            <View style={styles.autorTextos}>
+              {/* Hasta dos líneas: el nombre completo se lee (a quien modera le sirve verlo entero) y, si aun así no cabe, «…». */}
+              <Text numberOfLines={2} style={[t.cardTitle, { color: c.textStrong }]}>{post.author}</Text>
+              <Text numberOfLines={1} style={[t.small, { color: c.micro }]}>
                 {post.cell} · {post.timeAgo}
               </Text>
             </View>
           </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+          <View style={styles.insigniaYModerar}>
             {/* Sin día no hay insignia. Dibujar "Día 0" era peor que no dibujar nada. */}
             {post.diaPrograma !== null ? (
               <View style={[styles.dayBadge, { backgroundColor: c.goldWash }]}>
@@ -146,9 +149,6 @@ function TarjetaPublicacionMuroBase({
             ) : null}
           </View>
         </View>
-
-        {/* Spec 024: la formación de la publicación, solo cuando Administración lee «Todas» (para las demás cuentas no se dibuja). */}
-        <RotuloDeFormacion formation={post.formacion} estilo={{ marginTop: 8 }} />
 
         {/* Texto del Post con "Ver más..." */}
         <View style={{ marginTop: 8 }}>
@@ -519,6 +519,14 @@ function TarjetaPublicacionMuroBase({
 export const TarjetaPublicacionMuro = memo(TarjetaPublicacionMuroBase);
 
 const styles = StyleSheet.create({
+  /** La cabecera: autor a la izquierda, insignia del día y «…» a la derecha, con aire entre las dos mitades. */
+  cabecera: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
+  /** El autor ocupa lo que sobra y puede encogerse (`minWidth: 0`: sin él una fila de RN no baja del ancho de su contenido). */
+  autor: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  /** La columna del nombre y de «grupo · hace cuánto»: cede ancho antes que empujar a la derecha. */
+  autorTextos: { flexShrink: 1, minWidth: 0 },
+  /** La insignia del día y el «…» nunca se achican ni se salen: lo que cede es el nombre. */
+  insigniaYModerar: { flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 0 },
   /** El «…» de moderación: 48 de área táctil sin sumar alto a la cabecera (36 del avatar) ni correr el borde derecho. */
   botonModerar: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center', marginVertical: -6, marginRight: -12 },
   /* El contenedor externo de una publicación: su borde se queda. Lo que se fue son los trece
