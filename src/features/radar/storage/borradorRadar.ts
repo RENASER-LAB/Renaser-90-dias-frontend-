@@ -109,3 +109,18 @@ export function limpiarBorradoresViejos(usuarioId: string, momento: Date): Promi
     if (viejas.length > 0) await AsyncStorage.multiRemove(viejas);
   }, undefined);
 }
+
+/**
+ * Borra TODOS los borradores del Código Renaser del teléfono, de cualquier cuenta y de cualquier hora (2026-11-03).
+ *
+ * Lo llama «Cerrar sesión»: lo escrito en un formulario a medias es de quien lo escribió y no debe quedar en un teléfono que
+ * ya no tiene sesión. No se llama al vencer la sesión por sí sola: ahí el borrador existe justamente para que la persona
+ * vuelva a entrar y encuentre lo que escribía.
+ */
+export function borrarTodosLosBorradores(): Promise<void> {
+  return sinRomper(async () => {
+    const claves = await AsyncStorage.getAllKeys();
+    const mias = claves.filter(k => k.startsWith(PREFIJO));
+    if (mias.length > 0) await AsyncStorage.multiRemove(mias);
+  }, undefined);
+}

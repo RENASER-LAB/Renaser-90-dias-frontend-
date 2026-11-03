@@ -127,33 +127,37 @@ export const MI_RADAR: ConfigMiRadar = {
   vecesPorDefecto: 6,
 };
 
-/** Las cinco preguntas, con el campo del contrato HTTP que cada una llena. */
+/**
+ * Las preguntas de texto, con el campo del contrato HTTP que cada una llena.
+ *
+ * El enunciado es lo único que se lee en pantalla: sin línea de ayuda debajo (2026-11-03, pedido del dueño: «hay mucho texto
+ * y se extendió demasiado»). El `marcador` es el gris dentro del campo vacío y se mantiene corto.
+ */
 export const PREGUNTAS_RADAR = [
   {
     campo: 'whatAmIDoing',
-    titulo: '¿Qué hago?',
-    ayuda: 'Lo que estás haciendo en este momento, sin adornos.',
+    titulo: '¿Dónde estoy y qué estoy haciendo ahora?',
     marcador: 'Estoy…',
   },
   {
     campo: 'whatAmIThinking',
-    titulo: '¿Qué pienso?',
-    ayuda: 'El pensamiento que te está ocupando ahora.',
+    titulo: '¿Qué estoy pensando?',
     marcador: 'Estoy pensando en…',
   },
   {
     campo: 'whatAmIFeeling',
-    titulo: '¿Qué siento?',
-    ayuda: 'La emoción, no la interpretación.',
+    titulo: '¿Qué estoy sintiendo?',
     marcador: 'Siento…',
   },
   {
     campo: 'whatAmIAvoiding',
-    titulo: '¿Qué evito?',
-    ayuda: 'Eso que sabes que toca y estás postergando.',
+    titulo: '¿Qué estoy evitando?',
     marcador: 'Estoy evitando…',
   },
 ] as const;
+
+/** La quinta pregunta: no se escribe, se elige del 1 al 10 (y no se dicta ni se escucha). */
+export const PREGUNTA_ENERGIA = '¿Cuál es mi nivel de energía?';
 
 export type CampoRadar = (typeof PREGUNTAS_RADAR)[number]['campo'];
 

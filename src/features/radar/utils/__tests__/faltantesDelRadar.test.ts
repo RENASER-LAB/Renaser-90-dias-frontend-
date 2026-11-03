@@ -13,7 +13,17 @@ describe('faltantesDelRadar', () => {
 
   it('en el orden de la pantalla, y un texto de solo espacios cuenta como vacío', () => {
     const faltan = faltantesDelRadar({ ...llenas, whatAmIFeeling: '   ' }, null);
-    expect(textoDeLoQueFalta(faltan)).toBe('Faltan 2: ¿Qué siento?, nivel de energía.');
+    expect(textoDeLoQueFalta(faltan)).toBe('Faltan 2: ¿Qué estoy sintiendo?, nivel de energía.');
+  });
+
+  it('usa los enunciados nuevos de las preguntas y no suma un punto detrás de un «?»', () => {
+    expect(textoDeLoQueFalta(faltantesDelRadar({ ...llenas, whatAmIAvoiding: '' }, 5))).toBe('Falta: ¿Qué estoy evitando?');
+    expect(textoDeLoQueFalta(faltantesDelRadar({ ...llenas, whatAmIDoing: '' }, 5))).toBe(
+      'Falta: ¿Dónde estoy y qué estoy haciendo ahora?',
+    );
+    expect(textoDeLoQueFalta(faltantesDelRadar({ ...llenas, whatAmIThinking: '' }, null))).toBe(
+      'Faltan 2: ¿Qué estoy pensando?, nivel de energía.',
+    );
   });
 
   it('completo: nada que decir', () => {

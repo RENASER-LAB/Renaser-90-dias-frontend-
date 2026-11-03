@@ -5,7 +5,7 @@ appId: com.renaser.app
 - runFlow: ../comun/despejar-capas.yaml
 # El formulario innegociable de los días 1 a 7 se abre solo, sin botón de cerrar.
 - extendedWaitUntil:
-    visible: "¿Dónde estás ahora mismo\\?"
+    visible: "Escuchar la pregunta ¿Dónde estoy y qué estoy haciendo ahora\\?"
     timeout: 40000
 - assertVisible: ".*Innegociable.*"
 - assertNotVisible: "Cerrar"
@@ -14,7 +14,7 @@ appId: com.renaser.app
 - extendedWaitUntil:
     visible: "TRAINING"
     timeout: 30000
-- assertNotVisible: "¿Dónde estás ahora mismo\\?"
+- assertNotVisible: "Escuchar la pregunta ¿Dónde estoy y qué estoy haciendo ahora\\?"
 # La mitad del Radar de Hoy (spec 016) dice «HH:00 · Registrado» en un solo texto.
 - scrollUntilVisible:
     element: ".*· Registrado"

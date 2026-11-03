@@ -1,4 +1,3 @@
-import { fuentes } from '../../../theme/fuentes';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
@@ -9,7 +8,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -19,7 +17,6 @@ import { Icon } from '../../../components/Icon';
 import { SliderRating } from '../../../components/SliderRating';
 import { MicroLabel } from '../../../components/ui';
 import { useSystemBackHandler } from '../../../hooks/useSystemBackHandler';
-import { ahoraConfiable } from '../../../services/http/relojServidor';
 import { useResponsive } from '../../../theme/responsive';
 import { useTheme } from '../../../theme/ThemeContext';
 import { tacto } from '../../../utils/tacto';
@@ -28,10 +25,12 @@ import {
   ENERGIA_MAXIMA,
   ENERGIA_MINIMA,
   MAXIMO_CARACTERES,
+  PREGUNTA_ENERGIA,
   PREGUNTAS_RADAR,
   type CampoRadar,
 } from '../config/configRadar';
-import { borrarBorrador, guardarBorrador, leerBorrador, limpiarBorradoresViejos } from '../storage/borradorRadar';
+import type { BorradorRadar } from '../storage/borradorRadar';
+import { useBorradorDelRadar } from '../hooks/useBorradorDelRadar';
 import { useDictadoDelRadar } from '../hooks/useDictadoDelRadar';
 import { useEscucharPregunta } from '../hooks/useEscucharPregunta';
 import type { CheckInRadarApi } from '../types/radar.types';
@@ -46,9 +45,16 @@ import {
 } from '../utils/dictadoDelRadar';
 import { faltantesDelRadar, textoDeLoQueFalta, type PiezaDelRadar } from '../utils/faltantesDelRadar';
 import type { SlotRadar } from '../utils/slotsDelRadar';
-import { VozDeLaPregunta } from './VozDeLaPregunta';
+import { IndicadorDeGuardado } from './IndicadorDeGuardado';
+import { PreguntaDelRadar } from './PreguntaDelRadar';
 
 const CAMPOS_DEL_RADAR: readonly CampoRadar[] = PREGUNTAS_RADAR.map(p => p.campo);
+const EN_BLANCO: Record<CampoRadar, string> = {
+  whatAmIDoing: '',
+  whatAmIThinking: '',
+  whatAmIFeeling: '',
+  whatAmIAvoiding: '',
+};
 
 /**
  * Las cinco preguntas del Código Renaser, a PANTALLA COMPLETA.
@@ -78,6 +84,14 @@ const CAMPOS_DEL_RADAR: readonly CampoRadar[] = PREGUNTAS_RADAR.map(p => p.campo
  * editable: nada se registra solo, solo «Registrar» con las reglas de siempre. Es el MISMO formulario en las cuatro entradas
  * (pantalla obligatoria, Hoy, Mi Radar y el aviso), así que la voz se ve y funciona igual en todas. La energía no se dicta.
  * Si algo de lo dictado queda en el texto, el registro viaja con `dictado: true` y quien acompaña lo ve (decisión 030-2).
+ *
+ * ## Compacto (2026-11-03, pedido del dueño: «hay mucho texto y se extendió demasiado»)
+ *
+ * La cabecera es solo «Código Renaser · 11:00» (con la ✕ si se puede cerrar): sin título grande ni párrafo. Las cinco preguntas
+ * —«¿Dónde estoy y qué estoy haciendo ahora?», «¿Qué estoy pensando?», «¿Qué estoy sintiendo?», «¿Qué estoy evitando?» y «¿Cuál
+ * es mi nivel de energía?»— van sin línea de ayuda, y los íconos de escuchar y dictar están en el renglón de cada pregunta
+ * (`PreguntaDelRadar`). Lo escrito, lo dictado y la energía se guardan MIENTRAS se escriben (`useBorradorDelRadar`, 400 ms) y
+ * vuelven al reabrir en la misma hora.
  */
 export function CodigoRenaserModal({
   visible,
@@ -107,7 +121,7 @@ export function CodigoRenaserModal({
   textoDelPie?: string;
 }) {
   const { c, t } = useTheme();
-  const { horizontalPadding, contentMaxWidth, isShort } = useResponsive();
+  const { horizontalPadding, contentMaxWidth } = useResponsive();
 
   const [respuestas, setRespuestas] = useState<Record<CampoRadar, string>>({
     whatAmIDoing: '',
@@ -152,45 +166,36 @@ export function CodigoRenaserModal({
      del SERVIDOR, así que lo escrito a las 10:58 y enviado a las 11:00 queda donde de verdad
      pasó. Y la cabecera sí se actualiza sola, porque lee el slot en vivo — la persona ve que ya
      es el registro de las 11:00. `esperandoRespuesta` evita el otro extremo: que reabrir el
-     formulario en la hora siguiente muestre lo que se escribió en la anterior. */
+     formulario en la hora siguiente muestre lo que se escribió en la anterior.
+
+     Esto va ANTES de `useBorradorDelRadar`: los dos corren al abrir y el borrador, que llega después, no puede quedar
+     pisado por el «en blanco». */
   const estabaVisible = useRef(false);
   useEffect(() => {
     const seAcabaDeAbrir = visible && !estabaVisible.current;
     estabaVisible.current = visible;
     if (!seAcabaDeAbrir) return;
-    setRespuestas({ whatAmIDoing: '', whatAmIThinking: '', whatAmIFeeling: '', whatAmIAvoiding: '' });
+    setRespuestas(EN_BLANCO);
     setEnergia(null);
     setDictados([]);
     setIntentoEnvio(false);
     onLimpiarError();
+  }, [visible, onLimpiarError]);
 
-    /* Y se intenta recuperar lo que hubiera quedado a medias en ESTA misma franja: un envío que
-       falló por falta de red, o la app cerrada a la fuerza. El borrador es de esta hora y de nadie
-       más, así que si existe es exactamente lo que la persona estaba escribiendo. */
-    if (!usuarioId) return;
-    let vigente = true;
-    const momento = ahoraConfiable();
-    void limpiarBorradoresViejos(usuarioId, momento);
-    void leerBorrador(usuarioId, momento).then(borrador => {
-      if (!vigente || !borrador) return;
-      setRespuestas(borrador.respuestas);
-      setEnergia(borrador.energia);
-      setDictados(marcasDelBorrador(borrador.dictados, CAMPOS_DEL_RADAR));
-    });
-    return () => {
-      vigente = false;
-    };
-  }, [visible, usuarioId, onLimpiarError]);
-
-  /* Se guarda con retardo y no en cada tecla: escribir cuatro textos largos serían cientos de
-     escrituras a disco por formulario. Un segundo de margen basta para que nada real se pierda. */
-  useEffect(() => {
-    if (!visible || !usuarioId) return;
-    const id = setTimeout(() => {
-      void guardarBorrador(usuarioId, ahoraConfiable(), { respuestas, energia, dictados: [...dictados] });
-    }, 1_000);
-    return () => clearTimeout(id);
-  }, [visible, usuarioId, respuestas, energia, dictados]);
+  /* Lo escrito, dictado o elegido se guarda mientras se hace (400 ms sin teclear) y vuelve al reabrir EN ESTA hora: un envío
+     que falló por falta de red, la app cerrada a la fuerza o el formulario cerrado a medias. El borrador es de esta hora y de
+     nadie más, así que si existe es exactamente lo que la persona estaba escribiendo. */
+  const recuperar = useCallback((borrador: BorradorRadar) => {
+    setRespuestas({ ...EN_BLANCO, ...borrador.respuestas });
+    setEnergia(borrador.energia);
+    setDictados(marcasDelBorrador(borrador.dictados, CAMPOS_DEL_RADAR));
+  }, []);
+  const { guardados, descartar: descartarElBorrador } = useBorradorDelRadar({
+    visible,
+    usuarioId,
+    contenido: { respuestas, energia, dictados: [...dictados] },
+    alRecuperar: recuperar,
+  });
 
   /* Devolver `true` SIN cerrar consume el evento: ni el botón físico ni el gesto lateral sacan de
      acá, y tampoco cierran la app (que es lo que pasaría si devolviéramos `false`). */
@@ -266,10 +271,11 @@ export function CodigoRenaserModal({
       ...(huboDictado(dictados, respuestas) ? { dictado: true } : {}),
     });
     if (ok) {
-      if (usuarioId) void borrarBorrador(usuarioId, ahoraConfiable());
+      // Registrado: el borrador ya no hace falta y el cierre del formulario no debe volver a escribirlo.
+      descartarElBorrador();
       onCerrar();
     }
-  }, [completo, faltan, energia, respuestas, dictados, dictado, voz, usuarioId, onEnviar, onCerrar]);
+  }, [completo, faltan, energia, respuestas, dictados, dictado, voz, descartarElBorrador, onEnviar, onCerrar]);
 
   return (
     <Modal
@@ -290,24 +296,24 @@ export function CodigoRenaserModal({
           style={[styles.columna, { maxWidth: contentMaxWidth, paddingHorizontal: horizontalPadding }]}
         >
           <View style={styles.encabezado}>
-            <View style={{ flex: 1, gap: 3 }}>
+            <View style={styles.rotulo}>
               <MicroLabel>
                 {slot ? `Código Renaser · ${slot.etiqueta}` : 'Código Renaser'}
                 {obligatorio ? ' · Innegociable' : ''}
               </MicroLabel>
-              <Text style={[t.screenTitle, { color: c.text, fontSize: isShort ? 20 : 24 }]}>
-                ¿Dónde estás ahora mismo?
-              </Text>
             </View>
+            <IndicadorDeGuardado cuenta={guardados} />
             {!obligatorio ? (
               <Pressable
                 onPress={onCerrar}
-                hitSlop={12}
+                hitSlop={4}
                 accessibilityRole="button"
                 accessibilityLabel="Cerrar"
-                style={[styles.cerrar, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
+                style={styles.cerrar}
               >
-                <Icon name="close" size={16} color={c.textSoft} />
+                <View style={[styles.cerrarCirculo, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}>
+                  <Icon name="close" size={16} color={c.textSoft} />
+                </View>
               </Pressable>
             ) : null}
           </View>
@@ -319,54 +325,33 @@ export function CodigoRenaserModal({
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            <Text style={[t.body, { color: c.textSoft, fontSize: 13.5, lineHeight: 20 }]}>
-              {slot
-                ? `Responde con lo que hay, no con lo que debería haber. Este registro es el de las ${slot.etiqueta} y se cierra a las ${slot.cierraA}.`
-                : 'Responde con lo que hay, no con lo que debería haber.'}
-            </Text>
-
             {PREGUNTAS_RADAR.map(pregunta => {
               const valor = respuestas[pregunta.campo];
-              const vacioYMarcado = intentoEnvio && valor.trim().length === 0;
               const dictandoAqui = dictado.dictandoEn === pregunta.campo;
               return (
-                <View key={pregunta.campo} style={{ gap: 6 }} onLayout={anotarPosicion(pregunta.campo)}>
-                  <Text style={[t.cardTitle, { color: c.text, fontSize: 15.5 }]}>{pregunta.titulo}</Text>
-                  <Text style={[t.micro, { color: c.micro, fontSize: 11.5 }]}>{pregunta.ayuda}</Text>
-                  <VozDeLaPregunta
-                    pregunta={pregunta.titulo}
-                    puedeDictar={dictado.disponible}
-                    leyendo={voz.leyendo === pregunta.campo}
-                    dictando={dictandoAqui}
-                    deshabilitado={enviando}
-                    fallo={dictado.fallo?.campo === pregunta.campo ? dictado.fallo.mensaje : null}
-                    alEscuchar={() => escucharEn(pregunta.campo)}
-                    alDictar={() => dictarEn(pregunta.campo)}
-                  />
-                  <TextInput
-                    value={dictandoAqui ? textoMientrasDicta(valor, dictado.parcial) : valor}
-                    onChangeText={texto => escribir(pregunta.campo, texto)}
-                    placeholder={dictandoAqui ? 'Te escucho…' : pregunta.marcador}
-                    placeholderTextColor={c.micro}
-                    multiline
-                    editable={!enviando && !dictandoAqui}
-                    style={[
-                      styles.campo,
-                      {
-                        color: c.text,
-                        backgroundColor: c.cardBgAlt,
-                        borderColor: vacioYMarcado ? '#E06A66' : c.border,
-                      },
-                    ]}
-                    accessibilityLabel={pregunta.titulo}
-                  />
-                </View>
+                <PreguntaDelRadar
+                  key={pregunta.campo}
+                  pregunta={pregunta}
+                  textoVisible={dictandoAqui ? textoMientrasDicta(valor, dictado.parcial) : valor}
+                  marcador={pregunta.marcador}
+                  puedeDictar={dictado.disponible}
+                  leyendo={voz.leyendo === pregunta.campo}
+                  dictando={dictandoAqui}
+                  enviando={enviando}
+                  marcadaVacia={intentoEnvio && valor.trim().length === 0}
+                  fallo={dictado.fallo?.campo === pregunta.campo ? dictado.fallo.mensaje : null}
+                  alCambiar={texto => escribir(pregunta.campo, texto)}
+                  alEscuchar={() => escucharEn(pregunta.campo)}
+                  alDictar={() => dictarEn(pregunta.campo)}
+                  alMedir={anotarPosicion(pregunta.campo)}
+                />
               );
             })}
 
             <View onLayout={anotarPosicion('energia')}>
               <SliderRating
-                label="Nivel de energía"
+                variante="pregunta"
+                label={PREGUNTA_ENERGIA}
                 value={energia}
                 onChange={setEnergia}
                 minLabel={`En reserva (${ENERGIA_MINIMA})`}
@@ -413,21 +398,13 @@ export function CodigoRenaserModal({
 
 const styles = StyleSheet.create({
   pantalla: { flex: 1 },
-  columna: { flex: 1, width: '100%', alignSelf: 'center', paddingTop: 10, paddingBottom: 14 },
-  encabezado: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginBottom: 12 },
-  cerrar: { width: 38, height: 38, borderRadius: 19, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  contenido: { gap: 18, paddingBottom: 24 },
-  campo: {
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 13,
-    paddingVertical: 11,
-    minHeight: 76,
-    fontFamily: fuentes.regular,
-    fontSize: 15,
-    lineHeight: 21,
-    textAlignVertical: 'top',
-  },
+  columna: { flex: 1, width: '100%', alignSelf: 'center', paddingTop: 6, paddingBottom: 14 },
+  encabezado: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 44, marginBottom: 4 },
+  rotulo: { flex: 1, flexShrink: 1 },
+  // Área táctil de 44; el círculo que se ve mide 32. Sale por la derecha lo que sobra, para que el círculo quede en el borde.
+  cerrar: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', marginRight: -6 },
+  cerrarCirculo: { width: 32, height: 32, borderRadius: 16, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  contenido: { gap: 14, paddingTop: 4, paddingBottom: 16 },
   aviso: { borderWidth: 1, borderRadius: 12, padding: 12 },
   pie: { gap: 8, paddingTop: 10 },
 });

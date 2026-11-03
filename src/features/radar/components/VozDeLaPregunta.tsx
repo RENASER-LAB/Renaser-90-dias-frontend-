@@ -1,18 +1,20 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
-import { useTheme } from '../../../theme/ThemeContext';
 import { BotonDeVoz } from './BotonDeVoz';
 
 /**
- * La voz de UNA pregunta del Código Renaser (spec 030): «Escuchar» la pregunta y «Dictar» la respuesta, más las dos líneas
- * que explican lo que pasa. Es el mismo bloque en las cuatro preguntas y en las cuatro entradas al formulario (la pantalla
- * obligatoria de los días 1 a 7, Hoy, Mi Radar y el aviso del teléfono: todas abren `CodigoRenaserModal`).
+ * Los dos íconos de voz de UNA pregunta del Código Renaser (spec 030, rehecha el 2026-11-03): el parlante para «Escuchar» la
+ * pregunta y el micrófono para «Dictar» la respuesta. Van a la derecha, EN el renglón del enunciado, como íconos sutiles (ver
+ * `BotonDeVoz`); ya no hay una fila de botones grandes debajo de cada pregunta. Es el mismo par en las cuatro preguntas y en las
+ * cuatro entradas al formulario (la pantalla obligatoria de los días 1 a 7, Hoy, Mi Radar y el aviso del teléfono: todas abren
+ * `CodigoRenaserModal`).
  *
- * - Sin reconocimiento de voz en el teléfono (`puedeDictar` falso) no hay «Dictar», pero «Escuchar» sí: la voz es una grabación.
- * - Mientras se dicta, una línea (anunciada al lector de pantalla) dice que el micrófono está abierto y cómo cerrarlo.
- * - Mientras suena la pregunta, una línea dice qué hacer si no se oye: el teléfono no le cuenta su volumen a la app.
- * - Si el micrófono falla, una línea dice por qué y que se puede escribir; lo escrito y lo dictado antes no se toca.
+ * - Sin reconocimiento de voz en el teléfono (`puedeDictar` falso) no hay micrófono, pero el parlante sí: la voz es una grabación.
+ * - Las líneas que explican lo que pasa mientras suena o se dicta, y el aviso si el micrófono falla, las dibuja
+ *   `PreguntaDelRadar` debajo del enunciado.
+ * - **No agrandan el renglón.** Cada ícono tiene 44 de área táctil pero el par se acuesta con márgenes negativos: el renglón
+ *   mide lo que mide el enunciado, y con dos líneas de enunciado los íconos quedan arriba a la derecha, a la altura de la primera.
  */
 export function VozDeLaPregunta({
   pregunta,
@@ -20,70 +22,56 @@ export function VozDeLaPregunta({
   leyendo,
   dictando,
   deshabilitado,
-  fallo,
   alEscuchar,
   alDictar,
 }: {
-  /** El enunciado, para el nombre accesible: «Escuchar la pregunta ¿Qué siento?». */
+  /** El enunciado, para el nombre accesible: «Escuchar la pregunta ¿Qué estoy sintiendo?». */
   pregunta: string;
   puedeDictar: boolean;
   leyendo: boolean;
   dictando: boolean;
   deshabilitado?: boolean;
-  /** Por qué falló el micrófono en ESTA pregunta, o `null`. */
-  fallo: string | null;
   alEscuchar: () => void;
   alDictar: () => void;
 }) {
-  const { c, t } = useTheme();
   return (
-    <View style={estilos.bloque}>
-      <View style={estilos.fila}>
+    <View style={estilos.par}>
+      <BotonDeVoz
+        icono="volume"
+        iconoActivo="pause"
+        activo={leyendo}
+        nombreAccesible={`Escuchar la pregunta ${pregunta}`}
+        nombreAccesibleActivo={`Detener la lectura de la pregunta ${pregunta}`}
+        deshabilitado={deshabilitado}
+        alPresionar={alEscuchar}
+      />
+      {puedeDictar ? (
         <BotonDeVoz
-          icono="volume"
-          iconoActivo="pause"
-          etiqueta="Escuchar"
-          etiquetaActiva="Detener"
-          activo={leyendo}
-          nombreAccesible={`Escuchar la pregunta ${pregunta}`}
-          nombreAccesibleActivo={`Detener la lectura de la pregunta ${pregunta}`}
+          icono="mic"
+          iconoActivo="mic"
+          activo={dictando}
+          pulso
+          nombreAccesible={`Dictar la respuesta a ${pregunta}`}
+          nombreAccesibleActivo={`Parar de dictar la respuesta a ${pregunta}`}
           deshabilitado={deshabilitado}
-          alPresionar={alEscuchar}
+          alPresionar={alDictar}
         />
-        {puedeDictar ? (
-          <BotonDeVoz
-            icono="mic"
-            iconoActivo="mic"
-            etiqueta="Dictar"
-            etiquetaActiva="Parar"
-            activo={dictando}
-            nombreAccesible={`Dictar la respuesta a ${pregunta}`}
-            nombreAccesibleActivo={`Parar de dictar la respuesta a ${pregunta}`}
-            deshabilitado={deshabilitado}
-            alPresionar={alDictar}
-          />
-        ) : null}
-      </View>
-      {dictando ? (
-        <Text accessibilityLiveRegion="polite" style={[t.body, { color: c.textSoft, fontSize: 14, lineHeight: 20 }]}>
-          Te escucho. Cuando termines, toca «Parar».
-        </Text>
-      ) : null}
-      {leyendo ? (
-        <Text accessibilityLiveRegion="polite" style={[t.body, { color: c.textSoft, fontSize: 14, lineHeight: 20 }]}>
-          Si no la oyes, sube el volumen de tu teléfono.
-        </Text>
-      ) : null}
-      {fallo ? (
-        <Text accessibilityRole="alert" style={[t.body, { color: c.danger, fontSize: 14, lineHeight: 20 }]}>
-          {fallo}
-        </Text>
       ) : null}
     </View>
   );
 }
 
+/** Mitad del alto del área táctil (44) menos mitad del renglón del enunciado (22): el ícono queda a la altura de la primera línea. */
+const SOBRA_ARRIBA_Y_ABAJO = -11;
+
 const estilos = StyleSheet.create({
-  bloque: { gap: 6 },
-  fila: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  par: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexShrink: 0,
+    marginTop: SOBRA_ARRIBA_Y_ABAJO,
+    marginBottom: SOBRA_ARRIBA_Y_ABAJO,
+    // El ícono de 20 queda a 12 del borde del área; con -8 su orilla queda a 4 de la orilla del campo de abajo.
+    marginRight: -8,
+  },
 });

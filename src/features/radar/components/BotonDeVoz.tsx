@@ -1,27 +1,45 @@
-import React from 'react';
-import { StyleSheet, Text } from 'react-native';
+import React, { useEffect } from 'react';
+import { StyleSheet, View } from 'react-native';
+import Animated, {
+  cancelAnimation,
+  Easing,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
 
 import { Icon, type IconName } from '../../../components/Icon';
 import { Presionable } from '../../../components/Presionable';
 import { useTheme } from '../../../theme/ThemeContext';
-import { fuentes } from '../../../theme/fuentes';
+
+/** Cuánto baja la luz del círculo en el punto bajo de la respiración (1 = llena). */
+const OPACIDAD_BAJA = 0.45;
+/** Media respiración: una ida o una vuelta. La respiración entera dura 1,3 s, tranquila, sin llamar la atención. */
+const MEDIA_RESPIRACION_MS = 650;
 
 /**
- * Un botón de voz del Código Renaser (spec 030): «Escuchar» la pregunta o «Dictar» la respuesta. Los dos son el mismo
- * componente, así que se ven, miden y responden igual.
+ * Un botón de voz del Código Renaser, de SOLO ícono, que vive en el renglón de la pregunta (2026-11-03, pedido del dueño: «esos
+ * botones de escuchar, dictar deben de aparecer allí de manera sutil … el ícono de audio dentro del label»). Los dos —el parlante
+ * (escuchar la pregunta) y el micrófono (dictar la respuesta)— son este mismo componente, así que se ven, miden y responden igual.
  *
- * - **48 de alto** y ancho a lo que diga la palabra: se toca con el pulgar sin apuntar. Ícono de 20 y texto de 15.
- * - **El estado no depende solo del color.** Activo cambia la palabra («Escuchar» → «Detener», «Dictar» → «Parar»), el ícono y
- *   el color; y el lector de pantalla lo oye como botón «seleccionado» con su nombre completo.
- * - **Sin movimiento propio**: solo el hundimiento de `Presionable` (0,97 en 120 ms). Se toca varias veces por formulario, doce
- *   formularios al día los primeros siete días: lo que no ayuda a entender, no se anima.
+ * - **Se ve chico y se toca grande.** Ícono de 20 en un círculo de 36 que solo se dibuja cuando está activo; el área táctil es de
+ *   44 × 44. En reposo no tiene fondo ni borde: solo el ícono, en el gris secundario.
+ * - **El estado no depende solo del color.** Activo cambia el ícono (el parlante pasa a pausa), el color (dorado, con un círculo
+ *   de lavado dorado y un borde fino) y el lector de pantalla lo oye como botón «seleccionado» con su nombre completo
+ *   («Parar de dictar la respuesta a …»).
+ * - **Mientras dicta, respira.** `pulso` hace que el círculo dorado suba y baje de opacidad (1 ↔ 0,45 cada 1,3 s): solo
+ *   `opacity`, en el hilo de la interfaz, sin re-dibujar nada. Con «reducir movimiento» queda quieto, solo con el color. El
+ *   parlante activo no pulsa: suena la voz y el cambio de ícono ya lo dice.
+ * - **Sin movimiento propio al tocar** más que el hundimiento de `Presionable` (0,97 en 120 ms): se toca varias veces por formulario.
  */
 export function BotonDeVoz({
   icono,
   iconoActivo,
-  etiqueta,
-  etiquetaActiva,
   activo,
+  pulso = false,
   nombreAccesible,
   nombreAccesibleActivo,
   deshabilitado,
@@ -29,20 +47,31 @@ export function BotonDeVoz({
 }: {
   icono: IconName;
   iconoActivo: IconName;
-  etiqueta: string;
-  etiquetaActiva: string;
   activo: boolean;
+  /** El círculo dorado respira mientras `activo` (el micrófono abierto). */
+  pulso?: boolean;
   nombreAccesible: string;
   nombreAccesibleActivo: string;
   deshabilitado?: boolean;
   alPresionar: () => void;
 }) {
   const { c } = useTheme();
-  // Dictar abre el micrófono (rojo, como el del chat de SER); escuchar usa el dorado de la marca.
-  const esMicrofono = icono === 'mic';
-  const fondo = activo ? (esMicrofono ? c.danger : c.goldWash) : c.cardBgAlt;
-  const borde = activo ? (esMicrofono ? c.danger : c.goldInk) : c.border;
-  const tinta = activo && esMicrofono ? '#FFFFFF' : activo ? c.goldInk : c.text;
+  const reducir = useReducedMotion();
+  const luz = useSharedValue(1);
+  const respira = activo && pulso && !reducir;
+
+  useEffect(() => {
+    if (!respira) {
+      cancelAnimation(luz);
+      luz.set(1);
+      return;
+    }
+    const config = { duration: MEDIA_RESPIRACION_MS, easing: Easing.inOut(Easing.ease) };
+    luz.set(withRepeat(withSequence(withTiming(OPACIDAD_BAJA, config), withTiming(1, config)), -1, false));
+    return () => cancelAnimation(luz);
+  }, [respira, luz]);
+
+  const estiloDeLaLuz = useAnimatedStyle(() => ({ opacity: luz.get() }));
 
   return (
     <Presionable
@@ -51,24 +80,23 @@ export function BotonDeVoz({
       accessibilityRole="button"
       accessibilityLabel={activo ? nombreAccesibleActivo : nombreAccesible}
       accessibilityState={{ selected: activo, disabled: !!deshabilitado }}
-      style={[estilos.boton, { backgroundColor: fondo, borderColor: borde, opacity: deshabilitado ? 0.5 : 1 }]}
+      style={[estilos.area, { opacity: deshabilitado ? 0.4 : 1 }]}
     >
-      <Icon name={activo ? iconoActivo : icono} size={20} color={activo && esMicrofono ? '#FFFFFF' : c.goldInk} />
-      <Text style={[estilos.texto, { color: tinta }]}>{activo ? etiquetaActiva : etiqueta}</Text>
+      <View style={estilos.circulo}>
+        {activo ? (
+          <Animated.View
+            pointerEvents="none"
+            style={[estilos.luz, { backgroundColor: c.goldWash, borderColor: c.goldInk }, estiloDeLaLuz]}
+          />
+        ) : null}
+        <Icon name={activo ? iconoActivo : icono} size={20} color={activo ? c.goldInk : c.textSoft} />
+      </View>
     </Presionable>
   );
 }
 
 const estilos = StyleSheet.create({
-  boton: {
-    minHeight: 48,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  texto: { fontFamily: fuentes.media, fontSize: 15, lineHeight: 20 },
+  area: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  circulo: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  luz: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, borderRadius: 18, borderWidth: 1 },
 });

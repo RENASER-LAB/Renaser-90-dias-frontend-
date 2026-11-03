@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, jest } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import React from 'react';
 import { ScrollView } from 'react-native';
 import TestRenderer, { act, type ReactTestInstance, type ReactTestRenderer } from 'react-test-renderer';
@@ -45,6 +45,12 @@ const slot = { hora: 14, etiqueta: '14:00', cierraA: '15:00' } as never;
 
 const onCerrar = jest.fn();
 
+const montadas: ReactTestRenderer[] = [];
+// Al terminar cada prueba se desmonta: la lectura del borrador que quedara en vuelo ya no escribe en un árbol muerto.
+afterEach(() => {
+  for (const r of montadas.splice(0)) act(() => r.unmount());
+});
+
 function montar(extra: { usuarioId?: string | null } = {}): ReactTestRenderer {
   let r!: ReactTestRenderer;
   act(() => {
@@ -63,6 +69,7 @@ function montar(extra: { usuarioId?: string | null } = {}): ReactTestRenderer {
       }),
     );
   });
+  montadas.push(r);
   return r;
 }
 

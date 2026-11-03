@@ -15,38 +15,38 @@ appId: com.renaser.app
 # El formulario se abre solo pasados los minutos de cortesía; si todavía no, se abre desde su mitad de Hoy.
 - runFlow:
     when:
-      notVisible: "¿Dónde estás ahora mismo\\?"
+      notVisible: "Escuchar la pregunta ¿Dónde estoy y qué estoy haciendo ahora\\?"
     commands:
       - tapOn: ".*Innegociable.*"
 - extendedWaitUntil:
-    visible: "¿Dónde estás ahora mismo\\?"
+    visible: "Escuchar la pregunta ¿Dónde estoy y qué estoy haciendo ahora\\?"
     timeout: 20000
 - runFlow: ../comun/cerrar-aviso-dev.yaml
 
 # Las cuatro preguntas traen «Escuchar»; «Dictar» solo si el teléfono tiene reconocimiento de voz (el emulador de Google, sí).
-- assertVisible: "Escuchar la pregunta ¿Qué hago\\?"
-- assertVisible: "Escuchar la pregunta ¿Qué pienso\\?"
-- assertVisible: "Escuchar la pregunta ¿Qué siento\\?"
-- assertVisible: "Dictar la respuesta a ¿Qué hago\\?"
+- assertVisible: "Escuchar la pregunta ¿Dónde estoy y qué estoy haciendo ahora\\?"
+- assertVisible: "Escuchar la pregunta ¿Qué estoy pensando\\?"
+- assertVisible: "Escuchar la pregunta ¿Qué estoy sintiendo\\?"
+- assertVisible: "Dictar la respuesta a ¿Dónde estoy y qué estoy haciendo ahora\\?"
 - takeScreenshot: 41a-botones-de-voz
 
 # Escuchar: el botón pasa a «Detener», aparece la línea del volumen y al volver a tocar se detiene.
-- tapOn: "Escuchar la pregunta ¿Qué pienso\\?"
+- tapOn: "Escuchar la pregunta ¿Qué estoy pensando\\?"
 - extendedWaitUntil:
-    visible: "Detener la lectura de la pregunta ¿Qué pienso\\?"
+    visible: "Detener la lectura de la pregunta ¿Qué estoy pensando\\?"
     timeout: 5000
 - assertVisible: "Si no la oyes, sube el volumen de tu teléfono\\."
 - takeScreenshot: 41b-escuchando-la-pregunta
-- tapOn: "Detener la lectura de la pregunta ¿Qué pienso\\?"
+- tapOn: "Detener la lectura de la pregunta ¿Qué estoy pensando\\?"
 - assertNotVisible: "Si no la oyes, sube el volumen de tu teléfono\\."
-- assertVisible: "Escuchar la pregunta ¿Qué pienso\\?"
+- assertVisible: "Escuchar la pregunta ¿Qué estoy pensando\\?"
 
 # Abrir el micrófono detiene la lectura (FR-011): la voz de la app no la capta el micrófono.
-- tapOn: "Escuchar la pregunta ¿Qué hago\\?"
+- tapOn: "Escuchar la pregunta ¿Dónde estoy y qué estoy haciendo ahora\\?"
 - extendedWaitUntil:
-    visible: "Detener la lectura de la pregunta ¿Qué hago\\?"
+    visible: "Detener la lectura de la pregunta ¿Dónde estoy y qué estoy haciendo ahora\\?"
     timeout: 5000
-- tapOn: "Dictar la respuesta a ¿Qué siento\\?"
+- tapOn: "Dictar la respuesta a ¿Qué estoy sintiendo\\?"
 # La primera vez Android pide el permiso del micrófono.
 - runFlow:
     when:
@@ -58,19 +58,19 @@ appId: com.renaser.app
       visible: "Mientras la app está en uso"
     commands:
       - tapOn: "Mientras la app está en uso"
-- assertNotVisible: "Detener la lectura de la pregunta ¿Qué hago\\?"
+- assertNotVisible: "Detener la lectura de la pregunta ¿Dónde estoy y qué estoy haciendo ahora\\?"
 # Con servicio de voz queda escuchando («Parar»); sin servicio, sin red o sin permiso, una línea lo dice. Las dos son correctas.
 - extendedWaitUntil:
-    visible: "Parar de dictar la respuesta a ¿Qué siento\\?|Para dictar necesito permiso.*|No hay conexión para reconocer tu voz.*|Tu teléfono no tiene el reconocimiento de voz.*|El reconocimiento de voz está ocupado.*|No pude entender el audio.*"
+    visible: "Parar de dictar la respuesta a ¿Qué estoy sintiendo\\?|Para dictar necesito permiso.*|No hay conexión para reconocer tu voz.*|Tu teléfono no tiene el reconocimiento de voz.*|El reconocimiento de voz está ocupado.*|No pude entender el audio.*"
     timeout: 15000
 - takeScreenshot: 41c-dictando-o-aviso
 
 # Pase lo que pase con la voz, el formulario sigue siendo el obligatorio y se puede llenar escribiendo.
 - runFlow:
     when:
-      visible: "Parar de dictar la respuesta a ¿Qué siento\\?"
+      visible: "Parar de dictar la respuesta a ¿Qué estoy sintiendo\\?"
     commands:
-      - tapOn: "Parar de dictar la respuesta a ¿Qué siento\\?"
+      - tapOn: "Parar de dictar la respuesta a ¿Qué estoy sintiendo\\?"
 - assertNotVisible: "Cerrar"
 - assertVisible: "Registrar"
 - tapOn: "Estoy…"

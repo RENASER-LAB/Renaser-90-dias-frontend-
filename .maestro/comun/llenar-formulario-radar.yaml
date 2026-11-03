@@ -20,7 +20,7 @@ appId: com.renaser.app
 - inputText: "d"
 - hideKeyboard
 - scrollUntilVisible:
-    element: "Nivel de energía"
+    element: "¿Cuál es mi nivel de energía\\?"
     direction: DOWN
 # La etiqueta asoma antes que la escala 1–10: se baja un poco más.
 - scroll

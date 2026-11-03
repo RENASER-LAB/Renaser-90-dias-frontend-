@@ -7,6 +7,15 @@ import type { CampoRadar } from './configRadar';
  * que lee `scripts/sonidos/generar-sonidos.sh` para hacer los MP3: la app y el script no pueden desincronizarse. Si cambia
  * el texto de una pregunta (`PREGUNTAS_RADAR`), una prueba avisa que hay que volver a generar su voz.
  *
+ * ## Pendiente (2026-11-03): los cuatro MP3 todavía dicen el enunciado de antes
+ *
+ * Al compactar el formulario (sin línea de ayuda; preguntas «¿Dónde estoy y qué estoy haciendo ahora?», «¿Qué estoy pensando?»,
+ * «¿Qué estoy sintiendo?» y «¿Qué estoy evitando?») se actualizó `vocesDelRadar.json` con el texto nuevo, pero NO se generaron
+ * audios nuevos (el dueño no lo pidió): los archivos de `assets/sonidos/voz_radar_*.mp3` siguen diciendo «¿Qué hago? Lo que estás
+ * haciendo en este momento, sin adornos.» y sus tres hermanas. Para ponerlos al día: `scripts/sonidos/generar-sonidos.sh`. Ojo:
+ * `vozDelRadar.test.ts` exige entre 2 y 5 segundos por archivo; los enunciados nuevos son más cortos y esa cota baja puede
+ * necesitar un ajuste al regenerar.
+ *
  * Los `require` son estáticos a propósito: Metro los resuelve al empaquetar y no admite rutas armadas con una variable.
  */
 /* eslint-disable @typescript-eslint/no-require-imports */

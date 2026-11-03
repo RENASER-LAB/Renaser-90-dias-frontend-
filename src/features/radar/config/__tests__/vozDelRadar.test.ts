@@ -16,8 +16,10 @@ import { ARCHIVOS_DE_VOZ_DEL_RADAR, loQueDiceLaVoz, VOZ_DE_LA_PREGUNTA } from '.
 const CARPETA = path.resolve(__dirname, '../../../../../assets/sonidos');
 
 describe('lo que dice cada voz', () => {
-  it.each(PREGUNTAS_RADAR)('«$titulo» se lee entera: el enunciado y su ayuda, tal cual están en el formulario', pregunta => {
-    expect(loQueDiceLaVoz(pregunta.campo)).toBe(`${pregunta.titulo} ${pregunta.ayuda}`);
+  // Desde el 2026-11-03 el formulario ya no dibuja la línea de ayuda: la voz lee solo el enunciado. Los MP3 aún no se regeneran
+  // (ver la nota de `vozDelRadar.ts`), pero lo que debe decir cada uno ya está en el JSON y esta prueba lo fija.
+  it.each(PREGUNTAS_RADAR)('«$titulo» se lee tal cual está en el formulario: el enunciado, sin ayuda', pregunta => {
+    expect(loQueDiceLaVoz(pregunta.campo)).toBe(pregunta.titulo);
   });
 
   it('hay una voz por pregunta y un archivo propio por voz', () => {

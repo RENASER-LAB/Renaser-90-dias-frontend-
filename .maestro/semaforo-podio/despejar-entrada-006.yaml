@@ -6,12 +6,12 @@ appId: com.renaser.app
 # Primero el permiso de avisos y las capas de siempre: el permiso puede tapar el Código Renaser.
 - runFlow: ../comun/despejar-capas.yaml
 - extendedWaitUntil:
-    visible: "TRAINING|¿Dónde estás ahora mismo\\?|Soporte · Equipo Renaser"
+    visible: "TRAINING|Escuchar la pregunta ¿Dónde estoy y qué estoy haciendo ahora\\?|Soporte · Equipo Renaser"
     timeout: 20000
     optional: true
 - runFlow:
     when:
-      visible: "¿Dónde estás ahora mismo\\?"
+      visible: "Escuchar la pregunta ¿Dónde estoy y qué estoy haciendo ahora\\?"
     commands:
       - tapOn: "Estoy…"
       # `inputText` con el dev client pasa de 120 s con más de ~10 letras (Maestro #3667): los textos largos van en comandos cortos.

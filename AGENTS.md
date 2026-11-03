@@ -699,6 +699,8 @@ días 1 a 7 y mitad del Radar) y en **Yo → Mi Radar**. Lo que cambia y nada m�
   movimiento propio salvo el hundimiento de `Presionable`, un «tic» de `tacto.seleccion()` por toque). Es el mismo formulario
   (`CodigoRenaserModal`) en las cuatro entradas —la pantalla obligatoria, Hoy, Mi Radar y el aviso del teléfono—, así que se ve y funciona
   igual en todas. Las cuatro preguntas, las horas, la obligatoriedad, el borrador, un registro por hora y el 409 **no cambian**.
+  > **Corregido 2026-11-03 (pedido del dueño).** «Escuchar» y «Dictar» ya no son botones de 48 con ícono y palabra en su propia fila: son dos **íconos sutiles en el renglón
+  > del enunciado** (`BotonDeVoz` de solo ícono, 44 de área táctil), el enunciado perdió su línea de ayuda y el micrófono activo es dorado y respira. Ver la entrada del 2026-11-03.
 * **Dictar** reutiliza `useDictado` (el reconocimiento de voz del teléfono, el mismo del chat de SER; español `es-419`; el audio no se
   guarda ni se sube). Lo dictado se **suma** al final del campo, se ve mientras se habla, queda **editable** y se corta en los 2 000
   caracteres de siempre. **Nada se registra solo:** solo «Registrar»; con el micrófono abierto ese botón dice «Terminar de dictar» y
@@ -706,7 +708,7 @@ días 1 a 7 y mitad del Radar) y en **Yo → Mi Radar**. Lo que cambia y nada m�
   entonces abre el segundo (`useDictadoDelRadar`). Sin reconocimiento de voz en el teléfono no hay «Dictar» y el formulario es el de hoy.
   Si falla (sin permiso, sin red, sin motor en español, ocupado) una línea bajo esa pregunta lo dice —«… escribe tu respuesta»— y lo
   escrito y lo dictado antes no se tocan.
-* **Escuchar** lee el enunciado y su ayuda con la voz Dora de las alarmas, **cuatro MP3 grabados** (`assets/sonidos/voz_radar_que_*.mp3`,
+* **Escuchar** (los MP3 de la spec 030 dicen el enunciado de entonces y su ayuda; ver el 2026-11-03) lee el enunciado y su ayuda con la voz Dora de las alarmas, **cuatro MP3 grabados** (`assets/sonidos/voz_radar_que_*.mp3`,
   generados con `scripts/sonidos/generar-sonidos.sh voces`, que ahora también lee `radar/vocesDelRadar.json`; sin campanita; Whisper los
   entendió sin errores), desde el paquete de la app, **sin red**. Una voz a la vez; se detiene al terminar, al tocar de nuevo, **antes** de
   abrir el micrófono, al registrar y al cerrar el formulario. El reproductor (`expo-audio`) nace al primer toque. **Límite aceptado:** el
@@ -2108,6 +2110,51 @@ calendario, mal para un INSTANTE—, así que el día era el de UTC. Lo que camb
   La bienvenida de Administración (`bienvenida.ts`) lee el instante en una zona fija de Lima a propósito.
 * **Pruebas:** `fechaDeLaAceptacionEnLima.test.ts` (con el instante de las 21:30 de Lima y el reloj fijado a esa hora: los límites 18:59, 19:00, 23:59:59 y 00:00, desfase y cruces de mes y año, la fecha
   de calendario que no se corre, la ficha dibujada y la cohorte). Jest corre con `TZ = America/Lima`.
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
+
+## Cambio por pedido del dueño — 2026-11-03 — Código Renaser compacto: sin párrafos, con los íconos de voz en el renglón y el borrador al escribir
+
+Textual, con capturas: «Allí en el código Renaser hay mucho texto y se extendió demasiado. En qué hago es: ¿Dónde estoy y qué estoy haciendo ahora? / ¿Qué
+estoy pensando? / ¿Qué estoy sintiendo? / ¿Qué estoy evitando? / ¿Cuál es mi nivel de energía? Y esos botones de escuchar, dictar deben de aparecer allí de manera
+sutil» y «el de dictar o el ícono de audio dentro del label, y que se guarde gradualmente». Es el mismo formulario (`CodigoRenaserModal`) de las cuatro entradas
+—la pantalla obligatoria de los días 1 a 7, Hoy, Mi Radar y el aviso—. Solo JavaScript y solo la forma; lo que se envía no cambia. Lo que cambia y nada más:
+* **Cabecera:** solo «Código Renaser · 11:00» (con «· Innegociable» cuando no se puede cerrar, como antes) y la ✕ si se puede cerrar (ahora con 44 de área
+  táctil). **Se quitaron** el título grande «¿Dónde estás ahora mismo?» y el párrafo «Responde con lo que hay… Este registro es el de las… y se cierra a las…».
+* **Las cinco preguntas, sin línea de ayuda debajo** (`PREGUNTAS_RADAR` ya no tiene `ayuda`; `PreguntaDelRadar`): «¿Dónde estoy y qué estoy haciendo ahora?»,
+  «¿Qué estoy pensando?», «¿Qué estoy sintiendo?», «¿Qué estoy evitando?» y «¿Cuál es mi nivel de energía?» (`PREGUNTA_ENERGIA`, la misma `SliderRating` del 1 al 10 con
+  la prop nueva `variante="pregunta"`: el rótulo es un enunciado más, 16 semibold, y el valor va a su altura; los demás usos de `SliderRating` no cambian). Enunciado a 16,
+  campo de mínimo 56 (era 76) y menos aire entre preguntas (14). Los marcadores en gris dentro del campo («Estoy…», «Estoy pensando en…», «Siento…», «Estoy evitando…») siguen.
+  `faltantesDelRadar` usa los enunciados nuevos («Falta: ¿Qué estoy evitando?» / «Faltan 2: ¿Qué estoy sintiendo?, nivel de energía.»; sin punto detrás de un «?»).
+* **Escuchar y Dictar son dos íconos, en el renglón del enunciado, a la derecha** (`VozDeLaPregunta` + `BotonDeVoz`, ya sin texto): el parlante (`volume`) y el micrófono
+  (`mic`), de 20, en el gris secundario, sin fondo ni borde en reposo y con 44 × 44 de área táctil. El par se acuesta con márgenes negativos (−11 arriba y abajo) para no
+  agrandar el renglón y, si el enunciado ocupa dos líneas, queda arriba a la derecha a la altura de la primera (el enunciado cede ancho: `flexShrink`). Los nombres accesibles
+  son los de siempre («Escuchar la pregunta …», «Detener la lectura de la pregunta …», «Dictar la respuesta a …», «Parar de dictar la respuesta a …»), con el enunciado nuevo.
+  **Activo se nota sin depender solo del color:** un círculo de 36 con lavado dorado y borde fino (`goldInk`), el ícono dorado, `accessibilityState.selected`, y el parlante
+  pasa a `pause`. **El micrófono abierto respira** (opacidad del círculo 1 ↔ 0,45, 650 ms cada mitad, `Easing.inOut`, solo `opacity` en el hilo de la interfaz); con «reducir
+  movimiento» queda solo el color. Las líneas «Te escucho. Toca el micrófono para parar.» (antes aludía al botón «Parar», que ya no tiene texto) y «Si no la oyes, sube el volumen
+  de tu teléfono.» y el aviso de si el micrófono falla **solo existen mientras pasa**; en reposo no hay nada. La energía no se dicta ni se escucha. El micrófono ya no es rojo: es dorado.
+* **El borrador se guarda al escribir** (`hooks/useBorradorDelRadar`, sobre `storage/borradorRadar`, que ya existía): las cuatro respuestas, qué respuestas se dictaron y la energía
+  se escriben en el teléfono **400 ms después de la última tecla** (era 1 s; una sola escritura al terminar de teclear), con la clave `renaser.radar.borrador.<cuenta>|<AAAA-MM-DD>|<HH>`
+  —por cuenta y por hora—. Reaparece tal cual al cerrar y reabrir el formulario o la app **en la misma hora**; el de otra hora no se lee y se barre; el de otra cuenta tampoco. Detalles
+  que se arreglaron: (1) **no se escribe hasta terminar de leer** el borrador al abrir (un formulario en blanco no puede pisarlo) y lo que la persona ya escribió manda sobre un borrador
+  que llegue tarde; (2) **al cerrar el formulario o desmontarse, lo que esperaba su turno se escribe en el acto** (antes los últimos segundos de teclado se perdían); (3) lo que ya
+  está en el teléfono no se vuelve a escribir; (4) **registrar con éxito lo borra** y el cierre del formulario no lo vuelve a escribir (`descartar`). **«Cerrar sesión» borra todos
+  los borradores del Código Renaser** (`borrarTodosLosBorradores`, desde `AuthContext.logout`); la sesión que vence sola, no (ahí el borrador existe para que la persona vuelva a
+  entrar y lo encuentre). Una línea chica «Guardado» (check de 16 + 12 px, `IndicadorDeGuardado`, en la cabecera) aparece 150 ms, se queda 1,4 s y se apaga cada vez que un borrador con
+  algo quedó escrito; no mueve nada de lugar, no recibe toques y el lector de pantalla la ignora.
+* **Las voces pregrabadas dicen el texto de antes.** `vocesDelRadar.json` ya trae el enunciado nuevo (solo el enunciado, sin ayuda) para cuando se regeneren, pero **los cuatro MP3 de
+  `assets/sonidos/voz_radar_*.mp3` siguen diciendo «¿Qué hago? Lo que estás haciendo en este momento, sin adornos.» y sus tres hermanas** (no se generaron audios nuevos: no se pidió).
+  Para ponerlos al día: `scripts/sonidos/generar-sonidos.sh voces`, y un APK nuevo. Ojo: `vozDelRadar.test.ts` exige entre 2 y 5 segundos por archivo; los enunciados nuevos son más
+  cortos y esa cota baja puede necesitar un ajuste al regenerar.
+* **No cambian**: `POST /api/v1/radar` (los mismos cinco campos y `dictado` solo si es cierto), el 409, las reglas de obligatorio de los días 1 a 7 y de Mi Radar, la validación,
+  los horarios, el pie («Completa las preguntas cada hora…» / «Puedes cerrarlo…»), el botón fijo «Registrar» / «Terminar de dictar», la hoja «Ya lo registraste» de Hoy (que lee
+  los mismos enunciados, ahora los nuevos), ni los demás tabs.
+* **Pruebas:** `codigoRenaserCompacto.test.ts` (sin título, párrafo ni ayuda; los cinco enunciados; los íconos en el renglón con sus nombres accesibles, 20 de ícono y 44 de área;
+  activo), `borradorDelCodigoRenaser.test.ts` (400 ms, una sola escritura, la energía, cerrar sin perder nada, reabrir en la misma hora, otra hora, otra cuenta, lectura tardía,
+  registrar borra, cerrar sesión), `useBorradorDelRadar` por esas mismas pruebas, y ajustadas `codigoRenaserConVoz`, `codigoRenaserModal`, `faltantesDelRadar`, `vozDelRadar`,
+  `tarjetaHabitoYRadar` y `alarmasDeLaCuentaAlSalir`. Sin emulador en esta corrida: el aspecto y el pulso del micrófono se confirman en pantalla.
+  Maestro (escritos, **no corridos**): los flujos que reconocían el formulario por su título «¿Dónde estás ahora mismo?» ahora lo reconocen por el ícono «Escuchar la pregunta ¿Dónde estoy y qué
+  estoy haciendo ahora?» (el enunciado solo también está en la hoja «Ya lo registraste»), `41-dictar-y-escuchar` usa los enunciados nuevos y `llenar-formulario-radar` busca «¿Cuál es mi nivel de energía?».
 * **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
 
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
