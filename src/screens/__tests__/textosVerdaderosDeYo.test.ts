@@ -33,10 +33,10 @@ describe('los textos del Centro de Perfil y Ajustes de Yo', () => {
   });
 
   it('dice solo lo que se puede editar', () => {
-    expect(codigo).toContain('detalle="Nombre y foto"');
-    // 03/11: se quitó la biografía; Información queda con el departamento.
-    expect(codigo).toContain('detalle="Departamento o área"');
+    expect(codigo).toContain('detalle="Nombre, foto, WhatsApp y departamento"');
+    // 03/11: se quitó la biografía y la fila «Información»: su campo (el departamento) pasó a «Editar perfil».
     expect(codigo).not.toContain('Biografía');
+    expect(codigo).not.toContain('titulo="Información"');
   });
 
   /* > **Corregido 2026-10-05 (rediseño de Yo).** La fila decía `Mi Onboarding (${ONBOARDING_STAGES.length}

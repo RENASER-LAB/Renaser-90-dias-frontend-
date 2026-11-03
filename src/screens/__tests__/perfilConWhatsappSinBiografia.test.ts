@@ -24,10 +24,9 @@ describe('Yo → Ajustes → Perfil sin biografía', () => {
     expect(yo).not.toMatch(/iografía/);
     expect(yo).not.toContain('profileBio');
     expect(yo).not.toMatch(/\bbio\b/);
-    expect(yo).toContain('detalle="Departamento o área"');
   });
 
-  it('ni Editar perfil ni Información la mandan al servidor', () => {
+  it('Editar perfil no la manda al servidor', () => {
     const llamadas = yo.match(/actualizarPerfil\(\{[^}]*\}\)/g) ?? [];
     expect(llamadas.length).toBeGreaterThan(0);
     for (const llamada of llamadas) expect(llamada).not.toMatch(/\bbio\b/);
@@ -41,6 +40,10 @@ describe('Yo → Ajustes → Perfil sin biografía', () => {
   });
 });
 
+/** Lo que dibuja y hace la vista «Editar perfil»: de su comienzo a la vista que sigue (El Método). */
+const vistaEditarPerfil = (codigo: string) =>
+  codigo.slice(codigo.indexOf("activeView === 'editar_perfil' &&"), codigo.indexOf("activeView === 'metodo' &&"));
+
 describe('Editar perfil con el WhatsApp de la ficha', () => {
   const yo = leer('screens/YoScreen.tsx');
 
@@ -49,15 +52,12 @@ describe('Editar perfil con el WhatsApp de la ficha', () => {
     expect(yo).toContain('<CampoWhatsappDelPerfil');
   });
 
-  it('el campo está en Editar perfil y no en Información', () => {
-    const editar = yo.slice(yo.indexOf("activeView === 'editar_perfil' &&"), yo.indexOf("activeView === 'info_perfil' &&"));
-    const informacion = yo.slice(yo.indexOf("activeView === 'info_perfil' &&"), yo.indexOf("activeView === 'metodo' &&"));
-    expect(editar).toContain('<CampoWhatsappDelPerfil');
-    expect(informacion).not.toContain('Whatsapp');
+  it('el campo está en Editar perfil', () => {
+    expect(vistaEditarPerfil(yo)).toContain('<CampoWhatsappDelPerfil');
   });
 
   it('antes de guardar nada se revisa el número, y vaciarlo no se guarda', () => {
-    const editar = yo.slice(yo.indexOf("activeView === 'editar_perfil' &&"), yo.indexOf("activeView === 'info_perfil' &&"));
+    const editar = vistaEditarPerfil(yo);
     expect(editar.indexOf('whatsapp.decidir()')).toBeGreaterThan(-1);
     expect(editar.indexOf('whatsapp.decidir()')).toBeLessThan(editar.indexOf('guardarElPerfil('));
     expect(editar).toContain("decisionWhatsapp.tipo === 'rechazar'");
@@ -80,5 +80,33 @@ describe('Editar perfil con el WhatsApp de la ficha', () => {
   it('la regla del número es la misma función de la ficha', () => {
     expect(leer('features/yo/utils/whatsappDelPerfil.ts')).toContain('validarWhatsapp');
     expect(leer('features/onboarding/data/pasosFicha.ts')).toMatch(/case 'whatsapp':\s*return validarWhatsapp\(/);
+  });
+});
+
+describe('la fila «Información» se quitó y el departamento pasó a Editar perfil (03/11)', () => {
+  const yo = leer('screens/YoScreen.tsx');
+
+  it('ya no hay fila «Información» ni su sub-vista, ni lo que solo ella usaba', () => {
+    for (const viejo of ["'info_perfil'", 'titulo="Información"', 'Guardar información', 'Información guardada']) {
+      expect(yo).not.toContain(viejo);
+    }
+    expect(leer('features/yo/utils/navegacionDeYo.ts')).not.toContain('info_perfil');
+  });
+
+  it('Ajustes → Perfil tiene una sola fila, «Editar perfil», que dice lo que se edita ahí', () => {
+    const grupo = yo.slice(yo.indexOf('<GrupoDeAjustes titulo="Perfil">'), yo.indexOf('</GrupoDeAjustes>', yo.indexOf('<GrupoDeAjustes titulo="Perfil">')));
+    expect(grupo.match(/<FilaDeAjuste/g)).toHaveLength(1);
+    expect(grupo).toContain('titulo="Editar perfil"');
+    expect(grupo).toContain('detalle="Nombre, foto, WhatsApp y departamento"');
+  });
+
+  it('«Departamento o área» está en Editar perfil, debajo del WhatsApp, y se guarda con el mismo botón', () => {
+    const editar = vistaEditarPerfil(yo);
+    expect(editar).toContain('Departamento o área');
+    expect(editar.indexOf('Departamento o área')).toBeGreaterThan(editar.indexOf('<CampoWhatsappDelPerfil'));
+    expect(editar).toContain('onChangeText={setProfileDepartment}');
+    expect(editar).toMatch(/guardarPerfil: \(\) => actualizarPerfil\(\{[^}]*department: profileDepartment/);
+    // Un solo «Guardar cambios» en la pantalla.
+    expect(editar.match(/<GoldButton/g)).toHaveLength(1);
   });
 });

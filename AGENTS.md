@@ -2110,14 +2110,18 @@ calendario, mal para un INSTANTE—, así que el día era el de UTC. Lo que camb
   de calendario que no se corre, la ficha dibujada y la cohorte). Jest corre con `TZ = America/Lima`.
 * **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
 
-## Cambio por pedido del dueño — 2026-11-03 — Yo → Ajustes → Perfil: sin biografía y con el WhatsApp de la ficha
+## Cambio por pedido del dueño — 2026-11-03 — Yo → Ajustes → Perfil: sin biografía, sin la fila «Información» y con el WhatsApp de la ficha
 
 Textual: «En perfil, en Yo, configuración, quitas biografía, y en editar perfil jalas los datos del número de WhatsApp que puso; agregas ese campo más.» Solo la app: **sin backend
 nuevo**. Lo que cambia y nada más:
-* **Se quita la «Biografía somática»** de Yo → Ajustes → Perfil → «Información» (ya no se pide, ni se muestra, ni se manda). «Información» queda con «Departamento o área» y su fila dice
-  «Departamento o área» (decía «Biografía y departamento»). El campo `bio` salió del usuario de la app (`User`, `UsuarioApi`, el esquema y el mapper), de `actualizarMiPerfil` y de la sesión de
+* **Se quita la «Biografía somática»** de Yo → Ajustes → Perfil → «Información» (ya no se pide, ni se muestra, ni se manda). El campo `bio` salió del usuario de la app (`User`, `UsuarioApi`, el esquema y el mapper), de `actualizarMiPerfil` y de la sesión de
   «ver como». **La columna del servidor no se toca** (`PATCH /users/me` ignora un `bio` que no llega: `null` significa «no cambiar»): lo que la persona escribió antes sigue guardado, solo que
   nadie lo pide ya.
+* **Se quita la fila «Información»** de Ajustes → Perfil (decisión posterior del dueño, el mismo día): con la biografía fuera solo le quedaba el departamento, así que **«Departamento o área»
+  pasó a «Editar perfil»**, debajo del WhatsApp, con el mismo campo y el mismo «Guardar cambios» (el mismo `department` de `PATCH /users/me`; un departamento vacío sigue sin borrar el guardado,
+  como antes). Ajustes → Perfil queda con una sola fila, «Editar perfil», que dice «Nombre, foto, WhatsApp y departamento». Se borró la sub-vista `info_perfil` (su pantalla, su título en
+  `navegacionDeYo`, su botón «Guardar información» y el aviso «Información guardada»); el atrás del sistema sigue subiendo un nivel: Editar perfil → Ajustes → Yo. El ícono `idCard` ya no se
+  dibuja en Yo (queda en `Icon.tsx`: lo usan «Ver ficha» del chat y la ficha del líder).
 * **«Editar perfil» suma el campo «WhatsApp»**, debajo del correo y ya lleno con el número que la persona puso en su ficha («WhatsApp principal»), con **el mismo control de la ficha**
   (`PhoneCountryInput`: la píldora del país que abre la hoja desde abajo con buscador, y el número solo con dígitos, con el largo máximo del país). El rótulo es el de los otros campos de la
   pantalla (15, medio). Mientras se lee, el lugar queda ocupado por una caja del mismo alto (52) que dice «Cargando…» (el selector de país parte del número que recibe, así que el campo no puede
@@ -2138,7 +2142,7 @@ nuevo**. Lo que cambia y nada más:
   pudo cargar (las rutas de la ficha están bajo esa función).
 * **Pruebas:** `whatsappDelPerfil` (de dónde sale, vaciarlo, la regla de la ficha), `guardarElPerfil`, `useWhatsappDelPerfil` (prellenado, relecturas, error, guardar), `campoWhatsappDelPerfil`
   (el control de la ficha prellenado, los tres estados) y `perfilConWhatsappSinBiografia` (ni `bio` en pantallas ni en pedidos; el campo en «Editar perfil», revisado antes de guardar).
-  `textosVerdaderosDeYo` se ajustó. Sin Maestro nuevo: no se probó en el emulador.
+  `navegacionDeYo`, `redisenoDeYo`, `barraDePestanasIconos` y `textosVerdaderosDeYo` se ajustaron (sin «Información»; el departamento en Editar perfil). Sin Maestro nuevo: no se probó en el emulador.
 * **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
 
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)

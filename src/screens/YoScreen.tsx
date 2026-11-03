@@ -1176,14 +1176,8 @@ export default function YoScreen() {
               <FilaDeAjuste
                 icono="user"
                 titulo="Editar perfil"
-                detalle="Nombre y foto"
+                detalle="Nombre, foto, WhatsApp y departamento"
                 onPress={() => setActiveView('editar_perfil')}
-              />
-              <FilaDeAjuste
-                icono="idCard"
-                titulo="Información"
-                detalle="Departamento o área"
-                onPress={() => setActiveView('info_perfil')}
               />
             </GrupoDeAjustes>
             ) : null}
@@ -1874,6 +1868,15 @@ export default function YoScreen() {
               onReintentar={() => void whatsapp.reintentar()}
             />
 
+            <View style={{ gap: 6 }}>
+              <Text style={[t.small, styles.rotuloCampo, { color: c.textStrong }]}>Departamento o área</Text>
+              <TextInput
+                value={profileDepartment}
+                onChangeText={setProfileDepartment}
+                style={[styles.modalInputText, { borderColor: c.border, backgroundColor: c.cardBg, color: c.text }]}
+              />
+            </View>
+
           </View>
 
           <GoldButton
@@ -1910,63 +1913,6 @@ export default function YoScreen() {
                 }
                 // Era un diálogo «Perfil guardado»: ahora una línea en Ajustes, que se va sola.
                 confirmar('Perfil guardado.', 'hub');
-                setActiveView('hub');
-              } catch (error) {
-                Alert.alert('No se pudo guardar', error instanceof Error ? error.message : 'Inténtalo de nuevo.');
-              } finally {
-                setGuardandoPerfil(false);
-              }
-            }}
-            disabled={guardandoPerfil}
-            style={{ width: '100%', marginBottom: 28 }}
-          />
-        </ScrollView>
-      )}
-
-      {/* ========================================================================= */}
-      {/* 9. SUB-VISTA: 🪪 INFORMACIÓN DE PERFIL                                     */}
-      {/* ========================================================================= */}
-      {activeView === 'info_perfil' && (
-        <ScrollView
-          {...barraAlDesplazar}
-          keyboardShouldPersistTaps="handled"
-          contentContainerStyle={[
-            styles.content,
-            {
-              paddingHorizontal: horizontalPadding,
-              maxWidth: contentMaxWidth,
-              alignSelf: isTablet ? 'center' : 'stretch',
-              width: isTablet ? '100%' : undefined,
-            },
-          ]}
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={{ gap: space.gap }}>
-            <View style={{ gap: 6 }}>
-              <Text style={[t.small, styles.rotuloCampo, { color: c.textStrong }]}>Departamento o área</Text>
-              <TextInput
-                value={profileDepartment}
-                onChangeText={setProfileDepartment}
-                style={[styles.modalInputText, { borderColor: c.border, backgroundColor: c.cardBg, color: c.text }]}
-              />
-            </View>
-
-          </View>
-
-          <GoldButton
-            label={guardandoPerfil ? 'Guardando…' : 'Guardar información'}
-            icon={guardandoPerfil ? undefined : 'check'}
-            iconPosition="left"
-            textStyle={{ fontSize: 15, letterSpacing: 0 }}
-            onPress={async () => {
-              setGuardandoPerfil(true);
-              try {
-                await actualizarPerfil({
-                  fullName: profileName,
-                  avatarUrl: profileAvatar,
-                  department: profileDepartment,
-                });
-                confirmar('Información guardada.', 'hub');
                 setActiveView('hub');
               } catch (error) {
                 Alert.alert('No se pudo guardar', error instanceof Error ? error.message : 'Inténtalo de nuevo.');
