@@ -19,6 +19,7 @@ jest.mock('../../../../components/Aparicion', () => ({
   Aparicion: ({ children }: { children: React.ReactNode }) => children,
 }));
 
+import { Icon } from '../../../../components/Icon';
 import { ApiError } from '../../../../services/http/apiClient';
 import type { CargarCierres, CierresDeLaSemana, DiaDelCierre } from '../../types/cierre.types';
 import { CierresDelDia, ETIQUETA_ANTERIOR, ETIQUETA_SIGUIENTE } from '../CierresDelDia';
@@ -111,8 +112,35 @@ describe('CierresDelDia: lo que muestra', () => {
     expect(t).toContain('Del 26 de octubre al 1 de noviembre');
     expect(t).toContain('2 cerrados · 1 sin cerrar');
     expect(t).toContain('Lo que más se repite');
-    expect(t).toContain('No me alcanzó el tiempo · 4 veces');
+    expect(t).toContain('Tiempo · 4 veces');
+    expect(t).not.toContain('No me alcanzó el tiempo'); // se ve el texto corto de los chips, no el largo
     expect(t).not.toContain('NUEVO'); // un motivo que esta versión no conoce no se dibuja
+  });
+
+  it('lo que dijo lleva el ícono de cada chip (los mismos con que lo eligió) y el lector oye el texto completo de siempre', async () => {
+    const r = await dibujar(cargarCon().cargar);
+    const iconos = r.root.findAll(n => n.type === Icon).map(n => n.props.name);
+    expect(iconos).toContain('clock'); // Tiempo
+    expect(iconos).toContain('calendarClock'); // Otra hora
+    const fila = r.root.findAll(n => n.props.accessibilityLabel === 'No me alcanzó el tiempo, Hacerla a otra hora')[0];
+    expect(fila).toBeDefined();
+    expect(fila.props.accessible).toBe(true);
+    // Los íconos son chicos (16) y no se tocan.
+    const delIcono = fila.findAll(n => n.type === Icon);
+    expect(delIcono.map(n => n.props.size)).toEqual([16, 16]);
+    expect(r.root.findAll(n => n.type === Icon && typeof n.props.onPress === 'function')).toHaveLength(0);
+  });
+
+  it('un valor que esta versión no conoce no dibuja ni su texto ni su ícono: la otra mitad sí', async () => {
+    const raro = semana(ACTUAL, {
+      dias: [dia('2026-10-28', { acciones: [{ ...PENDIENTE(null), cierre: { motivo: 'SIN_TIEMPO', manana: 'NUEVO', nota: null } }] })],
+    });
+    const r = await dibujar(cargarCon({ actual: raro }).cargar);
+    const t = textos(r);
+    expect(t).toContain('Tiempo');
+    expect(t).not.toContain('→');
+    expect(r.root.findAll(n => n.type === Icon).map(n => n.props.name)).toContain('clock');
+    expect(r.root.findAll(n => n.props.accessibilityLabel === 'No me alcanzó el tiempo')).not.toHaveLength(0);
   });
 
   it('cada día dice cómo quedó: «Cerrado», «Sin cerrar» (sin tono de falta) y «Hoy, todavía sin cerrar»', async () => {
@@ -126,7 +154,8 @@ describe('CierresDelDia: lo que muestra', () => {
   it('lo que dijo de cada pendiente, con su nota, y la nota del día', async () => {
     const t = textos(await dibujar(cargarCon().cargar));
     expect(t).toContain('«Revisar las facturas» quedó pendiente');
-    expect(t).toContain('No me alcanzó el tiempo → Hacerla a otra hora');
+    expect(t).toContain('Tiempo | → | Otra hora');
+    expect(t).not.toContain('Hacerla a otra hora');
     expect(t).toContain('«Se alargó la reunión»');
     expect(t).toContain('Nota del día: «Un día tranquilo»');
     expect(t).toContain('Ese día no tenía acciones.');
@@ -338,7 +367,7 @@ describe('CierresDelDia: lo que ve quien acompaña de una persona que trabaja de
     });
     const t = textos(await dibujar(cargarCon({ actual: normal }).cargar));
     expect(t).toContain('Jueves 29 · Cerrado');
-    expect(t).toContain('No me alcanzó el tiempo → Hacerla a otra hora');
+    expect(t).toContain('Tiempo | → | Otra hora');
     expect(t).toContain('«Se alargó la reunión»');
   });
 });

@@ -27,9 +27,11 @@ appId: com.renaser.app
     visible: "Guardar mi cierre"
     timeout: 30000
 - assertVisible: "¿Qué pasó?"
+- assertVisible: "Selecciona lo que más haya influido."
 # La hora de la acción es la que sembró la base: se comprueba la forma, no «20:30».
 - assertVisible: "Era a las .* · quedó pendiente"
-# Primera tarjeta («Revisar las facturas»)…
+# Primera tarjeta («Revisar las facturas»)… Los chips se ven con ícono y texto corto («Tiempo», «Otra hora», 2026-11-03), pero su nombre
+# para el lector de pantalla —lo que Maestro lee como accesibilidad— sigue siendo el texto completo de siempre: se toca por ese.
 - tapOn:
     text: "No me alcanzó el tiempo"
     index: 0

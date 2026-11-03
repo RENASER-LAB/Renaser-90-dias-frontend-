@@ -104,7 +104,7 @@ describe('cómo se dice un día anterior, sin culpa', () => {
       ],
     });
     const texto = textoDeUnDia(conRespuestas)!;
-    expect(texto.respuestas).toEqual(['«Revisar las facturas»: No me alcanzó el tiempo → Hacerla a otra hora. Me llamaron']);
+    expect(texto.respuestas).toEqual(['«Revisar las facturas»: Tiempo → Otra hora. Me llamaron']);
     expect(texto.nota).toBe('Día pesado');
 
     const sinCerrar = textoDeUnDia({ ...conRespuestas, estado: 'SIN_CERRAR', cerradoEn: null })!;
