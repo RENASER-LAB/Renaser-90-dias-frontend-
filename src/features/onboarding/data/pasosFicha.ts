@@ -1,5 +1,6 @@
 import { FichaInicialData } from '../types/onboarding.types';
 import { esMayorDeEdad, hoyEnLima, partirFecha, type FechaPartida } from '../../../components/fechaEnRuedas/logicaDeFecha';
+import { PLAZO_POR_DEFECTO } from '../../objetivos/utils/nombreDelObjetivo';
 import { CHAPTERS_CONFIG } from './chaptersConfig';
 
 /**
@@ -42,8 +43,30 @@ export interface PasoFicha {
   id: IdPasoFicha;
   capitulo: CapituloFicha;
   titulo: string;
-  /** Una línea de contexto bajo el título. Sólo donde ya existía como ayuda del campo. */
-  bajada?: string;
+  /**
+   * Una línea de contexto bajo el título. Sólo donde ya existía como ayuda del campo. Si nombra el plazo del programa es una función del plazo
+   * de la persona («90 días», «3 meses», «1 año»; issue #103): la ficha es de cada formación, no siempre de 90 días. Se lee con `bajadaDelPaso`.
+   */
+  bajada?: string | ((plazo: string) => string);
+}
+
+/**
+ * El plazo del programa con su artículo, para frases como «durante los 90 días» / «durante los 3 meses» / «durante el año» (issue #103, identidad por
+ * formación: la Ficha Inicial decía «90 días» a quien está en un Diplomado de 3 meses o de 1 año). `plazo` es el de `plazoDelObjetivo`. Con 90 días
+ * las frases son EXACTAMENTE las de siempre.
+ */
+export function plazoConArticulo(plazo: string): string {
+  return plazo === '1 año' ? 'el año' : `los ${plazo}`;
+}
+
+/** «a los 90 días», «a los 3 meses», «al año»: la contracción de «a el». */
+export function alPlazo(plazo: string): string {
+  return plazo === '1 año' ? 'al año' : `a los ${plazo}`;
+}
+
+/** La línea de contexto de un paso, con el plazo de SU programa donde lo nombra. */
+export function bajadaDelPaso(paso: PasoFicha, plazo: string = PLAZO_POR_DEFECTO): string | undefined {
+  return typeof paso.bajada === 'function' ? paso.bajada(plazo) : paso.bajada;
 }
 
 export const PASOS_FICHA: readonly PasoFicha[] = [
@@ -59,7 +82,7 @@ export const PASOS_FICHA: readonly PasoFicha[] = [
     id: 'expectativa',
     capitulo: 0,
     titulo: '¿Qué esperas concretamente de Renaser?',
-    bajada: 'Detalla los cambios específicos que necesitas lograr en tu mente, cuerpo y negocio durante los 90 días.',
+    bajada: plazo => `Detalla los cambios específicos que necesitas lograr en tu mente, cuerpo y negocio durante ${plazoConArticulo(plazo)}.`,
   },
   {
     id: 'temor',
@@ -92,11 +115,15 @@ const AVISOS = {
   whatsapp: { titulo: 'WhatsApp requerido', mensaje: 'Por favor ingresa tu número de WhatsApp para contacto con tu mentor.' },
   horas: { titulo: 'Horas de sueño requeridas', mensaje: 'Por favor ingresa tus horas promedio de sueño (entre 0 y 24).' },
   medicacion: { titulo: 'Medicación requerida', mensaje: 'Por favor especifica tu medicación y el motivo de la toma.' },
-  compromiso: {
-    titulo: 'Compromiso requerido',
-    mensaje: 'Por favor marca la casilla de autorización de datos y compromiso a los 90 días para continuar.',
-  },
 } satisfies Record<string, AvisoDePaso>;
+
+/** Falta marcar la casilla de autorización y compromiso: nombra el plazo de SU programa (issue #103). */
+function avisoDelCompromiso(plazo: string): AvisoDePaso {
+  return {
+    titulo: 'Compromiso requerido',
+    mensaje: `Por favor marca la casilla de autorización de datos y compromiso ${alPlazo(plazo)} para continuar.`,
+  };
+}
 
 /**
  * Lo que le falta a UN paso para poder seguir, o `null` si está completo.
@@ -106,7 +133,13 @@ const AVISOS = {
  * vieja `validateChapter`, más una regla nueva (2026-10-06): la fecha de nacimiento tiene que ser de
  * alguien con 18 años cumplidos en el día de Lima (`hoy`, inyectable para las pruebas).
  */
-export function validarPaso(id: IdPasoFicha, ficha: FichaInicialData, hoy: FechaPartida = hoyEnLima()): AvisoDePaso | null {
+export function validarPaso(
+  id: IdPasoFicha,
+  ficha: FichaInicialData,
+  hoy: FechaPartida = hoyEnLima(),
+  /** El plazo del programa de la persona (`plazoDelObjetivo`): solo lo usa el aviso del compromiso. */
+  plazo: string = PLAZO_POR_DEFECTO,
+): AvisoDePaso | null {
   const { identidad, salud, consentimiento } = ficha;
   switch (id) {
     case 'nombre':
@@ -126,7 +159,7 @@ export function validarPaso(id: IdPasoFicha, ficha: FichaInicialData, hoy: Fecha
     case 'medicacion':
       return salud.tomaMedicacionRegular && !salud.especificacionMedicacion?.trim() ? AVISOS.medicacion : null;
     case 'consentimiento':
-      return !consentimiento.autorizaUsoDatos && !consentimiento.compromiso90Dias ? AVISOS.compromiso : null;
+      return !consentimiento.autorizaUsoDatos && !consentimiento.compromiso90Dias ? avisoDelCompromiso(plazo) : null;
     default:
       // familia, trabajo, ubicación, expectativa y temor no tenían campos obligatorios.
       return null;
@@ -189,11 +222,12 @@ export function validarCapitulo(
   capitulo: number,
   ficha: FichaInicialData,
   hoy: FechaPartida = hoyEnLima(),
+  plazo: string = PLAZO_POR_DEFECTO,
 ): { indice: number; aviso: AvisoDePaso } | null {
   for (let i = 0; i < TOTAL_PASOS_FICHA; i++) {
     const paso = PASOS_FICHA[i];
     if (paso.capitulo !== capitulo) continue;
-    const aviso = validarPaso(paso.id, ficha, hoy);
+    const aviso = validarPaso(paso.id, ficha, hoy, plazo);
     if (aviso) return { indice: i, aviso };
   }
   return null;

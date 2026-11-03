@@ -17,7 +17,10 @@ import {
   ubicarPaso,
   validarCapitulo,
   validarPaso,
+  bajadaDelPaso,
 } from '../data/pasosFicha';
+import { useFormacionDeLaSesion } from '../../formaciones/context/FormacionContext';
+import { plazoDelObjetivo } from '../../objetivos/utils/nombreDelObjetivo';
 import { usePersistenciaOnboarding } from '../hooks/usePersistenciaOnboarding';
 import * as onboardingApi from '../api/onboardingApi';
 import { almacenamientoLocal } from '../../../services/storage/almacenamientoLocal';
@@ -95,6 +98,10 @@ export function FichaInicialScreen({
 }: FichaInicialScreenProps) {
   const { c, t } = useTheme();
   const { guardarCapitulo, avanzarEstado } = usePersistenciaOnboarding();
+  /* Issue #103: lo que la ficha dice del plazo («durante los 90 días», «me comprometo a los 3 meses») es el de la formación de la persona, la misma que
+     nombra «Tu programa empieza mañana» (`lineaDelPlazo`). Sin formación conocida vale la de siempre, 90 días. */
+  const { formacion } = useFormacionDeLaSesion();
+  const plazo = plazoDelObjetivo(formacion?.duracionDias, formacion?.activa?.codigo);
 
   /** El paso que se ve (índice global 0..11) y hacia dónde se llegó, para que entre del lado correcto. */
   const [navegacion, setNavegacion] = useState<{ indice: number; direccion: DireccionDePaso }>({
@@ -205,7 +212,7 @@ export function FichaInicialScreen({
   const handleNext = async () => {
     if (guardando) return;
 
-    const aviso = validarPaso(paso.id, formData);
+    const aviso = validarPaso(paso.id, formData, undefined, plazo);
     if (aviso) {
       avisar(aviso);
       return;
@@ -219,7 +226,7 @@ export function FichaInicialScreen({
 
     // Último paso del capítulo: antes de guardar se revisa el capítulo ENTERO, por si un borrador
     // restaurado dejó algo vacío más atrás. Se vuelve a ese paso y se dice qué falta.
-    const pendiente = validarCapitulo(capitulo, formData);
+    const pendiente = validarCapitulo(capitulo, formData, undefined, plazo);
     if (pendiente) {
       irAPaso(pendiente.indice, 'atras');
       avisar(pendiente.aviso);
@@ -331,7 +338,7 @@ export function FichaInicialScreen({
       case 'medicacion':
         return <PasoMedicacion {...salud} />;
       case 'consentimiento':
-        return <ChapterConsentimiento data={formData.consentimiento} onChange={setConsentimiento} />;
+        return <ChapterConsentimiento data={formData.consentimiento} onChange={setConsentimiento} plazo={plazo} />;
     }
   };
 
@@ -368,7 +375,7 @@ export function FichaInicialScreen({
         <Text accessibilityRole="header" style={[t.screenTitle, { color: c.textStrong }]}>
           {paso.titulo}
         </Text>
-        {paso.bajada ? <Text style={[t.body, { color: c.textSoft }]}>{paso.bajada}</Text> : null}
+        {bajadaDelPaso(paso, plazo) ? <Text style={[t.body, { color: c.textSoft }]}>{bajadaDelPaso(paso, plazo)}</Text> : null}
       </View>
 
       {contenidoDelPaso()}

@@ -1965,6 +1965,25 @@ dibujaba siempre que llegaran. Lo que cambia y nada más (`features/yo/utils/evo
 * **Pruebas:** `evolucionEnYo.test.ts` (los cuatro casos y que `YoScreen` condiciona la tarjeta, el semáforo y el rótulo).
 * **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
 
+## Corrección — 2026-11-02 — la Ficha Inicial dice el plazo de la formación de cada persona (issue #103)
+
+Identidad por formación en todo: la Ficha Inicial estándar —la que ve quien no tiene diagnóstico— decía «durante los 90 días», «me comprometo a los 90 días» y
+«compromiso a los 90 días» a todos, también a quien está en un Diplomado de 3 meses o de 1 año. Ahora el plazo sale de la formación de la persona
+(`useFormacionDeLaSesion` → `plazoDelObjetivo(duracionDias, codigo)`, el mismo que usa «Tu programa empieza mañana», `lineaDelPlazo`). Lo que cambia y nada más:
+* **Tres textos**: la ayuda de «¿Qué esperas concretamente de Renaser?» («…en tu mente, cuerpo y negocio durante los 90 días» / «durante los 3 meses» / «durante
+  el año»), la casilla del consentimiento («Autorizo el uso de mis datos y me comprometo a los 90 días» / «a los 3 meses» / «al año») con su nombre para el lector de
+  pantalla («Consentimiento y compromiso de 90 días» / «3 meses» / «1 año»), y el aviso «Por favor marca la casilla de autorización de datos y compromiso a los 90 días
+  para continuar.» (`plazoConArticulo` y `alPlazo` en `pasosFicha`: el artículo y la contracción «al año»).
+* **Con 90 días las frases son EXACTAMENTE las de siempre**, palabra por palabra: la Escuela y la Certificación no ven ningún cambio, y sin formación conocida
+  (un servidor anterior, o todavía sin leer) vale el de siempre, 90 días (`PLAZO_POR_DEFECTO`). `validarPaso`, `validarCapitulo` y `ChapterConsentimiento` suman un
+  parámetro opcional `plazo`; `PasoFicha.bajada` puede ser una función del plazo (`bajadaDelPaso`).
+* **No cambia** lo que se guarda (`compromiso90Dias` sigue siendo la clave del contrato con el servidor), las preguntas, ni los demás avisos.
+* **Quedan con «90 días» a propósito (no eran de este pedido, a decidir con el dueño):** el subtítulo de capítulo que la ficha no dibuja (`chaptersConfig`), la
+  invitación «Hacer mi programa de 90 días» del personal, la bienvenida («90 días de compromiso…»), el aviso «Pacto sellado. Tu compromiso de 90 días está activo.»,
+  la tarjeta del podio sin nombre de formación, y las pantallas sin uso del cuestionario profundo.
+* **Pruebas:** `fichaPorFormacion.test.ts` (los tres plazos en los tres textos, la frase de siempre con 90 días y el cableado de `FichaInicialScreen`).
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
+
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
 Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel especializado en React Native, Expo y TypeScript. Al crear, refactorizar o modificar cualquier pantalla o componente, debes cumplir OBLIGATORIAMENTE con los siguientes estándares:
