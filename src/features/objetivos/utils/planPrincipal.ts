@@ -69,7 +69,11 @@ const NBSP = '\u00A0';
  * el de ANTES del punto: «Inicio 8 000 · Actual 8 000» / «· Meta 12 000 S/», y no «… Actual 8 000 ·» / «Meta 12 000 S/» con el punto colgado
  * (E2E del 03/11, issue #115).
  */
-export function lineaDelObjetivo(roca: Pick<RocaMaestraApi, 'lineaBase' | 'avance' | 'meta' | 'unidad'>): string | null {
+/**
+ * Las cifras del objetivo como piezas («Inicio 82», «Actual 81», «Meta 80 kg»). La tarjeta las dibuja como piezas que bajan enteras de renglón, sin «·»
+ * entre ellas: con un separador, al partirse el renglón el punto siempre quedaba colgado al final o al empezar el de abajo (E2E 03/11, issue #115, 3).
+ */
+export function partesDelObjetivo(roca: Pick<RocaMaestraApi, 'lineaBase' | 'avance' | 'meta' | 'unidad'>): string[] | null {
   if (roca.meta == null || roca.avance == null) return null;
   const sufijo = roca.unidad?.trim() ?? '';
   // Una unidad que empieza con «/» («/10», la escala de Relaciones) es parte de la cifra: «8/10», no «8 /10» (issue #115, 2).
@@ -77,9 +81,13 @@ export function lineaDelObjetivo(roca: Pick<RocaMaestraApi, 'lineaBase' | 'avanc
   const partes: string[] = [];
   if (roca.lineaBase != null) partes.push(`Inicio${NBSP}${formatearNumero(roca.lineaBase)}`);
   partes.push(`Actual${NBSP}${formatearNumero(roca.avance)}`, `Meta${NBSP}${formatearNumero(roca.meta)}${unidad}`);
-  // Cada « · » va pegado al par que sigue (espacio duro después del punto): el renglón solo se parte ANTES del punto, que pasa a abrir el renglón de
-  // abajo, y nunca queda colgado al final del de arriba (issue #115, 3).
-  return partes.reduce((linea, parte, i) => (i === 0 ? parte : `${linea} ·${NBSP}${parte}`), '');
+  return partes;
+}
+
+/** La misma línea en una sola frase, para el lector de pantalla y las pruebas: «Inicio 82 · Actual 81 · Meta 80 kg». */
+export function lineaDelObjetivo(roca: Pick<RocaMaestraApi, 'lineaBase' | 'avance' | 'meta' | 'unidad'>): string | null {
+  const partes = partesDelObjetivo(roca);
+  return partes ? partes.join(' · ') : null;
 }
 
 /** El color de la regla de Pareto: la VERDE va primero. Recibe la paleta porque el verde y el rojo cambian con el tema. */

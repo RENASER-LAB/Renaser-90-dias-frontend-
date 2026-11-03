@@ -18,7 +18,7 @@ import { estadoDeLaAccion, horaCortaDeLaAccion, textoDelEstado } from '../utils/
 import { primeraClausula } from '../utils/cifraDelObjetivo';
 import { estaPorConfirmar } from '../utils/objetivosPorConfirmar';
 import { iconoDelEje } from '../utils/iconoDelEje';
-import { colorDePareto, etiquetaDeLaAccion, lineaDelObjetivo, NOMBRE_DEL_COLOR } from '../utils/planPrincipal';
+import { colorDePareto, etiquetaDeLaAccion, lineaDelObjetivo, NOMBRE_DEL_COLOR, partesDelObjetivo } from '../utils/planPrincipal';
 import { usePlazoDelObjetivo } from '../context/PlazoDelObjetivo';
 
 /**
@@ -53,6 +53,7 @@ export function TarjetaDelObjetivo({
 }) {
   const { c, t } = useTheme();
   const linea = roca ? lineaDelObjetivo(roca) : null;
+  const partes = roca ? partesDelObjetivo(roca) : null;
   const porConfirmar = estaPorConfirmar(roca);
   const plazo = usePlazoDelObjetivo();
   return (
@@ -100,9 +101,14 @@ export function TarjetaDelObjetivo({
           {roca.porcentaje != null ? (
             <>
               <View style={estilos.filaDeCifras}>
-                <Text style={[t.small, estilos.cifras, estilos.linea, { color: c.textSoft }]} numberOfLines={2}>
-                  {linea ?? ''}
-                </Text>
+                {/* Piezas que bajan enteras de renglón, sin «·» que pueda quedar colgado; el lector oye la frase entera. */}
+                <View style={estilos.linea} accessible accessibilityLabel={linea ?? undefined}>
+                  {(partes ?? []).map(parte => (
+                    <Text key={parte} style={[t.small, estilos.cifras, { color: c.textSoft, fontSize: 15 }]}>
+                      {parte}
+                    </Text>
+                  ))}
+                </View>
                 <Text style={[t.cardTitle, estilos.cifras, estilos.porcentaje, { color: c.goldInk }]}>{roca.porcentaje}%</Text>
               </View>
               <View
@@ -516,7 +522,7 @@ const estilos = StyleSheet.create({
   cifras: { fontVariant: ['tabular-nums'] },
   objetivo: { fontSize: 18, lineHeight: 25, fontFamily: fuentes.negrita, marginTop: 8 },
   filaDeCifras: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 8 },
-  linea: { flex: 1, fontSize: 15 },
+  linea: { flex: 1, flexDirection: 'row', flexWrap: 'wrap', columnGap: 14, rowGap: 2 },
   porcentaje: { fontSize: 18, fontFamily: fuentes.negrita },
   barra: { height: 8, borderRadius: 4, overflow: 'hidden', marginTop: 8 },
   // La línea «Inicio · Actual · Meta» puede ocupar dos renglones: 12 de aire hasta la barra para que no quede pegada.
