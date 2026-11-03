@@ -14,6 +14,11 @@ jest.mock('../../../../theme/ThemeContext', () => {
   const tokens = jest.requireActual<typeof import('../../../../theme/tokens')>('../../../../theme/tokens');
   return { useTheme: () => ({ mode: 'light', c: tokens.light, t: tokens.type, space: tokens.space }) };
 });
+/* Letra normal: con la del sistema grande (1,3) la fila de acciones pasa a solo íconos (issue #115, `muroConLetraGrande.test.ts`). */
+jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
+  __esModule: true,
+  default: () => ({ width: 411, height: 900, scale: 2.6, fontScale: 1 }),
+}));
 jest.mock('../FotoMuro', () => ({ FotoMuro: () => null }));
 
 import { light } from '../../../../theme/tokens';
