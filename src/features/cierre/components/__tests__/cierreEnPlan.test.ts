@@ -16,6 +16,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import React from 'react';
+import { StyleSheet } from 'react-native';
 import TestRenderer, { act, type ReactTestInstance, type ReactTestRenderer } from 'react-test-renderer';
 
 jest.mock('../../../../theme/ThemeContext', () => {
@@ -78,6 +79,8 @@ jest.mock('../../../../components/hojaDesdeAbajo/HojaDesdeAbajo', () => ({
 }));
 
 import { ApiError } from '../../../../services/http/apiClient';
+import { fuentes } from '../../../../theme/fuentes';
+import { light } from '../../../../theme/tokens';
 import { CierreEnPlan } from '../CierreEnPlan';
 import type { EjeObjetivo } from '../../../objetivos/types/objetivos.types';
 
@@ -386,6 +389,32 @@ describe('un día anterior', () => {
     const sinTocar = dias.filter(n => n.props.accessibilityState?.disabled === true).map(n => String(n.props.accessibilityLabel));
     expect(sinTocar).toEqual(['Jueves 29, hoy, no se puede ver', 'Viernes 30, no se puede ver', 'Sábado 31, no se puede ver', 'Domingo 1, no se puede ver']);
     expect(hay('Toca un día que ya pasó para ver cómo quedó. Un día que terminó no se puede cerrar.')).toBe(true);
+  });
+
+  it('issue #115 (4): hoy es lo más visible de la fila (pleno, en negrita y con un punto); los pasados van normales y los que vienen, apagados', async () => {
+    await montar({}, lima(JUEVES, '10:00'));
+    const estilo = (e: unknown) => (StyleSheet.flatten(e as never) ?? {}) as Record<string, unknown>;
+    const pastilla = (rotulo: string) =>
+      raiz!.root.findAll(n => n.props.accessibilityRole === 'radio' && n.props.contenedorStyle !== undefined && String(n.props.accessibilityLabel).startsWith(rotulo))[0];
+    const numero = (p: ReactTestInstance) => estilo(p.findAll(x => x.type === 'Text')[1].props.style);
+    const puntos = (p: ReactTestInstance) => p.findAll(x => x.type === 'View' && estilo(x.props.style).width === 5 && estilo(x.props.style).height === 5);
+
+    const hoy = pastilla('Jueves 29, hoy');
+    expect(estilo(hoy.props.contenedorStyle).opacity).toBe(1); // antes salía a 0,45, «como desactivado»
+    expect(numero(hoy)).toMatchObject({ fontFamily: fuentes.negrita, color: light.textStrong });
+    expect(puntos(hoy)).toHaveLength(1);
+
+    const ayer = pastilla('Miércoles 28');
+    expect(estilo(ayer.props.contenedorStyle).opacity).toBe(1);
+    expect(numero(ayer)).toMatchObject({ fontFamily: fuentes.media, color: light.textStrong });
+    expect(puntos(ayer)).toHaveLength(0);
+
+    for (const rotulo of ['Viernes 30', 'Sábado 31', 'Domingo 1']) {
+      const futuro = pastilla(rotulo);
+      expect(estilo(futuro.props.contenedorStyle).opacity).toBeLessThan(1);
+      expect(numero(futuro).color).toBe(light.textSoft);
+      expect(puntos(futuro)).toHaveLength(0);
+    }
   });
 
   it('tocar el miércoles lee SU cierre una vez y dice «Cerrado a las 22:00» con lo que respondió; el martes dice «Sin cerrar»', async () => {
