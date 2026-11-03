@@ -37,15 +37,16 @@ appId: com.renaser.app
 - tapOn: "3 días antes"
 - assertVisible: "1 día antes y el mismo día · 09:00"
 # Apagar los quita; encender los vuelve a poner.
+# Hay DOS elementos con ese nombre (el texto y el interruptor): el que se toca es el interruptor, que es el único marcado (`checked`); un `index` dependía del orden.
 - tapOn:
     text: "Recordarme mis cuotas"
-    index: 1
+    checked: true
 - assertVisible: "Apagados en este teléfono"
 - assertNotVisible: "El mismo día"
 - takeScreenshot: P08b-apagados
 - tapOn:
     text: "Recordarme mis cuotas"
-    index: 1
+    checked: false
 - assertVisible: "El mismo día"
 # Lo mismo desde «Mi ingreso»: una fila que abre una hoja con el mismo control.
 - back

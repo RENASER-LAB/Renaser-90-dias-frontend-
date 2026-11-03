@@ -18,13 +18,17 @@ appId: com.renaser.app
       text: "Escuela Renaser"
       below: "Kilómetros"
     timeout: 30000
-- assertVisible:
-    text: "Diplomado Renaser"
-    below: "Kilómetros"
+# La sección del Escuela ocupa la primera pantalla (su podio es alto): la del Diplomado queda debajo y se baja hasta ella.
+- scrollUntilVisible:
+    element:
+      text: "Diplomado Renaser"
+      below: "Kilómetros"
+    direction: DOWN
+    timeout: 30000
 - takeScreenshot: C04a-ranking-por-formacion
 # Elegir una sola formación deja la tabla de siempre, sin encabezados por formación.
 - tapOn: "Diplomado"
-# El texto de la tarjeta es «Tu Posición (nombre)» (con mayúscula; falta abrir su issue): se acepta cualquiera de las dos escrituras.
+# La tarjeta dice «Tu posición (nombre)» (`ComunidadScreen`); Maestro no distingue mayúsculas, y lleva el nombre detrás: por eso «.*».
 - extendedWaitUntil:
     visible: "(?i)Tu posición.*"
     timeout: 30000

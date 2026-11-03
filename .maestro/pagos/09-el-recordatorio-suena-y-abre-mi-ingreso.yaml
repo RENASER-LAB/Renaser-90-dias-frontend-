@@ -8,6 +8,13 @@ appId: com.renaser.app
 ---
 - runFlow: ../comun/ya-adentro.yaml
 - tapOn: "YO"
+# SER puede abrir su panel solo, con un aviso proactivo («Se te vence ÚLTIMA COMIDA DEL DÍA a las 21:10…»): se cierra para ver Yo (corrida del 02/11).
+- runFlow:
+    when:
+      visible: "Tu guía del programa, siempre disponible"
+    commands:
+      - back
+      - tapOn: "YO"
 - extendedWaitUntil:
     visible: "Coherencia"
     timeout: 30000

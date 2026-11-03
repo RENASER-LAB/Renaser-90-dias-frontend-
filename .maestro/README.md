@@ -116,3 +116,32 @@ mata la app si está en segundo plano, y lo está porque la cámara está al fre
 emulador, no `adb reverse`). El 12 deja la pantalla partida de kilómetros a medias y el 13 el error con «REINTENTAR»: si un
 paso falla, mira `adb logcat -s ReactNativeJS` (las líneas `[evidencia] falló el paso …` dicen cuál fue).
 - `ficha-con-diagnostico/` (2026-10-31, spec 026): el diagnóstico de la persona (01–04), Administración → Fichas (10–13) y Plan/Hoy sin el Mapa (20–22). **Escritos y sin correr**; ver su `README.md`.
+
+## El lote del 02/11/2026 (E2E final): 13 flujos fallaron, qué se ajustó y qué es de datos
+
+Corrida contra la base local `renaser_e2e_final` (resultados en `~/Imágenes/e2e-2026-11-02-final/emulador/resultados.md`). **Los ajustes no se volvieron a correr.**
+
+**Ajustados (el flujo estaba viejo, la app estaba bien):**
+
+| Flujo | Qué pasaba | Qué se cambió |
+|---|---|---|
+| `empieza-manana/03` | esperaba en Plan la fila de Hoy; a quien tiene la fila sin activar, Plan le dibuja «Tu plan empieza con tu programa» + «Empezar mañana» (`PlanSinPrograma`) | espera ese texto |
+| `acuerdo-de-transformacion/03` | esperaba «Formación RENASER · 90 días» y solo servía con la Escuela | comprueba el patrón `PROGRAMA` (se puede fijar con `-e`) |
+| `planificacion/lo-guardado-sale-marcado` | al pasar de «Siempre» a «Por semana» el editor muestra la primera semana, no la del cambio | en la limpieza pasa a «Semana siguiente» antes de buscar «Volver al plan de siempre…» |
+| `comunidad-por-formacion/04` | la sección del Diplomado quedaba debajo de la pantalla (el podio de la Escuela es alto) | `scrollUntilVisible` hasta ella |
+| `comunidad-por-formacion/01` | «Tu posición» exacto; la tarjeta dice «Tu posición (nombre)» | «Tu posición.*» |
+| `semaforo-podio/31` | en «Todas» el botón dice «Elige una formación arriba para descargar el podio.» (spec 024) | elige la Escuela antes de descargar |
+| `cierre-en-plan/01` | pedía el Mapa y la hora «20:30» | pide los objetivos confirmados (el Mapa ya no existe) y comprueba «Era a las .* · quedó pendiente» |
+| `diseno-31/06`, `mi-radar/16` | el ancla «Tu evolución» ya no existe antes del Día 1 ni sin programa (issue #102) | ancla «Coherencia» (y, en `mi-radar/16`, «Tu programa empieza…») |
+| `pagos/08` | `index: 1` no tocaba el interruptor | toca el elemento `checked` (el interruptor) |
+| `pagos/09` | SER abrió su panel solo (aviso proactivo) y tapó Yo | cierra el panel si está y vuelve a tocar Yo |
+| `identidad-por-formacion/01` | al volver a la Escuela, el texto de los mensajes queda debajo de la tarjeta | `scrollUntilVisible` |
+
+**De datos o de precondición (no se tocó el flujo; hay que preparar la base o la cuenta):**
+
+- `diseno-31/04`: las precondiciones van en su `# antes:` (Agua tibia, ritual y Última comida PENDIENTES); el lote no las aplicó y Ana ya había hecho esos hábitos (están bajo «8 hechos hoy»).
+- `diseno-31/06`: pide la cuenta del **líder de mentores** con un grupo; el lote lo corrió con `ef-admin` (Administración no tiene «Mis mentores»).
+- `cierre-en-plan/01`: necesita exactamente dos acciones de hoy sin cumplir (una con hora ya pasada y otra sin hora); la base de Ana tiene tres (05:00, 10:00 y sin hora).
+- `guia-de-ser/01`: Ana ya firmó el Pacto; la guía solo existe sin Pacto ni primer post.
+- `identidad-por-formacion/03`: la bienvenida del soporte no se envió porque «las bienvenidas automáticas están apagadas» en esa base (precondición `BIENVENIDA_ACTIVA`).
+- `semaforo-podio/31`: aun eligiendo la formación, la hoja de compartir del sistema puede no salir en el emulador (límite del emulador).

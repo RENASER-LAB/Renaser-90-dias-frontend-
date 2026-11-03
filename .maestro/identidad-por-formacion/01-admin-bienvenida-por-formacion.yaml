@@ -44,9 +44,13 @@ appId: com.renaser.app
     timeout: 30000
 - assertNotVisible: ".*Diplomado Renaser.*"
 - takeScreenshot: I01c-certificacion
-# Volver a la Escuela: sigue igual que al entrar.
+# Volver a la Escuela: sigue igual que al entrar. Los mensajes quedan debajo de la tarjeta: se baja hasta ellos (corrida del 02/11: a mano estaba bien).
 - tapOn: "Escuela"
-- extendedWaitUntil:
-    visible: ".*Formación Renaser.*"
+- scrollUntilVisible:
+    element: ".*Formación Renaser.*"
+    direction: DOWN
     timeout: 30000
-- assertVisible: "Es la portada original"
+- scrollUntilVisible:
+    element: "Es la portada original"
+    direction: UP
+    timeout: 30000

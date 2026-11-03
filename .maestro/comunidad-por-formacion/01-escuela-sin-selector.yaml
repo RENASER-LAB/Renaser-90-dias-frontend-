@@ -23,7 +23,7 @@ appId: com.renaser.app
 - takeScreenshot: C01b-tribu-de-la-escuela
 - tapOn: "Ranking"
 - extendedWaitUntil:
-    visible: "Tu posición"
+    visible: "Tu posición.*"
     timeout: 30000
 - assertNotVisible: "Diplomado Renaser"
 - takeScreenshot: C01c-ranking-de-la-escuela
