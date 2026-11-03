@@ -22,7 +22,7 @@ import { usePasosDelDia } from '../features/pasos/hooks/usePasosDelDia';
 import { CLAVE_SISTEMA_KILOMETROS } from '../features/pasos/utils/vistaDeKilometros';
 import { textoDelAvisoDeRegistro } from '../features/pasos/utils/textosDePasos';
 import { PracticasDeTraining } from '../features/training/components/PracticasDeTraining';
-import { nombreDeLaDimension } from '../features/training/data/dimensiones';
+import { contextoDeLaEvidencia } from '../features/training/utils/contextoDeLaEvidencia';
 import { AvisoDeProgramaEnOtraFormacion } from '../features/habits/components/AvisoDeProgramaEnOtraFormacion';
 import { useFormacionDeLaSesion } from '../features/formaciones/context/FormacionContext';
 import { useProgramaEnOtraFormacion } from '../features/formaciones/hooks/useProgramaEnOtraFormacion';
@@ -126,6 +126,8 @@ export interface HabitItem {
   estado?: string;
   /** `YYYY-MM-DD` del registro de hoy: para decir de qué día era uno que ya cerró. */
   fechaEjecucion?: string | null;
+  /** Solo en las acciones de los objetivos (`dimension` `VIDA Y NEGOCIO`): su eje real, `CUERPO`, `TRABAJO` o `RELACIONES`. */
+  eje?: string;
   note?: string;
   /**
    * Clave FUNCIONAL del hábito de catálogo (`DAILY_CLASS`, `PASTILLA_RENACER`…), `null` en las
@@ -1156,11 +1158,7 @@ export default function TrainingScreen() {
             }
             titulo={activeEvidenceHabit?.dimension === 'VIDA Y NEGOCIO' ? activeEvidenceHabit.title : tituloEnTipoOracion(activeEvidenceHabit?.title ?? '')}
             medicion={activeEvidenceHabit?.medicion ?? null}
-            contexto={
-              activeEvidenceHabit
-                ? `${nombreDeLaDimension(activeEvidenceHabit.dimension)} · ${activeEvidenceHabit.tag}`
-                : undefined
-            }
+            contexto={activeEvidenceHabit ? contextoDeLaEvidencia(activeEvidenceHabit) : undefined}
             notaInicial={activeEvidenceHabit?.respuestaTexto ?? activeEvidenceHabit?.note ?? ''}
             onCerrar={() => setActiveEvidenceHabit(null)}
             onCompletado={handleEvidenciaCompletada}
