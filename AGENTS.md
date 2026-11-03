@@ -2094,6 +2094,22 @@ tenía lo planificado para mañana. El #101 puso arriba la fila «Tu programa em
 * **Pruebas:** `useDiaInicialDeTraining.test.ts` (la función pura, el hook y el cableado de `TrainingScreen`).
 * **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
 
+## Corrección — 2026-11-02 — «Aceptada el …» en la ficha de Administración sale en la zona del teléfono, no en UTC (issue #108)
+
+E2E final del 2026-11-02: la ficha de la persona y la lista de «Aceptadas» de Administración decían «Aceptada por … el 3 de noviembre» para una aceptación de las 21:30 de Lima del
+2 (`2026-11-03T02:30:00Z`): entre las 19:00 y las 24:00 de Lima salía el día siguiente. Causa: `admin/utils/fechas.fechaCorta` partía el texto ISO a mano —bien para una fecha de
+calendario, mal para un INSTANTE—, así que el día era el de UTC. Lo que cambia y nada más:
+* **`fechaCorta` distingue las dos formas:** una fecha sola (`2026-11-03`, `LocalDate`) se sigue partiendo a mano, sin `Date` (que la correría un día); un instante (con hora: `…T02:30:00Z`,
+  con desfase o con espacio) se lee en la zona del TELÉFONO, como el resto de la app (`fechaDeFirma`, `fechaCortaDe` de la Caja, `fechaDeVersion`, `fechaLegible`). Arregla
+  `textoDeLaAceptada` (ficha y lista de «Aceptadas») y «Rechazada por … el …» (`SolicitudesAdminScreen`).
+* **Otros lugares revisados** (fechas de aceptación, firma, confirmación y versiones): los términos (`fechaDeVersion`, `fechaDeFirma`, «Aceptó los términos… el»), el Pacto, «Mi aceptación», «Confirmaste
+  tu cronograma el …» (`diaDeUnInstante`), la cuenta que se borra, la publicación del diagnóstico y la foto del grupo ya leían el instante en la zona del teléfono: no se tocaron. **Uno más
+  tenía el mismo fallo y se arregló:** «Nueva cohorte» proponía como fecha de inicio `new Date().toISOString().slice(0, 10)` (UTC: a las 21:30 de Lima, mañana); ahora es `hoyIso()`, el día del teléfono.
+  La bienvenida de Administración (`bienvenida.ts`) lee el instante en una zona fija de Lima a propósito.
+* **Pruebas:** `fechaDeLaAceptacionEnLima.test.ts` (con el instante de las 21:30 de Lima y el reloj fijado a esa hora: los límites 18:59, 19:00, 23:59:59 y 00:00, desfase y cruces de mes y año, la fecha
+  de calendario que no se corre, la ficha dibujada y la cohorte). Jest corre con `TZ = America/Lima`.
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
+
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
 Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel especializado en React Native, Expo y TypeScript. Al crear, refactorizar o modificar cualquier pantalla o componente, debes cumplir OBLIGATORIAMENTE con los siguientes estándares:

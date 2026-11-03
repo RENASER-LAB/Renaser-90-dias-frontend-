@@ -29,6 +29,7 @@ import {
   type PaginaStaffApi,
 } from './adminSchemas';
 import { z } from 'zod';
+import { hoyIso } from '../utils/fechas';
 
 /**
  * Superficie administrativa. Todas las rutas ya existían en el backend salvo la semana
@@ -55,7 +56,8 @@ export async function listarCohortes(): Promise<CohorteAdminApi[]> {
  * opcional —una cohorte puede no tener fin— y se omite.
  */
 export async function crearCohorte(nombre: string, fechaInicio?: string): Promise<CohorteAdminApi> {
-  const startDate = fechaInicio ?? new Date().toISOString().slice(0, 10);
+  // Hoy en el reloj del teléfono: `toISOString()` es UTC y entre las 19:00 y las 24:00 de Lima ya es mañana (issue #108).
+  const startDate = fechaInicio ?? hoyIso();
   return validarRespuesta<CohorteAdminApi>(
     cohorteAdminSchema,
     await apiFetch<unknown>('/api/v1/admin/cohorts', {
