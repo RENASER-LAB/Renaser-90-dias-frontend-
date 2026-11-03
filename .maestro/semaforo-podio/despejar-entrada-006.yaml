@@ -28,6 +28,14 @@ appId: com.renaser.app
       - tapOn: "Estoy evitando…"
       - inputText: "Nada"
       - hideKeyboard
+      # El nivel de energía es obligatorio (sin él: «Falta: nivel de energía.» y el formulario no se envía). Con Maestro el
+      # teclado a veces sigue abierto o vuelve a salir y tapa «Registrar»: se esconde de nuevo si hace falta.
+      - tapOn: "5"
+      - runFlow:
+          when:
+            notVisible: "Registrar"
+          commands:
+            - hideKeyboard
       - tapOn: "Registrar"
 - runFlow:
     when:

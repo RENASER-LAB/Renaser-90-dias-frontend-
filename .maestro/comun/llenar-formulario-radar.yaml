@@ -19,10 +19,23 @@ appId: com.renaser.app
 - tapOn: "Estoy evitando…"
 - inputText: "d"
 - hideKeyboard
+# Con el teclado abierto el botón «Registrar» no se ve (queda debajo) y el «5» de la escala coincide con la tecla «t» del teclado:
+# si el primer `hideKeyboard` no lo cerró, se vuelve a pedir antes de tocar la escala.
+- runFlow:
+    when:
+      notVisible: "Registrar"
+    commands:
+      - hideKeyboard
 - scrollUntilVisible:
     element: "¿Cuál es mi nivel de energía\\?"
     direction: DOWN
 # La etiqueta asoma antes que la escala 1–10: se baja un poco más.
 - scroll
 - tapOn: "5"
+# Con Maestro el teclado a veces vuelve a aparecer al tocar la escala (a mano no): sin esto «Registrar» queda tapado.
+- runFlow:
+    when:
+      notVisible: "Registrar"
+    commands:
+      - hideKeyboard
 - tapOn: "Registrar"

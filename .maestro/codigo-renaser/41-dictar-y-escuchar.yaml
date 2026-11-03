@@ -43,9 +43,13 @@ appId: com.renaser.app
     commands:
       - tapOn: "Mientras la app está en uso"
 # Con servicio de voz queda escuchando («Parar»); sin servicio, sin red o sin permiso, una línea lo dice. Las dos son correctas.
+# `optional`: con la build de desarrollo cada toque de Maestro tarda ~12 s, y el dictado sin voz se corta solo a los ~8 s sin decir nada
+# (medido el 2026-11-03: «Te escucho…» 8 s y vuelve a «Dictar»). Cuando Maestro mira, ya puede haber terminado. Lo que importa de este paso
+# está en lo que sigue: el formulario obligatorio sigue entero y se puede llenar escribiendo.
 - extendedWaitUntil:
     visible: "Parar de dictar la respuesta a ¿Qué estoy sintiendo\\?|Para dictar necesito permiso.*|No hay conexión para reconocer tu voz.*|Tu teléfono no tiene el reconocimiento de voz.*|El reconocimiento de voz está ocupado.*|No pude entender el audio.*"
-    timeout: 15000
+    timeout: 5000
+    optional: true
 - takeScreenshot: 41b-dictando-o-aviso
 
 # Pase lo que pase con la voz, el formulario sigue siendo el obligatorio y se puede llenar escribiendo.
