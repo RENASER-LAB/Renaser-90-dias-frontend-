@@ -1,5 +1,7 @@
 # cuenta: admin
 # Spec 006, US3: con permiso (Admin, Alquimista, Líder, Soporte TI) aparece «Descargar» y abre la hoja de compartir.
+# Con varias formaciones (Administración ve «Todas») el podio es de UNA formación: en «Todas» el botón solo dice «Elige una formación arriba para descargar el
+# podio.» (spec 024), así que se elige una antes de descargar. Límite del emulador: la hoja de compartir del sistema puede no salir en él.
 appId: com.renaser.app
 ---
 - runFlow: ../comun/ya-adentro.yaml
@@ -11,6 +13,15 @@ appId: com.renaser.app
     visible: "Descargar"
     timeout: 40000
 - takeScreenshot: ranking-${MAESTRO_CASO}
+# En «Todas» no hay podio que descargar: se elige la Escuela (el selector solo existe con más de una formación).
+- runFlow:
+    when:
+      visible: "Elige una formación arriba para descargar el podio\\."
+    commands:
+      - tapOn: "Escuela"
+      - extendedWaitUntil:
+          notVisible: "Elige una formación arriba para descargar el podio\\."
+          timeout: 15000
 - tapOn: "Descargar"
 - extendedWaitUntil:
     visible: ".*(Compartir|Share|Copy|Copiar|Nearby|Gmail|Drive|Mensajes|Messages).*"

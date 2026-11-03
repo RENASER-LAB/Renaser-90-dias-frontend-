@@ -39,9 +39,13 @@ appId: com.renaser.app
 - assertNotVisible: "Empezar mañana"
 - assertNotVisible: "Encendido"
 - takeScreenshot: 16d-empieza-el-dia-8
-# Ya con Día 1 la fila de Yo desaparece (Mi Radar empieza en el día 8).
+# Ya con Día 1 la fila de Yo desaparece (Mi Radar empieza en el día 8). Antes del Día 1 Yo no dibuja la fase ni el semáforo (issue #102): dice
+# «Tu programa empieza el …», con el ancla de siempre, «Coherencia».
 - back
-- assertVisible: "Tu evolución"
+- assertVisible: "Coherencia"
+- extendedWaitUntil:
+    visible: ".*Tu programa empieza.*"
+    timeout: 20000
 - scrollUntilVisible:
     element: "Tuve una emergencia"
     direction: DOWN
