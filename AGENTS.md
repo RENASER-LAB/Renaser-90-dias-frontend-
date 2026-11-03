@@ -1797,6 +1797,9 @@ de firmar. No te guíes explícitamente como mencionan, solamente agregar esa pa
   y me comprometo a cumplirlo.». Sin esa casilla «Continuar» no avanza y dice «Cronograma por aceptar» (la casilla se marca en rojo con «Marca esta casilla para continuar.»). Al firmar, el pedido lleva `scheduleFingerprint` y el
   servidor confirma el cronograma con la MISMA confirmación de la spec 032 (el nombre completo del perfil, la hora y la huella): «Mi ingreso» ya sale «Confirmaste tu cronograma el …» y no lo vuelve a pedir. **Sin
   cronograma, o con «pagó completo», la firma es la de siempre, sin esa sección.**
+  > **Corregido 2026-11-02 (decisión del dueño: «lo de los pagos no debe de salir en términos y condiciones ya que será asíncrono»).** Todo este punto **ya no es cierto**: ni «Mi cronograma de
+  > pagos», ni su casilla, ni `scheduleFingerprint`, ni el 409 «Tu cronograma cambió mientras leías», ni «Firmaste tu cronograma de pagos con los términos.». Lo mismo en «El pedido», «Qué guarda el servidor»
+  > y «Orden del onboarding» de abajo, en lo que hablan del cronograma. «Mi aceptación» y el texto no cambian. Ver «Decisión del dueño — 2026-11-02 — el cronograma de pagos no va en los términos».
 * **Orden del onboarding**: Ficha → (diagnóstico, si lo tiene) → Términos con «Mi aceptación» y, si corresponde, el cronograma → firma → «Tu programa empieza mañana» (se activa sola). Las fechas de «Mi aceptación» y las de «empieza
   mañana» son las mismas (las dos salen de la misma cuenta del servidor).
 * **Volver a aceptar** (quien ya estaba dentro: «Actualizamos nuestros términos», `TerminosActualizadosScreen`): el texto nuevo y «Mi aceptación» con su programa y sus fechas REALES (ya empezó), **sin** la sección del cronograma,
@@ -1814,6 +1817,31 @@ de firmar. No te guíes explícitamente como mencionan, solamente agregar esa pa
 * **Pruebas**: Jest `miAceptacion` (lectura y líneas), `acuerdoDeTransformacion` (las pantallas sin cronograma, con cronograma y volver a aceptar, el 409), `loMostradoAlAceptar` (releer y la constancia), `borradorDeTerminos` y
   `cableadoDeTerminos` (el texto de respaldo y el cableado). Maestro, escritos y sin correr: `.maestro/acuerdo-de-transformacion/` (01 a 04).
 * **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire) y el backend con la spec 039 (V162) antes; sin él la app usa el texto que lleva y no dibuja «Mi aceptación» ni el cronograma.
+
+## Decisión del dueño — 2026-11-02 — el cronograma de pagos no va en los términos
+
+Textual: «lo de los pagos no debe de salir en términos y condiciones ya que será asíncrono bro, eso saldrá luego que el administrador lo llene». Corrige la spec 039 (más arriba) y se apoya en la 032. Backend: D-315,
+`specs/039-acuerdo-de-transformacion/`. Lo que cambia y nada más:
+* **Los términos y la firma NO muestran ni exigen el cronograma**, ni al entrar (el onboarding) ni al aceptar los «términos actualizados». Se quitaron `MiCronogramaDePagos`, la casilla de la cláusula 19, la huella (`useSellarTerminos`,
+  `aceptarHito`: el pedido solo lleva `termsVersionId` y `agreementStartDate`), el 409 por cronograma cambiado y las líneas «Firmaste tu cronograma de pagos con los términos.» de «Mis términos» y de la constancia de la ficha. La app
+  ignora `agreement.schedule` y `scheduleSigned` aunque un servidor anterior los mande. **«MI ACEPTACIÓN» se queda tal cual** (nombre, programa y fechas que llena el servidor), como las 23 cláusulas y la firma de siempre.
+* **El cronograma es asíncrono: lo llena Administración cuando quiera, después de aceptar.** En la hoja «Aceptar» (Pago → «Con cronograma») **las cuotas son opcionales**: la moneda sigue siendo obligatoria (el servidor la guarda con la
+  modalidad; no hay valor por defecto) y se manda `SCHEDULE` con la moneda y las cuotas que se hayan escrito (ninguna, si no); una fila sin nada escrito no cuenta y una a medias sigue siendo un error (`problemaDelBorrador(…, {
+  permiteSinCuotas })`). La ayuda dice «Eliges la moneda; las cuotas las puedes registrar ahora o después, en su ficha.». La persona queda «con cronograma» **sin cuotas**.
+* **Dónde se llenan después (ya existía, la spec 032; no se inventó nada):** la ficha de la persona → «Pagos» (`PagosDeLaPersona`). Con cronograma y sin cuotas dice «Con cronograma en soles (S/). Sin cuotas registradas.» y «Todavía no hay cuotas.
+  La persona verá que aparecerán cuando las registres.», con **«Armar las cuotas»** (la hoja del cronograma con la moneda ya puesta y el atajo mensual; puede guardarse otra vez sin cuotas) y «Agregar una cuota» (una por una). Quien ya tiene
+  cuotas conserva «Reemplazar el cronograma» y no puede guardarlo sin cuotas.
+* **Lo que ve la persona** (Yo → «Mi ingreso», spec 032): la fila existe en cuanto hay un pago anotado y dice «Aún no hay cuotas registradas»; la pantalla, en lugar de la lista vacía y de la casilla de confirmar, dibuja una tarjeta corta con el
+  ícono del calendario, «Tu cronograma de pagos» y «Tu cronograma de pagos aparecerá aquí cuando Administración lo registre.» (sin recordatorios de pago, que no hay qué recordar). El paso «Pagos» de arriba queda pendiente. En cuanto hay
+  una cuota, es el «Tus fechas de pago» de siempre, con su confirmación **solo aquí** (el servidor responde 409 si se intenta confirmar sin cuotas).
+* **No cambian**: el diseño de las demás pantallas, los tabs, el texto de las cláusulas (la 19 sigue hablando del acuerdo de pagos), «Sin cronograma (pagó completo)», los recordatorios de pago ni las reglas de la 032 (lo pagado no se toca,
+  nada se recalcula solo, nunca bloquea).
+* **Backend** (D-315): el acuerdo de `GET /onboarding/terms` ya no trae `schedule`; sellar los términos ya no lee ni valida ninguna huella (un APK de la 039 que todavía manda `scheduleFingerprint` no falla: se ignora) y no confirma el
+  cronograma; «con cronograma» sin cuotas es válido al aceptar y en `PUT /admin/pagos/personas/{id}`. No se borró ninguna tabla ni columna: `aceptaciones_de_terminos.cronograma_huella` queda sin escribir ni leer.
+* **Pruebas** (marcadas `decisión 2026-11-02 pagos fuera de términos`): Jest `acuerdoDeTransformacion` (la firma sin cronograma aunque tenga cuotas), `cableadoDeTerminos`, `miAceptacion`, `loMostradoAlAceptar`,
+  `borradorDelCronograma`, `aceptarSolicitudConPago` (aceptar «Con cronograma» sin cuotas), `pagosDeLaPersona` (la ficha sin cuotas), `vistaDeMiIngreso` y `miIngresoScreen` («Mi ingreso» sin cuotas, sin hueco). Maestro, escritos y sin
+  correr: `.maestro/acuerdo-de-transformacion/02-con-cronograma-la-firma-no-lo-muestra.yaml` (antes firmaba el cronograma), `.maestro/pagos/10-aceptar-con-cronograma-sin-cuotas.yaml` y `11-mi-ingreso-con-cronograma-sin-cuotas.yaml`.
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). El backend nuevo funciona con el APK de la 039 (ignora `schedule`); el APK nuevo con un backend anterior simplemente no dibuja el cronograma (lo ignora).
 
 ## Cambio por pedido del dueño — 2026-11-02 — «Kilómetros diarios»: los pasos del teléfono llenan los km (spec 037, D-310)
 
