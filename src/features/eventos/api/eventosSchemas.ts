@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 import { formacionTolerante } from '../../formaciones/api/formacionTolerante';
-import type { Asistencia, Evento, Ocurrencia, ReglaDeAviso, TipoUbicacion } from '../types/eventos.types';
+import type { Asistencia, Evento, Ocurrencia, ReglaDeAviso, ResumenDeMeet, TipoUbicacion } from '../types/eventos.types';
 
 /**
  * Validación y traducción de `/api/v1/calendar/events` (backend `calendar`, `EventoResponse` y
@@ -18,6 +18,23 @@ import type { Asistencia, Evento, Ocurrencia, ReglaDeAviso, TipoUbicacion } from
 const reglaSchema = z
   .object({ kind: z.string(), value: z.union([z.number(), z.string()]).nullish() })
   .passthrough();
+
+/**
+ * Spec 040: cómo va la sala de Meet. Tolerante por dentro: un campo que falta se completa y un acceso desconocido deja el resumen
+ * sin dibujar (`catch(null)`); nada de esto puede tirar el evento.
+ */
+const meetSchema = z
+  .object({
+    estado: z.string().nullish(),
+    acceso: z.string().nullish(),
+    accesoAplicado: z.boolean().nullish(),
+    mensaje: z.string().nullish(),
+    fechasConSala: z.number().nullish(),
+    fechasConProblema: z.number().nullish(),
+  })
+  .passthrough()
+  .nullish()
+  .catch(null);
 
 const eventoSchema = z
   .object({
@@ -39,6 +56,8 @@ const eventoSchema = z
     targetRoles: z.array(z.string()).nullish(),
     // Spec 024: la formación del evento. Opcional y tolerante (un servidor anterior no la manda).
     formation: formacionTolerante,
+    // Spec 040: solo para ADMIN y ALCHEMIST, y solo en un evento con enlace automático.
+    meet: meetSchema,
   })
   .passthrough();
 
@@ -98,7 +117,23 @@ function aRegla(crudo: z.infer<typeof reglaSchema>): ReglaDeAviso | null {
   return null;
 }
 
+/** `null` si el servidor no lo mandó o no se entiende: sin resumen, la pantalla es la de siempre. */
+function aResumenDeMeet(crudo: EventoCrudo['meet']): ResumenDeMeet | null {
+  if (!crudo || !crudo.estado) return null;
+  const acceso = crudo.acceso === 'CON_PERMISO' ? 'CON_PERMISO' : crudo.acceso === 'ABIERTA' ? 'ABIERTA' : null;
+  if (!acceso) return null;
+  return {
+    estado: crudo.estado,
+    acceso,
+    accesoAplicado: crudo.accesoAplicado !== false,
+    mensaje: crudo.mensaje?.trim() || null,
+    fechasConSala: crudo.fechasConSala ?? 0,
+    fechasConProblema: crudo.fechasConProblema ?? 0,
+  };
+}
+
 export function aEvento(crudo: EventoCrudo): Evento {
+  const meet = aResumenDeMeet(crudo.meet);
   return {
     id: crudo.id,
     titulo: crudo.title.trim() || 'Evento',
@@ -122,6 +157,8 @@ export function aEvento(crudo: EventoCrudo): Evento {
     rolesDestino: crudo.targetRoles ?? [],
     // Solo si el servidor la mandó: así el evento de un servidor anterior queda idéntico al de siempre.
     ...(crudo.formation ? { formacion: crudo.formation } : {}),
+    // Solo si el servidor la mandó: el evento de un servidor anterior (y el de un aprendiz) queda idéntico al de siempre.
+    ...(meet ? { meet } : {}),
   };
 }
 

@@ -82,4 +82,12 @@ describe('la página /eliminar-cuenta', () => {
     expect(t).toContain('puedes pedir a soporte que la recupere, escribiendo a renaserlab@gmail.com');
     expect(eliminar).toContain('href="mailto:renaserlab@gmail.com"');
   });
+
+  // spec 040 FR-022
+  it('declara a Google (Calendar y Meet) como proveedor del enlace de los eventos y qué datos le llegan (spec 040)', () => {
+    expect(texto).toContain('Google (Calendar y Meet)');
+    expect(texto).toContain('Crear la sala de videollamada de Google Meet de los eventos que usan el enlace automático');
+    expect(texto).toContain('Solo el nombre del evento, el día, la hora y la duración');
+    expect(texto).toContain('No enviamos tu nombre, tu correo ni quiénes van al evento');
+  });
 });

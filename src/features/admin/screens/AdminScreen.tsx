@@ -26,6 +26,7 @@ import { GruposAdminScreen } from './GruposAdminScreen';
 import { GuiasRecepcionScreen } from './GuiasRecepcionScreen';
 import { MasOpcionesScreen } from './MasOpcionesScreen';
 import { PersonasAdminScreen } from './PersonasAdminScreen';
+import { CuentaDeGoogleAdminScreen } from '../../integraciones-google/screens/CuentaDeGoogleAdminScreen';
 import { CodigoRenaserEnFichasAdminScreen } from './CodigoRenaserEnFichasAdminScreen';
 import { TerminosAdminScreen } from '../../onboarding/terminos/screens/TerminosAdminScreen';
 import { TerminosDeUnaFormacionScreen } from '../../onboarding/terminos/screens/TerminosDeUnaFormacionScreen';
@@ -81,6 +82,8 @@ type Vista =
   | { nombre: 'categorias-habito' }
   | { nombre: 'publicaciones-ocultas' }
   | { nombre: 'codigo-renaser-en-fichas' }
+  /* La cuenta de Google que crea los enlaces de Meet de los eventos (spec 040). */
+  | { nombre: 'cuenta-de-google' }
   | { nombre: 'fichas' }
   | { nombre: 'mas' }
   /* Los términos y condiciones editables, uno por formación (spec 027): la lista, los de una formación y su editor. */
@@ -317,6 +320,8 @@ export function AdminScreen({ onSalir, abrirEn = 'inicio' }: { onSalir: () => vo
       return <PublicacionesOcultasScreen onVolver={volver} />;
     case 'codigo-renaser-en-fichas':
       return <CodigoRenaserEnFichasAdminScreen onVolver={volver} />;
+    case 'cuenta-de-google':
+      return <CuentaDeGoogleAdminScreen onVolver={volver} />;
     case 'terminos':
       return <TerminosAdminScreen onVolver={volver} onAbrir={codigo => entrar({ nombre: 'terminos-formacion', codigo })} />;
     case 'terminos-formacion':
@@ -344,6 +349,7 @@ export function AdminScreen({ onSalir, abrirEn = 'inicio' }: { onSalir: () => vo
           onAbrirFichas={() => entrar({ nombre: 'fichas' })}
           onAbrirPublicacionesOcultas={() => entrar({ nombre: 'publicaciones-ocultas' })}
           onAbrirCodigoRenaserEnFichas={() => entrar({ nombre: 'codigo-renaser-en-fichas' })}
+          onAbrirCuentaDeGoogle={() => entrar({ nombre: 'cuenta-de-google' })}
           onAbrirTerminos={() => entrar({ nombre: 'terminos' })}
         />
       );

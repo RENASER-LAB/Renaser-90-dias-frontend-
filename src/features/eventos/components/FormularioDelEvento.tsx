@@ -8,6 +8,7 @@ import { BotonPrincipal, BotonSecundario } from '../../../components/Legible';
 import { useTheme } from '../../../theme/ThemeContext';
 import { CursoPortada } from '../../academy/components/CursoPortada';
 import { HoraPickerModal } from '../../habits/components/HoraPickerModal';
+import { useDisponibilidadDeMeet } from '../hooks/useDisponibilidadDeMeet';
 import type { Evento } from '../types/eventos.types';
 import {
   DURACIONES_MINUTOS,
@@ -16,10 +17,12 @@ import {
   TIPOS_DE_EVENTO,
   type FormularioDeEvento,
 } from '../utils/formularioDeEvento';
+import { lineaDeLaSerie, motivoSinMeet } from '../utils/enlaceDeMeet';
 import { elegirPortada, type PortadaElegida } from '../utils/portadaDelEvento';
 import { duracionEnPalabras, diaRelativo } from '../utils/textosDeFecha';
 import { fechaEnZona, sumarDiasIso } from '../utils/zonaHoraria';
 import { BotonVolver, CampoDeTexto, LETRA, Parrafo } from './piezas';
+import { SeccionDelEnlaceDeMeet } from './SeccionDelEnlaceDeMeet';
 
 /**
  * Crear o editar un evento (E-6), para ADMIN y ALCHEMIST. Mínimo a propósito: nombre, día, hora,
@@ -53,6 +56,9 @@ export function FormularioDelEvento({
   const [eligiendoHora, setEligiendoHora] = useState(false);
   const [portada, setPortada] = useState<PortadaElegida | null>(null);
   const portadaVisible = portada?.uri ?? original?.portadaUrl ?? null;
+  /* Spec 040: «Crear enlace de Meet» solo se ofrece si el servidor dice que se puede; un evento que ya lo usaba lo conserva a la vista. */
+  const { sabido: meetSabido, disponibilidad: meet } = useDisponibilidadDeMeet(true);
+  const ofrecerMeet = meet.disponible || form.crearEnlaceMeet;
   const cambiar = <K extends keyof FormularioDeEvento>(campo: K, valor: FormularioDeEvento[K]) =>
     setForm(f => ({ ...f, [campo]: valor }));
 
@@ -145,18 +151,31 @@ export function FormularioDelEvento({
         </View>
       </View>
 
-      <CampoDeTexto
-        rotulo="Link de la reunión"
-        ayuda="Pega el link de Meet, Zoom o Drive. Empieza con https://"
-        value={form.link}
-        onChangeText={v => cambiar('link', v)}
-        autoCapitalize="none"
-        autoCorrect={false}
-        keyboardType="url"
-        placeholder="https://meet.google.com/…"
-      />
+      {ofrecerMeet ? (
+        <SeccionDelEnlaceDeMeet
+          encendido={form.crearEnlaceMeet}
+          acceso={form.accesoSalaMeet}
+          porQueNo={meetSabido && !meet.disponible ? motivoSinMeet(meet.motivo) : undefined}
+          serie={!!original && lineaDeLaSerie(original) !== null}
+          onEncender={v => cambiar('crearEnlaceMeet', v)}
+          onElegirAcceso={v => cambiar('accesoSalaMeet', v)}
+        />
+      ) : null}
 
-      {!form.link.trim() ? (
+      {!form.crearEnlaceMeet ? (
+        <CampoDeTexto
+          rotulo="Link de la reunión"
+          ayuda="Pega el link de Meet, Zoom o Drive. Empieza con https://"
+          value={form.link}
+          onChangeText={v => cambiar('link', v)}
+          autoCapitalize="none"
+          autoCorrect={false}
+          keyboardType="url"
+          placeholder="https://meet.google.com/…"
+        />
+      ) : null}
+
+      {!form.crearEnlaceMeet && !form.link.trim() ? (
         <CampoDeTexto
           rotulo="O el lugar"
           ayuda="Si es en persona, escribe la dirección."

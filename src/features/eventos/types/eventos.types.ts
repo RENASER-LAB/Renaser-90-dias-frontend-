@@ -22,6 +22,26 @@ export type ReglaDeAviso =
   | { tipo: 'diasAntes'; dias: number }
   | { tipo: 'horaDelDia'; hora: string /* HH:mm */ };
 
+/** Quién puede entrar a la sala de Meet que crea el servidor (spec 040): se elige en cada evento. */
+export type AccesoDeLaSala = 'ABIERTA' | 'CON_PERMISO';
+
+/**
+ * Cómo va la sala de Meet de un evento que pidió el enlace automático (spec 040). Solo lo manda el servidor a ADMIN y ALCHEMIST
+ * (en el detalle de un evento): para cualquier otra persona, y para un evento con el link pegado a mano, no existe.
+ *
+ * `estado` es el peor de las fechas (`CREADO`, `PENDIENTE`, `FALLIDO`…; un valor nuevo se conserva como texto). `mensaje` es una frase corta
+ * del servidor, solo cuando hay algo sin terminar —y entonces tiene sentido «Reintentar»—; `null` si todo está bien.
+ */
+export interface ResumenDeMeet {
+  estado: string;
+  acceso: AccesoDeLaSala;
+  /** Google confirmó que la sala quedó con el acceso elegido. */
+  accesoAplicado: boolean;
+  mensaje: string | null;
+  fechasConSala: number;
+  fechasConProblema: number;
+}
+
 export interface Evento {
   id: string;
   titulo: string;
@@ -51,6 +71,8 @@ export interface Evento {
   rolesDestino: string[];
   /** Spec 024: el código de la formación del evento. Ausente con un servidor anterior. */
   formacion?: string | null;
+  /** Spec 040: cómo va la sala de Meet automática. Ausente para quien no administra y con un servidor anterior. */
+  meet?: ResumenDeMeet | null;
 }
 
 /** Una fecha concreta de un evento (un evento recurrente tiene varias). */
