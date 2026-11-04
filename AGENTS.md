@@ -2369,6 +2369,27 @@ calcula nada):
 * **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire) **y el backend con D-318 antes**: contra uno anterior la ficha no
   trae `haceSuPrograma` y la fila no se dibuja; todo queda como estaba.
 
+## Corrección — 2026-11-04 — las fotos de muchos megapíxeles ya no dan «No se pudo procesar la foto» (issue #120)
+
+Un usuario no podía subir la foto de un hábito que había creado: «No se pudo procesar la foto · Prueba a sacarla de nuevo.». No dependía de que el
+hábito fuera propio (uno propio tiene evidencia opcional y abre la hoja genérica, que usa el procesamiento de foto de todos): fallaba con fotos
+de 50 y 108 MP, de forma intermitente según la memoria libre. **Causa:** en Android `ImageManipulator.manipulate(uri).resize(..).renderAsync()`
+decodifica la foto ENTERA y recién después la achica (108 MP son ~430 MB de bitmap); con poca memoria se cancela
+(`Context.renderAsync has been rejected … JobCancellationException`) y el `catch` de cada pantalla lo volvía ese aviso sin registrar nada. El código era
+el mismo en 1.5.0, 1.6.0 y 1.7.1. Lo que cambia y nada más (solo JavaScript: `expo-image` y `expo-image-manipulator` ya vienen en la app):
+* **`src/utils/reducirFoto.ts`**: carga la foto YA achicada (`Image.loadAsync(uri, { maxWidth })` de expo-image, que muestrea al decodificar) y se la
+  pasa al manipulador, que le da la medida exacta, endereza el EXIF y guarda el JPEG. Si falla, reintenta a 60 % y a 35 % del tamaño antes de
+  rendirse, y deja cada fallo en el registro (`[foto] no se pudo achicar a … px: <causa real>`). En la web se deja como estaba (el navegador no tiene
+  este problema).
+* **Los seis lugares que decodificaban la foto entera la usan**: evidencia de hábitos (`habits/utils/capturarEvidencia`), chat, Muro
+  (`community/utils/normalizarImagen`), Caja (`caja/utils/subirImagen`), foto de perfil y portada de bienvenida (`auth/utils/elegirFotoDePerfil`) y portada
+  de eventos. Mismos anchos máximos, calidades y textos de siempre; la foto sale igual y derecha (EXIF), solo que sin armar el bitmap grande.
+* **Comprobado en el emulador** (Pixel 6, backend local): con el código anterior las fotos de 50 y 108 MP fallaban; con el nuevo, 8 de 8 seguidas
+  con la de 108 MP, Glide carga a 1440 px en ~125 ms (antes el bitmap completo en ~1,3 s), la orientación EXIF se conserva y el hábito propio se
+  entrega y queda `COMPLETADO`.
+* **Pruebas:** `reducirFoto` (carga achicada, reintentos, error final, `release`, web) y `elegirFotoCuadrada` (ajustada).
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
+
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
 Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel especializado en React Native, Expo y TypeScript. Al crear, refactorizar o modificar cualquier pantalla o componente, debes cumplir OBLIGATORIAMENTE con los siguientes estándares:

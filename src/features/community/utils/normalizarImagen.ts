@@ -1,6 +1,6 @@
 import { Alert } from '../../../components/Alerta';
 import * as ImagePicker from 'expo-image-picker';
-import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
+import { reducirFoto } from '../../../utils/reducirFoto';
 
 /**
  * Selección y normalización de la foto para "Nueva publicación" del Muro (`ComunidadScreen.tsx`,
@@ -77,7 +77,8 @@ async function normalizarFoto(asset: ImagePicker.ImagePickerAsset): Promise<Foto
   // el tag nosotros mismos rotaría dos veces. (Sin dispositivo real a mano en este entorno para
   // confirmarlo en carne propia: queda como lo único de este archivo sin verificar en un teléfono,
   // ver el informe de la tarea.)
-  const renderizada = await ImageManipulator.manipulate(asset.uri).resize({ width: anchoDestino }).renderAsync();
+  // Se carga ya achicada (`reducirFoto`): decodificar la foto entera de un teléfono de 50 o 108 MP agotaba la memoria (issue #120).
+  // Quien carga también endereza la foto por su EXIF (ver arriba), igual que antes.
 
   // Sin recorte a un aspecto fijo, a propósito: la "retícula" del Muro
   // (ComunidadScreen.tsx, styles.mediaSingleBox/mediaHalfBox/mediaLargeLeft/mediaSmallRight) hoy
@@ -88,7 +89,7 @@ async function normalizarFoto(asset: ImagePicker.ImagePickerAsset): Promise<Foto
   // inventar una regla que el diseño no tiene. Se conserva la proporción original de la foto:
   // una vertical sigue vertical, una horizontal sigue horizontal — "manejar vertical y horizontal"
   // sin descartar contenido de ninguna de las dos.
-  const resultado = await renderizada.saveAsync({ compress: CALIDAD_JPEG, format: SaveFormat.JPEG });
+  const resultado = await reducirFoto(asset.uri, { width: anchoDestino }, CALIDAD_JPEG);
 
   return {
     uri: resultado.uri,

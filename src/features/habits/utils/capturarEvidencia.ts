@@ -1,8 +1,8 @@
 import { Linking, Platform } from 'react-native';
 import { Alert } from '../../../components/Alerta';
 import * as ImagePicker from 'expo-image-picker';
-import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import type { TipoEvidencia } from '../api/evidenciaHabitoApi';
+import { reducirFoto } from '../../../utils/reducirFoto';
 
 /**
  * Elegir/capturar el archivo de evidencia de un hábito. Solo selección y normalización — el
@@ -86,11 +86,8 @@ async function normalizarFoto(
   tomadaEn: string | null,
 ): Promise<ArchivoEvidencia> {
   const anchoDestino = asset.width > 0 ? Math.min(asset.width, 1440) : 1440;
-  // API contextual de `expo-image-manipulator@57`: la vieja `manipulateAsync` está deprecada.
-  const renderizada = await ImageManipulator.manipulate(asset.uri)
-    .resize({ width: anchoDestino })
-    .renderAsync();
-  const resultado = await renderizada.saveAsync({ compress: 0.8, format: SaveFormat.JPEG });
+  // Se carga ya achicada: decodificar la foto entera de un teléfono de 50 o 108 MP agotaba la memoria (issue #120).
+  const resultado = await reducirFoto(asset.uri, { width: anchoDestino }, 0.8);
   return {
     uri: resultado.uri,
     mimeType: 'image/jpeg',

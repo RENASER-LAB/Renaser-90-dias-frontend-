@@ -1,7 +1,7 @@
 import * as ImagePicker from 'expo-image-picker';
-import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 
 import { Alert } from '../../../components/Alerta';
+import { reducirFoto } from '../../../utils/reducirFoto';
 import { almacenamientoSinConfigurar, subirImagenAS3 } from '../../community/api/wallApi';
 import { confirmarPortada, solicitarUrlDePortada } from '../api/eventosApi';
 import type { Evento } from '../types/eventos.types';
@@ -47,8 +47,7 @@ export async function elegirPortada(): Promise<PortadaElegida | null> {
     if (!asset) return null;
     const ancho = asset.width > 0 ? Math.min(asset.width, ANCHO_DE_PORTADA) : ANCHO_DE_PORTADA;
     // Pasar por el manipulador también endereza la foto según su EXIF (ver `normalizarImagen.ts`).
-    const renderizada = await ImageManipulator.manipulate(asset.uri).resize({ width: ancho }).renderAsync();
-    const guardada = await renderizada.saveAsync({ compress: 0.8, format: SaveFormat.JPEG });
+    const guardada = await reducirFoto(asset.uri, { width: ancho }, 0.8);
     return { uri: guardada.uri, mimeType: 'image/jpeg' };
   } catch {
     Alert.alert('No se pudo usar esa imagen', 'Prueba con otra.');

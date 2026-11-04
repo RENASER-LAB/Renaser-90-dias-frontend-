@@ -1,6 +1,6 @@
 import { Alert } from '../../../components/Alerta';
 import * as ImagePicker from 'expo-image-picker';
-import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
+import { reducirFoto } from '../../../utils/reducirFoto';
 
 /**
  * Elegir o capturar la foto que se manda por chat, y derivar el MIME del audio grabado. Solo
@@ -27,11 +27,8 @@ export interface ArchivoChat {
  */
 async function normalizarFoto(asset: ImagePicker.ImagePickerAsset): Promise<ArchivoChat> {
   const anchoDestino = asset.width > 0 ? Math.min(asset.width, 1440) : 1440;
-  // API contextual de `expo-image-manipulator@57`: la vieja `manipulateAsync` está deprecada.
-  const renderizada = await ImageManipulator.manipulate(asset.uri)
-    .resize({ width: anchoDestino })
-    .renderAsync();
-  const resultado = await renderizada.saveAsync({ compress: 0.8, format: SaveFormat.JPEG });
+  // Se carga ya achicada: decodificar la foto entera de un teléfono de 50 o 108 MP agotaba la memoria (issue #120).
+  const resultado = await reducirFoto(asset.uri, { width: anchoDestino }, 0.8);
   return { uri: resultado.uri, mimeType: 'image/jpeg' };
 }
 
