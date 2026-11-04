@@ -56,8 +56,11 @@ import { ObservarScreen } from './ObservarScreen';
  *   al cambiar de semana, no en cada foco.
  * - **Sin días por venir**: la ventana termina ayer (o, con el viernes de hoy, hoy: «Hoy, todavía sin cerrar»), así
  *   que no hay tarjetas de días futuros ni un aviso de que el porcentaje puede cambiar.
- * - **El mentor o la guía con programa propio** (`NO_SE_MIDE`) llega sin días: se dice su rol y que no se mide,
- *   con su porcentaje, y no se cuentan hábitos (ceros que parecerían incumplimiento).
+ * - **El mentor o la guía con programa propio** (`NO_SE_MIDE`): se dice su rol y que no se mide en el semáforo, con su
+ *   porcentaje. **Desde D-318 (2026-11-03) llega con sus 7 días de verdad**, igual que un aprendiz —hábitos hechos y pendientes,
+ *   evidencias, lo que escribió y sus acciones—: el servidor los arma con el mismo armado y la pantalla los dibuja como los de
+ *   cualquiera. Solo sigue sin color: no cuenta para el semáforo de ningún grupo. Un servidor anterior los mandaba vacíos: ahí
+ *   no se dibuja nada de días, como antes.
  * - **Dos acciones** (US3): «Escribirle» abre el chat 1 a 1 con la persona, vacío y sin enviar nada
  *   (FR-015), y «Avisar a su mentor» deja una observación sobre ella y la semana (FR-014; no aparece si el
  *   grupo no tiene mentor). La observación se escribe en `ObservarScreen`; la ficha sigue montada debajo, así
@@ -79,6 +82,9 @@ import { ObservarScreen } from './ObservarScreen';
  * ser `null`) solo dice si hay a quién avisar. Sin `desdeTodos` la pantalla pide las rutas de siempre, las del grupo.
  * «Avisar a su mentor» exige además que el servidor lo permita (`puedeAvisarAlMentor`; si no lo dice, vale la regla de
  * siempre: que haya mentor).
+ *
+ * **Los días de un mentor** (D-318): `FichaMentorScreen` la abre con `desdeTodos`, `grupoId = null` y `avisarAlMentor = false`:
+ * a un mentor no se le avisa «a su mentor» (él es el mentor), «Escribirle» sí.
  */
 export function PersonaDelLiderScreen({
   grupoId,
@@ -92,6 +98,7 @@ export function PersonaDelLiderScreen({
   alAbrirFicha,
   desdeTodos = false,
   diaInicial,
+  avisarAlMentor = true,
 }: {
   /** El grupo de la persona; `null` = no tiene (solo se llega así desde «Todos los aprendices»). */
   grupoId: string | null;
@@ -122,6 +129,11 @@ export function PersonaDelLiderScreen({
    * si no está (hoy no cabe en los 7 días hasta ayer), abre el de siempre. Ausente = el de siempre. Aditiva: nada más cambia.
    */
   diaInicial?: string;
+  /**
+   * Si se ofrece «Avisar a su mentor». Apagado cuando la persona ES el mentor (sus días se abren desde su ficha, D-318): no hay a
+   * quién avisar. Por defecto prendido: nada cambia para un aprendiz.
+   */
+  avisarAlMentor?: boolean;
 }) {
   /* La puerta de las cuatro lecturas: la del grupo, o `null` = la que no pregunta por grupo. */
   const grupoDeRuta = desdeTodos ? null : grupoId;
@@ -176,7 +188,7 @@ export function PersonaDelLiderScreen({
      a quién, y si el servidor dice que no se puede (`puedeAvisarAlMentor` en `false`) tampoco; si no lo dice (un backend
      anterior), vale la regla de siempre. */
   const mentor =
-    grupoId !== null && datos?.puedeAvisarAlMentor !== false && datos?.mentor && datos.mentor.id !== personaId
+    avisarAlMentor && grupoId !== null && datos?.puedeAvisarAlMentor !== false && datos?.mentor && datos.mentor.id !== personaId
       ? datos.mentor
       : null;
 
@@ -282,9 +294,12 @@ function EncabezadoDeLaPersona({
     <View style={estilos.encabezado}>
       <AvatarPersona nombre={nombre} avatarUrl={avatarUrl} size={56} />
       <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
-        <Text style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 22 }]} numberOfLines={2}>
-          {quien}
-        </Text>
+        {/* Sin grupo ni mentor que decir (los días de un mentor) no hay renglón: nada de líneas vacías. */}
+        {quien ? (
+          <Text style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 22 }]} numberOfLines={2}>
+            {quien}
+          </Text>
+        ) : null}
         {datos ? <EstadoDeLaSemana datos={datos} /> : null}
       </View>
     </View>
@@ -311,8 +326,8 @@ function EstadoDeLaSemana({ datos }: { datos: SemanaDePersona }) {
           </Text>
         ) : null}
       </View>
-      {/* Quien no se mide no trae días: contar sus hábitos daría ceros que parecen incumplimiento. */}
-      {datos.resumen && !datos.noSeMide ? (
+      {/* Quien no se mide y no trae días (un servidor anterior a D-318): contar sus hábitos daría ceros que parecen incumplimiento. */}
+      {datos.resumen && (!datos.noSeMide || datos.dias.length > 0) ? (
         <Text style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 22 }]}>
           {resumenDeLaSemanaEnPalabras(datos.resumen)}
         </Text>

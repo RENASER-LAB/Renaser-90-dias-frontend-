@@ -500,6 +500,39 @@ describe('del grupo a la persona', () => {
     expect(botones(r).some(b => b.startsWith('Avisar a su mentor'))).toBe(false);
   });
 
+  it('D-318: el mentor del grupo con su programa activado se abre por la ruta del grupo con sus 7 días de verdad —hábitos y su resumen—, y sigue sin color', async () => {
+    mockTabla.mockResolvedValue(LISTA);
+    mockSemana.mockResolvedValue(
+      semana({
+        personaId: 'm1',
+        nombre: 'Luisa Rojas',
+        rol: 'MENTOR',
+        noSeMide: true,
+        color: 'SIN_DATOS',
+        etiqueta: null,
+        porcentaje: 88.2,
+        mentor: null,
+        puedeAvisarAlMentor: false,
+        resumen: { obligaciones: 2, cumplidas: 1, conEntrega: 0, pendientes: 0, sinCumplir: 1 },
+      }),
+    );
+    const r = await montar(resumen([grupo('g1', 'Fénix', true)]));
+    await tocar(r, 'Abrir el semáforo del grupo');
+    /* En la lista sigue siendo «No se mide en el semáforo» con su %: tocarla abre sus días. */
+    const enLaLista = textos(r);
+    expect(enLaLista).toContain('Mentor · No se mide en el semáforo');
+    await tocar(r, 'Luisa Rojas');
+    expect(mockSemana).toHaveBeenCalledWith('g1', 'm1', null);
+    const t = textos(r);
+    expect(t).toContain('Mentor · No se mide en el semáforo');
+    expect(t).toContain('88.2');
+    expect(t).toContain('Ritual de la mañana');
+    expect(t).toContain('Agua tibia');
+    expect(t).toContain('1 cumplidos · 1 sin cumplir · 0 pendientes');
+    expect(botones(r).some(b => b.startsWith('Avisar a su mentor'))).toBe(false);
+    expect(botones(r)).toContain('Escribirle a Luisa Rojas');
+  });
+
   it('la ventana termina ayer: no hay aviso de que el porcentaje puede cambiar ni tarjetas de días por venir', async () => {
     mockTabla.mockResolvedValue(LISTA);
     mockSemana.mockResolvedValue(semana());
