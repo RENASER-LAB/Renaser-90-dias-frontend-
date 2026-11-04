@@ -1,8 +1,8 @@
 import * as ImagePicker from 'expo-image-picker';
-import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 
 // El `Alert` del proyecto, no el de react-native: en web aquel no existe y el aviso se perderia.
 import { Alert } from '../../../components/Alerta';
+import { reducirFoto } from '../../../utils/reducirFoto';
 
 /** Lo que hace falta para subir una foto de perfil, y nada más. */
 export interface FotoDePerfil {
@@ -105,9 +105,6 @@ export async function elegirFotoCuadrada(opciones: OpcionesFotoCuadrada): Promis
  * día el recorte se hiciera opcional, esto seguiría entregando algo que entra bien en el círculo.
  */
 async function reducirACuadrado(uri: string, lado: number): Promise<FotoCuadrada> {
-  const renderizada = await ImageManipulator.manipulate(uri)
-    .resize({ width: lado, height: lado })
-    .renderAsync();
-  const resultado = await renderizada.saveAsync({ compress: 0.85, format: SaveFormat.JPEG });
+  const resultado = await reducirFoto(uri, { width: lado, height: lado }, 0.85);
   return { uri: resultado.uri, mimeType: 'image/jpeg' };
 }

@@ -1,7 +1,7 @@
 import * as ImagePicker from 'expo-image-picker';
-import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 
 import { Alert } from '../../../components/Alerta';
+import { reducirFoto } from '../../../utils/reducirFoto';
 import { ApiError, mensajeDeError } from '../../../services/http/apiClient';
 import { almacenamientoSinConfigurar } from '../../community/api/wallApi';
 
@@ -86,8 +86,7 @@ export async function elegirImagen(desde: 'galeria' | 'camara', para: string): P
   if (!asset) return null;
   try {
     const ancho = asset.width > 0 ? Math.min(asset.width, ANCHO_MAXIMO) : ANCHO_MAXIMO;
-    const renderizada = await ImageManipulator.manipulate(asset.uri).resize({ width: ancho }).renderAsync();
-    const guardada = await renderizada.saveAsync({ compress: 0.85, format: SaveFormat.JPEG });
+    const guardada = await reducirFoto(asset.uri, { width: ancho }, 0.85);
     return { uri: guardada.uri, mimeType: 'image/jpeg' };
   } catch {
     Alert.alert('No se pudo procesar la foto', 'Prueba con otra imagen.');

@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 
 const mockPermiso = jest.fn<() => Promise<{ granted: boolean }>>();
 const mockGaleria = jest.fn<(opciones: unknown) => Promise<unknown>>();
-const mockReducir = jest.fn<(uri: string, medidas: unknown) => void>();
+const mockCargar = jest.fn<(uri: string, opciones: unknown) => Promise<unknown>>();
+const mockReducir = jest.fn<(fuente: unknown, medidas: unknown) => void>();
 const mockGuardar = jest.fn<(opciones: unknown) => Promise<{ uri: string }>>();
 const mockAlerta = jest.fn<(titulo: string, mensaje?: string) => void>();
 
@@ -10,12 +11,16 @@ jest.mock('expo-image-picker', () => ({
   requestMediaLibraryPermissionsAsync: () => mockPermiso(),
   launchImageLibraryAsync: (opciones: unknown) => mockGaleria(opciones),
 }));
+// La foto se carga ya achicada (issue #120) y esa foto cargada es la que llega al manipulador.
+jest.mock('expo-image', () => ({
+  Image: { loadAsync: (uri: string, opciones: unknown) => mockCargar(uri, opciones) },
+}));
 jest.mock('expo-image-manipulator', () => ({
   SaveFormat: { JPEG: 'jpeg' },
   ImageManipulator: {
-    manipulate: (uri: string) => ({
+    manipulate: (fuente: unknown) => ({
       resize: (medidas: unknown) => {
-        mockReducir(uri, medidas);
+        mockReducir(fuente, medidas);
         return { renderAsync: async () => ({ saveAsync: (opciones: unknown) => mockGuardar(opciones) }) };
       },
     }),
@@ -36,6 +41,7 @@ import { LADO_DEL_AVATAR, elegirFotoCuadrada, elegirFotoDePerfil } from '../eleg
 beforeEach(() => {
   mockPermiso.mockReset().mockResolvedValue({ granted: true });
   mockGaleria.mockReset().mockResolvedValue({ canceled: false, assets: [{ uri: 'file:///original.jpg' }] });
+  mockCargar.mockReset().mockResolvedValue({ release: () => undefined, nombre: 'cargada' });
   mockReducir.mockReset();
   mockGuardar.mockReset().mockResolvedValue({ uri: 'file:///reducida.jpg' });
   mockAlerta.mockReset();
@@ -48,7 +54,8 @@ describe('elegirFotoDePerfil (no cambia)', () => {
     expect(mockGaleria).toHaveBeenCalledWith(
       expect.objectContaining({ mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1] }),
     );
-    expect(mockReducir).toHaveBeenCalledWith('file:///original.jpg', { width: 512, height: 512 });
+    expect(mockCargar).toHaveBeenCalledWith('file:///original.jpg', { maxWidth: 512, maxHeight: 512 });
+    expect(mockReducir).toHaveBeenCalledWith(expect.objectContaining({ nombre: 'cargada' }), { width: 512, height: 512 });
     expect(mockGuardar).toHaveBeenCalledWith({ compress: 0.85, format: 'jpeg' });
   });
 
@@ -73,7 +80,8 @@ describe('elegirFotoCuadrada (la portada de la tarjeta de bienvenida)', () => {
   it('el mismo recorte cuadrado, reducida al lado pedido: 1200, el lienzo de la tarjeta', async () => {
     await expect(elegirFotoCuadrada(PORTADA)).resolves.toEqual({ uri: 'file:///reducida.jpg', mimeType: 'image/jpeg' });
     expect(mockGaleria).toHaveBeenCalledWith(expect.objectContaining({ allowsEditing: true, aspect: [1, 1] }));
-    expect(mockReducir).toHaveBeenCalledWith('file:///original.jpg', { width: 1200, height: 1200 });
+    expect(mockCargar).toHaveBeenCalledWith('file:///original.jpg', { maxWidth: 1200, maxHeight: 1200 });
+    expect(mockReducir).toHaveBeenCalledWith(expect.objectContaining({ nombre: 'cargada' }), { width: 1200, height: 1200 });
   });
 
   it('sin permiso: el aviso habla de la portada, no de la foto de perfil', async () => {
@@ -93,8 +101,10 @@ describe('elegirFotoCuadrada (la portada de la tarjeta de bienvenida)', () => {
 
   it('si la imagen no se puede procesar avisa y devuelve null, sin lanzar', async () => {
     mockGuardar.mockRejectedValue(new Error('formato no soportado'));
+    const avisos = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
 
     await expect(elegirFotoCuadrada(PORTADA)).resolves.toBeNull();
+    avisos.mockRestore();
     expect(mockAlerta).toHaveBeenCalledWith('No se pudo procesar la foto', 'Prueba con otra imagen.');
   });
 });
