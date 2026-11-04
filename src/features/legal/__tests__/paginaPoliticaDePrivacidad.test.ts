@@ -83,3 +83,40 @@ describe('la página /eliminar-cuenta', () => {
     expect(eliminar).toContain('href="mailto:renaserlab@gmail.com"');
   });
 });
+
+describe('los recordatorios de eventos por WhatsApp (spec 041)', () => {
+  // spec 041 FR-044
+  it('dice que se usa el WhatsApp de la ficha para recordar por WhatsApp los eventos a los que dijo «Voy», y cuándo', () => {
+    expect(texto).toContain('Recordarte por WhatsApp los eventos a los que dijiste «Voy»');
+    expect(texto).toContain('un día, una hora, 30 y 10 minutos antes, usando el WhatsApp de tu ficha');
+  });
+
+  // spec 041 FR-044
+  it('dice cómo darse de baja: el botón, responder «BAJA» o el interruptor de Yo → Notificaciones', () => {
+    expect(texto).toContain('con el botón «No recibir más» de cada mensaje');
+    expect(texto).toContain('respondiendo «BAJA» a un mensaje nuestro');
+    expect(texto).toContain('apagando «Recordatorios de eventos por WhatsApp» en Yo → Notificaciones');
+  });
+
+  // spec 041 FR-044
+  it('nombra a YCloud y a Meta en la tabla de con quién se comparte, y qué datos van', () => {
+    const fila = Array.from(doc.querySelectorAll('table.tabla tr')).find(tr => (tr.textContent ?? '').includes('YCloud'));
+    expect(fila).toBeDefined();
+    const celdas = Array.from(fila!.querySelectorAll('td')).map(td => (td.textContent ?? '').replace(/\s+/g, ' '));
+    expect(celdas[0]).toContain('YCloud');
+    expect(celdas[0]).toContain('Meta');
+    expect(celdas[1]).toContain('recordatorios de tus eventos por WhatsApp');
+    expect(celdas[2]).toContain('Tu número de WhatsApp');
+    expect(celdas[2]).toContain('tu nombre de pila');
+    expect(celdas[2]).toContain('el nombre de tu formación');
+    expect(celdas[2]).toContain('no enviamos nada más');
+    expect(celdas[2]).toContain('según sus propias condiciones');
+  });
+
+  // spec 041 FR-044
+  it('dice que no guarda el texto del mensaje ni las respuestas, solo el estado, por 12 meses', () => {
+    expect(texto).toContain('no guardamos el texto del mensaje ni lo que respondes');
+    expect(texto).toContain('solo el estado de cada envío');
+    expect(texto).toContain('durante 12 meses');
+  });
+});
