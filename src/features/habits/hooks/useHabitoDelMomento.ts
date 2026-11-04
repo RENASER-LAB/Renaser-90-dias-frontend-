@@ -5,6 +5,7 @@ import { useMinutoActual } from '../../../hooks/useMinutoActual';
 import { obtenerTracksDeHoy } from '../api/habitsApi';
 import type { TrackDelDiaApi } from '../types/habits.types';
 import { habitoDelMomento, type HabitoDelMomento } from '../utils/habitoDelMomento';
+import { vistaDeLaClaseDiaria, type VistaDeLaClaseDiaria } from '../utils/vistaDeLaClaseDiaria';
 
 /**
  * El hábito que le toca AHORA, para la primera tarjeta de Hoy.
@@ -24,6 +25,7 @@ export function useHabitoDelMomento(): {
   recargar: () => Promise<void>;
   registrosLeidos: boolean;
   registrosDeHoy: number;
+  claseDiaria: VistaDeLaClaseDiaria | null;
 } {
   const [tracks, setTracks] = useState<TrackDelDiaApi[]>([]);
   const [leidos, setLeidos] = useState(false);
@@ -47,5 +49,8 @@ export function useHabitoDelMomento(): {
   );
 
   const habito = useMemo(() => habitoDelMomento(tracks, ahora), [tracks, ahora]);
-  return { habito, recargar, registrosLeidos: leidos, registrosDeHoy: tracks.length };
+  /* La tarjeta «Clase diaria» de Hoy (2026-11-03) sale de ESTA MISMA lectura, sin un pedido más. Mientras no se leyó (o si falló) `tracks` está
+     vacío y no hay tarjeta: sin parpadeo. */
+  const claseDiaria = useMemo(() => vistaDeLaClaseDiaria(tracks), [tracks]);
+  return { habito, recargar, registrosLeidos: leidos, registrosDeHoy: tracks.length, claseDiaria };
 }
