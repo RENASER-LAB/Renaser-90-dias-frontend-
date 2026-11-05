@@ -2390,6 +2390,40 @@ el mismo en 1.5.0, 1.6.0 y 1.7.1. Lo que cambia y nada más (solo JavaScript: `e
 * **Pruebas:** `reducirFoto` (carga achicada, reintentos, error final, `release`, web) y `elegirFotoCuadrada` (ajustada).
 * **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
 
+## Cambio por pedido del dueño — 2026-11-05 — tab `Comunidad` → Muro en lista compacta estilo Skool
+
+El dueño autorizó explícitamente este cambio en el tab Comunidad, con un lienzo de referencia (estilo Skool): el Muro pasa de tarjetas
+grandes a una lista compacta, y la tarjeta completa de siempre se ve al abrir una publicación. Solo JavaScript, sin backend. Lo que cambia y
+nada más:
+* **Cada publicación del Muro es una fila compacta** (`community/components/FilaCompactaDelMuro`, lógica pura en `utils/filaCompactaDelMuro`),
+  sobre el fondo de tarjeta y separadas por franjas de 8 del fondo de pantalla:
+  * **Cabecera:** su foto o sus iniciales (44), el nombre (16 semibold, hasta dos líneas, cede ante lo de la derecha) y, debajo en una línea,
+    «grupo · hace cuánto» (13, `textSoft`). A la derecha, la insignia «Día N» de siempre (`diaPrograma`) y el «…» de moderación solo para
+    ADMIN y ALCHEMIST (`usePuedeModerarElMuro`, sin cambios; abre la misma hoja).
+  * **Cuerpo:** el texto a 15 px cortado a tres líneas y, a la derecha, la PRIMERA foto en una miniatura cuadrada de 66 (radio 10, `FotoMuro`);
+    con más de una foto, la chapa «+N» (N = fotos − 1) abajo a la derecha, fondo oscuro translúcido y texto blanco de 12 en negrita. Sin fotos,
+    el texto usa todo el ancho.
+  * **Pie:** «me gusta» con su número (dorado y con relleno suave si ya lo diste; toca para dar o quitar, como siempre) y comentarios con su
+    número (toca para abrir la publicación con los comentarios a la vista). Áreas de 44 o más. **No se dibuja «Nuevo comentario hace X»:** el
+    feed no trae la fecha del último comentario (solo `commentCount`), y no se inventa. El número de comentarios sale de `commentCount`
+    (`PostItem.cantidadComentarios`, nuevo, de `wallMappers`), o de los ya leídos si van por delante.
+  * **Tocar la fila** (fuera de esos botones) abre la publicación. Una publicación que todavía se está subiendo no se abre ni se modera.
+* **La publicación abierta** (`PublicacionAbierta`): pantalla completa DENTRO de Comunidad, encima de la lista, que queda montada debajo y por eso
+  conserva su posición al volver. Cabecera «‹ Publicación» (`CabeceraAdmin`, volver de 48) y un solo scroll con la **tarjeta completa de siempre**
+  (`TarjetaPublicacionMuro`, sin reescribir nada): texto entero, mosaico de fotos con «+2», reacciones, comentarios, compartir y moderación.
+  Sin barra de pestañas ni el botón flotante de SER mientras está abierta (`OPCIONES_SIN_PESTANAS`, `marcarChatMontado`). El atrás del sistema
+  vuelve al Muro, después de cerrar las hojas que se abren desde ella (reacciones, compartir). Si la publicación se oculta o elimina, se vuelve
+  a la lista; cambiar de sección la cierra.
+* **Tocar una foto** dentro de la publicación abre el visor de siempre (`ImageViewerModal`), con sus comentarios, sin cambios.
+* **Sin animación nueva** (se toca decenas de veces por visita): el hundimiento de `Presionable` en la fila (0,985) y nada más.
+* **No cambian:** crear publicación, el selector de formación, la moderación y su hoja, `AvisoDeAbajo`, la llegada desde Hoy a una publicación
+  (`scrollToIndex`, ahora a su fila con borde dorado), Hoy, los demás tabs y el backend.
+* **Pruebas:** Jest `utils/__tests__/filaCompactaDelMuro` (miniatura, «+N», sin foto, comentarios, etiquetas), `components/__tests__/filaCompactaDelMuro`
+  (miniatura de 66, «+N», sin foto a todo el ancho, insignia del día, «…» solo para quien modera, abrir, comentarios, «me gusta», 44 de alto) y
+  `screens/__tests__/muroCompactoEnComunidad` (la lista dibuja filas, la publicación abierta usa la tarjeta completa, el atrás y la barra); se
+  ajustó `moderarElMuroEnComunidad`. Maestro, **escrito y sin correr** (el emulador estaba ocupado): `.maestro/muro-compacto/01-lista-y-publicacion-abierta.yaml`.
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
+
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
 Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel especializado en React Native, Expo y TypeScript. Al crear, refactorizar o modificar cualquier pantalla o componente, debes cumplir OBLIGATORIAMENTE con los siguientes estándares:
