@@ -71,7 +71,8 @@ function evento(parcial: Partial<Evento> = {}): Evento {
 }
 
 describe('formulario del evento', () => {
-  const base = { ...formularioVacio(AHORA, 'America/Lima'), titulo: 'Clase en vivo', link: 'https://meet.google.com/abc' };
+  const base = { ...formularioVacio(AHORA, 'America/Lima'), titulo: 'Clase en vivo', link: 'https://meet.google.com/abc', donde: 'enlace' as const };
+  // spec 040: estas reglas son las del link pegado o el lugar («Pegar otro enlace»); el Meet automático se prueba en enlaceDeMeetAutomatico.
 
   it('arma el cuerpo con la hora de Lima convertida a UTC', () => {
     const r = armarCuerpo({ ...base, fecha: '2026-09-30', hora: '19:30' }, AHORA);

@@ -34,6 +34,7 @@ export function MasOpcionesScreen({
   onAbrirFichas,
   onAbrirPublicacionesOcultas,
   onAbrirCodigoRenaserEnFichas,
+  onAbrirCuentaDeGoogle,
   onAbrirTerminos,
 }: {
   onVolver: () => void;
@@ -45,6 +46,7 @@ export function MasOpcionesScreen({
   onAbrirFichas: () => void;
   onAbrirPublicacionesOcultas: () => void;
   onAbrirCodigoRenaserEnFichas: () => void;
+  onAbrirCuentaDeGoogle: () => void;
   onAbrirTerminos: () => void;
 }) {
   const barraAlDesplazar = useOcultarBarraAlDesplazar();
@@ -105,6 +107,14 @@ export function MasOpcionesScreen({
       detalle: 'Si el mentor y el líder ven el Código Renaser de los aprendices',
       onPress: onAbrirCodigoRenaserEnFichas,
       clave: CLAVES.admin,
+    },
+    /* La cuenta Gmail de Renaser que crea los enlaces de Meet de los eventos (pedido del dueño del 04/11, backend D-321, spec 040). Solo conectar,
+       ver y desconectar; sigue la disponibilidad de la gestión de eventos. */
+    {
+      titulo: 'Cuenta de Google',
+      detalle: 'La cuenta que crea los enlaces de Meet de los eventos',
+      onPress: onAbrirCuentaDeGoogle,
+      clave: CLAVES.eventosGestion,
     },
     /* El texto legal que firma cada persona al entrar, editable y con versiones, uno por formación (pedido del dueño del 31/10, backend D-304). */
     {
