@@ -101,12 +101,23 @@ export async function pedirPermisoDeUbicacion(): Promise<ResultadoDelPermiso> {
   }
 }
 
+/**
+ * ¿Este proceso arrancó el GPS? Si el proceso murió (Android, el sistema o «forzar detención»), al volver `expo-task-manager`
+ * restaura la tarea ANTES de que la app esté al frente y `expo-location` no puede levantar el servicio en primer plano
+ * («Foreground location task cannot be started while the app is in the background»): el GPS queda sin servicio y sin su
+ * notificación, y moriría al irse a segundo plano. Por eso, la primera vez de cada proceso se detiene y se vuelve a empezar.
+ */
+let arrancadoEnEsteProceso = false;
+
 /** Arranca el GPS con el servicio en primer plano. Con la app al frente (la regla de Android para empezar un servicio). */
 export async function empezarGps(): Promise<boolean> {
   const m = cargar();
   if (!m) return false;
   try {
-    if (await m.Location.hasStartedLocationUpdatesAsync(TAREA_GPS_DE_LA_CARRERA)) return true;
+    if (await m.Location.hasStartedLocationUpdatesAsync(TAREA_GPS_DE_LA_CARRERA)) {
+      if (arrancadoEnEsteProceso) return true;
+      await m.Location.stopLocationUpdatesAsync(TAREA_GPS_DE_LA_CARRERA);
+    }
     await m.Location.startLocationUpdatesAsync(TAREA_GPS_DE_LA_CARRERA, {
       accuracy: m.Location.Accuracy.BestForNavigation,
       timeInterval: 1000,
@@ -120,6 +131,7 @@ export async function empezarGps(): Promise<boolean> {
         killServiceOnDestroy: false,
       },
     });
+    arrancadoEnEsteProceso = true;
     return true;
   } catch {
     return false;
@@ -130,6 +142,7 @@ export async function detenerGps(): Promise<void> {
   const m = cargar();
   if (!m) return;
   try {
+    arrancadoEnEsteProceso = false;
     if (await m.Location.hasStartedLocationUpdatesAsync(TAREA_GPS_DE_LA_CARRERA)) {
       await m.Location.stopLocationUpdatesAsync(TAREA_GPS_DE_LA_CARRERA);
     }
