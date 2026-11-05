@@ -63,7 +63,7 @@ export const PASOS_FICHA: readonly PasoFicha[] = [
   { id: 'familia', capitulo: 0, titulo: 'Tu familia' },
   { id: 'trabajo', capitulo: 0, titulo: 'Tu trabajo' },
   { id: 'documento', capitulo: 0, titulo: 'Tu documento' },
-  { id: 'whatsapp', capitulo: 0, titulo: 'WhatsApp principal', bajada: 'El canal donde recibirás el seguimiento diario de tu mentor' },
+  { id: 'whatsapp', capitulo: 0, titulo: 'WhatsApp principal', bajada: 'Por aquí te acompaña tu mentor y te recordamos tus eventos. Puedes darte de baja cuando quieras' },
   { id: 'ubicacion', capitulo: 0, titulo: '¿Dónde vives?' },
   {
     id: 'expectativa',

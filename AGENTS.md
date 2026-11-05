@@ -2390,6 +2390,83 @@ el mismo en 1.5.0, 1.6.0 y 1.7.1. Lo que cambia y nada más (solo JavaScript: `e
 * **Pruebas:** `reducirFoto` (carga achicada, reintentos, error final, `release`, web) y `elegirFotoCuadrada` (ajustada).
 * **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
 
+## Cambio por pedido del dueño — 2026-11-04 — Eventos: el enlace de Meet lo crea el servidor, con una cuenta de Google de Renaser (spec 040, D-321)
+
+Pedido del dueño («procede»; spec, decisiones y contrato en `Renaser-90-dias-backend/specs/040-meet-automatico-en-eventos/`). Hasta hoy quien creaba un evento pegaba a mano el
+link de Meet. Ahora el formulario puede pedir que el servidor lo cree (Calendar API, cuenta `renasercorporation@gmail.com`, calendario propio «Renaser 90 días»). **Todo
+nace apagado** (`eventos.meet` en Soporte TI) y **no se prende en producción hasta pasar SC-001** (una reunión de más de 60 minutos con 3 o más personas en la cuenta real).
+Lo que cambia y nada más (el aprendiz, el mentor y el líder no ven ninguna pantalla nueva, SC-007):
+* **Formulario de eventos** (`SeccionDelEnlaceDeMeet`, dentro de `FormularioDelEvento`; solo ADMIN y ALCHEMIST): un interruptor **«Crear enlace de Meet»** («Renaser lo crea al
+  guardar el evento.») **en el lugar del campo del link**, que se esconde al encenderlo (y el lugar también). Debajo, con el interruptor encendido, **«Quién puede entrar»**:
+  **Abierta** («Se entra directo, sin esperar.», viene marcada) o **Con permiso** («Tú admites a cada persona.»). Solo se ofrece si `GET /calendar/events/meet/status` dice que se
+  puede (`useDisponibilidadDeMeet`): mientras no se sabe, con 404/403, sin red o apagado **no se dibuja** (nunca una opción que después responde 409 o 404). Un evento que ya
+  usaba el enlace lo conserva a la vista aunque el servidor ya no lo ofrezca, y una línea dice por qué («Hay que volver a conectar la cuenta de Google…»). Sin animación nueva.
+* **El cuerpo** (`armarCuerpo`): encendido manda `crearEnlaceMeet: true` y `accesoSalaMeet`, tipo `MEET` y **sin** `locationValue` (pedir el automático y pegar un link a la vez es un
+  400 del servidor); lo que haya en «Link» o «Lugar» no viaja. **Editar un evento que ya lo usa lo vuelve a mandar**, o el servidor lo entendería como «ahora es un link pegado»
+  y borraría sus salas: por eso «Editar evento» **espera** a leer el evento fresco (`useMeetDelEvento`, `GET /events/{id}`, que es el que trae `meet`) y se apaga mientras tanto o si
+  esa lectura falla («No pudimos leer el estado del enlace de Meet. Vuelve a abrir el evento en un rato.»). Apagado, el cuerpo es **idéntico al de siempre** (FR-020).
+* **Detalle del evento**: para ADMIN y ALCHEMIST, si algo de la sala quedó sin terminar, la frase corta del servidor (`meet.mensaje`: «No pudimos crear el enlace de Meet.», «El enlace
+  de Meet todavía se está creando.»…) y **«Reintentar»** (`POST /events/{id}/meet/retry`); al lograrlo se relee la lista y aparece el enlace. En un evento que se repite, «Cada fecha
+  tendrá su propio enlace.» (el formulario de la app no edita eventos que se repiten). «Unirme» y todo lo del aprendiz **no cambian**: el enlace de cada fecha llega en el
+  `locationValue` de su ocurrencia.
+* **Yo → Administración → Más opciones → «Cuenta de Google»** (`integraciones-google/`, `CuentaDeGoogleAdminScreen`; sigue la disponibilidad de la gestión de eventos): sin
+  credenciales en el servidor lo dice y no ofrece conectar; **«Conectar cuenta de Google»** abre Google en el navegador (`POST /admin/integraciones/google/connect` da la dirección)
+  y **no da nada por conectado** hasta que la app vuelve al frente y relee; ya conectada muestra el correo, desde cuándo, el último uso, el último problema, las **últimas acciones**
+  (en palabras, con quién, con «Salió bien» / «No salió» además del color) y «Volver a conectar» / «Desconectar» (con confirmación que dice que los enlaces ya creados siguen
+  funcionando). Si la cuenta está revocada lo dice y ofrece volver a conectarla. **Nunca se muestra ni viaja un permiso o un token.**
+* **Política de privacidad** (`public/privacidad/index.html`): nueva fila «Google (Calendar y Meet)» en los proveedores: solo el nombre del evento, el día, la hora y la duración; no
+  el nombre, el correo ni quiénes van. **Debe publicarse antes del APK.**
+* **FR-021 (la puerta de los 60 minutos) no deja ningún aviso en la app**: si la prueba SC-001 muestra que Google corta, se para y se avisa al dueño; si no corta, no hay texto de
+  ningún tipo. Una prueba vigila que ningún texto del formulario hable de 60 minutos ni de cortes.
+* **No cambian**: los demás tabs, la barra, el resto del formulario (nombre, tipo, día, hora, duración, portada, aviso), las alarmas de «Voy», la asistencia, ni ningún permiso (los decide el
+  servidor). Sin dependencias nuevas ni código nativo.
+* **Pruebas:** Jest `enlaceDeMeetAutomatico` (el cuerpo y los textos), `meetApi` (disponibilidad, «Reintentar» y el resumen tolerante), `enlaceDeMeetEnElFormulario` (el formulario y el
+  detalle), `cuentaDeGoogle`, `useCuentaDeGoogle` y `cuentaDeGoogleEnAdministracion`, y la de la política de privacidad. Maestro: no se escribió ninguno (SC-001 y el Meet real los
+  prueba el dueño con su cuenta).
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire) **y el backend de la spec 040 antes** (V169); contra uno anterior «Crear enlace de Meet» no se ofrece
+  (404) y todo queda como hoy.
+
+> **Corregido 2026-11-05 (decisión del dueño: «el Meet se crea solo y los demás entran sin tanto ajetreo en el móvil, mucha configuración arruina la experiencia»).**
+> Lo del formulario y del cuerpo de arriba ya no es así. (1) **Ya no hay interruptor «Crear enlace de Meet» ni «Quién puede entrar»**: la sala es **siempre abierta** (el servidor
+> pide `accessType=OPEN` y lo lee de vuelta) y la app **no manda `accesoSalaMeet`**; `ResumenDeMeet` ya no tiene `acceso` (un `acceso` que llegue se ignora). (2) En su lugar,
+> **«Dónde es»** (`DondeEsElEvento`, que reemplaza a `SeccionDelEnlaceDeMeet`): dos opciones de 52, **«Por Meet (se crea solo)»** —**viene marcada**: un evento nuevo sin tocar nada
+> pide la sala— y **«En un lugar»**, que muestra el campo «Dirección»; debajo, discreto (texto subrayado de 16 en un área de 48), **«Pegar otro enlace»** muestra el campo «Link de la
+> reunión» de siempre (Zoom, Drive, un Meet que ya existe). Sin textos de ayuda en las opciones. El formulario guarda `donde: 'meet' | 'lugar' | 'enlace'` (`formularioDeEvento`).
+> (3) Si el servidor no ofrece el Meet automático (apagado, sin cuenta, 404, sin red) no hay «Dónde es» y queda el formulario de siempre («Link de la reunión» u «O el lugar»):
+> `dondeQueSeGuarda` lo guarda como `enlace`, así nunca se pide una sala que responde 409; mientras no se sabe, no se dibuja la parte del lugar (una sola lectura corta). Un evento
+> que ya usaba el enlace sigue en «Por Meet» y dice por qué si el servidor dejó de ofrecerlo. (4) **«Unirme» ya era de un toque**: `Linking.openURL` con el enlace tal cual; un
+> `https://meet.google.com/…` lo abre Android en la app de Google Meet si está instalada (enlace verificado de la app), sin pantallas intermedias. No cambió. Pruebas:
+> `enlaceDeMeetAutomatico` (sin elegir nada el cuerpo pide la sala y no manda acceso; lugar; otro enlace; sin servidor), `enlaceDeMeetEnElFormulario` (Meet marcado, sin elección de
+> acceso, lugar y otro enlace), `meetApi` y `reglasDeEventos` ajustadas. Hace falta el backend con esta corrección (un backend de la versión anterior también deja la sala abierta
+> cuando no recibe el acceso).
+
+## Cambio por pedido del dueño — 2026-11-04 — Recordatorios de eventos por el chat y por WhatsApp: la baja en Yo → Notificaciones y el aviso de finalidad (spec 041)
+
+Pedido del dueño (textual): «Quiero lo mismo [que RenaserOs]… los recordatorios dentro del mismo chat y la app, y también con otro número que pondré». Spec, plan y decisiones en el backend
+(`specs/041-recordatorios-de-eventos/`, D-322). **Casi todo es del servidor:** manda el recordatorio de cada evento (1 día, 1 hora, 30 y 10 minutos antes) como un mensaje del programa en el
+chat de soporte de quien dijo «Voy» y, por WhatsApp (YCloud, con el número nuevo del dueño), a quien tiene su WhatsApp en la Ficha Inicial. La app solo suma lo que sigue; ningún tab cambia de forma.
+* **Yo → Notificaciones suma «Recordatorios de eventos por WhatsApp»** (`alarmas/api/preferenciasDeNotificacion`, tema `whatsapp`, tipo `RECORDATORIO_EVENTO_WHATSAPP`), **al final de la lista**, **encendido de
+  fábrica** (lo que no tiene fila en el servidor cuenta como encendido) y **solo si el servidor lo lista**: contra un backend anterior no se dibuja ni se lee la ficha. Es el único lugar de la app
+  donde se apaga (la otra baja es el botón «No recibir más» del propio mensaje de WhatsApp o responder «BAJA»; las dos apagan esta misma preferencia en el servidor). **Apagarlo no toca «Eventos y clases»**
+  (el aviso del teléfono y el mensaje del chat siguen): son dos preferencias distintas.
+* **La fila dice a qué número se escribe** (`useWhatsappDeLosAvisos` sobre `leerWhatsappDelPerfil`, una lectura por visita; `alarmas/utils/whatsappDeLosAvisos`, puro): «Te escribimos al +51 9•• ••• •21.» (el número
+  **enmascarado**, nunca entero, ni en pantalla ni en lo que oye el lector), o «Agrega tu WhatsApp en Editar perfil.» si la ficha no tiene uno con forma de número internacional (la misma regla que aplica el servidor:
+  `+` y 8 a 15 dígitos). Mientras se lee, o si la lectura falla, la línea no se dibuja (no se afirma nada del número). La descripción de la fila dice cuándo llegan los avisos.
+* **La Ficha Inicial dice para qué se usa el WhatsApp** (`onboarding/data/pasosFicha`, paso «WhatsApp principal», solo la `bajada`): «Por aquí te acompaña tu mentor y te recordamos tus eventos. Puedes darte de baja cuando
+  quieras». Es el aviso de finalidad de la Ley 29733; no cambia el paso ni su validación.
+* **La Política de privacidad** (`public/privacidad/index.html`) dice que el WhatsApp de la ficha se usa para recordar por WhatsApp los eventos a los que se dijo «Voy», **que YCloud y Meta procesan el mensaje** (con qué
+  datos: el número, el nombre de pila, el nombre del evento, su fecha y hora, el enlace o el lugar y el nombre de la formación), cómo darse de baja (el botón, «BAJA», o el interruptor de Yo) y que **no se guarda el
+  texto del mensaje ni lo que la persona responde, solo el estado del envío, 12 meses**. **Debe publicarse antes de sacar el APK** (sale con el deploy de Vercel).
+* **Chat de Comunidad, sin cambios.** El mensaje llega como cualquier mensaje del programa («Formación Renaser», «Diplomado Renaser»…) con una línea «Entra aquí: https://…» o «Lugar: …». **Hallazgo, sin tocar:** la burbuja
+  del chat dibuja el texto como texto plano, así que el enlace se ve pero no se toca; hacerlo tocable cambia el chat de todos los mensajes y necesita la autorización explícita del dueño para el tab Comunidad.
+* **No cambian:** el formulario de eventos (no hay elección de WhatsApp por evento: a quién le llega es un valor del servidor), «Mi agenda», las alarmas locales de eventos, los demás avisos ni los otros tabs. Sin
+  dependencias, íconos ni código nativo.
+* **Pruebas:** Jest `recordatoriosDeEventosPorWhatsApp` (el tema, que solo se ofrece si el servidor lo lista, encendido de fábrica, que se guarda solo ese tipo, el número enmascarado y la fila), `fichaDiceParaQueSeUsaElWhatsapp`
+  y `paginaPoliticaDePrivacidad` (la finalidad, YCloud y Meta, la baja, y qué no se guarda). Maestro: no se escribió ningún flujo (la fila es un interruptor como los de al lado; el envío real depende del número y de la
+  plantilla que apruebe Meta, y se prueba a mano: SC-015 de la spec).
+* **Hace falta un APK nuevo** para la fila de Yo (solo JavaScript: la app no se actualiza por aire) **y el backend con V166 a V168 antes**. Un APK anterior sigue funcionando: no ve la fila, y los mensajes llegan igual (el chat
+  y el WhatsApp salen del servidor; la baja la cubren el botón y «BAJA»).
+
 ## Cambio por pedido del dueño — 2026-11-05 — tab `Comunidad` → Muro en lista compacta estilo Skool
 
 El dueño autorizó explícitamente este cambio en el tab Comunidad, con un lienzo de referencia (estilo Skool): el Muro pasa de tarjetas

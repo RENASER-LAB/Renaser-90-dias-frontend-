@@ -22,6 +22,11 @@ import { apiFetch } from '../../../services/http/apiClient';
  * | Mensajes         | `MENSAJE_CHAT`                            |
  * | Revisiones de tu líder | `REVISION_DEL_LIDER` (spec 005, solo quien acompaña un grupo) |
  * | Análisis de tu 80/20 | `ANALISIS_80_20` (spec 031, para todos los que hacen su programa) |
+ * | Recordatorios de eventos por WhatsApp | `RECORDATORIO_EVENTO_WHATSAPP` (spec 041, encendido de fábrica; solo se ofrece si el servidor lo lista) |
+ *
+ * > **Spec 041 (2026-11-04).** «Recordatorios de eventos por WhatsApp» es la BAJA del WhatsApp: el mismo interruptor que apagan el botón «No recibir más» y un
+ * > «BAJA» que responde a un mensaje nuestro. Apagarlo no apaga el aviso del teléfono ni el mensaje del chat (esos son «Eventos y clases»). Sin fila en el
+ * > servidor está encendido, como todos. Contra un servidor anterior, que no lo lista, la fila no se ofrece.
  *
  * > **Corregido 2026-09-29 (D-221 del backend).** Decía: «"Mi grupo y mensajes" (`MENSAJE_CHAT`,
  * > `MENSAJE_MENTOR`) no está: al 26/09 ningún código del backend emite esos tipos». Desde D-221 el
@@ -41,12 +46,14 @@ import { apiFetch } from '../../../services/http/apiClient';
  */
 
 export interface TemaDeAviso {
-  clave: 'eventos' | 'logros' | 'resumen' | 'mensajes' | 'revisiones' | 'analisis';
+  clave: 'eventos' | 'logros' | 'resumen' | 'mensajes' | 'revisiones' | 'analisis' | 'whatsapp';
   nombre: string;
   detalle: string;
   tipos: readonly string[];
   /** Solo se ofrece a quien acompaña un grupo (mentor, guía de aprendiz, líder): ver `temasVisibles`. */
   soloParaQuienAcompana?: boolean;
+  /** La fila dice, debajo, a qué WhatsApp se escribe (el de la ficha, enmascarado): spec 041. */
+  diceElNumero?: boolean;
 }
 
 export const TEMAS: readonly TemaDeAviso[] = [
@@ -88,6 +95,14 @@ export const TEMAS: readonly TemaDeAviso[] = [
     nombre: 'Análisis de tu 80/20',
     detalle: 'Cuando el análisis de tu semana o de tu mes está listo',
     tipos: ['ANALISIS_80_20'],
+  },
+  /* Spec 041 (FR-041): la baja del WhatsApp de los eventos. Encendido de fábrica (el servidor lo cuenta encendido si no hay fila). */
+  {
+    clave: 'whatsapp',
+    nombre: 'Recordatorios de eventos por WhatsApp',
+    detalle: 'Un día, una hora, 30 y 10 minutos antes de los eventos a los que dijiste «Voy»',
+    tipos: ['RECORDATORIO_EVENTO_WHATSAPP'],
+    diceElNumero: true,
   },
 ];
 

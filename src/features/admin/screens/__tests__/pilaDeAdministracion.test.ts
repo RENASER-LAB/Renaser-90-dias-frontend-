@@ -7,6 +7,7 @@ jest.mock('../AnimalesDeFaseAdminScreen', () => ({}));
 jest.mock('../../hooks/useAnimalesDeFaseAdmin', () => ({}));
 jest.mock('../BienvenidaAdminScreen', () => ({}));
 jest.mock('../CodigoRenaserEnFichasAdminScreen', () => ({}));
+jest.mock('../../../integraciones-google/screens/CuentaDeGoogleAdminScreen', () => ({}));
 jest.mock('../CategoriasDeHabitoAdminScreen', () => ({}));
 jest.mock('../HabitosProgramaAdminScreen', () => ({}));
 jest.mock('../HabitoProgramaFormScreen', () => ({}));
