@@ -72,6 +72,8 @@ import {
   TarjetaPublicacionMuro,
   type AccionesPublicacion,
 } from '../features/community/components/TarjetaPublicacionMuro';
+import { FilaCompactaDelMuro, type AccionesDeLaFila } from '../features/community/components/FilaCompactaDelMuro';
+import { PublicacionAbierta } from '../features/community/components/PublicacionAbierta';
 import { avisarPostPublicado } from '../features/sparkie/events/avisoPrimerPost';
 import { cerrarHabitoPostDiarioComunidad } from '../features/habits/api/postDiarioComunidad';
 import { avisarPostDiarioCerrado } from '../features/habits/events/avisoPostDiarioCerrado';
@@ -297,6 +299,12 @@ export interface PostItem {
    */
   userReaction?: 'like' | null;
   comments: CommentItem[];
+  /**
+   * Cuántos comentarios tiene según el servidor (`WallPostResponse.commentCount`). El feed no trae la
+   * lista (`comments` llega vacía hasta abrir los comentarios), así que la fila compacta del Muro cuenta
+   * con esto (pedido del dueño 2026-11-05). Ausente en una publicación optimista.
+   */
+  cantidadComentarios?: number;
   /**
    * `true` mientras la publicación existe solo en el teléfono y todavía está viajando a S3 y al
    * backend (UI optimista, ver `useWallFeed.publicarOptimista`). La tarjeta se dibuja igual que
@@ -580,8 +588,9 @@ const ICONO_POR_TIPO_DE_LECCION: Record<ResourceType, IconName> = {
 };
 
 /** El aire entre dos publicaciones del Muro: el mismo `gap` que tenían dentro del `.map`. */
+/* Lista compacta estilo Skool (pedido del dueño 2026-11-05): franjas finas del fondo entre fila y fila. */
 function SeparadorDePublicaciones() {
-  return <View style={{ height: space.gap }} />;
+  return <View style={{ height: 8 }} />;
 }
 
 /**
@@ -1306,6 +1315,11 @@ function ComunidadPorFormacion({
   /** Reintentos de `scrollToIndex` hacia la publicación pedida, para no quedar en un bucle. */
   const intentosScrollAPublicacion = useRef(0);
   const [openComments, setOpenComments] = useState<Record<string, boolean>>({});
+  /**
+   * La publicación abierta desde la lista compacta del Muro (pedido del dueño, 2026-11-05). Se dibuja ENCIMA de la lista,
+   * que queda montada debajo: al volver, el Muro sigue donde estaba.
+   */
+  const [publicacionAbiertaId, setPublicacionAbiertaId] = useState<string | null>(null);
   const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
   const [commentPhotos, setCommentPhotos] = useState<Record<string, FotoMuroNormalizada | null>>({});
   const [expandedComments, setExpandedComments] = useState<Record<string, boolean>>({});
@@ -1790,6 +1804,12 @@ function ComunidadPorFormacion({
       setReactionsModalVisible(false);
       return true;
     }
+    /* La publicación abierta del Muro (2026-11-05): después de las hojas que se abren desde ella (reacciones, compartir),
+       el atrás vuelve a la lista, que conserva su posición. */
+    if (publicacionAbiertaId !== null) {
+      setPublicacionAbiertaId(null);
+      return true;
+    }
     if (createPostModalVisible) {
       setCreatePostModalVisible(false);
       return true;
@@ -1814,7 +1834,7 @@ function ComunidadPorFormacion({
       return true;
     }
     return false;
-  }, shareSheetPost !== null || seccionActiva !== 'muro' || selectedCourse !== null || fullScreenLesson !== null || createPostModalVisible || reactionsModalVisible || activeChat !== null || groupInfoVisible || selectedMemberProfile !== null || fotoChatAmpliada !== null || integrantesAbiertos);
+  }, shareSheetPost !== null || seccionActiva !== 'muro' || selectedCourse !== null || fullScreenLesson !== null || createPostModalVisible || reactionsModalVisible || activeChat !== null || groupInfoVisible || selectedMemberProfile !== null || fotoChatAmpliada !== null || integrantesAbiertos || publicacionAbiertaId !== null);
 
   /**
    * Mientras la sala de chat esté abierta, se esconde el botón flotante del acompañante: se monta
@@ -1836,11 +1856,19 @@ function ComunidadPorFormacion({
    * se desmonta con la conversación abierta, la limpieza también la devuelve.
    */
   const pantallaCompleta = conversacionAPantallaCompleta({ enTribu, hayConversacionAbierta: activeChat !== null });
+  /* La publicación abierta del Muro (2026-11-05) también va a pantalla completa: sin barra de pestañas ni el botón
+     flotante de SER, que caería sobre el campo de comentar. */
+  const conPublicacionAbierta = seccionActiva === 'muro' && publicacionAbiertaId !== null;
+  const sinPestanas = pantallaCompleta || conPublicacionAbierta;
   useEffect(() => {
-    if (!pantallaCompleta) return;
+    if (!conPublicacionAbierta) return;
+    return marcarChatMontado();
+  }, [conPublicacionAbierta]);
+  useEffect(() => {
+    if (!sinPestanas) return;
     navigation.setOptions(OPCIONES_SIN_PESTANAS);
     return () => navigation.setOptions(OPCIONES_CON_PESTANAS);
-  }, [pantallaCompleta, navigation]);
+  }, [sinPestanas, navigation]);
 
   // =========================================================================
   // HANDLERS
@@ -2770,34 +2798,47 @@ function ComunidadPorFormacion({
     []
   );
 
+  /*
+   * Muro en lista compacta estilo Skool (pedido del dueño, 2026-11-05): cada publicación es una fila
+   * (`FilaCompactaDelMuro`) y tocarla abre la tarjeta COMPLETA de siempre (`TarjetaPublicacionMuro`) en
+   * `PublicacionAbierta`, encima de la lista. Abrirla muestra el texto entero; desde el botón de comentarios,
+   * también los comentarios (que se leen ahí, como siempre).
+   */
+  const abrirPublicacion = (postId: string, conComentarios?: boolean) => {
+    setExpandedPosts(prev => ({ ...prev, [postId]: true }));
+    if (conComentarios && !openComments[postId]) handleToggleComments(postId);
+    setPublicacionAbiertaId(postId);
+  };
+  const abrirPublicacionVigente = useRef(abrirPublicacion);
+  abrirPublicacionVigente.current = abrirPublicacion;
+  const accionesDeLaFila = useMemo<AccionesDeLaFila>(
+    () => ({
+      abrir: (id, conComentarios) => abrirPublicacionVigente.current(id, conComentarios),
+      alternarLike: id => accionesVigentes.current!.alternarLike(id),
+      moderar: id => accionesVigentes.current!.moderar(id),
+    }),
+    []
+  );
+  /* Si la publicación abierta deja de estar en el Muro (se ocultó o se eliminó), se vuelve a la lista. */
+  const publicacionAbierta = publicacionAbiertaId ? posts.find(p => p.id === publicacionAbiertaId) ?? null : null;
+  useEffect(() => {
+    if (publicacionAbiertaId !== null && publicacionAbierta === null && !muroCargando) setPublicacionAbiertaId(null);
+  }, [publicacionAbiertaId, publicacionAbierta, muroCargando]);
+  /* Salir del Muro (otra sección) cierra la publicación abierta. */
+  useEffect(() => {
+    if (seccionActiva !== 'muro') setPublicacionAbiertaId(null);
+  }, [seccionActiva]);
+
   const renderPublicacion = useCallback(
     ({ item }: ListRenderItemInfo<PostItem>) => (
-      <TarjetaPublicacionMuro
+      <FilaCompactaDelMuro
         post={item}
-        expandida={!!expandedPosts[item.id]}
-        comentariosAbiertos={!!openComments[item.id]}
         destacada={publicacionDestacada === item.id}
-        proporcion={proporcionesFoto[item.id]}
-        textoComentario={commentInputs[item.id] || ''}
-        fotoComentario={commentPhotos[item.id]}
-        comentariosExpandidos={expandedComments}
-        confirmacion={confirmacionDePublicacion?.postId === item.id ? confirmacionDePublicacion : null}
         puedeModerar={puedeModerarMuro}
-        acciones={accionesPublicacion}
+        acciones={accionesDeLaFila}
       />
     ),
-    [
-      confirmacionDePublicacion,
-      puedeModerarMuro,
-      expandedPosts,
-      openComments,
-      publicacionDestacada,
-      proporcionesFoto,
-      commentInputs,
-      commentPhotos,
-      expandedComments,
-      accionesPublicacion,
-    ]
+    [puedeModerarMuro, publicacionDestacada, accionesDeLaFila]
   );
 
   /* Si esta persona ACOMPAÑA un grupo. Se calcula acá y no dentro del JSX porque la pestaña Tribu
@@ -3174,6 +3215,29 @@ function ComunidadPorFormacion({
           removeClippedSubviews={false}
         />
       )}
+      {/* La publicación abierta (2026-11-05): la tarjeta COMPLETA de siempre, encima de la lista compacta. */}
+      {seccionActiva === 'muro' && !seccionEnMantenimiento && publicacionAbierta ? (
+        <PublicacionAbierta
+          onVolver={() => setPublicacionAbiertaId(null)}
+          margenArriba={encabezado.flotante ? insets.top : 0}
+        >
+          <TarjetaPublicacionMuro
+            post={publicacionAbierta}
+            expandida={!!expandedPosts[publicacionAbierta.id]}
+            comentariosAbiertos={!!openComments[publicacionAbierta.id]}
+            destacada={false}
+            proporcion={proporcionesFoto[publicacionAbierta.id]}
+            textoComentario={commentInputs[publicacionAbierta.id] || ''}
+            fotoComentario={commentPhotos[publicacionAbierta.id]}
+            comentariosExpandidos={expandedComments}
+            confirmacion={
+              confirmacionDePublicacion?.postId === publicacionAbierta.id ? confirmacionDePublicacion : null
+            }
+            puedeModerar={puedeModerarMuro}
+            acciones={accionesPublicacion}
+          />
+        </PublicacionAbierta>
+      ) : null}
       {/* «Publicación oculta» / «Publicación eliminada» (moderación, 2026-10-31): un aviso tipo snackbar ABAJO, encima de los
           botones flotantes de SER y de la barra de pestañas, con fondo opaco. Nunca sobre la cabecera ni los círculos de las
           secciones (el primero se vio flotando arriba, transparente, mezclado con «Muro» y «Eventos»). No recibe toques. */}
