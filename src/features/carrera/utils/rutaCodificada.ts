@@ -1,37 +1,17 @@
-import { distanciaM, interpolar, type Coordenada } from './geo';
+import type { Coordenada } from './geo';
 
 /**
- * La ruta que viaja UNA sola vez, dentro del pedido final (FR-040 y FR-043): recortada en los primeros y últimos 200 m (zona de
- * privacidad), simplificada con Douglas-Peucker a 5 m y codificada con el algoritmo de polyline de Google (precisión 1e-5).
- * Puras.
+ * La ruta que viaja UNA sola vez, dentro del pedido final (FR-040): completa, simplificada con Douglas-Peucker a 5 m y codificada
+ * con el algoritmo de polyline de Google (precisión 1e-5). Puras.
+ *
+ * La zona de privacidad (los primeros y los últimos 200 m, FR-043) NO la quita el teléfono: la quita el servidor antes de guardar,
+ * para que ni una app modificada logre que se guarde dónde empieza o termina una carrera. Si el teléfono también recortara, se
+ * perderían 400 m por punta. La pantalla «Terminaste» dibuja la ruta completa: es la de la propia persona, en su teléfono.
  */
 
-export const ZONA_DE_PRIVACIDAD_M = 200;
 export const TOLERANCIA_M = 5;
 export const MAXIMO_DE_PUNTOS = 3000;
 export const MAXIMO_DE_BYTES = 100 * 1024;
-
-/** Quita los primeros y los últimos `metros` de la ruta (cortando en el punto exacto). Si la ruta no los tiene, queda vacía. */
-export function recortarPrivacidad(puntos: readonly Coordenada[], metros = ZONA_DE_PRIVACIDAD_M): Coordenada[] {
-  if (puntos.length < 2) return [];
-  const desdeInicio = cortarDesde(puntos, metros);
-  if (desdeInicio.length < 2) return [];
-  const alReves = cortarDesde([...desdeInicio].reverse(), metros);
-  return alReves.reverse();
-}
-
-function cortarDesde(puntos: readonly Coordenada[], metros: number): Coordenada[] {
-  let acumulado = 0;
-  for (let i = 1; i < puntos.length; i++) {
-    const tramo = distanciaM(puntos[i - 1], puntos[i]);
-    if (acumulado + tramo >= metros) {
-      const f = tramo > 0 ? (metros - acumulado) / tramo : 0;
-      return [interpolar(puntos[i - 1], puntos[i], f), ...puntos.slice(i)];
-    }
-    acumulado += tramo;
-  }
-  return [];
-}
 
 /** Distancia (m) de `p` al segmento `a`–`b`, en una proyección plana local (exacta de sobra a escala de metros). */
 function distanciaAlSegmento(p: Coordenada, a: Coordenada, b: Coordenada): number {
@@ -126,15 +106,14 @@ export function decodificarPolyline(texto: string): Coordenada[] {
 }
 
 /**
- * La ruta lista para el cuerpo: recortada, simplificada y codificada, dentro de los topes (≤ 3000 puntos y ≤ 100 KB). Si no
- * entra, se sube la tolerancia hasta que entre. `null` si después del recorte no queda ruta que mandar.
+ * La ruta lista para el cuerpo: COMPLETA (sin recortar: eso lo hace el servidor, FR-043), simplificada y codificada, dentro de los
+ * topes (≤ 3000 puntos y ≤ 100 KB). Si no entra, se sube la tolerancia hasta que entre. `null` si no hay al menos 2 puntos.
  */
 export function rutaParaEnviar(puntos: readonly Coordenada[]): { polyline: string; puntos: number } | null {
-  const recortada = recortarPrivacidad(puntos);
-  if (recortada.length < 2) return null;
+  if (puntos.length < 2) return null;
   let tolerancia = TOLERANCIA_M;
   for (let intento = 0; intento < 8; intento++) {
-    const simple = simplificar(recortada, tolerancia);
+    const simple = simplificar(puntos, tolerancia);
     const polyline = codificarPolyline(simple);
     if (simple.length <= MAXIMO_DE_PUNTOS && polyline.length <= MAXIMO_DE_BYTES) return { polyline, puntos: simple.length };
     tolerancia *= 2;

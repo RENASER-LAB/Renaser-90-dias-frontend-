@@ -2598,10 +2598,17 @@ llame al servidor a cada rato y que nada se duplique**, y **«el avatar debe ref
 * **Cero pedidos durante la carrera** (FR-004): el estado vive en `servicios/carreraEnVivo` y se guarda en el teléfono (AsyncStorage, clave
   `renaser.carrera.enCurso`, con la cuenta adentro) como mucho cada 5 s o cada 10 puntos. **Si Android mata la app**, al reabrir se retoma esa carrera de
   esa cuenta en pausa, sin contar el tiempo muerto (FR-006). La única lectura de red es antes de la cuenta regresiva (peso y sexo).
-* **Un solo envío al terminar** (FR-016): `POST /api/v1/carreras` con la `carreraId`, el resumen, los tramos completos y la ruta (recortada 200 m al inicio y
-  al final, Douglas-Peucker a 5 m, polyline de Google, ≤ 3000 puntos y ≤ 100 KB; sin ruta si la persona apagó «Guardar mi ruta», encendido por defecto). El
+* **Un solo envío al terminar** (FR-016): `POST /api/v1/carreras` con la `carreraId`, el resumen, los tramos completos y la ruta (COMPLETA,
+  Douglas-Peucker a 5 m, polyline de Google, ≤ 3000 puntos y ≤ 100 KB; sin ruta si la persona apagó «Guardar mi ruta», encendido por defecto). El
   cuerpo se arma UNA vez y va a la **cola por cuenta** (`renaser.carreras.cola.<cuenta>`) ANTES de borrar la carrera de «en curso»: los reintentos mandan los
-  mismos bytes (misma huella). Sin red o 5xx/503/404: espera creciente 5 s, 15 s, 1 min, 5 min, 15 min y luego 30 min; con la app al frente nunca más de 1 min
+  mismos bytes (misma huella).
+  > **Corregido 2026-11-05 (FR-043, decisión del coordinador): la zona de privacidad la quita el SERVIDOR, no el teléfono.** `rutaParaEnviar` ya no recorta
+  > (se borraron `recortarPrivacidad` y `ZONA_DE_PRIVACIDAD_M`): manda la ruta completa por HTTPS y el servidor le quita los primeros y los últimos 200 m
+  > —cortando en el punto exacto, con el mismo algoritmo que tenía la app— antes de guardarla; si no quedan 2 puntos, la carrera se guarda sin ruta. Así ni
+  > una app modificada logra que se guarde dónde empieza o termina una carrera (la casa de alguien). Nunca se recorta en los dos lados (se perderían 400 m por
+  > punta). Lo que leen la persona, el mentor, el líder y Administración (`GET …/ruta`) ya viene recortado; «Terminaste» dibuja la ruta completa porque es la
+  > propia pantalla de la persona. No hay imagen de la ruta para el Muro: «Compartir en el Muro» abre el compositor vacío. Prueba: `rutaYCuerpo` («manda la
+  > ruta completa»). Hace falta el backend con este cambio a la vez que la app (un backend anterior guardaría la ruta entera). Sin red o 5xx/503/404: espera creciente 5 s, 15 s, 1 min, 5 min, 15 min y luego 30 min; con la app al frente nunca más de 1 min
   (no hay detector de red en la app). 2xx —también `repetida: true`— o 409 `CARRERA_YA_REGISTRADA` la sacan de la cola; otro 4xx queda marcado con el motivo.
   La línea del hábito (FR-018): «Registrando 3,2 km en tu hábito…», «Registramos 3,2 km en tu hábito», «Guardada en tu teléfono, se enviará al tener señal», o
   por qué no entró (captura, día cerrado, sin hábito, no cuenta). Si la carrera cerró el hábito (`CERRADO`, no repetida) se emite `habitoCumplido` (alarmas,

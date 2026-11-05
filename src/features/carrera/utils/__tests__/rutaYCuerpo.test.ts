@@ -2,7 +2,7 @@ import { describe, expect, it } from '@jest/globals';
 import { crearCarrera, alPunto } from '../motorDeCarrera';
 import { cuerpoDeLaCarrera } from '../cuerpoDeLaCarrera';
 import { longitudM, puntoDestino } from '../geo';
-import { codificarPolyline, decodificarPolyline, recortarPrivacidad, rutaParaEnviar, simplificar } from '../rutaCodificada';
+import { codificarPolyline, decodificarPolyline, rutaParaEnviar, simplificar } from '../rutaCodificada';
 import { caloriasDelTramo, formatoDuracion, formatoKm, formatoRitmo, metPorVelocidad, pesoParaCalorias } from '../ritmoYCalorias';
 
 const ORIGEN = { lat: -12.0464, lng: -77.0428 };
@@ -26,11 +26,18 @@ describe('la ruta que viaja una sola vez', () => {
   });
 
   // spec 042 FR-043
-  it('recorta los primeros y los últimos 200 m (la distancia no cambia, la ruta sí)', () => {
-    const ruta = Array.from({ length: 101 }, (_, i) => puntoDestino(ORIGEN, 90, i * 10)); // 1 km
-    const recortada = recortarPrivacidad(ruta);
-    expect(longitudM(recortada)).toBeCloseTo(600, -1);
-    expect(recortarPrivacidad(ruta.slice(0, 30))).toEqual([]); // 290 m: no queda nada que mostrar
+  it('manda la ruta completa: no recorta la zona de privacidad, que la quita el servidor', () => {
+    // Una L de 1 km (500 m al este y 500 m al norte): Douglas-Peucker deja las dos puntas y la esquina.
+    const este = Array.from({ length: 51 }, (_, i) => puntoDestino(ORIGEN, 90, i * 10));
+    const ruta = [...este, ...Array.from({ length: 50 }, (_, i) => puntoDestino(este[50], 0, (i + 1) * 10))];
+    const enviada = decodificarPolyline(rutaParaEnviar(ruta)!.polyline);
+    expect(longitudM(enviada)).toBeCloseTo(1000, -1);
+    expect(enviada[0].lat).toBeCloseTo(ruta[0].lat, 5);
+    expect(enviada[0].lng).toBeCloseTo(ruta[0].lng, 5);
+    expect(enviada[enviada.length - 1].lat).toBeCloseTo(ruta[ruta.length - 1].lat, 5);
+    expect(enviada[enviada.length - 1].lng).toBeCloseTo(ruta[ruta.length - 1].lng, 5);
+    // Una ruta de 290 m también viaja entera (el servidor decide que no queda nada que guardar).
+    expect(rutaParaEnviar(este.slice(0, 30))).not.toBeNull();
   });
 
   // spec 042 FR-026, FR-040
