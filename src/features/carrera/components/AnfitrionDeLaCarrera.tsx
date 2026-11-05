@@ -30,11 +30,12 @@ import { escucharPasos, prepararPodometro } from '../servicios/podometro';
 import { detenerGps, empezarGps, pedirPermisoDeUbicacion } from '../servicios/tareaDeUbicacion';
 import { efectoDeVoz } from '../servicios/vozDeLaCarrera';
 import type { EstadoDeLaCarrera, PreferenciasDeLaCarrera } from '../types/carrera.types';
-import { esAvisoDeCarrera, ACCION_PAUSAR } from '../utils/avisoDeCarrera';
+import { esAvisoDeCarrera, ACCION_PAUSAR, ACCION_SEGUIR } from '../utils/avisoDeCarrera';
 import { cuerpoDeLaCarrera } from '../utils/cuerpoDeLaCarrera';
 import type { FiguraDelAvatar } from '../utils/fusionDelAvatar';
 import { nuevaCarreraId } from '../utils/idDeLaCarrera';
 import { esMuyCorta, pausar } from '../utils/motorDeCarrera';
+import { laCarreraYaEmpezo } from '../utils/notificacionUnica';
 import { TEXTOS_DE_LA_CARRERA } from '../utils/textosDeLaCarrera';
 import { CuentaRegresiva } from './CuentaRegresiva';
 import { PantallaCorriendo, PantallaTerminaste, type PanelDeLaPausa } from './PantallaDeCarrera';
@@ -49,7 +50,8 @@ import { PantallaCorriendo, PantallaTerminaste, type PanelDeLaPausa } from './Pa
  * - **Retomar** (FR-006): al entrar con una carrera sin terminar de esta cuenta, la abre (en pausa si la app estuvo muerta).
  * - **Terminar** (FR-016): arma el único cuerpo, lo pone en la cola ANTES de borrar la carrera de «en curso» y lo envía.
  * - **La cola** (FR-017): la procesa al abrir, al volver al frente y cada 15 s con la app abierta.
- * - **Fuera de la app** (FR-011): al irse a segundo plano muestra la notificación fija; «Pausar» la pausa al abrir.
+ * - **La notificación única** (FR-011): reemplaza la del servicio del GPS (km, tiempo, ritmo, en pausa o no); se pone al día al
+ *   cambiar de fase y al irse a segundo plano. «Pausar» la pausa y «Seguir» la sigue, al abrir.
  *
  * Solo Android: en la web no hace nada (FR-001).
  */
@@ -120,7 +122,7 @@ function Anfitrion() {
       } else if (carreraActual()) {
         const r = resumenParaLaNotificacion();
         const actual = carreraActual();
-        if (r && actual) void mostrarNotificacionDeCarrera({ ...r, enPausa: actual.fase === 'pausa' }, Date.now(), true);
+        if (r && actual && laCarreraYaEmpezo(actual)) void mostrarNotificacionDeCarrera({ ...r, enPausa: actual.fase === 'pausa' }, Date.now(), true);
       }
     });
     const id = setInterval(() => {
@@ -144,13 +146,27 @@ function Anfitrion() {
     };
   }, [hayCarrera]);
 
-  // Tocar la notificación fija abre la carrera; «Pausar» además la pausa.
+  // La notificación única dice si está en pausa y lleva «Pausar» o «Seguir»: se pone al día en el acto al cambiar de fase.
+  const fase = e?.fase ?? null;
+  const empezo = laCarreraYaEmpezo(e);
+  useEffect(() => {
+    if (!fase || !empezo) return;
+    const r = resumenParaLaNotificacion();
+    const actual = carreraActual();
+    if (r && actual) void mostrarNotificacionDeCarrera({ ...r, enPausa: actual.fase === 'pausa' }, Date.now(), true);
+  }, [fase, empezo]);
+
+  // Tocar la notificación fija abre la carrera; «Pausar» además la pausa y «Seguir» la sigue.
   useEffect(() => {
     const N = cargarNotificaciones();
     if (!N) return;
     const sub = N.addNotificationResponseReceivedListener(r => {
       if (!esAvisoDeCarrera(r.notification.request.identifier)) return;
       if (r.actionIdentifier === ACCION_PAUSAR && carreraActual()?.fase === 'corriendo') pausarCarrera();
+      if (r.actionIdentifier === ACCION_SEGUIR && carreraActual()?.fase === 'pausa') {
+        seguirCarrera();
+        void empezarGps();
+      }
       if (carreraActual()) setVista({ tipo: 'carrera' });
     });
     return () => sub.remove();

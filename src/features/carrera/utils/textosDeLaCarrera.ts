@@ -49,7 +49,9 @@ export const TEXTOS_DE_LA_CARRERA = {
 export const TEXTOS_DE_LA_NOTIFICACION = {
   titulo: 'Carrera en curso',
   cuerpoDelServicio: 'Renaser registra tu recorrido',
+  enPausa: 'Carrera en pausa',
   pausar: 'Pausar',
+  seguir: 'Seguir',
   abrir: 'Abrir',
 } as const;
 

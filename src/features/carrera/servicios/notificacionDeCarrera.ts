@@ -2,18 +2,28 @@ import { Platform } from 'react-native';
 
 import { cargarNotificaciones } from '../../habits/notificaciones/recordatoriosDeHabito';
 import { formatoDuracion } from '../utils/ritmoYCalorias';
-import { lineaDeLaNotificacion, TEXTOS_DE_LA_NOTIFICACION } from '../utils/textosDeLaCarrera';
-import { ACCION_ABRIR, ACCION_PAUSAR, CANAL_CARRERA, CATEGORIA_CARRERA, ID_NOTIFICACION_CARRERA } from '../utils/avisoDeCarrera';
+import { TEXTOS_DE_LA_NOTIFICACION } from '../utils/textosDeLaCarrera';
+import {
+  ACCION_ABRIR,
+  ACCION_PAUSAR,
+  ACCION_SEGUIR,
+  CANAL_CARRERA,
+  CATEGORIA_CARRERA,
+  CATEGORIA_CARRERA_EN_PAUSA,
+  ID_NOTIFICACION_CARRERA,
+} from '../utils/avisoDeCarrera';
+import { contenidoDeLaNotificacion, type DatosDeLaNotificacion } from '../utils/notificacionUnica';
 
-export { ACCION_ABRIR, ACCION_PAUSAR, esAvisoDeCarrera, ID_NOTIFICACION_CARRERA } from '../utils/avisoDeCarrera';
+export { ACCION_ABRIR, ACCION_PAUSAR, ACCION_SEGUIR, esAvisoDeCarrera, ID_NOTIFICACION_CARRERA } from '../utils/avisoDeCarrera';
 
 /**
- * La notificación fija de la carrera fuera de la app (FR-011): km, tiempo y ritmo, con «Pausar» y «Abrir».
+ * La notificación ÚNICA de la carrera (FR-011): km, tiempo y ritmo, con «Pausar» (o «Seguir» en pausa) y «Abrir».
  *
- * Por qué una notificación propia y no la del servicio: la del servicio en primer plano de `expo-location` (la que exige Android
- * para el GPS) no admite acciones y solo se puede cambiar con la app al frente. Esta se actualiza desde la tarea del GPS como mucho
- * cada 10 s, en un canal silencioso. Sus dos botones abren la app («Pausar» además pausa): una acción que corra sin abrir la app
- * pediría un módulo nativo (queda anotado en el informe).
+ * Es la del servicio en primer plano del GPS: `scripts/arreglar-notificacion-de-carrera.js` hace que `expo-notifications` publique
+ * esta con el mismo id que la de `expo-location` y sin tag, así Android la toma como la del servicio (fija) y nunca hay dos. Hasta
+ * la primera publicación se ve la del servicio («Carrera en curso»). Se actualiza como mucho cada 10 s (salvo al cambiar de fase),
+ * en un canal silencioso y sin volver a sonar. Sus botones abren la app («Pausar» y «Seguir» además lo hacen): una acción que corra
+ * sin abrir la app pediría un módulo nativo.
  */
 
 const CADA_MS = 10_000;
@@ -39,6 +49,10 @@ async function preparar(): Promise<boolean> {
       { identifier: ACCION_PAUSAR, buttonTitle: TEXTOS_DE_LA_NOTIFICACION.pausar, options: { opensAppToForeground: true } },
       { identifier: ACCION_ABRIR, buttonTitle: TEXTOS_DE_LA_NOTIFICACION.abrir, options: { opensAppToForeground: true } },
     ]);
+    await N.setNotificationCategoryAsync(CATEGORIA_CARRERA_EN_PAUSA, [
+      { identifier: ACCION_SEGUIR, buttonTitle: TEXTOS_DE_LA_NOTIFICACION.seguir, options: { opensAppToForeground: true } },
+      { identifier: ACCION_ABRIR, buttonTitle: TEXTOS_DE_LA_NOTIFICACION.abrir, options: { opensAppToForeground: true } },
+    ]);
     preparada = true;
     return true;
   } catch {
@@ -48,7 +62,7 @@ async function preparar(): Promise<boolean> {
 
 /** Muestra o actualiza la notificación (como mucho cada 10 s, salvo `forzar`). Nunca lanza. */
 export async function mostrarNotificacionDeCarrera(
-  datos: { metros: number; activoMs: number; ritmo: number | null; enPausa: boolean },
+  datos: DatosDeLaNotificacion,
   ahora = Date.now(),
   forzar = false,
 ): Promise<void> {
@@ -60,27 +74,36 @@ export async function mostrarNotificacionDeCarrera(
     await N?.scheduleNotificationAsync({
       identifier: ID_NOTIFICACION_CARRERA,
       content: {
-        title: datos.enPausa ? `${TEXTOS_DE_LA_NOTIFICACION.titulo} · en pausa` : TEXTOS_DE_LA_NOTIFICACION.titulo,
-        body: lineaDeLaNotificacion(datos.metros, formatoDuracion(datos.activoMs), datos.ritmo),
+        ...contenidoDeLaNotificacion(datos, formatoDuracion(datos.activoMs)),
         sticky: true,
         autoDismiss: false,
         sound: false,
-        categoryIdentifier: CATEGORIA_CARRERA,
         data: { carrera: true },
       },
       trigger: { channelId: CANAL_CARRERA } as never,
     });
   } catch {
-    // Sin permiso de avisos: la carrera sigue; queda la notificación del servicio del GPS.
+    // Sin permiso de avisos: la carrera sigue; queda la notificación del servicio del GPS (la única).
   }
 }
 
-export async function quitarNotificacionDeCarrera(): Promise<void> {
+/**
+ * La quita al terminar o descartar (después de detener el GPS: con el servicio vivo Android no deja quitarla). Se repite medio
+ * segundo después por si una actualización que ya estaba en camino la volvió a publicar: sin servicio quedaría fija para siempre.
+ */
+export async function quitarNotificacionDeCarrera(esperarMs = 500): Promise<void> {
   ultimaMs = 0;
   const N = cargarNotificaciones();
-  try {
-    await N?.dismissNotificationAsync(ID_NOTIFICACION_CARRERA);
-  } catch {
-    // Nada que quitar.
+  const quitar = async () => {
+    try {
+      await N?.dismissNotificationAsync(ID_NOTIFICACION_CARRERA);
+    } catch {
+      // Nada que quitar.
+    }
+  };
+  await quitar();
+  if (esperarMs > 0) {
+    await new Promise(listo => setTimeout(listo, esperarMs));
+    await quitar();
   }
 }

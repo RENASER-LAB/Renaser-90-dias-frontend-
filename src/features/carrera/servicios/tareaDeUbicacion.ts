@@ -1,9 +1,10 @@
-import { AppState, Platform } from 'react-native';
+import { Platform } from 'react-native';
 
 import type { PuntoGps } from '../types/carrera.types';
 import { cargarCarrera, carreraActual, recibirPuntos, resumenParaLaNotificacion } from './carreraEnVivo';
 import { leerCarreraEnCurso } from './almacenCarrera';
 import { mostrarNotificacionDeCarrera, quitarNotificacionDeCarrera } from './notificacionDeCarrera';
+import { laCarreraYaEmpezo } from '../utils/notificacionUnica';
 import { TEXTOS_DE_LA_NOTIFICACION } from '../utils/textosDeLaCarrera';
 
 /**
@@ -73,11 +74,10 @@ export function definirTareaDeLaCarrera(): void {
         await cargarCarrera(guardada.cuentaId);
       }
       recibirPuntos(puntosDeLaUbicacion(locations));
-      if (AppState.currentState !== 'active') {
-        const r = resumenParaLaNotificacion();
-        const e = carreraActual();
-        if (r && e) void mostrarNotificacionDeCarrera({ ...r, enPausa: e.fase === 'pausa' });
-      }
+      // La notificación única (FR-011) se pone al día también con la app abierta: es la que se ve en la barra.
+      const r = resumenParaLaNotificacion();
+      const e = carreraActual();
+      if (r && e && laCarreraYaEmpezo(e)) void mostrarNotificacionDeCarrera({ ...r, enPausa: e.fase === 'pausa' });
     });
   } catch {
     definida = false;
