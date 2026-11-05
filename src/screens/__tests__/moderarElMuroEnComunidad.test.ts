@@ -36,7 +36,8 @@ describe('ComunidadScreen', () => {
     expect(fuente).toMatch(/const puedeModerarMuro = usePuedeModerarElMuro\(\);/);
     expect(fuente).toMatch(/puedeModerar=\{puedeModerarMuro\}/);
     // El prop está entre las dependencias del renderizado de la fila: si cambia el permiso, las tarjetas se redibujan.
-    expect(fuente).toMatch(/confirmacionDePublicacion,\n\s+puedeModerarMuro,/);
+    // Desde el 2026-11-05 (muro compacto) la lista dibuja filas: el permiso va en las dependencias de la fila.
+    expect(fuente).toMatch(/\[puedeModerarMuro, publicacionDestacada, accionesDeLaFila\]/);
   });
 
   it('el «…» de la tarjeta abre la hoja de ESA publicación y la hoja está montada una sola vez', () => {
