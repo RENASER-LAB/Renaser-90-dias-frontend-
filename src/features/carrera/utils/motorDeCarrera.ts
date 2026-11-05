@@ -71,6 +71,7 @@ export function crearCarrera(datos: {
     subidaM: 0,
     caloriasKcal: 0,
     ultimoCalculoCaloriasMs: 0,
+    ultimoCalculoCaloriasDistanciaM: 0,
     muestras: [],
     quietoDesdeMs: null,
     pesoKg: datos.pesoKg,
@@ -152,13 +153,27 @@ function conMuestra(e: EstadoDeLaCarrera, ahora: number): EstadoDeLaCarrera {
   return { ...e, muestras };
 }
 
+/**
+ * Las calorías salen de la distancia (FR-015): cada tramo suma según los metros recorridos desde el último cálculo. Sin metros nuevos
+ * no se suma nada ni se mueve el punto de partida (con 0 m, 0 kcal; un hueco del GPS se cuenta entero cuando llega el punto).
+ */
 function conCalorias(e: EstadoDeLaCarrera, ahora: number): EstadoDeLaCarrera {
   const act = activoMs(e, ahora);
   const dt = act - e.ultimoCalculoCaloriasMs;
   if (dt < 1000) return e;
-  const ritmo = ritmoActualSegPorKm(e, ahora);
-  const kmh = ritmo != null ? 3600 / ritmo : velocidadKmh(e.distanciaM, act / 1000) ?? 0;
-  return { ...e, caloriasKcal: e.caloriasKcal + caloriasDelTramo(kmh, e.pesoKg, dt / 1000), ultimoCalculoCaloriasMs: act };
+  // Un estado guardado por una versión anterior no trae el campo: se parte de la distancia de ahora.
+  const desdeM = e.ultimoCalculoCaloriasDistanciaM ?? e.distanciaM;
+  const metros = e.distanciaM - desdeM;
+  if (!(metros > 0)) {
+    return e.ultimoCalculoCaloriasDistanciaM == null ? { ...e, ultimoCalculoCaloriasDistanciaM: e.distanciaM } : e;
+  }
+  const kmh = velocidadKmh(metros, dt / 1000) ?? 0;
+  return {
+    ...e,
+    caloriasKcal: e.caloriasKcal + caloriasDelTramo(kmh, e.pesoKg, dt / 1000),
+    ultimoCalculoCaloriasMs: act,
+    ultimoCalculoCaloriasDistanciaM: e.distanciaM,
+  };
 }
 
 function conSubida(e: EstadoDeLaCarrera, altitud: number | null | undefined): EstadoDeLaCarrera {

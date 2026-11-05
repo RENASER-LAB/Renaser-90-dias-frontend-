@@ -199,6 +199,28 @@ describe('motor de la carrera: tramos, ritmo y calorías', () => {
     expect(e.caloriasKcal).toBeLessThan(80);
   });
 
+  // spec 042 FR-015
+  it('las calorías salen de la distancia: con 0 m, 0 kcal aunque corra el reloj', () => {
+    let e = nueva(false, false);
+    for (let i = 1; i <= 600; i++) e = alLatido(e, T0 + i * 1000);
+    expect(e.distanciaM).toBe(0);
+    expect(e.caloriasKcal).toBe(0);
+    // Parada con el GPS dando el mismo lugar: tampoco suma.
+    const quieta = Array.from({ length: 120 }, (_, i) => ({ ...ORIGEN, t: T0 + 1000 + i * 1000, precision: 5, velocidad: 0 }));
+    const g = aplicar(nueva(false, false), quieta);
+    expect(g.caloriasKcal).toBe(0);
+  });
+
+  // spec 042 FR-015
+  it('al pararse después de correr, las calorías dejan de subir', () => {
+    let e = aplicar(nueva(false, false), caminata(121, 3));
+    const antes = e.caloriasKcal;
+    expect(antes).toBeGreaterThan(0);
+    const fin = e.ultimoCrudo!.t;
+    for (let i = 1; i <= 300; i++) e = alLatido(e, fin + i * 1000);
+    expect(e.caloriasKcal).toBe(antes);
+  });
+
   it('una carrera de menos de 100 m o de menos de 1 minuto es muy corta (no se envía)', () => {
     const e = aplicar(nueva(), caminata(30, 3));
     expect(esMuyCorta(e, e.ultimoCrudo!.t)).toBe(true);

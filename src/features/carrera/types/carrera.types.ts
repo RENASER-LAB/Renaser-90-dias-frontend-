@@ -77,6 +77,8 @@ export interface EstadoDeLaCarrera {
   subidaM: number;
   caloriasKcal: number;
   ultimoCalculoCaloriasMs: number;
+  /** Distancia al último cálculo de calorías (FR-015: salen de los metros). Opcional: falta en un estado guardado antes. */
+  ultimoCalculoCaloriasDistanciaM?: number;
   muestras: MuestraDeRitmo[];
   /** Desde cuándo no hay movimiento (para la pausa automática). */
   quietoDesdeMs: number | null;

@@ -2634,6 +2634,9 @@ llame al servidor a cada rato y que nada se duplique**, y **«el avatar debe ref
   batería, pantalla bloqueada 10 min, SC-007 y SC-011).
 * **Corregido 2026-11-05 (pendientes del E2E):**
   * **Los km, un solo formato.** «Registramos X km en tu hábito» usa `formatoKm`, el de la tarjeta: dos decimales («Registramos 0,40 km», no «0,4»).
+  * **Las calorías salen de la distancia** (FR-015). Antes, parada, el reloj sumaba el MET de estar quieta y subían con 0 m. Ahora cada tramo usa los
+    metros recorridos desde el último cálculo (`ultimoCalculoCaloriasDistanciaM`, opcional para estados guardados antes); sin metros nuevos no suma, y por
+    debajo de 1 km/h `caloriasDelTramo` da 0. Con 0 m, 0 kcal; al pararse, dejan de subir.
 
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 

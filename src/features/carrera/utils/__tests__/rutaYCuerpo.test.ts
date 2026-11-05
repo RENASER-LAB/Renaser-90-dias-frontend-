@@ -3,7 +3,7 @@ import { crearCarrera, alPunto } from '../motorDeCarrera';
 import { cuerpoDeLaCarrera } from '../cuerpoDeLaCarrera';
 import { longitudM, puntoDestino } from '../geo';
 import { codificarPolyline, decodificarPolyline, recortarPrivacidad, rutaParaEnviar, simplificar } from '../rutaCodificada';
-import { formatoDuracion, formatoKm, formatoRitmo, metPorVelocidad, pesoParaCalorias } from '../ritmoYCalorias';
+import { caloriasDelTramo, formatoDuracion, formatoKm, formatoRitmo, metPorVelocidad, pesoParaCalorias } from '../ritmoYCalorias';
 
 const ORIGEN = { lat: -12.0464, lng: -77.0428 };
 
@@ -83,6 +83,10 @@ describe('números y calorías', () => {
   it('MET sube con la velocidad; parado no suma ejercicio', () => {
     expect(metPorVelocidad(0.5)).toBe(1);
     expect(metPorVelocidad(5)).toBeLessThan(metPorVelocidad(10));
+    // Parado (menos de 1 km/h) no suma calorías.
+    expect(caloriasDelTramo(0, 70, 600)).toBe(0);
+    expect(caloriasDelTramo(0.5, 70, 600)).toBe(0);
+    expect(caloriasDelTramo(10, 70, 600)).toBeGreaterThan(0);
   });
 
   // spec 042 FR-015 (decisión del dueño: el peso del objetivo de Cuerpo en kg, si no 70 kg)

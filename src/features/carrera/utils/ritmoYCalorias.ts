@@ -86,7 +86,8 @@ export function metPorVelocidad(kmh: number): number {
 
 /** kcal = MET × peso (kg) × horas (FR-015). */
 export function caloriasDelTramo(kmh: number, pesoKg: number, segundos: number): number {
-  if (!(segundos > 0) || !(pesoKg > 0)) return 0;
+  // Por debajo de 1 km/h no hay ejercicio que contar: 0 kcal (no el MET de estar parado).
+  if (!(segundos > 0) || !(pesoKg > 0) || !(kmh >= 1)) return 0;
   return metPorVelocidad(kmh) * pesoKg * (segundos / 3600);
 }
 
