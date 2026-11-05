@@ -434,6 +434,7 @@ export function TrainingPorHora({
           <HojaConectarPasos
             visible={conectarAbierta}
             soporte={pasos.vista.modo === 'ofrecer' ? pasos.vista.soporte : 'disponible'}
+            conectada={pasos.vista.modo !== 'ofrecer'}
             conectar={pasos.conectar}
             fuente={pasos.vista.modo === 'avance' ? pasos.vista.fuente.etiqueta : null}
             desdeLasHoy={pasos.conectadoHoyA}

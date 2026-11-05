@@ -2541,6 +2541,10 @@ actividad de «por qué pedimos esto» y el alias de «ver uso de permisos» en 
   diálogo **no borra el intento** (vence solo a los 15 min) y `reconciliarElIntento`, al volver a primer plano, relee el permiso con las
   relecturas: con el permiso en el sistema queda conectada sin otro toque. Sin el permiso sigue sin conectar nada. Pruebas: dos nuevas en
   `usePasosDelDia` (fallan con el código anterior).
+* **Y la hoja se entera (issue #137, E2E del mapa del 05/11).** Con la conexión ya terminada al volver a primer plano, la hoja «Cuenta tus km solo»
+  seguía en «Conectar» (solo pasaba a «Ya contamos tus pasos» si el diálogo contestaba que sí). Ahora recibe `conectada` (Training le pasa
+  `vista.modo !== 'ofrecer'`) y, con la hoja abierta y la conexión anotada, pasa a «Ya contamos tus pasos» y borra el aviso de error. Prueba en
+  `pasosEnPantalla` (falla con la hoja anterior).
 * **Comprobado en el emulador** (Pixel 6, API 37, debug local, sin cuentas ni producción): camino normal (acepta todo → conectada) y la app
   muerta con el diálogo abierto (acepta todo → al reabrir queda conectada sin otro toque). **Sin comprobar:** el teléfono real del reporte; si
   el bucle vuelve, el registro ahora dice qué falló (`[pasos] falló el diálogo de permisos…`).
@@ -2657,6 +2661,12 @@ llame al servidor a cada rato y que nada se duplique**, y **«el avatar debe ref
 Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel especializado en React Native, Expo y TypeScript. Al crear, refactorizar o modificar cualquier pantalla o componente, debes cumplir OBLIGATORIAMENTE con los siguientes estándares:
 
 ---
+* **Decisión del dueño (05/11): cerrar la app NO pausa la carrera** («Seguir grabando», como Strava, Nike Run y adidas Running). Mientras esté la
+  notificación «Carrera en curso», la carrera sigue (servicio en primer plano con `killServiceOnDestroy: false` y la tarea `renaser-carrera-gps`
+  definida al cargar la app). Comprobado en el emulador con la ruta simulada: botón Inicio, 60 s → sigue sumando; **cerrar desde recientes**, 90 s →
+  la notificación sigue y al reabrir retoma corriendo con lo recorrido mientras estuvo cerrada; **forzar detención** → al reabrir vuelve «En pausa» sin
+  contar el tiempo muerto (FR-006). Las marcas que matan la app al deslizarla (Xiaomi, Huawei, Honor) caen en este último caso. No se pausa sola al
+  cerrar: mucha gente cierra las apps por costumbre mientras corre y perdería esos km.
 
 ## 1. 🏗️ ARQUITECTURA LIMPIA Y SEPARACIÓN DE RESPONSABILIDADES
 * **Estructura Modular por Feature**: Agrupa el código bajo `src/features/<nombre_modulo>/`:
