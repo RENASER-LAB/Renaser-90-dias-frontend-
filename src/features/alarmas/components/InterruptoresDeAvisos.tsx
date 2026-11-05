@@ -6,6 +6,8 @@ import { Interruptor } from '../../../components/Interruptor';
 import { BotonSecundario } from '../../../components/Legible';
 import { useTheme } from '../../../theme/ThemeContext';
 import { useEsMentor } from '../../mentor/hooks/useEsMentor';
+import { useWhatsappDeLosAvisos } from '../hooks/useWhatsappDeLosAvisos';
+import { lineaDelWhatsapp } from '../utils/whatsappDeLosAvisos';
 import { guardarTema, obtenerPreferencias, temasVisibles, type Preferencias, type TemaDeAviso } from '../api/preferenciasDeNotificacion';
 
 /**
@@ -20,6 +22,9 @@ export function InterruptoresDeAvisos() {
   const [fallo, setFallo] = useState(false);
   const [guardando, setGuardando] = useState<string | null>(null);
   const [errorAlGuardar, setErrorAlGuardar] = useState<string | null>(null);
+  /* Spec 041 (FR-041): la fila del WhatsApp solo existe si el servidor la lista; solo entonces se lee el número de la ficha, una vez. */
+  const whatsapp = useWhatsappDeLosAvisos(preferencias !== null && 'RECORDATORIO_EVENTO_WHATSAPP' in preferencias);
+  const lineaDelNumero = lineaDelWhatsapp(whatsapp.lectura, whatsapp.guardado);
 
   const cargar = useCallback(async () => {
     setFallo(false);
@@ -72,6 +77,7 @@ export function InterruptoresDeAvisos() {
             <View style={{ flex: 1 }}>
               <Text style={[estilos.nombre, { color: c.textStrong }]}>{tema.nombre}</Text>
               <Text style={texto}>{tema.detalle}</Text>
+              {tema.diceElNumero && lineaDelNumero ? <Text style={texto}>{lineaDelNumero}</Text> : null}
             </View>
             {/* `Interruptor` y no el `Switch` con colores a mano: en la web su pulgar encendido salía
                 verde azulado (2026-10-05). */}

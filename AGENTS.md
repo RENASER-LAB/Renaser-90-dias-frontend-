@@ -2440,6 +2440,33 @@ Lo que cambia y nada más (el aprendiz, el mentor y el líder no ven ninguna pan
 > acceso, lugar y otro enlace), `meetApi` y `reglasDeEventos` ajustadas. Hace falta el backend con esta corrección (un backend de la versión anterior también deja la sala abierta
 > cuando no recibe el acceso).
 
+## Cambio por pedido del dueño — 2026-11-04 — Recordatorios de eventos por el chat y por WhatsApp: la baja en Yo → Notificaciones y el aviso de finalidad (spec 041)
+
+Pedido del dueño (textual): «Quiero lo mismo [que RenaserOs]… los recordatorios dentro del mismo chat y la app, y también con otro número que pondré». Spec, plan y decisiones en el backend
+(`specs/041-recordatorios-de-eventos/`, D-322). **Casi todo es del servidor:** manda el recordatorio de cada evento (1 día, 1 hora, 30 y 10 minutos antes) como un mensaje del programa en el
+chat de soporte de quien dijo «Voy» y, por WhatsApp (YCloud, con el número nuevo del dueño), a quien tiene su WhatsApp en la Ficha Inicial. La app solo suma lo que sigue; ningún tab cambia de forma.
+* **Yo → Notificaciones suma «Recordatorios de eventos por WhatsApp»** (`alarmas/api/preferenciasDeNotificacion`, tema `whatsapp`, tipo `RECORDATORIO_EVENTO_WHATSAPP`), **al final de la lista**, **encendido de
+  fábrica** (lo que no tiene fila en el servidor cuenta como encendido) y **solo si el servidor lo lista**: contra un backend anterior no se dibuja ni se lee la ficha. Es el único lugar de la app
+  donde se apaga (la otra baja es el botón «No recibir más» del propio mensaje de WhatsApp o responder «BAJA»; las dos apagan esta misma preferencia en el servidor). **Apagarlo no toca «Eventos y clases»**
+  (el aviso del teléfono y el mensaje del chat siguen): son dos preferencias distintas.
+* **La fila dice a qué número se escribe** (`useWhatsappDeLosAvisos` sobre `leerWhatsappDelPerfil`, una lectura por visita; `alarmas/utils/whatsappDeLosAvisos`, puro): «Te escribimos al +51 9•• ••• •21.» (el número
+  **enmascarado**, nunca entero, ni en pantalla ni en lo que oye el lector), o «Agrega tu WhatsApp en Editar perfil.» si la ficha no tiene uno con forma de número internacional (la misma regla que aplica el servidor:
+  `+` y 8 a 15 dígitos). Mientras se lee, o si la lectura falla, la línea no se dibuja (no se afirma nada del número). La descripción de la fila dice cuándo llegan los avisos.
+* **La Ficha Inicial dice para qué se usa el WhatsApp** (`onboarding/data/pasosFicha`, paso «WhatsApp principal», solo la `bajada`): «Por aquí te acompaña tu mentor y te recordamos tus eventos. Puedes darte de baja cuando
+  quieras». Es el aviso de finalidad de la Ley 29733; no cambia el paso ni su validación.
+* **La Política de privacidad** (`public/privacidad/index.html`) dice que el WhatsApp de la ficha se usa para recordar por WhatsApp los eventos a los que se dijo «Voy», **que YCloud y Meta procesan el mensaje** (con qué
+  datos: el número, el nombre de pila, el nombre del evento, su fecha y hora, el enlace o el lugar y el nombre de la formación), cómo darse de baja (el botón, «BAJA», o el interruptor de Yo) y que **no se guarda el
+  texto del mensaje ni lo que la persona responde, solo el estado del envío, 12 meses**. **Debe publicarse antes de sacar el APK** (sale con el deploy de Vercel).
+* **Chat de Comunidad, sin cambios.** El mensaje llega como cualquier mensaje del programa («Formación Renaser», «Diplomado Renaser»…) con una línea «Entra aquí: https://…» o «Lugar: …». **Hallazgo, sin tocar:** la burbuja
+  del chat dibuja el texto como texto plano, así que el enlace se ve pero no se toca; hacerlo tocable cambia el chat de todos los mensajes y necesita la autorización explícita del dueño para el tab Comunidad.
+* **No cambian:** el formulario de eventos (no hay elección de WhatsApp por evento: a quién le llega es un valor del servidor), «Mi agenda», las alarmas locales de eventos, los demás avisos ni los otros tabs. Sin
+  dependencias, íconos ni código nativo.
+* **Pruebas:** Jest `recordatoriosDeEventosPorWhatsApp` (el tema, que solo se ofrece si el servidor lo lista, encendido de fábrica, que se guarda solo ese tipo, el número enmascarado y la fila), `fichaDiceParaQueSeUsaElWhatsapp`
+  y `paginaPoliticaDePrivacidad` (la finalidad, YCloud y Meta, la baja, y qué no se guarda). Maestro: no se escribió ningún flujo (la fila es un interruptor como los de al lado; el envío real depende del número y de la
+  plantilla que apruebe Meta, y se prueba a mano: SC-015 de la spec).
+* **Hace falta un APK nuevo** para la fila de Yo (solo JavaScript: la app no se actualiza por aire) **y el backend con V166 a V168 antes**. Un APK anterior sigue funcionando: no ve la fila, y los mensajes llegan igual (el chat
+  y el WhatsApp salen del servidor; la baja la cubren el botón y «BAJA»).
+
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
 Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel especializado en React Native, Expo y TypeScript. Al crear, refactorizar o modificar cualquier pantalla o componente, debes cumplir OBLIGATORIAMENTE con los siguientes estándares:
