@@ -66,7 +66,17 @@ export function AvatarCaminante({
   const estilo = useAnimatedStyle(() => ({ transform: [{ translateY: vaiven.get() }] }));
 
   return (
-    <View pointerEvents="none" accessible accessibilityLabel={ETIQUETA[figura]} style={estilos.contenedor}>
+    // Decorativo y NUNCA enfocable: en Android `accessible` vuelve la vista enfocable y, fuera del modo táctil (al volver de modo
+    // avión, con un teclado), recibía el foco y Android le pintaba encima su resaltado gris: el «cuadro gris detrás del avatar» de
+    // «Terminaste». Lo que importa (km, duración, ritmo) lo leen las tarjetas de datos; el mapa ya está oculto para el lector.
+    <View
+      pointerEvents="none"
+      accessibilityLabel={ETIQUETA[figura]}
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+      focusable={false}
+      style={estilos.contenedor}
+    >
       <View style={estilos.sombra} />
       <Animated.View style={estilo}>
         <DibujoDelAvatar figura={figura} iniciales={iniciales} fotoUrl={fotoUrl ?? null} />

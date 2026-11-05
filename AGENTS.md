@@ -2637,6 +2637,9 @@ llame al servidor a cada rato y que nada se duplique**, y **«el avatar debe ref
   * **Las calorías salen de la distancia** (FR-015). Antes, parada, el reloj sumaba el MET de estar quieta y subían con 0 m. Ahora cada tramo usa los
     metros recorridos desde el último cálculo (`ultimoCalculoCaloriasDistanciaM`, opcional para estados guardados antes); sin metros nuevos no suma, y por
     debajo de 1 km/h `caloriasDelTramo` da 0. Con 0 m, 0 kcal; al pararse, dejan de subir.
+  * **Sin el cuadro gris detrás del avatar** en «Terminaste» (visto al volver de modo avión). Era el resaltado de foco de Android: `accessible` volvía al
+    avatar (72 × 80) enfocable y, fuera del modo táctil, tomaba el foco. `AvatarCaminante` ahora es decorativo y no enfocable (`focusable={false}`,
+    oculto para el lector, como el mapa); los datos los leen las tarjetas. Causa deducida por la medida del cuadro, sin emulador: falta confirmarlo en pantalla.
 
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 

@@ -112,6 +112,20 @@ describe('el mapa no calcula nada', () => {
     expect(raiz.findAll(n => n.props.accessibilityLabel === 'Tu avatar, mujer').length).toBeGreaterThan(0);
   });
 
+  // spec 042 FR-038, FR-014
+  it('el avatar no es enfocable (sin el resaltado gris de Android detrás de él en «Terminaste»)', () => {
+    const raiz = dibujar(
+      React.createElement(MapaDeCarrera, { ruta: [], posicion: ORIGEN, rumbo: 0, duracionMs: 0, figura: 'mujer', caminando: false, iniciales: 'AP', alto: 220 }),
+    ).root;
+    const avatar = raiz.findAll(n => n.props.accessibilityLabel === 'Tu avatar, mujer' && typeof n.type === 'string')[0];
+    expect(avatar).toBeDefined();
+    expect(avatar.props.accessible).not.toBe(true);
+    expect(avatar.props.focusable).toBe(false);
+    expect(avatar.props.importantForAccessibility).toBe('no-hide-descendants');
+    // Nada sobre el mapa toma el foco: ninguna vista del mapa es `accessible`.
+    expect(raiz.findAll(n => typeof n.type === 'string' && n.props.accessible === true)).toHaveLength(0);
+  });
+
   // spec 042 FR-037
   it('sin la clave de Maps no rompe: fondo neutro con el avatar y una línea que lo dice', () => {
     const raiz = dibujar(
