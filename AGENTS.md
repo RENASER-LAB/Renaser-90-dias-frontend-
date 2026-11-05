@@ -2426,6 +2426,20 @@ Lo que cambia y nada más (el aprendiz, el mentor y el líder no ven ninguna pan
 * **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire) **y el backend de la spec 040 antes** (V169); contra uno anterior «Crear enlace de Meet» no se ofrece
   (404) y todo queda como hoy.
 
+> **Corregido 2026-11-05 (decisión del dueño: «el Meet se crea solo y los demás entran sin tanto ajetreo en el móvil, mucha configuración arruina la experiencia»).**
+> Lo del formulario y del cuerpo de arriba ya no es así. (1) **Ya no hay interruptor «Crear enlace de Meet» ni «Quién puede entrar»**: la sala es **siempre abierta** (el servidor
+> pide `accessType=OPEN` y lo lee de vuelta) y la app **no manda `accesoSalaMeet`**; `ResumenDeMeet` ya no tiene `acceso` (un `acceso` que llegue se ignora). (2) En su lugar,
+> **«Dónde es»** (`DondeEsElEvento`, que reemplaza a `SeccionDelEnlaceDeMeet`): dos opciones de 52, **«Por Meet (se crea solo)»** —**viene marcada**: un evento nuevo sin tocar nada
+> pide la sala— y **«En un lugar»**, que muestra el campo «Dirección»; debajo, discreto (texto subrayado de 16 en un área de 48), **«Pegar otro enlace»** muestra el campo «Link de la
+> reunión» de siempre (Zoom, Drive, un Meet que ya existe). Sin textos de ayuda en las opciones. El formulario guarda `donde: 'meet' | 'lugar' | 'enlace'` (`formularioDeEvento`).
+> (3) Si el servidor no ofrece el Meet automático (apagado, sin cuenta, 404, sin red) no hay «Dónde es» y queda el formulario de siempre («Link de la reunión» u «O el lugar»):
+> `dondeQueSeGuarda` lo guarda como `enlace`, así nunca se pide una sala que responde 409; mientras no se sabe, no se dibuja la parte del lugar (una sola lectura corta). Un evento
+> que ya usaba el enlace sigue en «Por Meet» y dice por qué si el servidor dejó de ofrecerlo. (4) **«Unirme» ya era de un toque**: `Linking.openURL` con el enlace tal cual; un
+> `https://meet.google.com/…` lo abre Android en la app de Google Meet si está instalada (enlace verificado de la app), sin pantallas intermedias. No cambió. Pruebas:
+> `enlaceDeMeetAutomatico` (sin elegir nada el cuerpo pide la sala y no manda acceso; lugar; otro enlace; sin servidor), `enlaceDeMeetEnElFormulario` (Meet marcado, sin elección de
+> acceso, lugar y otro enlace), `meetApi` y `reglasDeEventos` ajustadas. Hace falta el backend con esta corrección (un backend de la versión anterior también deja la sala abierta
+> cuando no recibe el acceso).
+
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
 Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel especializado en React Native, Expo y TypeScript. Al crear, refactorizar o modificar cualquier pantalla o componente, debes cumplir OBLIGATORIAMENTE con los siguientes estándares:

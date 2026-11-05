@@ -87,14 +87,13 @@ describe('«Reintentar» (FR-008)', () => {
 
 describe('el resumen de la sala en el evento (FR-019, SC-007, FR-020)', () => {
   // spec 040 FR-019
-  it('lee el estado, el acceso y la frase del servidor', () => {
+  it('lee el estado y la frase del servidor; un `acceso` que llegue (servidor de la versión anterior) se ignora', () => {
     const evento = leerEvento(
       eventoCrudo({ meet: { estado: 'FALLIDO', acceso: 'CON_PERMISO', accesoAplicado: false, mensaje: ' No pudimos crear el enlace de Meet. ', fechasConSala: 0, fechasConProblema: 2 } }),
     );
 
     expect(evento.meet).toEqual({
       estado: 'FALLIDO',
-      acceso: 'CON_PERMISO',
       accesoAplicado: false,
       mensaje: 'No pudimos crear el enlace de Meet.',
       fechasConSala: 0,
@@ -109,8 +108,8 @@ describe('el resumen de la sala en el evento (FR-019, SC-007, FR-020)', () => {
   });
 
   // spec 040 FR-020
-  it('un resumen roto (acceso desconocido, sin estado, de otro tipo) no tumba el evento: solo se pierde él', () => {
-    for (const roto of [{ estado: 'CREADO', acceso: 'RESTRINGIDA' }, { acceso: 'ABIERTA' }, 'texto', 7, []]) {
+  it('un resumen roto (sin estado, de otro tipo) no tumba el evento: solo se pierde él', () => {
+    for (const roto of [{ acceso: 'ABIERTA' }, { estado: '' }, 'texto', 7, []]) {
       const evento = leerEvento(eventoCrudo({ meet: roto }));
       expect(evento.titulo).toBe('Clase en vivo');
       expect('meet' in evento).toBe(false);

@@ -20,13 +20,12 @@ const reglaSchema = z
   .passthrough();
 
 /**
- * Spec 040: cómo va la sala de Meet. Tolerante por dentro: un campo que falta se completa y un acceso desconocido deja el resumen
- * sin dibujar (`catch(null)`); nada de esto puede tirar el evento.
+ * Spec 040: cómo va la sala de Meet. Tolerante por dentro: un campo que falta se completa y uno roto deja el resumen sin dibujar
+ * (`catch(null)`); nada de esto puede tirar el evento. `acceso` ya no se lee: la sala siempre es abierta (decisión del dueño del 2026-11-05).
  */
 const meetSchema = z
   .object({
     estado: z.string().nullish(),
-    acceso: z.string().nullish(),
     accesoAplicado: z.boolean().nullish(),
     mensaje: z.string().nullish(),
     fechasConSala: z.number().nullish(),
@@ -120,11 +119,8 @@ function aRegla(crudo: z.infer<typeof reglaSchema>): ReglaDeAviso | null {
 /** `null` si el servidor no lo mandó o no se entiende: sin resumen, la pantalla es la de siempre. */
 function aResumenDeMeet(crudo: EventoCrudo['meet']): ResumenDeMeet | null {
   if (!crudo || !crudo.estado) return null;
-  const acceso = crudo.acceso === 'CON_PERMISO' ? 'CON_PERMISO' : crudo.acceso === 'ABIERTA' ? 'ABIERTA' : null;
-  if (!acceso) return null;
   return {
     estado: crudo.estado,
-    acceso,
     accesoAplicado: crudo.accesoAplicado !== false,
     mensaje: crudo.mensaje?.trim() || null,
     fechasConSala: crudo.fechasConSala ?? 0,

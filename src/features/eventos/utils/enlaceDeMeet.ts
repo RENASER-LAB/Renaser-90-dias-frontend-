@@ -1,25 +1,22 @@
-import type { AccesoDeLaSala, Evento, ResumenDeMeet } from '../types/eventos.types';
+import type { Evento, ResumenDeMeet } from '../types/eventos.types';
 import type { MotivoSinMeet } from '../api/meetApi';
 
 /**
  * Los textos y las reglas del enlace de Meet automático (spec 040, D-321), sin React: el formulario, el detalle del evento y las pruebas leen de acá.
  *
- * Palabras simples, tuteo de Perú y una sola frase por opción (poco texto: el dueño pidió «sin mucha entrada»). Los textos de FALLO que ve
+ * Palabras simples, tuteo de Perú y lo mínimo de texto (el dueño pidió «sin mucha entrada»). Los textos de FALLO que ve
  * ADMIN en el detalle los escribe el servidor (`ResumenDeMeet.mensaje`); la app solo los muestra, junto a «Reintentar».
  */
 
-export const ETIQUETA_CREAR_ENLACE = 'Crear enlace de Meet';
-export const AYUDA_CREAR_ENLACE = 'Renaser lo crea al guardar el evento.';
-
-export const ROTULO_ACCESO = 'Quién puede entrar';
-
-/** Las dos opciones, en el orden en que se ofrecen: «Abierta» es la que viene marcada. */
-export const ACCESOS_DE_LA_SALA: ReadonlyArray<{ clave: AccesoDeLaSala; nombre: string; ayuda: string }> = [
-  { clave: 'ABIERTA', nombre: 'Abierta', ayuda: 'Se entra directo, sin esperar.' },
-  { clave: 'CON_PERMISO', nombre: 'Con permiso', ayuda: 'Tú admites a cada persona.' },
-];
-
-export const ACCESO_POR_DEFECTO: AccesoDeLaSala = 'ABIERTA';
+/**
+ * Dónde es el evento (decisión del dueño del 2026-11-05: «el Meet se crea solo y los demás entran sin tanto ajetreo; mucha configuración
+ * arruina la experiencia»). Lo que viene marcado es Meet, que se crea solo y siempre con la sala ABIERTA: no hay nada que elegir sobre quién
+ * entra. «En un lugar» pide la dirección; pegar otro enlace es una salida secundaria y discreta.
+ */
+export const ROTULO_DONDE = 'Dónde es';
+export const OPCION_MEET = 'Por Meet (se crea solo)';
+export const OPCION_LUGAR = 'En un lugar';
+export const ETIQUETA_OTRO_ENLACE = 'Pegar otro enlace';
 
 /** En un evento que se repite: cada fecha tiene su propia sala (decisión 4 del dueño). */
 export const LINEA_CADA_FECHA = 'Cada fecha tendrá su propio enlace.';
@@ -36,10 +33,6 @@ export function motivoSinMeet(motivo: MotivoSinMeet | null): string {
     default:
       return '';
   }
-}
-
-export function accesoEnPalabras(acceso: AccesoDeLaSala): string {
-  return ACCESOS_DE_LA_SALA.find(a => a.clave === acceso)?.nombre ?? 'Abierta';
 }
 
 /** ¿El evento tiene el enlace automático? Solo lo sabe quien administra (el servidor manda `meet` solo a ADMIN y ALCHEMIST). */

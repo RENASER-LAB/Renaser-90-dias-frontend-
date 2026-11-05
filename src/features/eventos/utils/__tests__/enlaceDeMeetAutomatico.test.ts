@@ -2,17 +2,17 @@ import { describe, expect, it } from '@jest/globals';
 
 import type { Evento, ResumenDeMeet } from '../../types/eventos.types';
 import {
-  ACCESO_POR_DEFECTO,
-  ACCESOS_DE_LA_SALA,
-  AYUDA_CREAR_ENLACE,
-  ETIQUETA_CREAR_ENLACE,
+  ETIQUETA_OTRO_ENLACE,
   LINEA_CADA_FECHA,
+  OPCION_LUGAR,
+  OPCION_MEET,
+  ROTULO_DONDE,
   lineaDeLaSala,
   lineaDeLaSerie,
   motivoSinMeet,
   sePuedeReintentar,
 } from '../enlaceDeMeet';
-import { armarCuerpo, formularioDesdeEvento, formularioVacio, type FormularioDeEvento } from '../formularioDeEvento';
+import { armarCuerpo, dondeQueSeGuarda, formularioDesdeEvento, formularioVacio, type FormularioDeEvento } from '../formularioDeEvento';
 
 /**
  * El enlace de Meet automático en el formulario de eventos (spec 040, D-321): qué se pide al servidor, qué se conserva al editar y qué
@@ -22,7 +22,7 @@ import { armarCuerpo, formularioDesdeEvento, formularioVacio, type FormularioDeE
 const AHORA = Date.parse('2026-11-05T15:00:00Z');
 
 function resumen(parcial: Partial<ResumenDeMeet> = {}): ResumenDeMeet {
-  return { estado: 'CREADO', acceso: 'ABIERTA', accesoAplicado: true, mensaje: null, fechasConSala: 1, fechasConProblema: 0, ...parcial };
+  return { estado: 'CREADO', accesoAplicado: true, mensaje: null, fechasConSala: 1, fechasConProblema: 0, ...parcial };
 }
 
 function evento(parcial: Partial<Evento> = {}): Evento {
@@ -49,34 +49,23 @@ function evento(parcial: Partial<Evento> = {}): Evento {
 
 const base: FormularioDeEvento = { ...formularioVacio(AHORA, 'America/Lima'), titulo: 'Clase en vivo' };
 
-describe('pedir el enlace automático (FR-001, FR-004, FR-023)', () => {
+describe('pedir el enlace automático (FR-001, FR-004, FR-023; decisión del dueño del 2026-11-05)', () => {
   // spec 040 FR-001, FR-023
-  it('encendido: el cuerpo pide el enlace, lleva el acceso y NO lleva ubicación pegada', () => {
-    const r = armarCuerpo({ ...base, crearEnlaceMeet: true, accesoSalaMeet: 'CON_PERMISO' }, AHORA);
+  it('un evento nuevo, sin elegir nada, pide el Meet automático y NO manda ningún acceso: la sala queda abierta (OPEN) en el servidor', () => {
+    expect(base.donde).toBe('meet');
+    const r = armarCuerpo(base, AHORA);
 
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     expect(r.cuerpo.crearEnlaceMeet).toBe(true);
-    expect(r.cuerpo.accesoSalaMeet).toBe('CON_PERMISO');
+    expect('accesoSalaMeet' in r.cuerpo).toBe(false);
     expect(r.cuerpo.locationType).toBe('MEET');
     expect(r.cuerpo.locationValue).toBeNull();
   });
 
-  // spec 040 FR-023
-  it('el acceso que viene marcado es «Abierta»', () => {
-    expect(ACCESO_POR_DEFECTO).toBe('ABIERTA');
-    expect(base.accesoSalaMeet).toBe('ABIERTA');
-    expect(ACCESOS_DE_LA_SALA.map(a => a.clave)).toEqual(['ABIERTA', 'CON_PERMISO']);
-    const r = armarCuerpo({ ...base, crearEnlaceMeet: true }, AHORA);
-    expect(r.ok && r.cuerpo.accesoSalaMeet).toBe('ABIERTA');
-  });
-
   // spec 040 FR-004
-  it('encendido no manda el link ni el lugar que hubiera escritos: no se pide el automático y uno pegado a la vez', () => {
-    const r = armarCuerpo(
-      { ...base, crearEnlaceMeet: true, link: 'https://meet.google.com/zzz-zzzz-zzz', lugar: 'Av. Lima 123' },
-      AHORA,
-    );
+  it('con Meet no manda el link ni el lugar que hubiera escritos: no se pide el automático y uno pegado a la vez', () => {
+    const r = armarCuerpo({ ...base, link: 'https://meet.google.com/zzz-zzzz-zzz', lugar: 'Av. Lima 123' }, AHORA);
 
     expect(r.ok).toBe(true);
     if (!r.ok) return;
@@ -85,9 +74,18 @@ describe('pedir el enlace automático (FR-001, FR-004, FR-023)', () => {
     expect(JSON.stringify(r.cuerpo)).not.toContain('Av. Lima');
   });
 
+  // spec 040 FR-019
+  it('«En un lugar» manda la dirección y pide escribirla si falta', () => {
+    const r = armarCuerpo({ ...base, donde: 'lugar', lugar: 'Av. Lima 123' }, AHORA);
+    expect(r.ok && r.cuerpo.locationType).toBe('ADDRESS');
+    expect(r.ok && r.cuerpo.locationValue).toBe('Av. Lima 123');
+    expect(r.ok && 'crearEnlaceMeet' in r.cuerpo).toBe(false);
+    expect(armarCuerpo({ ...base, donde: 'lugar' }, AHORA)).toEqual({ ok: false, error: 'Escribe la dirección del lugar.' });
+  });
+
   // spec 040 FR-020
-  it('apagado (lo de siempre): sin crearEnlaceMeet ni accesoSalaMeet, y el link pegado viaja igual', () => {
-    const r = armarCuerpo({ ...base, link: 'https://meet.google.com/abc-defg-hij' }, AHORA);
+  it('«Pegar otro enlace» (lo de siempre): sin crearEnlaceMeet, y el link pegado viaja igual', () => {
+    const r = armarCuerpo({ ...base, donde: 'enlace', link: 'https://meet.google.com/abc-defg-hij' }, AHORA);
 
     expect(r.ok).toBe(true);
     if (!r.ok) return;
@@ -96,25 +94,21 @@ describe('pedir el enlace automático (FR-001, FR-004, FR-023)', () => {
     expect(r.cuerpo.locationValue).toBe('https://meet.google.com/abc-defg-hij');
   });
 
-  // spec 040 FR-020
-  it('un formulario nuevo nace con el enlace automático apagado', () => {
-    expect(base.crearEnlaceMeet).toBe(false);
-  });
-
-  // spec 040 FR-004
-  it('apagado y sin link ni lugar sigue pidiendo uno (no hay un enlace «solo»)', () => {
-    const r = armarCuerpo(base, AHORA);
-    expect(r.ok).toBe(false);
+  // spec 040 FR-014, FR-020
+  it('si el servidor no puede crear la sala, se guarda como el formulario de siempre (un link o un lugar), nunca pidiendo la sala', () => {
+    expect(dondeQueSeGuarda('meet', false)).toBe('enlace');
+    expect(dondeQueSeGuarda('lugar', false)).toBe('enlace');
+    expect(dondeQueSeGuarda('meet', true)).toBe('meet');
+    expect(armarCuerpo({ ...base, donde: dondeQueSeGuarda(base.donde, false) }, AHORA).ok).toBe(false);
   });
 });
 
 describe('editar un evento que ya usa el enlace automático (FR-005)', () => {
   // spec 040 FR-005
-  it('el formulario arranca con el enlace encendido, su acceso y el link vacío (lo puso Google)', () => {
-    const form = formularioDesdeEvento(evento({ meet: resumen({ acceso: 'CON_PERMISO' }) }));
+  it('el formulario arranca en «Por Meet» y con el link vacío (lo puso Google)', () => {
+    const form = formularioDesdeEvento(evento({ meet: resumen() }));
 
-    expect(form.crearEnlaceMeet).toBe(true);
-    expect(form.accesoSalaMeet).toBe('CON_PERMISO');
+    expect(form.donde).toBe('meet');
     expect(form.link).toBe('');
   });
 
@@ -127,7 +121,7 @@ describe('editar un evento que ya usa el enlace automático (FR-005)', () => {
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     expect(r.cuerpo.crearEnlaceMeet).toBe(true);
-    expect(r.cuerpo.accesoSalaMeet).toBe('ABIERTA');
+    expect('accesoSalaMeet' in r.cuerpo).toBe(false);
     expect(r.cuerpo.locationValue).toBeNull();
   });
 
@@ -138,16 +132,21 @@ describe('editar un evento que ya usa el enlace automático (FR-005)', () => {
     const form = formularioDesdeEvento(original);
     const r = armarCuerpo(form, AHORA - 10 * 24 * 3600 * 1000, original);
 
-    expect(form.crearEnlaceMeet).toBe(false);
+    expect(form.donde).toBe('enlace');
     expect(form.link).toBe('https://meet.google.com/abc-defg-hij');
     expect(r.ok && 'crearEnlaceMeet' in r.cuerpo).toBe(false);
   });
 
+  // spec 040 FR-020
+  it('un evento en una dirección se abre en «En un lugar»', () => {
+    expect(formularioDesdeEvento(evento({ tipoUbicacion: 'ADDRESS', valorUbicacion: 'Av. Lima 123' })).donde).toBe('lugar');
+  });
+
   // spec 040 FR-005
-  it('apagar el enlace automático al editar exige pegar un link o escribir un lugar', () => {
+  it('pasar a «Pegar otro enlace» al editar exige pegar un link', () => {
     const original = evento({ meet: resumen() });
 
-    const r = armarCuerpo({ ...formularioDesdeEvento(original), crearEnlaceMeet: false }, AHORA - 10 * 24 * 3600 * 1000, original);
+    const r = armarCuerpo({ ...formularioDesdeEvento(original), donde: 'enlace' }, AHORA - 10 * 24 * 3600 * 1000, original);
 
     expect(r.ok).toBe(false);
   });
@@ -155,14 +154,11 @@ describe('editar un evento que ya usa el enlace automático (FR-005)', () => {
 
 describe('los textos (FR-019, FR-021)', () => {
   // spec 040 FR-019
-  it('el interruptor, su ayuda y las dos opciones con UNA frase cada una', () => {
-    expect(ETIQUETA_CREAR_ENLACE).toBe('Crear enlace de Meet');
-    expect(AYUDA_CREAR_ENLACE.split('.').filter(Boolean)).toHaveLength(1);
-    expect(ACCESOS_DE_LA_SALA).toEqual([
-      { clave: 'ABIERTA', nombre: 'Abierta', ayuda: 'Se entra directo, sin esperar.' },
-      { clave: 'CON_PERMISO', nombre: 'Con permiso', ayuda: 'Tú admites a cada persona.' },
-    ]);
-    for (const a of ACCESOS_DE_LA_SALA) expect(a.ayuda.split('.').filter(Boolean)).toHaveLength(1);
+  it('«Dónde es» con dos opciones y la salida discreta; nada sobre quién puede entrar', () => {
+    expect(ROTULO_DONDE).toBe('Dónde es');
+    expect(OPCION_MEET).toBe('Por Meet (se crea solo)');
+    expect(OPCION_LUGAR).toBe('En un lugar');
+    expect(ETIQUETA_OTRO_ENLACE).toBe('Pegar otro enlace');
   });
 
   // spec 040 FR-019
@@ -187,10 +183,11 @@ describe('los textos (FR-019, FR-021)', () => {
   // spec 040 FR-021
   it('ningún texto habla de un límite de 60 minutos ni de que la reunión se corte: si no cortó en la prueba, no hay aviso de ningún tipo', () => {
     const todos = [
-      ETIQUETA_CREAR_ENLACE,
-      AYUDA_CREAR_ENLACE,
+      ROTULO_DONDE,
+      OPCION_MEET,
+      OPCION_LUGAR,
+      ETIQUETA_OTRO_ENLACE,
       LINEA_CADA_FECHA,
-      ...ACCESOS_DE_LA_SALA.flatMap(a => [a.nombre, a.ayuda]),
       motivoSinMeet('SIN_CUENTA'),
       motivoSinMeet('CUENTA_REVOCADA'),
     ].join(' ');

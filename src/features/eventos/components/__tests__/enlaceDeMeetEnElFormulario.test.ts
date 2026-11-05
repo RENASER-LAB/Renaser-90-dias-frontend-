@@ -1,5 +1,5 @@
 /**
- * «Crear enlace de Meet» en el formulario de eventos y la línea de la sala en el detalle (spec 040, D-321, FR-014, FR-019, FR-021, SC-007, SC-009).
+ * «Dónde es» (Meet que se crea solo, por defecto) en el formulario de eventos y la línea de la sala en el detalle (spec 040, D-321, FR-014, FR-019, FR-021, SC-007, SC-009).
  * El formulario y el detalle se montan de verdad; la red, el tema y lo pesado son dobles.
  */
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
@@ -105,69 +105,91 @@ function formulario(original: Evento | null = null, inicial = original ? formula
   );
 }
 
-describe('el formulario (FR-019, FR-014, SC-009)', () => {
+const radio = (r: ReactTestRenderer, etiqueta: string) =>
+  r.root.findAll(n => n.props.accessibilityRole === 'radio' && typeof n.props.onPress === 'function' && n.props.accessibilityLabel === etiqueta)[0];
+
+describe('el formulario (FR-019, FR-014, FR-023, SC-009; decisión del dueño del 2026-11-05)', () => {
   // spec 040 FR-014, SC-009
-  it('SC-009: si el servidor dice que no se puede, la opción NO existe y el campo del link es el de siempre', () => {
+  it('SC-009: si el servidor dice que no se puede, no hay «Dónde es» y el formulario es el de siempre (link o lugar)', () => {
     mockDisponibilidad = { sabido: true, disponibilidad: { disponible: false, motivo: 'APAGADA' } };
 
     const r = formulario();
 
-    expect(hay(r, 'Crear enlace de Meet')).toBe(false);
+    expect(hay(r, 'Dónde es')).toBe(false);
     expect(hay(r, 'Link de la reunión')).toBe(true);
+    expect(hay(r, 'O el lugar')).toBe(true);
   });
 
   // spec 040 FR-014
   it('mientras no se sabe si se puede, tampoco se ofrece (nunca una opción que después responde 409)', () => {
     mockDisponibilidad = { sabido: false, disponibilidad: { disponible: false, motivo: null } };
 
-    expect(hay(formulario(), 'Crear enlace de Meet')).toBe(false);
+    expect(hay(formulario(), 'Por Meet (se crea solo)')).toBe(false);
   });
 
-  // spec 040 FR-019
-  it('disponible: aparece el interruptor APAGADO, con el campo del link a la vista y sin la elección de acceso', () => {
+  // spec 040 FR-019, FR-023
+  it('disponible: «Por Meet (se crea solo)» viene marcada, sin campos que llenar y SIN elegir quién puede entrar', () => {
     const r = formulario();
 
-    expect(hay(r, 'Crear enlace de Meet')).toBe(true);
-    expect(hay(r, 'Renaser lo crea al guardar el evento.')).toBe(true);
-    expect(hay(r, 'Quién puede entrar')).toBe(false);
-    expect(hay(r, 'Link de la reunión')).toBe(true);
-  });
-
-  // spec 040 FR-019
-  it('encendido: el campo del link se esconde y aparece «Quién puede entrar» con «Abierta» marcada y una frase por opción', () => {
-    const r = formulario(null, { ...formularioVacio(AHORA, 'America/Lima'), crearEnlaceMeet: true });
-
+    expect(hay(r, 'Dónde es')).toBe(true);
+    expect(radio(r, 'Por Meet (se crea solo)')?.props.accessibilityState).toEqual({ checked: true });
+    expect(radio(r, 'En un lugar')?.props.accessibilityState).toEqual({ checked: false });
     expect(hay(r, 'Link de la reunión')).toBe(false);
-    expect(hay(r, 'O el lugar')).toBe(false);
-    expect(hay(r, 'Quién puede entrar')).toBe(true);
-    const radios = r.root.findAll(n => n.props.accessibilityRole === 'radio' && typeof n.props.onPress === 'function');
-    const abierta = radios.find(n => String(n.props.accessibilityLabel).startsWith('Abierta'));
-    const conPermiso = radios.find(n => String(n.props.accessibilityLabel).startsWith('Con permiso'));
-    expect(abierta?.props.accessibilityState).toEqual({ checked: true });
-    expect(conPermiso?.props.accessibilityState).toEqual({ checked: false });
-    expect(abierta?.props.accessibilityLabel).toBe('Abierta. Se entra directo, sin esperar.');
-    expect(conPermiso?.props.accessibilityLabel).toBe('Con permiso. Tú admites a cada persona.');
+    expect(hay(r, 'Dirección')).toBe(false);
+    expect(hay(r, 'Quién puede entrar')).toBe(false);
+    expect(hay(r, 'Con permiso')).toBe(false);
+    expect(hay(r, 'Abierta')).toBe(false);
+    expect(conRol(r, 'radiogroup')).toHaveLength(1);
   });
 
   // spec 040 FR-019
-  it('un evento que ya usaba el enlace sigue mostrándolo aunque el servidor ya no lo ofrezca, y dice por qué', () => {
+  it('«En un lugar» pide la dirección; «Pegar otro enlace», discreto, muestra el campo del link', () => {
+    const r = formulario();
+
+    act(() => radio(r, 'En un lugar')!.props.onPress());
+    expect(hay(r, 'Dirección')).toBe(true);
+    expect(hay(r, 'Link de la reunión')).toBe(false);
+
+    act(() => boton(r, 'Pegar otro enlace')!.props.onPress());
+    expect(hay(r, 'Link de la reunión')).toBe(true);
+    expect(hay(r, 'Dirección')).toBe(false);
+    expect(radio(r, 'Por Meet (se crea solo)')?.props.accessibilityState).toEqual({ checked: false });
+  });
+
+  // spec 040 FR-001, FR-023
+  it('guardar sin tocar nada manda el formulario con Meet: el servidor crea la sala abierta', () => {
+    const onGuardar = jest.fn();
+    const r = montar(
+      React.createElement(FormularioDelEvento, {
+        inicial: formularioVacio(AHORA, 'America/Lima'),
+        original: null,
+        error: null,
+        guardando: false,
+        onVolver: () => undefined,
+        onGuardar,
+      }),
+    );
+
+    act(() => boton(r, 'Crear evento')!.props.onPress());
+    expect((onGuardar.mock.calls[0]?.[0] as { donde: string }).donde).toBe('meet');
+  });
+
+  // spec 040 FR-019
+  it('un evento que ya usaba el enlace sigue en «Por Meet» aunque el servidor ya no lo ofrezca, y dice por qué', () => {
     mockDisponibilidad = { sabido: true, disponibilidad: { disponible: false, motivo: 'CUENTA_REVOCADA' } };
-    const original = evento({ meet: { estado: 'CREADO', acceso: 'CON_PERMISO', accesoAplicado: true, mensaje: null, fechasConSala: 1, fechasConProblema: 0 } });
+    const original = evento({ meet: { estado: 'CREADO', accesoAplicado: true, mensaje: null, fechasConSala: 1, fechasConProblema: 0 } });
 
     const r = formulario(original);
 
-    expect(hay(r, 'Crear enlace de Meet')).toBe(true);
+    expect(radio(r, 'Por Meet (se crea solo)')?.props.accessibilityState).toEqual({ checked: true });
     expect(hay(r, 'Hay que volver a conectar la cuenta de Google')).toBe(true);
-    const conPermiso = r.root.findAll(n => n.props.accessibilityRole === 'radio').find(n => String(n.props.accessibilityLabel).startsWith('Con permiso'));
-    expect(conPermiso?.props.accessibilityState).toEqual({ checked: true });
   });
 
   // spec 040 FR-021
-  it('FR-021: el formulario con el enlace encendido no dice nada de 60 minutos ni de cortes', () => {
-    const r = formulario(null, { ...formularioVacio(AHORA, 'America/Lima'), crearEnlaceMeet: true });
+  it('FR-021: el formulario con Meet no dice nada de 60 minutos ni de cortes', () => {
+    const r = formulario();
 
     expect(textos(r).join(' ')).not.toMatch(/60 min|sesenta|una hora|se corta|límite de tiempo/i);
-    expect(conRol(r, 'radiogroup')).toHaveLength(1);
   });
 });
 
@@ -194,7 +216,7 @@ function detalle(e: Evento, puedeGestionar: boolean, onEditar = jest.fn(), onSal
   };
 }
 
-const FALLIDO = { estado: 'FALLIDO', acceso: 'ABIERTA' as const, accesoAplicado: false, mensaje: 'No pudimos crear el enlace de Meet.', fechasConSala: 0, fechasConProblema: 1 };
+const FALLIDO = { estado: 'FALLIDO', accesoAplicado: false, mensaje: 'No pudimos crear el enlace de Meet.', fechasConSala: 0, fechasConProblema: 1 };
 
 describe('el detalle del evento (FR-019, FR-008, SC-007)', () => {
   // spec 040 SC-007

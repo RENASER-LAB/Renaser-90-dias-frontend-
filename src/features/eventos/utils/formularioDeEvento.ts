@@ -1,5 +1,4 @@
-import type { AccesoDeLaSala, Evento, ReglaDeAviso } from '../types/eventos.types';
-import { ACCESO_POR_DEFECTO } from './enlaceDeMeet';
+import type { Evento, ReglaDeAviso } from '../types/eventos.types';
 import { esLinkSeguro, tipoDeUbicacionDelLink } from './linkDelEvento';
 import { fechaEnZona, horaEnZona, instanteEnZona, zonaDelTelefono } from './zonaHoraria';
 
@@ -14,9 +13,11 @@ import { fechaEnZona, horaEnZona, instanteEnZona, zonaDelTelefono } from './zona
  * dirección lleva texto, y la llamada interna o el webinar no llevan nada. La app pide **un link o un
  * lugar**; el tipo sale solo del link (Meet → `MEET`, Zoom → `ZOOM`, Drive y el resto → `LINK`).
  *
- * **Enlace de Meet automático (spec 040).** Con «Crear enlace de Meet» encendido no se pega ningún link: el cuerpo lleva `crearEnlaceMeet`
- * y `accesoSalaMeet`, el tipo es `MEET` y NO lleva `locationValue` (pegar uno y pedir el automático a la vez es un 400 del servidor,
- * FR-004). Al editar un evento que ya lo tiene hay que seguir mandándolos, o el servidor lo entendería como «ahora es un link pegado».
+ * **Enlace de Meet automático (spec 040; decisión del dueño del 2026-11-05).** Un evento nuevo es «Por Meet (se crea solo)» de entrada
+ * (`donde: 'meet'`): no se pega ningún link, el cuerpo lleva `crearEnlaceMeet`, el tipo es `MEET` y NO lleva `locationValue` (pegar uno y
+ * pedir el automático a la vez es un 400 del servidor, FR-004). La sala es siempre abierta: no se manda ni se elige quién entra. Al editar
+ * un evento que ya lo tiene hay que seguir mandándolo, o el servidor lo entendería como «ahora es un link pegado». «En un lugar» pide la
+ * dirección y «enlace» es la salida discreta para pegar otro link (Zoom, Drive…).
  */
 
 export const MAX_TITULO = 30;
@@ -57,10 +58,21 @@ export interface FormularioDeEvento {
   tipoEvento: string;
   notificarAlCrear: boolean;
   zona: string;
-  /** Spec 040: que el servidor cree la sala de Meet. Apagado por defecto: solo se ofrece si el servidor dice que se puede. */
-  crearEnlaceMeet: boolean;
-  /** Spec 040: quién puede entrar a esa sala. */
-  accesoSalaMeet: AccesoDeLaSala;
+  /**
+   * Spec 040: dónde es. `meet` (lo que viene marcado) = el servidor crea la sala; `lugar` = una dirección; `enlace` = un link pegado.
+   * Si el servidor no ofrece el Meet automático, la pantalla lo guarda como `enlace` (`dondeQueSeGuarda`), el formulario de siempre.
+   */
+  donde: DondeEs;
+}
+
+export type DondeEs = 'meet' | 'lugar' | 'enlace';
+
+/**
+ * Lo que de verdad se guarda: `meet` solo si el servidor puede crear la sala (o el evento ya la tenía); si no, el formulario de siempre
+ * (un link o un lugar). Así nunca se pide una sala que después responde 409.
+ */
+export function dondeQueSeGuarda(donde: DondeEs, meetPosible: boolean): DondeEs {
+  return meetPosible ? donde : 'enlace';
 }
 
 export function formularioVacio(ahoraMs: number, zona: string = zonaDelTelefono()): FormularioDeEvento {
@@ -77,8 +89,7 @@ export function formularioVacio(ahoraMs: number, zona: string = zonaDelTelefono(
     tipoEvento: 'SESION_ESPECIAL',
     notificarAlCrear: true,
     zona,
-    crearEnlaceMeet: false,
-    accesoSalaMeet: ACCESO_POR_DEFECTO,
+    donde: 'meet',
   };
 }
 
@@ -108,8 +119,7 @@ export function formularioDesdeEvento(evento: Evento): FormularioDeEvento {
     tipoEvento: evento.tipoEvento ?? 'SESION_ESPECIAL',
     notificarAlCrear: evento.notificarAlCrear,
     zona,
-    crearEnlaceMeet: conEnlaceAutomatico,
-    accesoSalaMeet: evento.meet?.acceso ?? ACCESO_POR_DEFECTO,
+    donde: conEnlaceAutomatico ? 'meet' : esDireccion ? 'lugar' : 'enlace',
   };
 }
 
@@ -147,9 +157,13 @@ export function armarCuerpo(
   const link = form.link.trim();
   const lugar = form.lugar.trim();
   let ubicacion: { locationType: string; locationValue: string | null };
-  if (form.crearEnlaceMeet) {
+  if (form.donde === 'meet') {
     // Spec 040, FR-004: o el enlace automático o uno pegado, nunca los dos. El link y el lugar que hubiera escritos no viajan.
     ubicacion = { locationType: 'MEET', locationValue: null };
+  } else if (form.donde === 'lugar') {
+    if (!lugar) return { ok: false, error: 'Escribe la dirección del lugar.' };
+    if (lugar.length > MAX_UBICACION) return { ok: false, error: 'El lugar es demasiado largo.' };
+    ubicacion = { locationType: 'ADDRESS', locationValue: lugar };
   } else if (link) {
     if (!esLinkSeguro(link)) return { ok: false, error: 'El link tiene que empezar con https://' };
     if (link.length > MAX_UBICACION) return { ok: false, error: 'El link es demasiado largo.' };
@@ -176,9 +190,9 @@ export function armarCuerpo(
     targetRoles: original?.audiencia === 'ROLES' ? original.rolesDestino : [],
     notifyOnCreate: form.notificarAlCrear,
   };
-  if (form.crearEnlaceMeet) {
+  if (form.donde === 'meet') {
+    // La sala siempre es abierta (decisión del dueño del 2026-11-05): no viaja ningún acceso.
     cuerpo.crearEnlaceMeet = true;
-    cuerpo.accesoSalaMeet = form.accesoSalaMeet;
   }
   // Sin `reminderRules` el backend usa los avisos por defecto del tipo. Si el evento tenía avisos
   // propios, se reenvían: omitirlos al editar los borraría.

@@ -22,9 +22,6 @@ export type ReglaDeAviso =
   | { tipo: 'diasAntes'; dias: number }
   | { tipo: 'horaDelDia'; hora: string /* HH:mm */ };
 
-/** Quién puede entrar a la sala de Meet que crea el servidor (spec 040): se elige en cada evento. */
-export type AccesoDeLaSala = 'ABIERTA' | 'CON_PERMISO';
-
 /**
  * Cómo va la sala de Meet de un evento que pidió el enlace automático (spec 040). Solo lo manda el servidor a ADMIN y ALCHEMIST
  * (en el detalle de un evento): para cualquier otra persona, y para un evento con el link pegado a mano, no existe.
@@ -34,8 +31,7 @@ export type AccesoDeLaSala = 'ABIERTA' | 'CON_PERMISO';
  */
 export interface ResumenDeMeet {
   estado: string;
-  acceso: AccesoDeLaSala;
-  /** Google confirmó que la sala quedó con el acceso elegido. */
+  /** Google confirmó que la sala quedó abierta (la sala de Renaser siempre es abierta: decisión del dueño del 2026-11-05). */
   accesoAplicado: boolean;
   mensaje: string | null;
   fechasConSala: number;
