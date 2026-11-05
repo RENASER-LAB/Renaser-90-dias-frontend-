@@ -1,4 +1,4 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { almacen } from './almacenamiento';
 
 import { ApiError } from '../../../services/http/apiClient';
 import { avisarHabitoCumplido } from '../../habits/eventos/habitoCumplido';
@@ -26,7 +26,7 @@ const PREFIJO = 'renaser.carreras.cola.';
 
 async function leerCola(cuentaId: string): Promise<EntradaDeLaCola[]> {
   try {
-    const crudo = await AsyncStorage.getItem(PREFIJO + cuentaId);
+    const crudo = await almacen().getItem(PREFIJO + cuentaId);
     const lista = crudo ? (JSON.parse(crudo) as EntradaDeLaCola[]) : [];
     return Array.isArray(lista) ? lista.filter(e => e && typeof e.carreraId === 'string' && e.cuentaId === cuentaId) : [];
   } catch {
@@ -36,8 +36,8 @@ async function leerCola(cuentaId: string): Promise<EntradaDeLaCola[]> {
 
 async function guardarCola(cuentaId: string, cola: EntradaDeLaCola[]): Promise<void> {
   try {
-    if (cola.length === 0) await AsyncStorage.removeItem(PREFIJO + cuentaId);
-    else await AsyncStorage.setItem(PREFIJO + cuentaId, JSON.stringify(cola));
+    if (cola.length === 0) await almacen().removeItem(PREFIJO + cuentaId);
+    else await almacen().setItem(PREFIJO + cuentaId, JSON.stringify(cola));
   } catch {
     // Se reintenta la próxima vez.
   }

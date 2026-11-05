@@ -1,3 +1,4 @@
+import { describe, expect, it } from '@jest/globals';
 import type { PuntoGps } from '../../types/carrera.types';
 import { distanciaM, puntoDestino } from '../geo';
 import {
@@ -75,6 +76,21 @@ describe('motor de la carrera: distancia con el GPS filtrado', () => {
   it('sin sensor de pasos, igual cuenta lo que se camina con el GPS', () => {
     const e = aplicar(nueva(false), caminata(61, 1.4));
     expect(e.distanciaM).toBeGreaterThan(70);
+  });
+});
+
+describe('los km oficiales son los del GPS', () => {
+  // spec 042 FR-034
+  it('los pasos solos (sin GPS que se mueva) no suman distancia: solo mueven al avatar', () => {
+    let e = aplicar(nueva(true), caminata(5, 0));
+    const antes = e.distanciaM;
+    const ultimo = e.ultimoCrudo!;
+    for (let i = 1; i <= 5; i++) {
+      e = alPasos(e, 2, ultimo.t + i * 1000);
+      e = alPunto(e, { ...ultimo, t: ultimo.t + i * 1000, precision: 5, velocidad: 0 }).estado;
+    }
+    expect(e.pasos).toBe(10);
+    expect(e.distanciaM).toBe(antes);
   });
 });
 

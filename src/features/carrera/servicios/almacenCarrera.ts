@@ -1,4 +1,4 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { almacen } from './almacenamiento';
 
 import { PREFERENCIAS_POR_DEFECTO, type EstadoDeLaCarrera, type PreferenciasDeLaCarrera } from '../types/carrera.types';
 
@@ -16,7 +16,7 @@ const PREFIJO_PREFERENCIAS = 'renaser.carrera.preferencias.';
 
 export async function leerCarreraEnCurso(): Promise<EstadoDeLaCarrera | null> {
   try {
-    const crudo = await AsyncStorage.getItem(CLAVE_CARRERA_EN_CURSO);
+    const crudo = await almacen().getItem(CLAVE_CARRERA_EN_CURSO);
     if (!crudo) return null;
     const e = JSON.parse(crudo) as EstadoDeLaCarrera;
     return e && e.version === 1 && typeof e.carreraId === 'string' && typeof e.cuentaId === 'string' ? e : null;
@@ -27,7 +27,7 @@ export async function leerCarreraEnCurso(): Promise<EstadoDeLaCarrera | null> {
 
 export async function guardarCarreraEnCurso(e: EstadoDeLaCarrera): Promise<void> {
   try {
-    await AsyncStorage.setItem(CLAVE_CARRERA_EN_CURSO, JSON.stringify(e));
+    await almacen().setItem(CLAVE_CARRERA_EN_CURSO, JSON.stringify(e));
   } catch {
     // Sin poder guardar, la carrera sigue en memoria: solo se perdería si Android mata la app.
   }
@@ -35,7 +35,7 @@ export async function guardarCarreraEnCurso(e: EstadoDeLaCarrera): Promise<void>
 
 export async function borrarCarreraEnCurso(): Promise<void> {
   try {
-    await AsyncStorage.removeItem(CLAVE_CARRERA_EN_CURSO);
+    await almacen().removeItem(CLAVE_CARRERA_EN_CURSO);
   } catch {
     // Nada que hacer.
   }
@@ -43,7 +43,7 @@ export async function borrarCarreraEnCurso(): Promise<void> {
 
 export async function leerPreferencias(cuentaId: string): Promise<PreferenciasDeLaCarrera> {
   try {
-    const crudo = await AsyncStorage.getItem(PREFIJO_PREFERENCIAS + cuentaId);
+    const crudo = await almacen().getItem(PREFIJO_PREFERENCIAS + cuentaId);
     if (!crudo) return PREFERENCIAS_POR_DEFECTO;
     const p = JSON.parse(crudo) as Partial<PreferenciasDeLaCarrera>;
     return {
@@ -58,7 +58,7 @@ export async function leerPreferencias(cuentaId: string): Promise<PreferenciasDe
 
 export async function guardarPreferencias(cuentaId: string, p: PreferenciasDeLaCarrera): Promise<void> {
   try {
-    await AsyncStorage.setItem(PREFIJO_PREFERENCIAS + cuentaId, JSON.stringify(p));
+    await almacen().setItem(PREFIJO_PREFERENCIAS + cuentaId, JSON.stringify(p));
   } catch {
     // Se quedan en memoria esta vez.
   }

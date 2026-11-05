@@ -17,6 +17,7 @@ jest.mock('../../../../services/http/apiClient', () => {
   return { ApiError, apiFetch: jest.fn() };
 });
 
+import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { apiFetch, ApiError } from '../../../../services/http/apiClient';
@@ -37,7 +38,8 @@ import {
 } from '../carreraEnVivo';
 import { encolarYEnviar, estadoDelEnvio, procesarCola } from '../colaDeCarreras';
 
-const fetchFalso = apiFetch as jest.Mock;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const fetchFalso = apiFetch as unknown as jest.Mock<(...a: any[]) => Promise<any>>;
 const ORIGEN = { lat: -12.0464, lng: -77.0428 };
 const T0 = 1_800_000_000_000;
 
@@ -62,7 +64,7 @@ const RESPUESTA = {
 beforeEach(async () => {
   reiniciarParaPruebas();
   fetchFalso.mockReset();
-  (avisarHabitoCumplido as jest.Mock).mockReset();
+  (avisarHabitoCumplido as unknown as jest.Mock).mockReset();
   await AsyncStorage.clear();
 });
 
@@ -78,7 +80,7 @@ describe('una carrera no llama al servidor mientras dura', () => {
     await encolarYEnviar('cuenta', cuerpoDeLaCarrera(final!, T0 + 602_000, { guardarRuta: true }));
     expect(fetchFalso).toHaveBeenCalledTimes(1);
     expect(fetchFalso.mock.calls[0][0]).toBe('/api/v1/carreras');
-    expect(fetchFalso.mock.calls[0][1].body.carreraId).toBe('6f1c2c1e-3b1a-4c0a-9a55-2f0f8d1d7a10');
+    expect((fetchFalso.mock.calls[0][1] as { body: { carreraId: string } }).body.carreraId).toBe('6f1c2c1e-3b1a-4c0a-9a55-2f0f8d1d7a10');
     // spec 042 FR-027: cerrar el hábito avisa el cumplido de siempre.
     expect(avisarHabitoCumplido).toHaveBeenCalledWith(expect.objectContaining({ registroId: 'reg-1', puntosOtorgados: 8 }));
     expect(estadoDelEnvio('6f1c2c1e-3b1a-4c0a-9a55-2f0f8d1d7a10')?.tipo).toBe('respondida');
@@ -119,7 +121,7 @@ describe('sin red, la carrera espera en el teléfono', () => {
       Date.now = ahora;
     }
     expect(fetchFalso).toHaveBeenCalledTimes(2);
-    expect(fetchFalso.mock.calls[1][1].body).toEqual(fetchFalso.mock.calls[0][1].body); // mismos bytes: misma huella
+    expect((fetchFalso.mock.calls[1][1] as { body: unknown }).body).toEqual((fetchFalso.mock.calls[0][1] as { body: unknown }).body); // mismos bytes: misma huella
     expect(estadoDelEnvio('b')?.tipo).toBe('respondida');
     expect(avisarHabitoCumplido).not.toHaveBeenCalled(); // una respuesta repetida no vuelve a celebrar
   });

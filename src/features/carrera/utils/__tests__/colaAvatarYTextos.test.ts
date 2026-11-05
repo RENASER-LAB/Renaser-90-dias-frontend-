@@ -1,3 +1,4 @@
+import { describe, expect, it } from '@jest/globals';
 import type { CuerpoDeLaCarrera, RespuestaDeLaCarrera } from '../../types/carrera.types';
 import { PREFERENCIAS_POR_DEFECTO } from '../../types/carrera.types';
 import { agregarALaCola, aplicarDesenlace, desenlaceDelError, esperaTrasIntentos, tocaIntentar } from '../colaDeEnvio';
@@ -5,7 +6,7 @@ import { alDarPasos, alPuntoGps, AVATAR_INICIAL, avatarCamina, figuraDelAvatar, 
 import { distanciaM, puntoDestino } from '../geo';
 import { seOfreceLaCarrera } from '../entradaDeLaCarrera';
 import { esUuid, nuevaCarreraId } from '../idDeLaCarrera';
-import { fraseDelAviso, lineaDelEnvio, tocaAviso } from '../textosDeLaCarrera';
+import { fraseDelAviso, lineaDeLaNotificacion, lineaDelEnvio, tocaAviso } from '../textosDeLaCarrera';
 import { detalleDeLosKm } from '../../../pasos/utils/textosDePasos';
 import { textosDeLaMedicion } from '../../../pasos/utils/medicionDeLaFicha';
 
@@ -141,10 +142,17 @@ describe('textos y voz', () => {
 describe('lo que dicen Training y las fichas de un día con carreras', () => {
   // spec 042 FR-044
   it('el origen GPS se nombra «Carrera con GPS»', () => {
-    expect(detalleDeLosKm(6.2, 'GPS', null)).toBe('6,2 km · Carrera con GPS');
+    expect(detalleDeLosKm(6.2, 'GPS', null)).toMatch(/^6,2\skm · Carrera con GPS$/);
     expect(
       textosDeLaMedicion({ valor: 6.2, origen: 'GPS', pasos: null, fuente: null, dispositivo: null, leidaEn: null, porRevisar: false }).principal,
-    ).toBe('6,2 km · Carrera con GPS');
+    ).toMatch(/^6,2\skm · Carrera con GPS$/);
+  });
+});
+
+describe('la notificación fija', () => {
+  // spec 042 FR-011
+  it('dice km, tiempo y ritmo', () => {
+    expect(lineaDeLaNotificacion(3250, '00:21:04', 389)).toBe('3,25 km · 00:21:04 · 6:29 min/km');
   });
 });
 

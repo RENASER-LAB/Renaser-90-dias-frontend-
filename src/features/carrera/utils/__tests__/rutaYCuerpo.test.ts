@@ -1,3 +1,4 @@
+import { describe, expect, it } from '@jest/globals';
 import { crearCarrera, alPunto } from '../motorDeCarrera';
 import { cuerpoDeLaCarrera } from '../cuerpoDeLaCarrera';
 import { longitudM, puntoDestino } from '../geo';

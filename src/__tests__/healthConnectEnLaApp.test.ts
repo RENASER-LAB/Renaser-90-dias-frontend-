@@ -130,8 +130,25 @@ describe('app.json', () => {
   // spec 037 FR-001
   it('no suma Recording API, Google Fit ni un módulo propio de pasos (cambio del dueño del 2026-11-02)', () => {
     const todo = leer('package.json') + leer('app.json');
-    expect(todo).not.toMatch(/play-services-fitness|expo-sensors|react-native-google-fit|renaser-pasos/);
+    // `expo-sensors` sí está desde la spec 042 (2026-11-05), pero solo para el podómetro del avatar de la carrera con GPS: los km del
+    // hábito de los pasos siguen saliendo SOLO de Health Connect (lo que cuida esta prueba). Que no se use para eso lo vigila la de abajo.
+    expect(todo).not.toMatch(/play-services-fitness|react-native-google-fit|renaser-pasos/);
     expect(fs.existsSync(path.join(raiz, 'modules', 'renaser-pasos'))).toBe(false);
+  });
+
+  // spec 037 FR-001, spec 042 FR-031
+  it('el podómetro de expo-sensors solo lo usa la carrera con GPS, nunca los km de los pasos', () => {
+    const pasos = path.join(raiz, 'src', 'features', 'pasos');
+    const archivos: string[] = [];
+    const recorrer = (dir: string) => {
+      for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+        const p = path.join(dir, e.name);
+        if (e.isDirectory()) recorrer(p);
+        else if (/\.tsx?$/.test(e.name)) archivos.push(p);
+      }
+    };
+    recorrer(pasos);
+    for (const a of archivos) expect(fs.readFileSync(a, 'utf8')).not.toMatch(/expo-sensors/);
   });
 });
 
