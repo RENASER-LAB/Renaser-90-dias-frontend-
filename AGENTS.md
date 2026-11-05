@@ -2390,6 +2390,34 @@ el mismo en 1.5.0, 1.6.0 y 1.7.1. Lo que cambia y nada más (solo JavaScript: `e
 * **Pruebas:** `reducirFoto` (carga achicada, reintentos, error final, `release`, web) y `elegirFotoCuadrada` (ajustada).
 * **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
 
+## Corrección — 2026-11-05 — «Kilómetros diarios»: aceptar los permisos de Health Connect ya no depende de una sola respuesta (issue #127)
+
+Un usuario real (Play Store, 1.7.1 y 1.7.2) tocaba «Cuenta tus pasos solo» → «Conectar», aceptaba TODOS los permisos de Health Connect y la
+pantalla de permisos volvía a salir, sin quedar nunca conectado. **La causa exacta en ese teléfono NO se pudo reproducir ni confirmar**: en
+un emulador Android 37 con Health Connect real el flujo completo funciona. Lo comprobado y lo que se endureció (solo JavaScript, sin
+dependencias ni código nativo; `app.json`, el manifiesto y `plugins/withHealthConnect.js` ya estaban bien: están los dos permisos, la
+actividad de «por qué pedimos esto» y el alias de «ver uso de permisos» en el APK 1.7.2 publicado):
+* **La app dependía de UNA sola respuesta del diálogo** (`requestPermission`), y la conexión solo se anotaba si esa respuesta llegaba bien. Dos
+  caminos la perdían sin avisar: (1) Android cierra la app con el diálogo abierto (poca memoria, ahorro de batería, `singleTask` + el
+  proceso que muere): la persona acepta, el sistema GUARDA el permiso, pero la respuesta se pierde con el proceso; al volver la app no se
+  había anotado conectada y volvía a ofrecer «Conectar» (medido en el emulador: permiso concedido en el sistema, app «sin conectar»). (2) La
+  librería lanza o devuelve vacío: `pedirPermisosDeSalud` se tragaba el error sin dejar nada en el registro.
+* **`pedirPermisosDeSalud`** (`pasos/services/saludConectada`): si el sistema ya tiene el permiso de pasos no abre el diálogo; si el diálogo
+  no devuelve los pasos (vacío, error o se perdió), le pregunta al SISTEMA (`getGrantedPermissions`) antes de decir que no; y un fallo queda en
+  el registro de la app (`[pasos] …`). `permisosDeSalud` confirma un «faltan» con dos relecturas más (350 ms entre una y otra) para que un
+  teléfono lento no «pierda» los pasos por una lectura vacía. Sigue pidiéndose SOLO la lectura de pasos y de distancia (spec 037 FR-003).
+* **El intento de conectar se anota ANTES de abrir el diálogo** (`pasos/services/conexionDeLosPasos`: `renaser.pasos.intento.<cuenta>`, vale 15
+  minutos, se borra al terminar). Si la app vuelve sin conexión anotada, con un intento reciente y el permiso de pasos ya concedido en el
+  sistema, `usePasosDelDia` termina de conectar sola (al montar y al volver a primer plano). **Sin un intento reciente no se conecta nada
+  solo**, aunque el permiso exista: el consentimiento es el toque en «Conectar» (el que pide Google Play, spec 037).
+* **No cambian**: ningún diseño ni texto, la lectura de pasos, el registro de los km, «Desconectar», ni el backend.
+* **Comprobado en el emulador** (Pixel 6, API 37, debug local, sin cuentas ni producción): camino normal (acepta todo → conectada) y la app
+  muerta con el diálogo abierto (acepta todo → al reabrir queda conectada sin otro toque). **Sin comprobar:** el teléfono real del reporte; si
+  el bucle vuelve, el registro ahora dice qué falló (`[pasos] falló el diálogo de permisos…`).
+* **Pruebas:** Jest `saludConectada` (qué se pide, cuándo cuenta como concedido, relecturas, errores), `intentoDeConectar` y las nuevas de
+  `usePasosDelDia` (el intento antes del diálogo, la app muerta, sin intento no conecta, sin permiso tampoco).
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
+
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
 Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel especializado en React Native, Expo y TypeScript. Al crear, refactorizar o modificar cualquier pantalla o componente, debes cumplir OBLIGATORIAMENTE con los siguientes estándares:

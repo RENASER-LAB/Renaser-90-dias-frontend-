@@ -57,22 +57,51 @@ function tienePasos(permisos: readonly { accessType: string; recordType: string 
   return permisos.some(p => p.accessType === 'read' && p.recordType === 'Steps');
 }
 
-/** `otorgados` si la persona dejó leer los pasos. La distancia es un extra: sin ella se estiman los km con los pasos. */
-export async function permisosDeSalud(): Promise<'otorgados' | 'faltan'> {
-  try {
-    return tienePasos(await getGrantedPermissions()) ? 'otorgados' : 'faltan';
-  } catch {
-    return 'faltan';
+const esperar = (ms: number) => new Promise<void>(resolver => setTimeout(resolver, ms));
+
+/** Cuántas veces más se vuelve a preguntar al sistema antes de decir «faltan», y cuánto se espera entre una y otra. */
+export const RELECTURAS_DEL_PERMISO = 2;
+export const ESPERA_ENTRE_RELECTURAS_MS = 350;
+
+/**
+ * `otorgados` si el sistema dice que la persona dejó leer los pasos. La distancia es un extra: sin ella se estiman los km con los pasos.
+ *
+ * El sistema es la verdad (no lo que contestó el diálogo): en algunos teléfonos el permiso aparece unos instantes después de volver
+ * del diálogo, así que un «faltan» se comprueba `reintentos` veces más antes de darlo por bueno. `reintentos: 0` es una sola lectura.
+ */
+export async function permisosDeSalud(
+  { reintentos = RELECTURAS_DEL_PERMISO, esperaMs = ESPERA_ENTRE_RELECTURAS_MS }: { reintentos?: number; esperaMs?: number } = {},
+): Promise<'otorgados' | 'faltan'> {
+  for (let intento = 0; intento <= reintentos; intento += 1) {
+    try {
+      if (tienePasos(await getGrantedPermissions())) return 'otorgados';
+    } catch (error) {
+      console.warn('[pasos] no se pudo leer qué permisos de Health Connect hay:', error);
+    }
+    if (intento < reintentos) await esperar(esperaMs);
   }
+  return 'faltan';
 }
 
-/** Abre la pantalla de permisos del sistema (Pasos y Distancia, solo lectura). `true` si dejó leer los pasos. */
+/**
+ * Abre la pantalla de permisos del sistema (Pasos y Distancia, solo lectura). `true` si la persona dejó leer los pasos.
+ *
+ * Tres cosas de robustez (issue #127, «acepto todos los permisos y vuelve a pedirlos»):
+ * 1. Si el sistema ya tiene el permiso no se abre el diálogo: se da por concedido.
+ * 2. Lo que contesta el diálogo no es lo único que cuenta: si viene vacío, falla o se pierde, se le pregunta al sistema, que es
+ *    quien guarda el permiso (`getGrantedPermissions`), antes de decir que no.
+ * 3. Un fallo ya no se traga en silencio: queda en el registro de la app con su causa.
+ */
 export async function pedirPermisosDeSalud(): Promise<boolean> {
+  if ((await soporteDeSalud()) !== 'disponible') return false;
+  if ((await permisosDeSalud({ reintentos: 0 })) === 'otorgados') return true;
   try {
-    return tienePasos(await requestPermission([...PERMISOS_DE_LECTURA]));
-  } catch {
-    return false;
+    if (tienePasos(await requestPermission([...PERMISOS_DE_LECTURA]))) return true;
+    console.warn('[pasos] el diálogo de Health Connect no devolvió el permiso de pasos; se comprueba con el sistema');
+  } catch (error) {
+    console.warn('[pasos] falló el diálogo de permisos de Health Connect:', error);
   }
+  return (await permisosDeSalud()) === 'otorgados';
 }
 
 /** La pantalla de Health Connect: ahí se quita el permiso o se cambia qué fuente va primero. */

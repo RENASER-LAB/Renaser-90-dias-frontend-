@@ -11,7 +11,14 @@ import {
   permisosDeSalud,
   soporteDeSalud,
 } from '../services/saludConectada';
-import { borrarLaConexion, guardarLaConexion, leerLaConexion } from '../services/conexionDeLosPasos';
+import {
+  anotarElIntento,
+  borrarElIntento,
+  borrarLaConexion,
+  guardarLaConexion,
+  hayUnIntentoReciente,
+  leerLaConexion,
+} from '../services/conexionDeLosPasos';
 import type { LecturaDelDia } from '../types/pasos.types';
 import { armarLaLectura, cuerpoParaElServidor } from '../utils/lecturaDelDia';
 import { TEXTOS_DE_PASOS } from '../utils/textosDePasos';
@@ -162,6 +169,40 @@ export function usePasosDelDia({
     if (soporte === 'disponible' && conectado === true) void refrescarPermisos();
   }, [soporte, conectado, refrescarPermisos]);
 
+  /** Deja anotada la conexión de esta cuenta (lo que hace «Conectar» al terminar bien) y borra la nota del intento. */
+  const quedarConectada = useCallback(async (): Promise<void> => {
+    if (!cuentaId) return;
+    const ahora = new Date();
+    await guardarLaConexion(cuentaId, ahora);
+    await borrarElIntento(cuentaId);
+    if (montado.current) {
+      setConectadoEn(ahora.toISOString());
+      setPermisos('otorgados');
+    }
+    ultimaLecturaMs.current = 0;
+  }, [cuentaId]);
+
+  /**
+   * Si la persona tocó «Conectar» hace poco, el sistema ya tiene el permiso y la conexión no quedó anotada (Android cerró la app con
+   * el diálogo abierto y la respuesta se perdió con ella), se termina de conectar sin pedir nada otra vez. Sin intento reciente no se
+   * conecta nada solo, aunque el permiso exista: el consentimiento es el toque en «Conectar».
+   */
+  const reconciliandoElIntento = useRef(false);
+  const reconciliarElIntento = useCallback(async (): Promise<void> => {
+    if (!cuentaId || reconciliandoElIntento.current) return;
+    reconciliandoElIntento.current = true;
+    try {
+      if (!(await hayUnIntentoReciente(cuentaId, new Date()))) return;
+      if ((await permisosDeSalud({ reintentos: 0 })) !== 'otorgados') return;
+      await quedarConectada();
+    } finally {
+      reconciliandoElIntento.current = false;
+    }
+  }, [cuentaId, quedarConectada]);
+  useEffect(() => {
+    if (soporte === 'disponible' && conectado === false) void reconciliarElIntento();
+  }, [soporte, conectado, reconciliarElIntento]);
+
   /**
    * Lee Health Connect. Con `forzar` es una acción de la persona («Actualizar», «Registrar»): ignora el enfriamiento y el
    * permiso que todavía no se hubiera reflejado en un render. Devuelve la lectura, o `null` si no se pudo o no hacía falta.
@@ -200,26 +241,25 @@ export function usePasosDelDia({
       if (estado !== 'active') return;
       if (vivo.current.habito && soporte === 'disponible' && conectado === true) {
         void refrescarPermisos().then(() => leer(false));
+      } else if (soporte === 'disponible' && conectado === false) {
+        void reconciliarElIntento();
       }
     });
     return () => suscripcion.remove();
-  }, [activo, soporte, conectado, refrescarPermisos, leer]);
+  }, [activo, soporte, conectado, refrescarPermisos, leer, reconciliarElIntento]);
 
   const conectar = useCallback(async (): Promise<boolean> => {
     if (!cuentaId) return false;
+    // Antes del diálogo: si Android cierra la app mientras está abierto, esta nota permite terminar de conectar al volver.
+    await anotarElIntento(cuentaId, new Date());
     if (!(await pedirPermisosDeSalud())) {
+      await borrarElIntento(cuentaId);
       if (montado.current) setPermisos('faltan');
       return false;
     }
-    const ahora = new Date();
-    await guardarLaConexion(cuentaId, ahora);
-    if (montado.current) {
-      setConectadoEn(ahora.toISOString());
-      setPermisos('otorgados');
-    }
-    ultimaLecturaMs.current = 0;
+    await quedarConectada();
     return true;
-  }, [cuentaId]);
+  }, [cuentaId, quedarConectada]);
 
   const actualizar = useCallback(async (): Promise<void> => {
     // El permiso pudo cambiar en Health Connect mientras la app estaba abierta: se vuelve a preguntar y, si lo hay, se lee.
