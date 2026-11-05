@@ -13,6 +13,7 @@ import { useFuncionalidad } from '../../plataforma/estado/useFuncionalidad';
 import { CLAVES } from '../../plataforma/utils/clavesDeLaApp';
 import { lineaDelAutor } from '../utils/lineaDelAutor';
 import { accionesSoloConIconos } from '../utils/accionesDelMuro';
+import { cantidadDeComentarios } from '../utils/filaCompactaDelMuro';
 import type { FotoMuroNormalizada } from '../utils/normalizarImagen';
 import { PROPORCION_POR_DEFECTO } from '../utils/proporcionImagen';
 import { FotoMuro } from './FotoMuro';
@@ -273,7 +274,7 @@ function TarjetaPublicacionMuroBase({
             style={{ minHeight: 48, justifyContent: 'center' }}
           >
             <Text style={[t.small, styles.cifras, { color: c.textSoft }]}>
-              {post.comments.length === 1 ? '1 comentario' : `${post.comments.length} comentarios`}
+              {textoDeComentarios(cantidadDeComentarios(post))}
             </Text>
           </Pressable>
         </View>
@@ -718,3 +719,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 });
+
+/* El resumen cuenta los comentarios como la fila compacta (#130): el feed trae `commentCount` pero no la lista, que se lee
+   al abrir los comentarios. Con `post.comments.length` la publicación abierta decía «0 comentarios» de una que tiene uno. */
+export function textoDeComentarios(cantidad: number): string {
+  return cantidad === 1 ? '1 comentario' : `${cantidad} comentarios`;
+}

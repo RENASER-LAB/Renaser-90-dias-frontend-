@@ -8,22 +8,26 @@ import { BotonPrincipal, BotonSecundario } from '../../../components/Legible';
 import { useTheme } from '../../../theme/ThemeContext';
 import { CursoPortada } from '../../academy/components/CursoPortada';
 import { HoraPickerModal } from '../../habits/components/HoraPickerModal';
+import { useDisponibilidadDeMeet } from '../hooks/useDisponibilidadDeMeet';
 import type { Evento } from '../types/eventos.types';
 import {
   DURACIONES_MINUTOS,
   MAX_DESCRIPCION,
   MAX_TITULO,
   TIPOS_DE_EVENTO,
+  dondeQueSeGuarda,
   type FormularioDeEvento,
 } from '../utils/formularioDeEvento';
+import { lineaDeLaSerie, motivoSinMeet } from '../utils/enlaceDeMeet';
 import { elegirPortada, type PortadaElegida } from '../utils/portadaDelEvento';
 import { duracionEnPalabras, diaRelativo } from '../utils/textosDeFecha';
 import { fechaEnZona, sumarDiasIso } from '../utils/zonaHoraria';
 import { BotonVolver, CampoDeTexto, LETRA, Parrafo } from './piezas';
+import { DondeEsElEvento } from './DondeEsElEvento';
 
 /**
  * Crear o editar un evento (E-6), para ADMIN y ALCHEMIST. Mínimo a propósito: nombre, día, hora,
- * duración, el link (Meet, Zoom o Drive) o el lugar, y si se avisa a todos. La audiencia es todo el
+ * duración, dónde es (por Meet, que se crea solo; en un lugar; o un link pegado) y si se avisa a todos. La audiencia es todo el
  * mundo; lo avanzado (repetición, grupos, niveles) queda en el panel de administración.
  *
  * El día se elige con ‹ › en vez de un calendario: botones de 52 px que no hay que apuntar, y los
@@ -53,6 +57,15 @@ export function FormularioDelEvento({
   const [eligiendoHora, setEligiendoHora] = useState(false);
   const [portada, setPortada] = useState<PortadaElegida | null>(null);
   const portadaVisible = portada?.uri ?? original?.portadaUrl ?? null;
+  /*
+   * Spec 040 (decisión del dueño del 2026-11-05): el Meet automático viene marcado, pero solo se ofrece si el servidor dice que se puede (un
+   * evento que ya lo usaba lo conserva a la vista). Mientras no se sabe no se dibuja el «dónde» (una sola lectura corta, sin parpadeo de
+   * opciones que después cambian); si no se puede, queda el formulario de siempre: un link o un lugar.
+   */
+  const { sabido: meetSabido, disponibilidad: meet } = useDisponibilidadDeMeet(true);
+  const yaUsabaMeet = !!original?.meet;
+  const meetPosible = meet.disponible || yaUsabaMeet;
+  const donde = dondeQueSeGuarda(form.donde, meetPosible);
   const cambiar = <K extends keyof FormularioDeEvento>(campo: K, valor: FormularioDeEvento[K]) =>
     setForm(f => ({ ...f, [campo]: valor }));
 
@@ -145,18 +158,33 @@ export function FormularioDelEvento({
         </View>
       </View>
 
-      <CampoDeTexto
-        rotulo="Link de la reunión"
-        ayuda="Pega el link de Meet, Zoom o Drive. Empieza con https://"
-        value={form.link}
-        onChangeText={v => cambiar('link', v)}
-        autoCapitalize="none"
-        autoCorrect={false}
-        keyboardType="url"
-        placeholder="https://meet.google.com/…"
-      />
+      {meetPosible ? (
+        <DondeEsElEvento
+          donde={form.donde}
+          porQueNo={meetSabido && !meet.disponible ? motivoSinMeet(meet.motivo) : undefined}
+          serie={!!original && lineaDeLaSerie(original) !== null}
+          onCambiar={v => cambiar('donde', v)}
+        />
+      ) : null}
 
-      {!form.link.trim() ? (
+      {meetPosible && donde === 'lugar' ? (
+        <CampoDeTexto rotulo="Dirección" value={form.lugar} onChangeText={v => cambiar('lugar', v)} />
+      ) : null}
+
+      {(meetSabido || meetPosible) && donde === 'enlace' ? (
+        <CampoDeTexto
+          rotulo="Link de la reunión"
+          ayuda="Pega el link de Meet, Zoom o Drive. Empieza con https://"
+          value={form.link}
+          onChangeText={v => cambiar('link', v)}
+          autoCapitalize="none"
+          autoCorrect={false}
+          keyboardType="url"
+          placeholder="https://meet.google.com/…"
+        />
+      ) : null}
+
+      {meetSabido && !meetPosible && !form.link.trim() ? (
         <CampoDeTexto
           rotulo="O el lugar"
           ayuda="Si es en persona, escribe la dirección."
@@ -207,7 +235,7 @@ export function FormularioDelEvento({
       <BotonPrincipal
         etiqueta={original ? 'Guardar cambios' : 'Crear evento'}
         cargando={guardando}
-        onPress={() => onGuardar(form, portada)}
+        onPress={() => onGuardar({ ...form, donde }, portada)}
       />
 
       <HoraPickerModal

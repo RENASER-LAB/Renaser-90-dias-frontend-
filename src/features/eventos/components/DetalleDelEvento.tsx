@@ -8,7 +8,9 @@ import { LogoDeMarca } from '../../../components/LogoDeMarca';
 import { useTheme } from '../../../theme/ThemeContext';
 import { useAhora } from '../hooks/useAhora';
 import { useAsistenciaDelEvento } from '../hooks/useAsistenciaDelEvento';
-import type { Asistencia, Ocurrencia } from '../types/eventos.types';
+import { useMeetDelEvento } from '../hooks/useMeetDelEvento';
+import type { Asistencia, Evento, Ocurrencia } from '../types/eventos.types';
+import { ETIQUETA_REINTENTAR, lineaDeLaSala, lineaDeLaSerie, sePuedeReintentar } from '../utils/enlaceDeMeet';
 import { sePuedeEditarEnLaApp } from '../utils/formularioDeEvento';
 import { linkParaUnirme, marcaDelLink, nombreDelLink } from '../utils/linkDelEvento';
 import { duracionEnPalabras, fechaYHora } from '../utils/textosDeFecha';
@@ -39,6 +41,7 @@ export function DetalleDelEvento({
   onResponder,
   onEditar,
   onCancelar,
+  onSalaActualizada,
 }: {
   oc: Ocurrencia;
   puedeGestionar: boolean;
@@ -48,9 +51,12 @@ export function DetalleDelEvento({
   onVolver: () => void;
   onPasarLista?: () => void;
   onResponder: (respuesta: Exclude<Asistencia, null>) => void;
-  onEditar: () => void;
+  /** Recibe el evento recién leído (con `meet` si usa el enlace automático): el formulario lo necesita para no perderlo al editar. */
+  onEditar: (original: Evento) => void;
   /** `todas` = el evento entero; si no, solo esta fecha (eventos que se repiten). */
   onCancelar: (todas: boolean) => void;
+  /** Tras «Reintentar» con éxito: la lista se relee para ver el enlace nuevo. */
+  onSalaActualizada?: () => void;
 }) {
   const { c } = useTheme();
   const { evento } = oc;
@@ -62,6 +68,14 @@ export function DetalleDelEvento({
   const ahora = useAhora();
   const { lista } = useAsistenciaDelEvento(evento.id, oc.inicioOcurrencia, verAsistencia);
   const [hojaAbierta, setHojaAbierta] = useState(false);
+  /* Spec 040: cómo va la sala de Meet, solo para quien administra y solo en un evento de Meet. */
+  const { evento: fresco, lectura, reintentando, fallo: falloAlReintentar, reintentar } = useMeetDelEvento(
+    evento.id,
+    puedeGestionar && evento.tipoUbicacion === 'MEET',
+  );
+  const meet = fresco?.meet ?? null;
+  const avisoDeLaSala = lineaDeLaSala(meet);
+  const lineaSerie = fresco ? lineaDeLaSerie(fresco) : null;
 
   const unirme = async () => {
     if (!link) return;
@@ -118,6 +132,22 @@ export function DetalleDelEvento({
         <Parrafo tono="fuerte">Lugar: {evento.valorUbicacion}</Parrafo>
       ) : null}
 
+      {puedeGestionar && meet ? (
+        <View style={{ gap: 8 }}>
+          {lineaSerie ? <Parrafo>{lineaSerie}</Parrafo> : null}
+          {avisoDeLaSala ? <Parrafo tono="peligro">{avisoDeLaSala}</Parrafo> : null}
+          {falloAlReintentar ? <Parrafo tono="peligro">No se pudo reintentar. Intenta de nuevo en un rato.</Parrafo> : null}
+          {sePuedeReintentar(meet) ? (
+            <BotonSecundario
+              etiqueta={ETIQUETA_REINTENTAR}
+              icono="rotateCcw"
+              cargando={reintentando}
+              onPress={() => void reintentar().then(bien => bien && onSalaActualizada?.())}
+            />
+          ) : null}
+        </View>
+      ) : null}
+
       {lista ? (
         <TarjetaDeAsistencia
           lista={lista}
@@ -154,10 +184,14 @@ export function DetalleDelEvento({
         <View style={{ gap: 10, marginTop: 8 }}>
           <Text style={[estilos.subtitulo, { color: c.textStrong }]}>Administrar</Text>
           {sePuedeEditarEnLaApp(evento) ? (
-            <BotonSecundario etiqueta="Editar evento" onPress={onEditar} />
+            /* Sin haber leído si el evento usa el enlace automático no se edita: el formulario lo trataría como un link pegado. */
+            <BotonSecundario etiqueta="Editar evento" deshabilitado={lectura !== 'lista'} onPress={() => onEditar(fresco ?? evento)} />
           ) : (
             <Parrafo>Este evento se repite o es para un grupo: se edita desde el panel de administración.</Parrafo>
           )}
+          {lectura === 'fallo' ? (
+            <Parrafo tono="peligro">No pudimos leer el estado del enlace de Meet. Vuelve a abrir el evento en un rato.</Parrafo>
+          ) : null}
           {evento.recurrente ? (
             <BotonPeligro etiqueta="Cancelar solo esta fecha" onPress={() => confirmarCancelacion(false)} />
           ) : null}

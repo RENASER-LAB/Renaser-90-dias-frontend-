@@ -446,9 +446,13 @@ export function SeccionEventos({
           setVista({ nombre: 'detalle', eventoId: oc.evento.id, inicioOcurrencia: oc.inicioOcurrencia, pasandoLista: true })
         }
         onResponder={r => void alResponder(oc, r)}
-        onEditar={() => {
+        onEditar={original => {
           setErrorFormulario(null);
-          setVista({ nombre: 'formulario', original: oc.evento });
+          setVista({ nombre: 'formulario', original });
+        }}
+        onSalaActualizada={() => {
+          void recargar({ forzar: true });
+          void releerElMes({ forzar: true });
         }}
         onCancelar={todas => void alCancelar(oc, todas)}
       />

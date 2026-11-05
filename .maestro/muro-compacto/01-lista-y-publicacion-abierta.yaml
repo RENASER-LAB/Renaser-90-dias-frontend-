@@ -1,0 +1,50 @@
+# Muro en lista compacta estilo Skool (pedido del dueño 2026-11-05 muro compacto): cada publicación es una fila con la
+# insignia del día, el texto en tres líneas y, si tiene fotos, la miniatura de la primera con «+N». Tocar la fila abre la
+# publicación completa («‹ Publicación»: la tarjeta de siempre, con el mosaico, reacciones y comentarios); la flecha y el
+# atrás del sistema vuelven al Muro.
+#
+# Backend local (base clonada, NUNCA producción). Precondición: al menos una publicación en el Muro con el texto
+# «Muro-compacto-1» y TRES fotos (para ver la chapa «+2»).
+# Se corre con: .maestro/correr.sh .maestro/muro-compacto/01-lista-y-publicacion-abierta.yaml
+# cuenta: aprendiz
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "COMUNIDAD"
+- tapOn: "Muro"
+- extendedWaitUntil:
+    visible: "Muro-compacto-1.*"
+    timeout: 30000
+# La fila compacta: la chapa de las fotos de más y el pie con comentarios.
+- assertVisible: "\\+2"
+- assertVisible:
+    text: ".*comentario.*Abrir la publicación"
+- takeScreenshot: MC01a-lista-compacta
+# Un aprendiz no ve el «…» de moderación.
+- assertNotVisible: "Opciones de moderación"
+# Abrir la publicación tocando la fila.
+- tapOn: "Muro-compacto-1.*"
+- extendedWaitUntil:
+    visible: "Publicación"
+    timeout: 10000
+# La tarjeta completa: sus tres acciones de siempre.
+- assertVisible: "Compartir"
+- assertVisible: "Comentar"
+- takeScreenshot: MC01b-publicacion-abierta
+# Volver con la flecha.
+- tapOn: "Volver"
+- extendedWaitUntil:
+    visible: "Muro-compacto-1.*"
+    timeout: 10000
+- assertNotVisible: "Compartir"
+# Abrir otra vez y volver con el atrás del sistema.
+- tapOn: "Muro-compacto-1.*"
+- extendedWaitUntil:
+    visible: "Publicación"
+    timeout: 10000
+- back
+- extendedWaitUntil:
+    visible: "Muro-compacto-1.*"
+    timeout: 10000
+- assertVisible: "COMUNIDAD"
+- takeScreenshot: MC01c-de-vuelta-en-el-muro
