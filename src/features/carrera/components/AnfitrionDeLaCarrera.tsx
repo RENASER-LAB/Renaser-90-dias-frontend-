@@ -30,12 +30,11 @@ import { escucharPasos, prepararPodometro } from '../servicios/podometro';
 import { detenerGps, empezarGps, pedirPermisoDeUbicacion } from '../servicios/tareaDeUbicacion';
 import { efectoDeVoz } from '../servicios/vozDeLaCarrera';
 import type { EstadoDeLaCarrera, PreferenciasDeLaCarrera } from '../types/carrera.types';
-import { esAvisoDeCarrera, ACCION_PAUSAR, ACCION_SEGUIR } from '../utils/avisoDeCarrera';
 import { cuerpoDeLaCarrera } from '../utils/cuerpoDeLaCarrera';
 import type { FiguraDelAvatar } from '../utils/fusionDelAvatar';
 import { nuevaCarreraId } from '../utils/idDeLaCarrera';
 import { esMuyCorta, pausar } from '../utils/motorDeCarrera';
-import { laCarreraYaEmpezo } from '../utils/notificacionUnica';
+import { accionDelToque, laCarreraYaEmpezo, marcaDelToque, type ToqueEnLaNotificacion } from '../utils/notificacionUnica';
 import { TEXTOS_DE_LA_CARRERA } from '../utils/textosDeLaCarrera';
 import { CuentaRegresiva } from './CuentaRegresiva';
 import { PantallaCorriendo, PantallaTerminaste, type PanelDeLaPausa } from './PantallaDeCarrera';
@@ -156,21 +155,36 @@ function Anfitrion() {
     if (r && actual) void mostrarNotificacionDeCarrera({ ...r, enPausa: actual.fase === 'pausa' }, Date.now(), true);
   }, [fase, empezo]);
 
-  // Tocar la notificación fija abre la carrera; «Pausar» además la pausa y «Seguir» la sigue.
+  // Tocar la notificación fija abre la carrera; «Pausar» además la pausa y «Seguir» la sigue. Con la app cerrada desde recientes
+  // (el proceso sigue por el servicio del GPS) el toque llega antes de que esto se monte: se lee la última respuesta.
+  const atendidos = useRef(new Set<string>());
+  const atenderToque = useCallback((toque: ToqueEnLaNotificacion | null) => {
+    if (!toque) return;
+    const marca = marcaDelToque(toque);
+    if (atendidos.current.has(marca)) return;
+    const accion = accionDelToque(toque, carreraActual(), Date.now());
+    if (!accion) return;
+    atendidos.current.add(marca);
+    if (accion === 'pausar') pausarCarrera();
+    if (accion === 'seguir') {
+      seguirCarrera();
+      void empezarGps();
+    }
+    setVista({ tipo: 'carrera' });
+  }, []);
   useEffect(() => {
     const N = cargarNotificaciones();
     if (!N) return;
-    const sub = N.addNotificationResponseReceivedListener(r => {
-      if (!esAvisoDeCarrera(r.notification.request.identifier)) return;
-      if (r.actionIdentifier === ACCION_PAUSAR && carreraActual()?.fase === 'corriendo') pausarCarrera();
-      if (r.actionIdentifier === ACCION_SEGUIR && carreraActual()?.fase === 'pausa') {
-        seguirCarrera();
-        void empezarGps();
-      }
-      if (carreraActual()) setVista({ tipo: 'carrera' });
-    });
+    const sub = N.addNotificationResponseReceivedListener(r => atenderToque(r as unknown as ToqueEnLaNotificacion));
     return () => sub.remove();
-  }, []);
+  }, [atenderToque]);
+  useEffect(() => {
+    if (!hayCarrera) return;
+    const N = cargarNotificaciones();
+    void N?.getLastNotificationResponseAsync()
+      .then(r => atenderToque(r as unknown as ToqueEnLaNotificacion | null))
+      .catch(() => undefined);
+  }, [hayCarrera, atenderToque]);
 
   const empezar = useCallback(
     async (registroId: string | null) => {

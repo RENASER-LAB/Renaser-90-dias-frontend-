@@ -1,5 +1,5 @@
 import type { EstadoDeLaCarrera } from '../types/carrera.types';
-import { CATEGORIA_CARRERA, CATEGORIA_CARRERA_EN_PAUSA } from './avisoDeCarrera';
+import { ACCION_PAUSAR, ACCION_SEGUIR, CATEGORIA_CARRERA, CATEGORIA_CARRERA_EN_PAUSA, ID_NOTIFICACION_CARRERA } from './avisoDeCarrera';
 import { lineaDeLaNotificacion, TEXTOS_DE_LA_NOTIFICACION } from './textosDeLaCarrera';
 
 /**
@@ -33,4 +33,36 @@ export function contenidoDeLaNotificacion(
     body: lineaDeLaNotificacion(datos.metros, duracion, datos.ritmo),
     categoryIdentifier: datos.enPausa ? CATEGORIA_CARRERA_EN_PAUSA : CATEGORIA_CARRERA,
   };
+}
+
+/** Lo que importa de una respuesta de `expo-notifications` (un toque en la notificación o en uno de sus botones). */
+export interface ToqueEnLaNotificacion {
+  actionIdentifier: string;
+  notification: { date: number; request: { identifier: string } };
+}
+
+/** Un toque más viejo que esto no se atiende al abrir la app: no es de esta vez. */
+export const VIGENCIA_DEL_TOQUE_MS = 10 * 60_000;
+
+/**
+ * Qué hacer con un toque en la notificación de la carrera. «Pausar» solo corriendo y «Seguir» solo en pausa (un toque doble no
+ * hace dos cosas). Al abrir la app con el proceso recién armado el toque llega antes que el oyente y se lee después con
+ * `getLastNotificationResponseAsync`: por eso se descarta el de otra carrera (anterior a esta) o uno viejo.
+ */
+export function accionDelToque(
+  toque: ToqueEnLaNotificacion | null,
+  e: Pick<EstadoDeLaCarrera, 'fase' | 'iniciadaEnMs'> | null,
+  ahora: number,
+): 'pausar' | 'seguir' | 'abrir' | null {
+  if (!toque || !e || toque.notification.request.identifier !== ID_NOTIFICACION_CARRERA) return null;
+  const fecha = toque.notification.date;
+  if (Number.isFinite(fecha) && (fecha < e.iniciadaEnMs || ahora - fecha > VIGENCIA_DEL_TOQUE_MS)) return null;
+  if (toque.actionIdentifier === ACCION_PAUSAR) return e.fase === 'corriendo' ? 'pausar' : 'abrir';
+  if (toque.actionIdentifier === ACCION_SEGUIR) return e.fase === 'pausa' ? 'seguir' : 'abrir';
+  return 'abrir';
+}
+
+/** La marca de un toque, para atenderlo una sola vez (llega por el oyente y otra vez por la última respuesta). */
+export function marcaDelToque(toque: ToqueEnLaNotificacion): string {
+  return `${toque.notification.date}|${toque.actionIdentifier}`;
 }
