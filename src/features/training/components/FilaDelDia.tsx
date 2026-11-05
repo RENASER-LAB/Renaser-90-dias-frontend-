@@ -19,6 +19,8 @@ import { accionDeLaTarjeta, AVISO_DE_HORA_PASADA } from '../utils/tarjetaDelHabi
 import { LineaDeKilometros } from '../../pasos/components/LineaDeKilometros';
 import { usePasosDeLaFila } from '../../pasos/components/PasosDeLaLista';
 import { EntradaDeLaCarrera } from '../../carrera/components/EntradaDeLaCarrera';
+import { BotonCorrerDeLaFila } from '../../carrera/components/BotonCorrerDeLaFila';
+import { lugarDeLaCarrera } from '../../carrera/utils/entradaDeLaCarrera';
 import { TEXTOS_DE_PASOS } from '../../pasos/utils/textosDePasos';
 import { abreLaHojaDeKilometros } from '../../pasos/utils/vistaDeKilometros';
 
@@ -91,6 +93,11 @@ export function FilaDelDia({
   const conPasos = esHoy && (modo === 'hoy' || modo === 'atrasado') && !!pasos && abreLaHojaDeKilometros(pasos.vista);
   const vistaDeLosPasos = pasos?.vista ?? null;
   const avance = conPasos && vistaDeLosPasos?.modo === 'avance' ? vistaDeLosPasos : null;
+  /* Spec 042 (pedido del dueño del 2026-11-05): donde se puede correr con GPS, el botón de la derecha de «Kilómetros diarios» es
+     «Correr» y no «Subir» (la captura queda en la hoja del hábito). Ya cumplido, o con el avance de los pasos a la derecha, la
+     píldora va debajo del nombre como antes. Sin carrera, `null`: la fila de siempre. */
+  const lugarCarrera = esHoy && pasos?.carrera ? lugarDeLaCarrera({ ofrecida: true, modo, hecho: hecha, conAvanceDePasos: !!avance }) : null;
+  const correrEnLaFila = lugarCarrera === 'fila';
   // La etiqueta que oye el lector: la hora, qué es y qué pasa al tocarla.
   const etiqueta = [
     item.hora ?? 'Sin hora',
@@ -169,7 +176,7 @@ export function FilaDelDia({
           style={estilos.areaDelTexto}
         >
           {contenido}
-          {control !== 'check' && control !== 'subir' && !conPasos ? derecha : null}
+          {control !== 'check' && control !== 'subir' && !conPasos && !correrEnLaFila ? derecha : null}
           {avance && !avance.metaLista ? (
             // Aún no llega a la meta: el círculo vacío y apagado, sin botón (maqueta 2.1).
             <View style={[estilos.circuloApagado, { borderColor: c.border }]} accessibilityLabel="Todavía no llegas a tu meta" />
@@ -178,7 +185,7 @@ export function FilaDelDia({
       ) : (
         <View style={[estilos.areaDelTexto, { flex: 1 }]}>{contenido}</View>
       )}
-      {control === 'subir' && accion ? (
+      {control === 'subir' && accion && !correrEnLaFila ? (
         // «Subir» es un botón aparte (abre las cuatro formas); el nombre abre la hoja con «Marcar como hecho» (30/10).
         <Presionable
           onPress={() => onSubir?.(item)}
@@ -191,7 +198,7 @@ export function FilaDelDia({
           <Text style={[t.small, { color: c.goldInk, fontFamily: fuentes.media }]}>{accion.etiqueta}</Text>
         </Presionable>
       ) : null}
-      {conPasos && !avance && accion ? (
+      {conPasos && !avance && accion && !correrEnLaFila ? (
         // Sin pasos hoy o sin permiso la captura sigue ahí: «Subir» es un botón aparte, porque tocar el nombre abre la hoja de los pasos.
         <Presionable
           onPress={() => onSubir?.(item)}
@@ -204,6 +211,7 @@ export function FilaDelDia({
           <Text style={[t.small, { color: c.goldInk, fontFamily: fuentes.media }]}>{accion.etiqueta}</Text>
         </Presionable>
       ) : null}
+      {correrEnLaFila ? <BotonCorrerDeLaFila registroId={pasos?.registroId ?? null} titulo={item.titulo} /> : null}
       {avance?.metaLista ? (
         // La meta está lista: un toque registra los km (el servidor vuelve a comprobar la meta y el día).
         <Presionable
@@ -244,7 +252,7 @@ export function FilaDelDia({
   // La línea de los pasos (el enlace, la barra o «Todavía no vemos pasos hoy») va debajo de la fila, a la altura del nombre: fuera del
   // área táctil de la fila, para que su enlace sea un botón propio y no quede dentro de otro.
   // Spec 042: «Correr con GPS» va en el mismo lugar, debajo de la línea de los pasos (o sola, si los pasos no ofrecen nada).
-  const conCarrera = !!pasos?.carrera && esHoy && modo !== 'cerrado';
+  const conCarrera = lugarCarrera === 'debajo';
   const conLinea = pasos && esHoy && (pasos.vista.modo !== 'captura' || conCarrera) ? (
     <View>
       {cuerpo}

@@ -8,6 +8,9 @@ import { formatoKm, formatoRitmo } from './ritmoYCalorias';
 export const TEXTOS_DE_LA_CARRERA = {
   entrada: 'Correr con GPS',
   entradaEnCurso: 'Carrera en curso · Volver',
+  /** El botón de la derecha de la fila (pedido del dueño del 2026-11-05): corto, para no apretar el nombre. */
+  botonDeLaFila: 'Correr',
+  botonDeLaFilaEnCurso: 'Volver',
   empezarYa: 'Empezar ya',
   cancelar: 'Cancelar',
   aCorrer: '¡A correr!',

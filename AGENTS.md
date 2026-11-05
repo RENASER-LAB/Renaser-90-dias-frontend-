@@ -2401,6 +2401,15 @@ llame al servidor a cada rato y que nada se duplique**, y **«el avatar debe ref
   `medicion.carrerasDelDia` (un backend anterior no lo manda y la entrada no existe) y el interruptor `habitos.km.carreras` (`CLAVES.habitosKmCarreras`)
   disponible y prendido. Se ofrece también con el hábito ya cumplido (correr más sube los km del día, FR-022). La fila de siempre (la captura, los pasos
   de la spec 037) no cambia: `PasosDeLaLista` suma `carrera` y `FilaDelDia` dibuja la píldora debajo de la línea de los pasos. En la web no hay carrera.
+  > **Corregido 2026-11-05 (pedido del dueño: «que se detecte el dispositivo solo»).** Donde la carrera se ofrece (misma `seOfreceLaCarrera`), el botón de
+  > la DERECHA de «Kilómetros diarios» por cumplir hoy ya no es «Subir»: es **«Correr»** (`BotonCorrerDeLaFila`, ícono `footprints`, la misma píldora de
+  > «Subir», 48 de área con el `hitSlop`), o **«Volver»** con una carrera en curso; abre la cuenta 3, 2, 1. Debajo queda «Cuenta tus pasos solo ›» solo si
+  > Health Connect está disponible (spec 037). **La captura no desaparece:** tocar el nombre abre la hoja del hábito con «Correr con GPS» como botón principal y
+  > **«Subir captura»** como secundario (`accionesDeLaHojaConCarrera`; antes el toque abría la cámara directo). Ya cumplido, o con la barra de avance de los pasos a
+  > la derecha, la píldora «Correr con GPS» sigue debajo del nombre como antes (`lugarDeLaCarrera`, pura: `'fila' | 'debajo' | null`). **En cualquier otro caso**
+  > (web, iPhone, backend sin `carrerasDelDia`, interruptor apagado) la fila es exactamente la de antes, con «Subir». Sin parpadeo: la decisión sale de la misma
+  > agenda que dibuja la fila (`carrerasDelDia`) y de la lectura de interruptores guardada por cuenta, así que la fila nace con su botón. Sin animación nueva.
+  > Pruebas: `filaDeKilometrosConCarrera`.
 * **La pantalla vive sobre el navegador** (`AnfitrionDeLaCarrera`, montado en `App.tsx`; Training solo la pide con `pedirLaCarrera`): así la carrera sigue
   a la vista aunque se cambie de pestaña, y el atrás del sistema la deja seguir y vuelve a la app (la entrada dice «Volver»). Flujo: pedir ubicación
   precisa «mientras se usa la app» (sin permiso no empieza y lo dice; queda la captura) y, opcional, actividad física → leer el peso y el sexo ANTES de la

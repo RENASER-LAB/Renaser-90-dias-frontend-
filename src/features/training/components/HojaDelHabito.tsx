@@ -10,6 +10,7 @@ import { useTheme } from '../../../theme/ThemeContext';
 import { avisoDeHoraPasada } from '../utils/tarjetaDelHabito';
 import {
   accionDeLaHoja,
+  accionesDeLaHojaConCarrera,
   accionSecundariaDeLaHoja,
   lineaDelCumplido,
   metaDeLaHoja,
@@ -39,6 +40,7 @@ export function HojaDelHabito({
   onCerrar,
   alTerminarDeCerrar,
   onAccion,
+  carrera = null,
 }: {
   visible: boolean;
   item: ItemDelDia | null;
@@ -48,6 +50,8 @@ export function HojaDelHabito({
   /** La hoja ya se fue del todo: ahí se abre el registro, nunca con ella todavía encima. */
   alTerminarDeCerrar?: () => void;
   onAccion: (item: ItemDelDia, accion: AccionDeLaHoja) => void;
+  /** Spec 042: «Kilómetros diarios» en un teléfono que puede correr con GPS. `enCurso`: hay una carrera sin terminar. */
+  carrera?: { enCurso: boolean } | null;
 }) {
   const { c, t } = useTheme();
   const { height } = useWindowDimensions();
@@ -62,9 +66,11 @@ export function HojaDelHabito({
   if (!item) return null;
 
   const pendiente = (modo === 'hoy' || modo === 'atrasado') && !item.hecho;
-  const accion = pendiente ? accionDeLaHoja(item) : null;
-  // Solo en los hábitos de evidencia opcional: «Marcar como hecho» cierra sin evidencia, como el ✓ de la fila.
-  const secundaria = pendiente ? accionSecundariaDeLaHoja(item) : null;
+  const conCarrera = pendiente && carrera ? accionesDeLaHojaConCarrera(carrera.enCurso) : null;
+  const accion = conCarrera ? conCarrera.principal : pendiente ? accionDeLaHoja(item) : null;
+  // Solo en los hábitos de evidencia opcional: «Marcar como hecho» cierra sin evidencia, como el ✓ de la fila. Con la carrera,
+  // la captura («Subir captura») es la secundaria.
+  const secundaria = conCarrera ? conCarrera.secundaria : pendiente ? accionSecundariaDeLaHoja(item) : null;
   const avisoDeLaHora = modo === 'atrasado' && item.habit ? avisoDeHoraPasada(item.habit, ahoraMs) : null;
 
   return (
