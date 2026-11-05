@@ -1054,7 +1054,7 @@ export default function TrainingScreen() {
               </View>
             ) : null}
             {/* PROGRAMA SIN ARRANCAR — la misma compuerta que Plan tiene desde D-84. */}
-            {programaSinArrancar && (
+            {programaSinArrancar && !sinProgramaPropio && (
               <View
                 style={[styles.avisoSinArrancar, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
                 accessibilityLabel="Tu programa todavía no arrancó"
