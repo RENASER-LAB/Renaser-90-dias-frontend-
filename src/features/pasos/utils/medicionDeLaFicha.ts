@@ -93,6 +93,14 @@ export function medicionDeLaFichaDe(crudo: unknown): MedicionDeLaFicha | null {
   };
 }
 
+/**
+ * ¿Los km del día los midió el teléfono (carrera con GPS o Health Connect)? Entonces la medición ES la constancia y la ficha no dice
+ * «Evidencia sin entregar» aunque el hábito pida la captura (issue #134; spec 042 FR-044, spec 037).
+ */
+export function seMidioSolo(medicion: Pick<MedicionDeLaFicha, 'origen' | 'valor'> | null | undefined): boolean {
+  return !!medicion && medicion.valor > 0 && (medicion.origen === 'GPS' || medicion.origen === 'HEALTH_CONNECT');
+}
+
 export interface TextosDeLaMedicion {
   /** «5,9 km · Medido por el reloj». */
   principal: string;
