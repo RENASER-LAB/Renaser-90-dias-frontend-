@@ -2508,6 +2508,10 @@ nada más:
   (miniatura de 66, «+N», sin foto a todo el ancho, insignia del día, «…» solo para quien modera, abrir, comentarios, «me gusta», 44 de alto) y
   `screens/__tests__/muroCompactoEnComunidad` (la lista dibuja filas, la publicación abierta usa la tarjeta completa, el atrás y la barra); se
   ajustó `moderarElMuroEnComunidad`. Maestro, **escrito y sin correr** (el emulador estaba ocupado): `.maestro/muro-compacto/01-lista-y-publicacion-abierta.yaml`.
+* **Corregido 2026-11-05 (pendiente del E2E): deslizar hacia abajo recarga el Muro.** La lista compacta suma `RefreshControl` (dorado del tema, bajo el
+  encabezado): con publicaciones a la vista relee la primera página en silencio (`useWallFeed.refrescar` → `releerEnSilencio`: sin «Cargando el muro…», sin
+  vaciar ni volver arriba, `refrescando` mueve el círculo); con la lista vacía o tras un error es la carga de siempre. Pruebas: `muroSeReleeAlModerar` y
+  `muroCompactoEnComunidad`.
 
 ## Corrección — 2026-11-05 — «Kilómetros diarios»: aceptar los permisos de Health Connect ya no depende de una sola respuesta (issue #127)
 

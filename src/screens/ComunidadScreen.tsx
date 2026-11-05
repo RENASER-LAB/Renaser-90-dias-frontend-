@@ -1273,6 +1273,9 @@ function ComunidadPorFormacion({
     // La carga inicial la dispara el propio hook y publicar ya no recarga el feed entero (inserta la
     // publicación nueva). `recargar` se usa solo al volver el Muro de mantenimiento (spec 002).
     recargar: recargarMuro,
+    // Deslizar hacia abajo (2026-11-05): relee en silencio si ya hay publicaciones.
+    refrescar: refrescarMuro,
+    refrescando: muroRefrescando,
     reaccionar: reaccionarPublicacion,
     cargarComentarios,
     agregarComentario: agregarComentarioRemoto,
@@ -3189,6 +3192,17 @@ function ComunidadPorFormacion({
                 </Text>
               )}
             </View>
+          }
+          /* Deslizar hacia abajo relee el Muro (2026-11-05): con publicaciones, en silencio y sin volver arriba. */
+          refreshControl={
+            <RefreshControl
+              refreshing={muroRefrescando}
+              onRefresh={() => void refrescarMuro()}
+              // Con el encabezado encima, el círculo de «actualizando» aparece debajo de él (Android).
+              progressViewOffset={encabezado.relleno}
+              tintColor={c.goldInk}
+              colors={[c.goldInk]}
+            />
           }
           onEndReached={alLlegarAlFinalDelMuro}
           // Pantalla y media antes del final, el mismo margen que tenía `MARGEN_PARA_PEDIR_MAS`:

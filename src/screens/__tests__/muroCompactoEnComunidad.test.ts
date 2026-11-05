@@ -30,6 +30,16 @@ describe('el Muro compacto en Comunidad', () => {
     expect(render).not.toContain('<TarjetaPublicacionMuro');
   });
 
+  // pedido del dueño 2026-11-05 muro compacto: deslizar hacia abajo para recargar
+  it('la lista del Muro se recarga deslizando hacia abajo, con los colores del tema', () => {
+    const inicio = fuente.indexOf('data={posts}');
+    const bloque = fuente.slice(inicio, fuente.indexOf('onEndReached={alLlegarAlFinalDelMuro}', inicio));
+    expect(bloque).toContain('<RefreshControl');
+    expect(bloque).toContain('refreshing={muroRefrescando}');
+    expect(bloque).toContain('refrescarMuro()');
+    expect(bloque).toContain('colors={[c.goldInk]}');
+  });
+
   it('la publicación abierta usa la tarjeta completa de siempre', () => {
     const inicio = fuente.indexOf('<PublicacionAbierta');
     const bloque = fuente.slice(inicio, fuente.indexOf('</PublicacionAbierta>', inicio));

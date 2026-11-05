@@ -125,6 +125,25 @@ export function useWallFeed() {
     }
   }, []);
 
+  /**
+   * «Deslizar hacia abajo para recargar» (2026-11-05): con publicaciones a la vista se relee en silencio (sin `loading` ni
+   * volver arriba: nada parpadea) y `refrescando` mueve el círculo del `RefreshControl` mientras tanto; con la lista vacía es la
+   * carga de siempre (`recargar`), que muestra su «Cargando el muro…» y su error.
+   */
+  const [refrescando, setRefrescando] = useState(false);
+  const refrescar = useCallback(async () => {
+    if (postsAhora.current.length === 0) {
+      await recargar();
+      return;
+    }
+    setRefrescando(true);
+    try {
+      await releerEnSilencio();
+    } finally {
+      setRefrescando(false);
+    }
+  }, [recargar, releerEnSilencio]);
+
   /** Saca una publicación de la lista en el acto (la moderación que acaba de confirmar el servidor). */
   const quitarPublicacion = useCallback((postId: string) => {
     setPosts(prev => prev.filter(p => p.id !== postId));
@@ -308,6 +327,8 @@ export function useWallFeed() {
     agregarComentario,
     publicarOptimista,
     releerEnSilencio,
+    refrescar,
+    refrescando,
     quitarPublicacion,
     cargarMas,
     cargandoMas,

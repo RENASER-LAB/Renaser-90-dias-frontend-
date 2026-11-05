@@ -117,3 +117,38 @@ describe('releer el Muro después de moderar', () => {
     expect(feed.error).toBeNull();
   });
 });
+
+// pedido del dueño 2026-11-05 muro compacto: deslizar hacia abajo para recargar
+describe('deslizar hacia abajo relee el Muro', () => {
+  it('con publicaciones, relee en silencio: sin `loading`, con `refrescando` mientras tanto y sin vaciar la lista', async () => {
+    mockFeed.mockResolvedValueOnce({ posts: [post('a'), post('b')], nextCursor: null });
+    await montar();
+    let soltar!: (v: { posts: unknown[]; nextCursor: string | null }) => void;
+    mockFeed.mockImplementationOnce(() => new Promise(r => (soltar = r)));
+    let enCurso!: Promise<void>;
+    act(() => {
+      enCurso = feed.refrescar();
+    });
+    // Mientras lee: el círculo gira, nada de «Cargando el muro…» y la lista sigue a la vista.
+    expect(feed.refrescando).toBe(true);
+    expect(feed.loading).toBe(false);
+    expect(ids()).toEqual(['a', 'b']);
+    await act(async () => {
+      soltar({ posts: [post('nueva'), post('a'), post('b')], nextCursor: null });
+      await enCurso;
+    });
+    expect(ids()).toEqual(['nueva', 'a', 'b']);
+    expect(feed.refrescando).toBe(false);
+  });
+
+  it('sin publicaciones (o tras un error) es la carga de siempre', async () => {
+    mockFeed.mockRejectedValueOnce(new Error('sin red'));
+    await montar();
+    expect(feed.error).not.toBeNull();
+    mockFeed.mockResolvedValueOnce({ posts: [post('a')], nextCursor: null });
+    await act(async () => feed.refrescar());
+    expect(ids()).toEqual(['a']);
+    expect(feed.error).toBeNull();
+    expect(feed.refrescando).toBe(false);
+  });
+});
