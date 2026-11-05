@@ -27,7 +27,8 @@ function respuesta(resultado: string, repetida = false): RespuestaDeLaCarrera {
     kilometros: 6.21,
     cuentaParaElHabito: true,
     porRevisar: false,
-    habito: { resultado, registroId: 'r', kilometrosDelDia: 6.21, puntosOtorgados: 8 },
+    motivoNoCuenta: null,
+    habito: { resultado, registroId: 'r', kilometrosDelDia: 6.21, origenDelDia: 'GPS', puntosOtorgados: 8 },
   };
 }
 
@@ -64,6 +65,8 @@ describe('la cola de envío', () => {
     expect(aplicarDesenlace(cola, CUERPO.carreraId, desenlaceDelError(409, 'CARRERA_YA_REGISTRADA', ''), 0)).toEqual([]);
     expect(aplicarDesenlace(cola, CUERPO.carreraId, desenlaceDelError(503, 'FUNCIONALIDAD_APAGADA', ''), 0)).toHaveLength(1);
     expect(desenlaceDelError(502, null, '').tipo).toBe('reintentar');
+    // Un 409 que no es CARRERA_YA_REGISTRADA no se toma por éxito: queda marcado.
+    expect(desenlaceDelError(409, 'OTRO', 'x').tipo).toBe('bloqueada');
   });
 
   // spec 042 FR-017
@@ -120,6 +123,9 @@ describe('textos y voz', () => {
       'Tu carrera quedó guardada. Hoy ya registraste este hábito con tu captura.',
     );
     expect(lineaDelEnvio({ tipo: 'respondida', respuesta: respuesta('DIA_CERRADO') }, true)).toContain('Su día ya cerró');
+    expect(
+      lineaDelEnvio({ tipo: 'respondida', respuesta: { ...respuesta('NO_CUENTA'), motivoNoCuenta: 'Más de 60 km no se registra solo.' } }, true),
+    ).toBe('Tu carrera quedó guardada, pero no entra a tu hábito: Más de 60 km no se registra solo.');
   });
 
   // spec 042 FR-010
@@ -144,7 +150,7 @@ describe('lo que dicen Training y las fichas de un día con carreras', () => {
   it('el origen GPS se nombra «Carrera con GPS»', () => {
     expect(detalleDeLosKm(6.2, 'GPS', null)).toMatch(/^6,2\skm · Carrera con GPS$/);
     expect(
-      textosDeLaMedicion({ valor: 6.2, origen: 'GPS', pasos: null, fuente: null, dispositivo: null, leidaEn: null, porRevisar: false }).principal,
+      textosDeLaMedicion({ valor: 6.2, origen: 'GPS', pasos: null, fuente: null, dispositivo: null, leidaEn: null, porRevisar: false, carreras: [] }).principal,
     ).toMatch(/^6,2\skm · Carrera con GPS$/);
   });
 });

@@ -34,6 +34,7 @@ export const TEXTOS_DE_LA_CARRERA = {
   muyCorta: 'Muy corta para guardarla',
   muyCortaDetalle: 'Una carrera se guarda desde 100 m y 1 minuto. Puedes seguir corriendo o descartarla.',
   compartir: 'Compartir en el Muro',
+  porRevisar: 'Quedó marcada «por revisar»: tu mentor la ve con esa marca.',
   listo: 'Listo',
   sinPermisoUbicacion: 'Para contar tus km con el GPS necesitamos tu ubicación mientras corres. Sin ella, puedes subir tu captura como siempre.',
   sinGpsActivo: 'Activa la ubicación de tu teléfono para empezar la carrera.',
@@ -96,7 +97,9 @@ export function lineaDelEnvio(estado: EstadoDelEnvio, conHabito: boolean): strin
         case 'SIN_HABITO':
           return 'Tu carrera quedó guardada.';
         case 'NO_CUENTA':
-          return 'Tu carrera quedó guardada, pero no entra a tu hábito: la velocidad o la distancia no se registran solas.';
+          return r.motivoNoCuenta
+            ? `Tu carrera quedó guardada, pero no entra a tu hábito: ${r.motivoNoCuenta.replace(/\.$/, '')}.`
+            : 'Tu carrera quedó guardada, pero no entra a tu hábito: la velocidad o la distancia no se registran solas.';
         default:
           return 'Tu carrera quedó guardada.';
       }

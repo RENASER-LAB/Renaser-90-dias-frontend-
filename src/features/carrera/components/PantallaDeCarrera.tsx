@@ -312,6 +312,9 @@ export function PantallaTerminaste({
         <Icon name={exito ? 'checkCircle' : 'clock'} size={TAMANO_ICONO.normal} color={exito ? c.success : c.goldInk} />
         <Text style={[estilos.textoEnvio, { color: exito ? c.success : c.goldInk }]}>{linea}</Text>
       </View>
+      {envio?.tipo === 'respondida' && envio.respuesta.porRevisar ? (
+        <Text style={[estilos.porRevisar, { color: c.textSoft }]}>{TEXTOS_DE_LA_CARRERA.porRevisar}</Text>
+      ) : null}
       <Text style={[estilos.subtitulo, { color: c.textStrong }]}>Tramos</Text>
       <PanelTramos tramos={tramos} />
       <GoldButton label={TEXTOS_DE_LA_CARRERA.compartir} variant="outline" icon="share" iconPosition="left" onPress={alCompartir} />
@@ -361,4 +364,5 @@ const estilos = StyleSheet.create({
   envio: { flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: 14, padding: 14 },
   textoEnvio: { fontFamily: fuentes.seminegrita, fontSize: 15, flexShrink: 1 },
   subtitulo: { fontFamily: fuentes.seminegrita, fontSize: 17 },
+  porRevisar: { fontFamily: fuentes.regular, fontSize: 15 },
 });

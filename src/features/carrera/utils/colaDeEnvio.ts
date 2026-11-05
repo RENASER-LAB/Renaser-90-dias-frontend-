@@ -59,7 +59,7 @@ export function desenlaceDelError(status: number, codigo: string | null, mensaje
   // espera en la cola y sale cuando se prenda (casos de borde de la spec).
   if (status === 0 || status >= 500 || status === 408 || status === 429 || status === 404) return { tipo: 'reintentar' };
   if (status === 401) return { tipo: 'sin-sesion' };
-  if (status === 409 && (codigo === 'CARRERA_YA_REGISTRADA' || codigo == null)) return { tipo: 'ya-registrada' };
+  if (status === 409 && codigo === 'CARRERA_YA_REGISTRADA') return { tipo: 'ya-registrada' };
   return { tipo: 'bloqueada', motivo: mensaje || 'El servidor no aceptó esta carrera.' };
 }
 

@@ -13,6 +13,8 @@ const automatica = {
   dispositivo: 'RELOJ',
   leidaEn: '2026-11-04T22:10:00Z',
   porRevisar: false,
+  // Spec 042: sin carreras con GPS, la lista viene vacía.
+  carreras: [],
 };
 
 describe('medicionDeLaFichaDe', () => {
@@ -29,6 +31,7 @@ describe('medicionDeLaFichaDe', () => {
       dispositivo: null,
       leidaEn: null,
       porRevisar: false,
+      carreras: [],
     });
   });
 

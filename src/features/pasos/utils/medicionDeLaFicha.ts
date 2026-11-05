@@ -20,8 +20,33 @@ export const medicionDeLaFichaSchema = z
     dispositivo: z.string().nullish(),
     leidaEn: z.string().nullish(),
     porRevisar: z.boolean().nullish(),
+    // Spec 042 (FR-044): las carreras con GPS del día. Tolerante: una carrera rota se pierde ella, no la línea.
+    carreras: z.array(z.unknown()).nullish(),
   })
   .passthrough();
+
+const carreraDeLaFichaSchema = z
+  .object({
+    carreraId: z.string(),
+    kilometros: z.number(),
+    duracionActivaSeg: z.number(),
+    ritmoSegPorKm: z.number().nullish(),
+    porRevisar: z.boolean().nullish(),
+    cuentaParaElHabito: z.boolean().nullish(),
+    tieneRuta: z.boolean().nullish(),
+  })
+  .passthrough();
+
+/** Una carrera con GPS en la ficha (spec 042). La ruta se pide aparte, al abrir el mapa (FR-041: todavía sin pantalla). */
+export interface CarreraDeLaFicha {
+  carreraId: string;
+  kilometros: number;
+  duracionActivaSeg: number;
+  ritmoSegPorKm: number | null;
+  porRevisar: boolean;
+  cuentaParaElHabito: boolean;
+  tieneRuta: boolean;
+}
 
 export interface MedicionDeLaFicha {
   valor: number;
@@ -32,6 +57,8 @@ export interface MedicionDeLaFicha {
   dispositivo: string | null;
   leidaEn: string | null;
   porRevisar: boolean;
+  /** Spec 042: las carreras con GPS del día (vacía sin carreras o con un backend anterior). */
+  carreras: CarreraDeLaFicha[];
 }
 
 /** Tolerante: un valor roto pierde la línea de los km, no el día entero. */
@@ -47,6 +74,22 @@ export function medicionDeLaFichaDe(crudo: unknown): MedicionDeLaFicha | null {
     dispositivo: m.dispositivo ?? null,
     leidaEn: m.leidaEn ?? null,
     porRevisar: m.porRevisar === true,
+    carreras: (m.carreras ?? []).flatMap(crudo => {
+      const r = carreraDeLaFichaSchema.safeParse(crudo);
+      if (!r.success) return [];
+      const c = r.data;
+      return [
+        {
+          carreraId: c.carreraId,
+          kilometros: c.kilometros,
+          duracionActivaSeg: c.duracionActivaSeg,
+          ritmoSegPorKm: c.ritmoSegPorKm ?? null,
+          porRevisar: c.porRevisar === true,
+          cuentaParaElHabito: c.cuentaParaElHabito !== false,
+          tieneRuta: c.tieneRuta === true,
+        },
+      ];
+    }),
   };
 }
 
@@ -58,6 +101,31 @@ export interface TextosDeLaMedicion {
   /** «Galaxy Watch · leído a las 17:10»; solo en la lectura automática. */
   fuente: string | null;
   porRevisar: boolean;
+  /** Spec 042: una línea por carrera, «6,21 km · 36:55 · 5:57 min/km · Por revisar». */
+  carreras: string[];
+}
+
+function duracionCorta(seg: number): string {
+  const t = Math.max(0, Math.round(seg));
+  const h = Math.floor(t / 3600);
+  const m = Math.floor((t % 3600) / 60);
+  const s = t % 60;
+  const dos = (n: number) => String(n).padStart(2, '0');
+  return h > 0 ? `${h}:${dos(m)}:${dos(s)}` : `${m}:${dos(s)}`;
+}
+
+/** «6,21 km · 36:55 · 5:57 min/km», con «No cuenta» o «Por revisar» si el servidor lo dijo. */
+export function lineaDeLaCarrera(c: CarreraDeLaFicha): string {
+  const ritmo = c.ritmoSegPorKm != null && c.ritmoSegPorKm > 0 ? `${duracionCorta(c.ritmoSegPorKm)} min/km` : null;
+  return [
+    kmConUnidad(c.kilometros),
+    duracionCorta(c.duracionActivaSeg),
+    ritmo,
+    c.cuentaParaElHabito ? null : 'No cuenta',
+    c.porRevisar ? 'Por revisar' : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
 }
 
 function quienLoMidio(m: MedicionDeLaFicha): string {
@@ -76,11 +144,17 @@ export function textosDeLaMedicion(m: MedicionDeLaFicha): TextosDeLaMedicion {
     ? [m.pasos != null ? `Pasos ${formatoPasos(m.pasos)}` : null, `Distancia ${kmConUnidad(m.valor)}`].filter(Boolean).join(' · ')
     : null;
   const fuente = automatica && m.fuente ? `${m.fuente}${hora ? ` · leído a las ${hora}` : ''}` : null;
-  return { principal: `${kmConUnidad(m.valor)} · ${quienLoMidio(m)}`, detalle, fuente, porRevisar: m.porRevisar };
+  return {
+    principal: `${kmConUnidad(m.valor)} · ${quienLoMidio(m)}`,
+    detalle,
+    fuente,
+    porRevisar: m.porRevisar,
+    carreras: m.carreras.map(lineaDeLaCarrera),
+  };
 }
 
 /** Lo que oye el lector de pantalla: lo mismo, en una frase. */
 export function dichoDeLaMedicion(m: MedicionDeLaFicha): string {
   const t = textosDeLaMedicion(m);
-  return [t.principal, t.detalle, t.fuente, t.porRevisar ? 'Por revisar' : null].filter(Boolean).join('. ') + '.';
+  return [t.principal, t.detalle, t.fuente, ...t.carreras.map(l => `Carrera: ${l}`), t.porRevisar ? 'Por revisar' : null].filter(Boolean).join('. ') + '.';
 }

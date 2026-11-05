@@ -103,6 +103,10 @@ export function procesarCola(cuentaId: string, enPrimerPlano: boolean): Promise<
           continue;
         }
         const desenlace = await intentar(entrada.cuerpo);
+        if (desenlace.tipo === 'ya-registrada') {
+          // 409 CARRERA_YA_REGISTRADA: esa carreraId ya está guardada con otros datos. Sale de la cola sin reintentar y queda anotado.
+          console.warn(`[carrera] ${entrada.carreraId} ya estaba registrada con otros datos (409): sale de la cola sin reintentar`);
+        }
         cola = aplicarDesenlace(cola, entrada.carreraId, desenlace, Date.now());
         await guardarCola(cuentaId, cola);
         estados.set(entrada.carreraId, estadoDe(desenlace, entrada));

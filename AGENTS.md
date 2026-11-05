@@ -2448,7 +2448,11 @@ llame al servidor a cada rato y que nada se duplique**, y **«el avatar debe ref
   ritmo del último km); pitidos; pausa automática; pantalla siempre encendida (`expo-keep-awake`, apagada por defecto); «Guardar mi ruta». La voz es el texto
   a voz del teléfono (`expo-speech`, `es-419`).
 * **Lo que se lee de un día con carreras**: `origenDelDia: GPS` dice «6,2 km · Carrera con GPS» en Training y en las fichas (`detalleDeLosKm`,
-  `quienLoMidio`). La lista de carreras y el mapa de la ruta en las fichas (FR-044, FR-041) **todavía no están**.
+  `quienLoMidio`). En las fichas del mentor, el líder y Administración (`LineaDeLaMedicion`), cada carrera del día (`medicion.carreras[]`) es una
+  línea «6,21 km · 36:55 · 5:57 min/km», con «No cuenta» o «Por revisar» si el servidor lo dijo. Las rutas por rol ya tienen su función
+  (`leerRutaDeLaCarrera`: la propia, la del mentor o guía y la del liderazgo con y sin grupo, contracts/api.md §3), pero **el mapa de la ruta en
+  las fichas todavía no se abre** (pendiente). En «Terminaste», `NO_CUENTA` dice el `motivoNoCuenta` del servidor y una carrera `porRevisar` lo
+  avisa; un 409 que no sea `CARRERA_YA_REGISTRADA` queda marcado y no se toma por éxito.
 * **Cerrar sesión** apaga el GPS y la notificación (`apagarLaCarreraAlSalir`); la carrera y la cola quedan guardadas por cuenta (no salen con otra sesión).
   Falta el aviso «tienes una carrera sin enviar» antes de cerrar sesión.
 * **Dependencias nuevas, revisadas antes de instalar** (`npm view` y el tarball, integridad igual a la del lock, sin `preinstall`/`install`/`postinstall`, sin

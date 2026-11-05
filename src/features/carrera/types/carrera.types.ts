@@ -138,10 +138,13 @@ export interface RespuestaDeLaCarrera {
   kilometros: number;
   cuentaParaElHabito: boolean;
   porRevisar: boolean;
+  /** Por qué no cuenta para el hábito (FR-024), en texto que lee la persona; `null` si cuenta. */
+  motivoNoCuenta: string | null;
   habito: {
     resultado: ResultadoDelHabito | string;
     registroId: string | null;
     kilometrosDelDia: number | null;
+    origenDelDia: string | null;
     puntosOtorgados: number;
   } | null;
 }
