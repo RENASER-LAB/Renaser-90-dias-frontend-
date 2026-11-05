@@ -1,0 +1,21 @@
+# C04 — Sin permiso de ubicación la carrera no empieza y se dice por qué; queda la captura de siempre (spec 042, historia 1
+# escenario 2). Precondición: revocar la ubicación: `adb shell pm revoke com.renaser.app android.permission.ACCESS_FINE_LOCATION`
+# y `... ACCESS_COARSE_LOCATION`.
+# cuenta: aprendiz
+# spec 042 FR-039
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- runFlow: ../comun/abrir-training.yaml
+- tapOn: "Correr con GPS"
+- extendedWaitUntil:
+    visible: "No permitir|Don’t allow|Don't allow"
+    timeout: 10000
+- tapOn: "No permitir|Don’t allow|Don't allow"
+- extendedWaitUntil:
+    visible: "Para contar tus km con el GPS necesitamos tu ubicación.*"
+    timeout: 5000
+- takeScreenshot: C04-sin-permiso
+- tapOn: "OK|ACEPTAR|Aceptar"
+- assertNotVisible: "Empezar ya"
+- assertVisible: "Kilómetros diarios"

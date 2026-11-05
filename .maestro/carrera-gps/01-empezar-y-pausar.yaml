@@ -1,0 +1,55 @@
+# C01 — Empezar la carrera desde Training, pausar deslizando y seguir (spec 042). Precondición: README (APK nuevo, backend 042
+# local, GPS simulado caminando). La ubicación ya concedida; si el sistema la pide, se concede «Mientras se usa la app».
+# cuenta: aprendiz
+# spec 042 FR-001, FR-003, FR-007, FR-012
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- runFlow: ../comun/abrir-training.yaml
+- extendedWaitUntil:
+    visible: "Kilómetros diarios"
+    timeout: 20000
+- tapOn: "Correr con GPS"
+- runFlow:
+    when:
+      visible: "Mientras se usa la app|While using the app"
+    commands:
+      - tapOn: "Mientras se usa la app|While using the app"
+- runFlow:
+    when:
+      visible: "Permitir|Allow"
+    commands:
+      - tapOn: "Permitir|Allow"
+- extendedWaitUntil:
+    visible: "Empieza en .*"
+    timeout: 10000
+- assertVisible: "Empezar ya"
+- takeScreenshot: C01a-cuenta-regresiva
+- extendedWaitUntil:
+    visible: "Duración"
+    timeout: 8000
+- assertVisible: "Distancia km.*"
+- assertVisible: "Ritmo min/km.*"
+- assertVisible: "Calorías.*"
+- assertVisible: "Mapa"
+- assertVisible: "Estadísticas"
+- assertVisible: "Tramos"
+- assertVisible: "Voz"
+- takeScreenshot: C01b-corriendo
+
+# Pausar deslizando (o con la acción accesible del botón).
+- swipe:
+    from: "Pausar la carrera"
+    direction: RIGHT
+    duration: 400
+- extendedWaitUntil:
+    visible: "En pausa"
+    timeout: 5000
+- assertVisible: "Tu carrera queda guardada, aunque cierres la app"
+- assertVisible: "Ver mis tramos"
+- assertVisible: "Bloquear la pantalla"
+- assertVisible: "Descartar esta carrera"
+- takeScreenshot: C01c-pausa
+- tapOn: "Seguir"
+- assertNotVisible: "Tu carrera queda guardada, aunque cierres la app"
+- assertVisible: "Pausar la carrera"
