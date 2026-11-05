@@ -3,6 +3,7 @@ import { almacen } from './almacenamiento';
 import { ApiError } from '../../../services/http/apiClient';
 import { avisarHabitoCumplido } from '../../habits/eventos/habitoCumplido';
 import { enviarCarrera } from '../api/carrerasApi';
+import { avisarCarreraRegistrada, cambiaLosKmDelDia } from './avisoCarreraRegistrada';
 import type { CuerpoDeLaCarrera } from '../types/carrera.types';
 import {
   agregarALaCola,
@@ -130,6 +131,8 @@ async function intentar(cuerpo: CuerpoDeLaCarrera): Promise<DesenlaceDelEnvio> {
         ...(respuesta.fecha ? { fecha: respuesta.fecha } : {}),
       });
     }
+    // Issue #133: la agenda de Training vuelve a leer los km del día (también cuando la carrera solo los SUMA).
+    if (cambiaLosKmDelDia(respuesta)) avisarCarreraRegistrada();
     return { tipo: 'exito', respuesta };
   } catch (error) {
     if (error instanceof ApiError) return desenlaceDelError(error.status, error.codigo, error.message);

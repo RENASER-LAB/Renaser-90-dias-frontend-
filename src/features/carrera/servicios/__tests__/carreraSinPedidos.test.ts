@@ -37,6 +37,7 @@ import {
   reiniciarParaPruebas,
 } from '../carreraEnVivo';
 import { encolarYEnviar, estadoDelEnvio, procesarCola } from '../colaDeCarreras';
+import { cambiaLosKmDelDia, escucharCarreraRegistrada } from '../avisoCarreraRegistrada';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const fetchFalso = apiFetch as unknown as jest.Mock<(...a: any[]) => Promise<any>>;
@@ -161,5 +162,39 @@ describe('la carrera sobrevive a que Android mate la app', () => {
     const retomada = await cargarCarrera('cuenta', T0 + 600_000);
     expect(retomada?.carreraId).toBe('d');
     expect(retomada?.fase).toBe('pausa');
+  });
+});
+
+describe('Training vuelve a leer los km del día (issue #133)', () => {
+  // spec 042 FR-022, FR-029
+  it('una carrera que SUMA km (ACTUALIZADO) enviada desde la cola avisa a Training; una repetida no', async () => {
+    const oyente = jest.fn();
+    const quitar = escucharCarreraRegistrada(oyente);
+    try {
+      empezarCarrera({ carreraId: 'd', cuentaId: 'cuenta', pesoKg: 70, conPasos: false }, T0);
+      correr(120);
+      const final = await cerrarCarrera(T0 + 122_000);
+      const cuerpo = cuerpoDeLaCarrera(final!, T0 + 122_000, { guardarRuta: false });
+      fetchFalso.mockRejectedValueOnce(new ApiError(0, 'Sin conexión'));
+      await encolarYEnviar('cuenta', cuerpo);
+      expect(oyente).not.toHaveBeenCalled();
+
+      fetchFalso.mockResolvedValueOnce({ ...RESPUESTA, carreraId: 'd', habito: { ...RESPUESTA.habito, resultado: 'ACTUALIZADO', puntosOtorgados: 0, kilometrosDelDia: 2.13 } });
+      const ahora = Date.now;
+      Date.now = () => ahora() + 61_000;
+      try {
+        await procesarCola('cuenta', true);
+      } finally {
+        Date.now = ahora;
+      }
+      expect(oyente).toHaveBeenCalledTimes(1);
+      expect(avisarHabitoCumplido).not.toHaveBeenCalled(); // sumar km no es un cumplido nuevo
+    } finally {
+      quitar();
+    }
+    expect(cambiaLosKmDelDia({ repetida: false, habito: { resultado: 'CERRADO' } })).toBe(true);
+    expect(cambiaLosKmDelDia({ repetida: true, habito: { resultado: 'ACTUALIZADO' } })).toBe(false);
+    expect(cambiaLosKmDelDia({ repetida: false, habito: { resultado: 'NO_CUENTA' } })).toBe(false);
+    expect(cambiaLosKmDelDia({ repetida: false, habito: null })).toBe(false);
   });
 });

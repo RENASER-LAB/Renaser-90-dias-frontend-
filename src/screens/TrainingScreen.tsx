@@ -44,6 +44,7 @@ import { mensajeDeError } from '../services/http/apiClient';
 import { CLAVE_SISTEMA_PASTILLA_RENACER } from '../features/spirit/api/spiritApi';
 import { escucharPropuestaConfirmada } from '../features/renasia/events/avisoPropuestaConfirmada';
 import { escucharPostDiarioCerrado } from '../features/habits/events/avisoPostDiarioCerrado';
+import { escucharCarreraRegistrada } from '../features/carrera/servicios/avisoCarreraRegistrada';
 import { PastillaRenacerModal } from '../features/spirit/components/PastillaRenacerModal';
 import { audioDeLaAudioterapia, audioDeLaPastilla } from '../features/spirit/types/audioGuiado';
 import { obtenerAudioterapiaSemanal } from '../features/habits/api/audioterapiaApi';
@@ -385,6 +386,9 @@ export default function TrainingScreen() {
   // `useTraining` carga una sola vez al montarse. No se marca nada a mano: se recarga del backend,
   // que es la unica fuente de verdad.
   useEffect(() => escucharPostDiarioCerrado(() => void recargarEntrenamiento()), [recargarEntrenamiento]);
+  // Spec 042 (issue #133): una carrera que cerró o SUMÓ km vuelve a leer la agenda (la carrera vive sobre el navegador y Training
+  // no pierde el foco).
+  useEffect(() => escucharCarreraRegistrada(() => void recargarEntrenamiento()), [recargarEntrenamiento]);
   // D-229: SER creó un hábito (o cambió otro) y la persona lo confirmó en el chat: se recarga del backend.
   useEffect(() => escucharPropuestaConfirmada(() => void recargarEntrenamiento()), [recargarEntrenamiento]);
 
