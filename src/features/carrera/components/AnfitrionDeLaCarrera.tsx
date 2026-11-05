@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { AppState, Modal, Platform } from 'react-native';
+import { AppState, Modal, Platform, StyleSheet, View } from 'react-native';
 
 import { Alert } from '../../../components/Alerta';
 import { useSystemBackHandler } from '../../../hooks/useSystemBackHandler';
@@ -22,6 +22,7 @@ import {
   resumenParaLaNotificacion,
   seguirCarrera,
 } from '../servicios/carreraEnVivo';
+import { olvidarCentroDelMapa, prepararCentroDelMapa } from '../servicios/centroDelMapa';
 import { encolar, procesarCola } from '../servicios/colaDeCarreras';
 import { leerDatosDeLaPersona } from '../servicios/datosDeLaPersona';
 import { mostrarNotificacionDeCarrera, quitarNotificacionDeCarrera } from '../servicios/notificacionDeCarrera';
@@ -203,7 +204,8 @@ function Anfitrion() {
           );
           return;
         }
-        const [datos, conPasos] = await Promise.all([leerDatosDeLaPersona(cuentaId), prepararPodometro()]);
+        // El centro del mapa (solo para mirar, nunca se mide) se prepara junto con los datos: el mapa ya se ve en la cuenta.
+        const [datos, conPasos] = await Promise.all([leerDatosDeLaPersona(cuentaId), prepararPodometro(), prepararCentroDelMapa()]);
         setFigura(datos.figura);
         setConHabito(registroId != null);
         empezarCarrera({ carreraId: nuevaCarreraId(), cuentaId, pesoKg: datos.pesoKg, conPasos });
@@ -236,6 +238,7 @@ function Anfitrion() {
   );
 
   const detenerTodo = useCallback(async () => {
+    olvidarCentroDelMapa();
     await detenerGps();
     await quitarNotificacionDeCarrera();
   }, []);
@@ -320,18 +323,7 @@ function Anfitrion() {
 
   return (
     <Modal visible animationType="fade" statusBarTranslucent onRequestClose={() => void atras()}>
-      {vista.tipo === 'cuenta' ? (
-        <CuentaRegresiva
-          alTerminar={() => {
-            seguirCarrera();
-            setVista({ tipo: 'carrera' });
-          }}
-          alCancelar={() => {
-            void descartarCarrera().then(detenerTodo);
-            setVista({ tipo: 'cerrada' });
-          }}
-        />
-      ) : vista.tipo === 'terminaste' ? (
+      {vista.tipo === 'terminaste' ? (
         <PantallaTerminaste
           final={vista.final}
           terminadaEnMs={vista.terminadaEnMs}
@@ -343,28 +335,58 @@ function Anfitrion() {
           }}
           alListo={() => setVista({ tipo: 'cerrada' })}
         />
-      ) : e ? (
-        <PantallaCorriendo
-          e={e}
-          prefs={prefs}
-          persona={persona}
-          alPausar={() => pausarCarrera()}
-          alSeguir={() => {
-            seguirCarrera();
-            void empezarGps();
-          }}
-          alTerminar={() => void terminar()}
-          alDescartar={descartar}
-          alCambiarPrefs={cambiarPrefs}
-          panel={panel}
-          alCambiarPanel={setPanel}
-          bloqueada={bloqueada}
-          alBloquear={setBloqueada}
-        />
-      ) : null}
+      ) : (
+        // La cuenta va ENCIMA de la pantalla de correr, que ya está montada detrás: el mapa carga sus mosaicos durante el 3, 2, 1 y
+        // al terminar la cuenta es el mismo mapa (no se vuelve a montar).
+        <View style={estilos.capas}>
+          {e ? (
+            <View
+              style={estilos.capas}
+              importantForAccessibility={vista.tipo === 'cuenta' ? 'no-hide-descendants' : 'auto'}
+              accessibilityElementsHidden={vista.tipo === 'cuenta'}
+            >
+              <PantallaCorriendo
+                e={e}
+                prefs={prefs}
+                persona={persona}
+                detrasDeLaCuenta={vista.tipo === 'cuenta'}
+                alPausar={() => pausarCarrera()}
+                alSeguir={() => {
+                  seguirCarrera();
+                  void empezarGps();
+                }}
+                alTerminar={() => void terminar()}
+                alDescartar={descartar}
+                alCambiarPrefs={cambiarPrefs}
+                panel={panel}
+                alCambiarPanel={setPanel}
+                bloqueada={bloqueada}
+                alBloquear={setBloqueada}
+              />
+            </View>
+          ) : null}
+          {vista.tipo === 'cuenta' ? (
+            <View style={StyleSheet.absoluteFill}>
+              <CuentaRegresiva
+                sobreElMapa={e != null}
+                alTerminar={() => {
+                  seguirCarrera();
+                  setVista({ tipo: 'carrera' });
+                }}
+                alCancelar={() => {
+                  void descartarCarrera().then(detenerTodo);
+                  setVista({ tipo: 'cerrada' });
+                }}
+              />
+            </View>
+          ) : null}
+        </View>
+      )}
     </Modal>
   );
 }
+
+const estilos = StyleSheet.create({ capas: { flex: 1 } });
 
 function versionDeLaApp(): string | null {
   try {

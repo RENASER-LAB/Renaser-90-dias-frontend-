@@ -2,6 +2,7 @@ import { Platform } from 'react-native';
 
 import type { PuntoGps } from '../types/carrera.types';
 import { cargarCarrera, carreraActual, recibirPuntos, resumenParaLaNotificacion } from './carreraEnVivo';
+import { ponerCentroDelMapa } from './centroDelMapa';
 import { leerCarreraEnCurso } from './almacenCarrera';
 import { mostrarNotificacionDeCarrera, quitarNotificacionDeCarrera } from './notificacionDeCarrera';
 import { laCarreraYaEmpezo } from '../utils/notificacionUnica';
@@ -73,7 +74,10 @@ export function definirTareaDeLaCarrera(): void {
         // Proceso nuevo sin la pantalla: se carga tal cual; al abrir la app, `cargarCarrera` decide si estuvo muerta.
         await cargarCarrera(guardada.cuentaId);
       }
-      recibirPuntos(puntosDeLaUbicacion(locations));
+      const puntos = puntosDeLaUbicacion(locations);
+      // Solo para dónde mira el mapa (también en la cuenta 3, 2, 1, cuando el motor descarta el punto por estar en pausa).
+      if (puntos.length > 0) ponerCentroDelMapa(puntos[puntos.length - 1], 'gps');
+      recibirPuntos(puntos);
       // La notificación única (FR-011) se pone al día también con la app abierta: es la que se ve en la barra.
       const r = resumenParaLaNotificacion();
       const e = carreraActual();

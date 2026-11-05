@@ -9,6 +9,7 @@ import { Presionable } from '../../../components/Presionable';
 import { fuentes } from '../../../theme/fuentes';
 import { useTheme } from '../../../theme/ThemeContext';
 import { useEstadoDelEnvio, useRelojDeLaCarrera } from '../hooks/useCarreraEnVivo';
+import { useCentroDelMapa } from '../servicios/centroDelMapa';
 import type { EstadoDeLaCarrera, PreferenciasDeLaCarrera } from '../types/carrera.types';
 import {
   alDarPasos,
@@ -53,7 +54,10 @@ export function PantallaCorriendo({
   alCambiarPanel,
   bloqueada,
   alBloquear,
+  detrasDeLaCuenta = false,
 }: {
+  /** Montada detrás de la cuenta 3, 2, 1: el mapa ya carga y la pantalla es la de correr aunque la carrera siga en pausa. */
+  detrasDeLaCuenta?: boolean;
   e: EstadoDeLaCarrera;
   prefs: PreferenciasDeLaCarrera;
   persona: DatosDeLaPersona;
@@ -69,8 +73,9 @@ export function PantallaCorriendo({
 }) {
   const { c } = useTheme();
   const insets = useSafeAreaInsets();
-  const enPausa = e.fase === 'pausa';
+  const enPausa = e.fase === 'pausa' && !detrasDeLaCuenta;
   const ahora = useRelojDeLaCarrera(true);
+  const centroDeVista = useCentroDelMapa();
   const [pestana, setPestana] = useState<PestanaDeLaCarrera>('mapa');
   const avatar = useAvatarFusionado(e, ahora);
 
@@ -108,6 +113,7 @@ export function PantallaCorriendo({
           <MapaDeCarrera
             ruta={e.ruta}
             posicion={avatar.estado.posicion}
+            centroDeVista={centroDeVista}
             rumbo={avatar.estado.rumbo}
             duracionMs={avatar.duracionMs}
             figura={persona.figura}
@@ -289,6 +295,7 @@ export function PantallaTerminaste({
         posicion={ultimo}
         rumbo={0}
         duracionMs={0}
+        modo="resumen"
         figura={persona.figura}
         caminando={false}
         iniciales={persona.iniciales}

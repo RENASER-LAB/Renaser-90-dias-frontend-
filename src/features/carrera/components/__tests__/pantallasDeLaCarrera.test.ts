@@ -103,7 +103,7 @@ describe('el mapa no calcula nada', () => {
     ).root;
     const mapa = raiz.findAll((n: ReactTestInstance) => n.props.testID === 'mapa-google' && typeof n.type !== 'string')[0];
     expect(mapa.props.provider).toBe('google');
-    expect(mapa.props.initialCamera.pitch).toBe(60);
+    expect(mapa.props.initialCamera.pitch).toBe(67.5);
     expect(mapa.props.showsBuildings).toBe(true);
     const linea = raiz.findAll((n: ReactTestInstance) => n.props.testID === 'ruta-dorada' && typeof n.type !== 'string')[0];
     expect(linea.props.strokeColor).toBe('#B2924F');

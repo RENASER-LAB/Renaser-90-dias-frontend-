@@ -21,7 +21,26 @@ import { TEXTOS_DE_LA_CARRERA } from '../utils/textosDeLaCarrera';
 
 const PALABRAS: Record<number, string> = { 3: 'tres', 2: 'dos', 1: 'uno' };
 
-export function CuentaRegresiva({ alTerminar, alCancelar }: { alTerminar: () => void; alCancelar: () => void }) {
+/** Opacidad del dorado cuando el mapa ya carga detrás: se adivina el mapa sin perder el contraste del número blanco. */
+export const OPACIDAD_SOBRE_EL_MAPA = 0.86;
+
+function conOpacidad(hex: string, opacidad: number): string {
+  const m = /^#([0-9a-f]{6})$/i.exec(hex);
+  if (!m) return hex;
+  const n = parseInt(m[1], 16);
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${opacidad})`;
+}
+
+export function CuentaRegresiva({
+  alTerminar,
+  alCancelar,
+  sobreElMapa = false,
+}: {
+  alTerminar: () => void;
+  alCancelar: () => void;
+  /** El mapa ya carga detrás (spec 042, 2026-11-05): el dorado deja verlo apenas. */
+  sobreElMapa?: boolean;
+}) {
   const { c } = useTheme();
   const insets = useSafeAreaInsets();
   const reducir = useReducedMotion();
@@ -60,7 +79,7 @@ export function CuentaRegresiva({ alTerminar, alCancelar }: { alTerminar: () => 
   const estiloNumero = useAnimatedStyle(() => ({ transform: [{ scale: escala.get() }], opacity: opacidad.get() }));
 
   return (
-    <View style={[estilos.fondo, { backgroundColor: c.gold, paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 }]}>
+    <View style={[estilos.fondo, { backgroundColor: sobreElMapa ? conOpacidad(c.gold, OPACIDAD_SOBRE_EL_MAPA) : c.gold, paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 }]}>
       <View style={estilos.centro} accessibilityLiveRegion="assertive" accessibilityLabel={`Empieza en ${numero}`}>
         <View style={estilos.aro}>
           <Animated.Text style={[estilos.numero, estiloNumero]}>{numero}</Animated.Text>
