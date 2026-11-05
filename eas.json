@@ -15,7 +15,8 @@
       "distribution": "internal",
       "android": {
         "gradleCommand": ":app:assembleDebug"
-      }
+      },
+      "environment": "development"
     },
     "preview": {
       "distribution": "internal",
