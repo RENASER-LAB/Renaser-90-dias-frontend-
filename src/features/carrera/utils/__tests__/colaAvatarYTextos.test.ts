@@ -118,7 +118,7 @@ describe('textos y voz', () => {
   it('la línea del hábito dice el estado del envío', () => {
     expect(lineaDelEnvio({ tipo: 'enviando', km: '3,20' }, true)).toBe('Registrando 3,20 km en tu hábito…');
     expect(lineaDelEnvio({ tipo: 'en-cola', km: '3,20' }, true)).toBe('Guardada en tu teléfono, se enviará al tener señal');
-    expect(lineaDelEnvio({ tipo: 'respondida', respuesta: { ...respuesta('CERRADO'), kilometros: 3.2 } }, true)).toBe('Registramos 3,2 km en tu hábito');
+    expect(lineaDelEnvio({ tipo: 'respondida', respuesta: { ...respuesta('CERRADO'), kilometros: 3.2 } }, true)).toBe('Registramos 3,20 km en tu hábito');
     expect(lineaDelEnvio({ tipo: 'respondida', respuesta: respuesta('YA_CON_CAPTURA') }, true)).toBe(
       'Tu carrera quedó guardada. Hoy ya registraste este hábito con tu captura.',
     );
@@ -126,6 +126,15 @@ describe('textos y voz', () => {
     expect(
       lineaDelEnvio({ tipo: 'respondida', respuesta: { ...respuesta('NO_CUENTA'), motivoNoCuenta: 'Más de 60 km no se registra solo.' } }, true),
     ).toBe('Tu carrera quedó guardada, pero no entra a tu hábito: Más de 60 km no se registra solo.');
+  });
+
+  // spec 042 FR-018, FR-014
+  it('los km de la línea del hábito van con el mismo formato que la tarjeta (dos decimales)', () => {
+    const r = (kilometros: number) => ({ tipo: 'respondida' as const, respuesta: { ...respuesta('CERRADO'), kilometros } });
+    expect(lineaDelEnvio(r(0.4), true)).toBe('Registramos 0,40 km en tu hábito');
+    expect(lineaDelEnvio(r(0), true)).toBe('Registramos 0,00 km en tu hábito');
+    expect(lineaDelEnvio(r(5), true)).toBe('Registramos 5,00 km en tu hábito');
+    expect(lineaDelEnvio(r(6.2104), true)).toBe('Registramos 6,21 km en tu hábito');
   });
 
   // spec 042 FR-010

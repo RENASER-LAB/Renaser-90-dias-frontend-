@@ -87,7 +87,8 @@ export function lineaDelEnvio(estado: EstadoDelEnvio, conHabito: boolean): strin
       return 'Esta carrera ya estaba guardada.';
     case 'respondida': {
       const r = estado.respuesta;
-      const km = r.kilometros.toFixed(2).replace('.', ',').replace(/,?0+$/, '') || '0';
+      // El mismo formato que la tarjeta de «Terminaste» («0,40»): dos decimales, coma (formatoKm).
+      const km = formatoKm(Math.round(r.kilometros * 1000));
       switch (r.habito?.resultado) {
         case 'CERRADO':
         case 'ACTUALIZADO':

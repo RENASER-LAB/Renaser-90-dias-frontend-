@@ -2632,6 +2632,8 @@ llame al servidor a cada rato y que nada se duplique**, y **«el avatar debe ref
   `GOOGLE_MAPS_ANDROID_KEY`); en Play Console la declaración del servicio en primer plano de tipo ubicación (con video) y Data safety (ubicación precisa,
   actividad física); la política de privacidad con la ubicación y la ruta; el arte final del avatar; y probar en un teléfono real (latencia del podómetro,
   batería, pantalla bloqueada 10 min, SC-007 y SC-011).
+* **Corregido 2026-11-05 (pendientes del E2E):**
+  * **Los km, un solo formato.** «Registramos X km en tu hábito» usa `formatoKm`, el de la tarjeta: dos decimales («Registramos 0,40 km», no «0,4»).
 
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
