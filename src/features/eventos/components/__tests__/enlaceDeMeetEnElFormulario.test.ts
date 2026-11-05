@@ -177,7 +177,7 @@ describe('el formulario (FR-019, FR-014, FR-023, SC-009; decisión del dueño de
   // spec 040 FR-019
   it('un evento que ya usaba el enlace sigue en «Por Meet» aunque el servidor ya no lo ofrezca, y dice por qué', () => {
     mockDisponibilidad = { sabido: true, disponibilidad: { disponible: false, motivo: 'CUENTA_REVOCADA' } };
-    const original = evento({ meet: { estado: 'CREADO', accesoAplicado: true, mensaje: null, fechasConSala: 1, fechasConProblema: 0 } });
+    const original = evento({ meet: { estado: 'CREADO', accesoAplicado: true, mensaje: null, fechasConSala: 1, fechasConProblema: 0, avisoDelPlan: null } });
 
     const r = formulario(original);
 
@@ -216,7 +216,7 @@ function detalle(e: Evento, puedeGestionar: boolean, onEditar = jest.fn(), onSal
   };
 }
 
-const FALLIDO = { estado: 'FALLIDO', accesoAplicado: false, mensaje: 'No pudimos crear el enlace de Meet.', fechasConSala: 0, fechasConProblema: 1 };
+const FALLIDO = { estado: 'FALLIDO', accesoAplicado: false, mensaje: 'No pudimos crear el enlace de Meet.', fechasConSala: 0, fechasConProblema: 1, avisoDelPlan: null };
 
 describe('el detalle del evento (FR-019, FR-008, SC-007)', () => {
   // spec 040 SC-007
@@ -262,6 +262,19 @@ describe('el detalle del evento (FR-019, FR-008, SC-007)', () => {
     const { r } = detalle(evento({ recurrente: true }), true);
 
     expect(hay(r, 'Cada fecha tendrá su propio enlace.')).toBe(true);
+  });
+
+  // spec 040 FR-037
+  it('ADMIN ve qué plan de Google falta para grabar o transcribir, sin «Reintentar» (no es un error); quien no administra no lo ve', () => {
+    const aviso = 'Para grabar hace falta Google One de 2 TB o más en la cuenta conectada; para transcribir, Google Workspace.';
+    mockMeet = { ...mockMeet, evento: evento({ meet: { ...FALLIDO, estado: 'CREADO', accesoAplicado: true, mensaje: null, fechasConProblema: 0, fechasConSala: 1, avisoDelPlan: aviso } }) };
+
+    const { r } = detalle(evento(), true);
+    expect(hay(r, aviso)).toBe(true);
+    expect(hay(r, 'Reintentar')).toBe(false);
+
+    const { r: aprendiz } = detalle(evento(), false);
+    expect(hay(aprendiz, aviso)).toBe(false);
   });
 
   // spec 040 FR-005

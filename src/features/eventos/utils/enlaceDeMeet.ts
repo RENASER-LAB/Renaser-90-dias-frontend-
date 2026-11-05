@@ -48,6 +48,14 @@ export function lineaDeLaSala(meet: ResumenDeMeet | null | undefined): string | 
   return meet?.mensaje ? meet.mensaje : null;
 }
 
+/**
+ * Lo que le falta a la cuenta de Google conectada para grabar o transcribir (decisión del dueño del 2026-11-05), tal cual lo escribe el
+ * servidor, o `null`. Es solo un aviso: no lleva «Reintentar», porque reintentar no cambia el plan de la cuenta.
+ */
+export function avisoDelPlanDeGoogle(meet: ResumenDeMeet | null | undefined): string | null {
+  return meet?.avisoDelPlan ? meet.avisoDelPlan : null;
+}
+
 /** «Reintentar» solo cuando hay algo sin terminar (el servidor dice qué en `mensaje`). */
 export function sePuedeReintentar(meet: ResumenDeMeet | null | undefined): boolean {
   return lineaDeLaSala(meet) !== null;

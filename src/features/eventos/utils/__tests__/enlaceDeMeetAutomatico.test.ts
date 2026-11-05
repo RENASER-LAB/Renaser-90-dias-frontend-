@@ -7,6 +7,7 @@ import {
   OPCION_LUGAR,
   OPCION_MEET,
   ROTULO_DONDE,
+  avisoDelPlanDeGoogle,
   lineaDeLaSala,
   lineaDeLaSerie,
   motivoSinMeet,
@@ -22,7 +23,7 @@ import { armarCuerpo, dondeQueSeGuarda, formularioDesdeEvento, formularioVacio, 
 const AHORA = Date.parse('2026-11-05T15:00:00Z');
 
 function resumen(parcial: Partial<ResumenDeMeet> = {}): ResumenDeMeet {
-  return { estado: 'CREADO', accesoAplicado: true, mensaje: null, fechasConSala: 1, fechasConProblema: 0, ...parcial };
+  return { estado: 'CREADO', accesoAplicado: true, mensaje: null, fechasConSala: 1, fechasConProblema: 0, avisoDelPlan: null, ...parcial };
 }
 
 function evento(parcial: Partial<Evento> = {}): Evento {
@@ -201,5 +202,16 @@ describe('los textos (FR-019, FR-021)', () => {
     expect(motivoSinMeet('CUENTA_REVOCADA')).toContain('volver a conectar');
     expect(motivoSinMeet('APAGADA')).toBe('');
     expect(motivoSinMeet(null)).toBe('');
+  });
+});
+
+describe('el aviso del plan de Google (FR-037)', () => {
+  // spec 040 FR-037
+  it('dice lo que manda el servidor y no habilita «Reintentar»', () => {
+    const aviso = 'Para transcribir hace falta Google Workspace.';
+    expect(avisoDelPlanDeGoogle(resumen({ avisoDelPlan: aviso }))).toBe(aviso);
+    expect(sePuedeReintentar(resumen({ avisoDelPlan: aviso }))).toBe(false);
+    expect(avisoDelPlanDeGoogle(resumen())).toBeNull();
+    expect(avisoDelPlanDeGoogle(null)).toBeNull();
   });
 });
