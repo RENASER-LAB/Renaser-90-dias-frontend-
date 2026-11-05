@@ -2440,6 +2440,15 @@ Lo que cambia y nada más (el aprendiz, el mentor y el líder no ven ninguna pan
 > acceso, lugar y otro enlace), `meetApi` y `reglasDeEventos` ajustadas. Hace falta el backend con esta corrección (un backend de la versión anterior también deja la sala abierta
 > cuando no recibe el acceso).
 
+> **Agregado 2026-11-05 (decisión 6 del dueño: «que el administrador o alquimista, jalando su correo, sea el que tenga permisos, y que el Meet ya venga grabando
+> y transcribiendo»; backend FR-035 a FR-037, V171).** Todo lo hace el servidor: invita al evento de Calendar a quien crea o edita el evento (sin correos de Google) y
+> pide que la sala grabe, transcriba y tome notas sola. En la app cambia **solo esto**: `ResumenDeMeet` suma `avisoDelPlan` (esquema tolerante: roto, vacío o ausente
+> = `null`) y el detalle del evento, para Administración y Alquimista, muestra ese aviso en una línea de texto normal (no roja) cuando la cuenta de Google conectada no
+> tiene el plan (por ejemplo «Para grabar hace falta Google One de 2 TB o más en la cuenta conectada; para transcribir, Google Workspace.»), **sin «Reintentar»** (no es un
+> error: el evento y el enlace están bien; `avisoDelPlanDeGoogle` en `utils/enlaceDeMeet`). El aprendiz, el mentor y el líder no ven nada. Sin diseño, textos del
+> formulario ni pantallas nuevas. Pruebas: `meetApi`, `enlaceDeMeetAutomatico` y `enlaceDeMeetEnElFormulario`. Hace falta un APK nuevo (solo JavaScript) y el backend
+> con V171; contra un backend anterior no llega el campo y la pantalla queda igual.
+
 ## Cambio por pedido del dueño — 2026-11-04 — Recordatorios de eventos por el chat y por WhatsApp: la baja en Yo → Notificaciones y el aviso de finalidad (spec 041)
 
 Pedido del dueño (textual): «Quiero lo mismo [que RenaserOs]… los recordatorios dentro del mismo chat y la app, y también con otro número que pondré». Spec, plan y decisiones en el backend
