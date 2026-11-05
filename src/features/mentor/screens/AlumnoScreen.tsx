@@ -41,6 +41,7 @@ import { etiquetaDeEntrega } from '../utils/etiquetaDeEntrega';
 import { subtituloDelAlumno } from '../utils/subtituloDelAlumno';
 import type { AlumnoConEstado } from '../types/mentor.types';
 import { useOcultarBarraAlDesplazar } from '../../../navigation/barraAlDesplazar/BarraInferior';
+import { medicionDeLaFichaDe, seMidioSolo } from '../../pasos/utils/medicionDeLaFicha';
 
 /**
  * El detalle de un aprendiz, para que el mentor sepa QUÉ decirle antes de escribirle.
@@ -339,7 +340,8 @@ export function AlumnoScreen({
                               >
                                 {etiquetaDeEstado(o.estadoHabito)}
                               </Text>
-                              {o.entrega !== 'NO_REQUERIDA' ? (
+                              {/* Issue #134: con los km medidos por el teléfono no se dice «Evidencia sin entregar». */}
+                              {o.entrega !== 'NO_REQUERIDA' && !(o.entrega === 'SIN_ENTREGA' && seMidioSolo(medicionDeLaFichaDe(o.medicion))) ? (
                                 <Text style={[t.body, { color: c.textSoft, fontSize: 16 }]}>
                                   {etiquetaDeEntrega(o.entrega, o.revision, o.publicacionId ?? null)}
                                 </Text>

@@ -1,0 +1,30 @@
+# C03 — Terminar: un solo envío y la línea del hábito (spec 042). Precondición: README, GPS simulado de AL MENOS 150 m en más
+# de 1 minuto (si no, la carrera es «Muy corta para guardarla»). El flujo cierra el hábito de hoy si estaba pendiente.
+# cuenta: aprendiz
+# spec 042 FR-014, FR-016, FR-018
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- runFlow: ../comun/abrir-training.yaml
+- tapOn: "Correr con GPS"
+- tapOn: "Empezar ya"
+- extendedWaitUntil:
+    visible: "Pausar la carrera"
+    timeout: 8000
+# Dejar correr la ruta simulada.
+- waitForAnimationToEnd:
+    timeout: 75000
+- swipe:
+    from: "Pausar la carrera"
+    direction: RIGHT
+    duration: 400
+- tapOn: "Terminar"
+- extendedWaitUntil:
+    visible: "¡Carrera terminada!"
+    timeout: 8000
+- extendedWaitUntil:
+    visible: "Registramos .* km en tu hábito|Tu carrera quedó guardada.*"
+    timeout: 20000
+- assertVisible: "Compartir en el Muro"
+- takeScreenshot: C03-terminaste
+- tapOn: "Listo"

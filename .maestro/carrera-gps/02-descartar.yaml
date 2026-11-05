@@ -1,0 +1,24 @@
+# C02 — Descartar una carrera: pide confirmación, se borra del teléfono y no se envía (spec 042). Precondición: README.
+# cuenta: aprendiz
+# spec 042 FR-013
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- runFlow: ../comun/abrir-training.yaml
+- tapOn: "Correr con GPS"
+- tapOn: "Empezar ya"
+- extendedWaitUntil:
+    visible: "Pausar la carrera"
+    timeout: 8000
+- longPressOn: "Pausar la carrera"
+- extendedWaitUntil:
+    visible: "Descartar esta carrera"
+    timeout: 5000
+- tapOn: "Descartar esta carrera"
+- assertVisible: "¿Descartar esta carrera\\?"
+- tapOn: "Descartar"
+- extendedWaitUntil:
+    visible: "Correr con GPS"
+    timeout: 8000
+- assertNotVisible: "Carrera en curso.*"
+- takeScreenshot: C02-descartada

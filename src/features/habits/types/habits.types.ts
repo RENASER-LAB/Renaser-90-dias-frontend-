@@ -359,6 +359,8 @@ export interface MedicionDelTrackApi {
   meta?: number | null;
   origenDelDia?: string | null;
   fuenteDelDia?: string | null;
+  /** Spec 042: cuántas carreras con GPS hubo ese día y sus km. Ausente = backend anterior; `null` = ninguna. */
+  carrerasDelDia?: { cantidad: number; kilometros: number } | null;
 }
 
 /**

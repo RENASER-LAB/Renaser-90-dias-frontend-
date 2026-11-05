@@ -18,6 +18,8 @@ export const CLAVES = {
   muroComentarios: 'muro.comentarios',
   muroReacciones: 'muro.reacciones',
   habitos: 'habitos',
+  /* «Correr con GPS» en «Kilómetros diarios» (spec 042, hija de `habitos.km`): se esconde o avisa mantenimiento; una carrera en la cola espera. */
+  habitosKmCarreras: 'habitos.km.carreras',
   /* Rocas y objetivos (las acciones del día). También tapa «Cierra tu día», que desde la spec 033 vive en Plan. */
   plan: 'plan',
   eventos: 'eventos',

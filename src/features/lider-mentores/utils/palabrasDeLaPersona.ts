@@ -1,4 +1,5 @@
 import { tituloEnTipoOracion } from '../../habits/utils/tituloEnTipoOracion';
+import { seMidioSolo } from '../../pasos/utils/medicionDeLaFicha';
 import type {
   AccionDeLaPersona,
   DiaDeLaPersona,
@@ -52,7 +53,8 @@ export function estadoDeLaObligacionEnPalabras(o: ObligacionDeLaPersona): string
 /** Qué pasó con la evidencia: la entrega y su revisión son dos hechos, se dicen los dos. `null` si no se exigía. */
 export function entregaEnPalabras(o: ObligacionDeLaPersona): string | null {
   if (o.entrega === null || o.entrega === 'NO_REQUERIDA') return null;
-  if (o.entrega === 'SIN_ENTREGA') return 'Evidencia sin entregar';
+  // Issue #134: con los km medidos por el teléfono (GPS o Health Connect) no hay captura que esperar.
+  if (o.entrega === 'SIN_ENTREGA') return seMidioSolo(o.medicion) ? null : 'Evidencia sin entregar';
   if (o.publicacionId !== null && o.revision === null) return 'Publicado en el Muro';
   switch (o.revision) {
     case 'VALIDA':

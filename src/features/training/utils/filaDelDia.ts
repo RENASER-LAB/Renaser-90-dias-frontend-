@@ -191,8 +191,8 @@ export function subtituloDeLaFila(
  * ---------------------------------------------------------------------------------------------- */
 
 export interface AccionDeLaHoja {
-  /** `marcar` cierra al instante (registra la hora); `registrar` abre el registro de su tipo. */
-  tipo: 'marcar' | 'registrar';
+  /** `marcar` cierra al instante (registra la hora); `registrar` abre el registro de su tipo; `correr` abre la carrera con GPS (spec 042). */
+  tipo: 'marcar' | 'registrar' | 'correr';
   etiqueta: string;
   icono: IconName;
   /** Una línea chica bajo el botón. */
@@ -264,3 +264,14 @@ export function metaDeLaHoja(item: ItemDelDia, modo: ModoDeLaFila): string {
 export const TEXTO_DE_DIA_CERRADO = 'Ese día ya cerró. No se puede registrar.';
 export const TEXTO_YA_HECHO = 'Ya hecho';
 export const TEXTO_SIN_LECTURA_DEL_DIA = 'Lo que hiciste ese día está en Yo → Mis evidencias.';
+
+/**
+ * La hoja de «Kilómetros diarios» cuando el teléfono puede correr con GPS (spec 042, pedido del dueño del 2026-11-05): el botón
+ * principal es la carrera y la captura queda como opción secundaria («Subir captura»), para quien no puede correr con el teléfono.
+ */
+export function accionesDeLaHojaConCarrera(enCurso: boolean): { principal: AccionDeLaHoja; secundaria: AccionDeLaHoja } {
+  return {
+    principal: { tipo: 'correr', etiqueta: enCurso ? 'Volver a la carrera' : 'Correr con GPS', icono: enCurso ? 'activity' : 'footprints', nota: null },
+    secundaria: { tipo: 'registrar', etiqueta: 'Subir captura', icono: 'camera', nota: null },
+  };
+}
