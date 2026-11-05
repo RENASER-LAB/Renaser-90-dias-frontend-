@@ -76,6 +76,7 @@ export function TrainingPorHora({
   onMarcar,
   onAbrirEvento,
   pasos,
+  ofrecerCarrera = false,
 }: {
   activa: boolean;
   /**
@@ -111,6 +112,8 @@ export function TrainingPorHora({
   onAbrirEvento: (eventoId: string) => void;
   /** Spec 037 (D-310): los pasos del teléfono para «Kilómetros diarios». Ausente = la fila de siempre. */
   pasos?: PasosEnTraining;
+  /** Spec 042: ofrecer «Correr con GPS» en la fila de «Kilómetros diarios» de hoy. */
+  ofrecerCarrera?: boolean;
 }) {
   const { c, t } = useTheme();
   // Con el día de hoy del servidor como llave: al pasar la medianoche la hora de «ahora» se toma de nuevo en ese mismo render.
@@ -301,9 +304,10 @@ export function TrainingPorHora({
             onConectar: () => setConectarAbierta(true),
             onActualizar: () => void pasos.actualizar(),
             onRegistrar: () => void pasos.registrar(),
+            carrera: ofrecerCarrera,
           }
         : null,
-    [pasos],
+    [pasos, ofrecerCarrera],
   );
   const itemDeKilometros = pasos?.registroId ? itemsHoy.find(x => x.habit?.id === pasos.registroId) ?? null : null;
   /** La captura de siempre: se abre cuando la hoja de los pasos ya se fue (en Android una ventana apilada se come los toques). */

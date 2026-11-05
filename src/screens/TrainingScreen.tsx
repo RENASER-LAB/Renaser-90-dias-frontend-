@@ -80,6 +80,7 @@ import { SeccionEnMantenimiento } from '../features/plataforma/components/Seccio
 import { SeccionNoDisponible } from '../features/plataforma/components/SeccionNoDisponible';
 import { useAlVolverAPrenderse, useFuncionalidad } from '../features/plataforma/estado/useFuncionalidad';
 import { CLAVES } from '../features/plataforma/utils/clavesDeLaApp';
+import { seOfreceLaCarrera } from '../features/carrera/utils/entradaDeLaCarrera';
 import { fechaEnZona, zonaDelTelefono } from '../features/eventos/utils/zonaHoraria';
 
 /**
@@ -946,6 +947,16 @@ export default function TrainingScreen() {
     },
     alCambiarElDia: () => void recargarEntrenamiento(),
   });
+  /* Spec 042: «Correr con GPS» en «Kilómetros diarios», solo en Android, en hoy, contra un servidor que sabe de carreras y con el
+     interruptor `habitos.km.carreras` disponible y prendido. La carrera vive en `AnfitrionDeLaCarrera` (sobre el navegador). */
+  const carrerasPrendidas = useFuncionalidad(CLAVES.habitosKmCarreras);
+  const ofrecerCarrera = seOfreceLaCarrera({
+    plataforma: Platform.OS,
+    esHoy: !viendoUnDiaAnterior && (diaElegido === null || diaElegido === hoyIso),
+    carrerasDelDia: habitoDeKilometros?.medicion?.carrerasDelDia,
+    disponible: carrerasPrendidas.disponible,
+    prendida: carrerasPrendidas.prendida,
+  });
   const estadoDeLaLista: 'cargando' | 'error' | 'listo' = cargandoBackend ? 'cargando' : errorBackend !== null ? 'error' : 'listo';
   /** «Tus prácticas» no ofrece nada que planificar antes de que el programa arranque. */
   const practicasDeshabilitadas = programaSinArrancar || programaSinConfirmar || sinProgramaPropio || programaEnOtraFormacion !== null;
@@ -1115,6 +1126,7 @@ export default function TrainingScreen() {
                 onMarcar={habit => toggleHabitState(habit.id)}
                 onAbrirEvento={eventoId => irAPestana('Comunidad', { abrirEventoId: eventoId })}
                 pasos={pasos}
+                ofrecerCarrera={ofrecerCarrera}
               />
               </>
             ) : null}

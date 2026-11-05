@@ -93,6 +93,8 @@ export type MedicionPedida = {
   valorDelDia?: number;
   origenDelDia?: string;
   fuenteDelDia?: string;
+  /** Spec 042: ausente si el servidor no sabe de carreras con GPS (backend anterior); `null` = ninguna hoy. */
+  carrerasDelDia?: { cantidad: number; kilometros: number } | null;
 };
 
 /** `null` si el track no pide un número (o si el backend es anterior a D-226). */
@@ -106,6 +108,7 @@ export function medicionPedidaDe(track: Pick<TrackDelDiaApi, 'medicion'> | undef
     ...(typeof medicion.valorDelDia === 'number' ? { valorDelDia: medicion.valorDelDia } : {}),
     ...(medicion.origenDelDia ? { origenDelDia: medicion.origenDelDia } : {}),
     ...(medicion.fuenteDelDia ? { fuenteDelDia: medicion.fuenteDelDia } : {}),
+    ...(medicion.carrerasDelDia !== undefined ? { carrerasDelDia: medicion.carrerasDelDia } : {}),
   };
 }
 

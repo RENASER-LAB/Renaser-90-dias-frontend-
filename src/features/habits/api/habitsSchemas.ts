@@ -281,6 +281,9 @@ const trackDelDiaSchema = z
         meta: z.number().nullish(),
         origenDelDia: z.string().nullish(),
         fuenteDelDia: z.string().nullish(),
+        // Spec 042: las carreras con GPS del día. Ausente = backend anterior (la app no ofrece la carrera); `null` = sin carreras hoy.
+        // Un valor roto se lee como `null` (el servidor sí sabe de carreras), sin perder el registro.
+        carrerasDelDia: z.object({ cantidad: z.number(), kilometros: z.number() }).nullable().optional().catch(null),
       })
       .passthrough()
       .nullish(),

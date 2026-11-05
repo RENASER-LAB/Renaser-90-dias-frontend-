@@ -61,6 +61,8 @@ export interface TextosDeLaMedicion {
 }
 
 function quienLoMidio(m: MedicionDeLaFicha): string {
+  // Spec 042 (FR-044): el día con carreras viene con origen GPS.
+  if (m.origen === 'GPS') return 'Carrera con GPS';
   if (m.origen !== 'HEALTH_CONNECT') return 'Captura de la persona';
   if (m.dispositivo === 'RELOJ') return 'Medido por el reloj';
   if (m.dispositivo === 'TELEFONO') return 'Medido por el teléfono';

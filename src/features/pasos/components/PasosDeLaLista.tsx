@@ -17,6 +17,8 @@ export interface PasosDeLaLista {
   onConectar: () => void;
   onActualizar: () => void;
   onRegistrar: () => void;
+  /** Spec 042: ofrecer «Correr con GPS» bajo el nombre (Android, hoy, servidor con carreras e interruptor prendido). */
+  carrera?: boolean;
 }
 
 const Contexto = createContext<PasosDeLaLista | null>(null);

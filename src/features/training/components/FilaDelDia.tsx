@@ -18,6 +18,7 @@ import type { MarcaDelPrimero } from '../utils/listaDelDia';
 import { accionDeLaTarjeta, AVISO_DE_HORA_PASADA } from '../utils/tarjetaDelHabito';
 import { LineaDeKilometros } from '../../pasos/components/LineaDeKilometros';
 import { usePasosDeLaFila } from '../../pasos/components/PasosDeLaLista';
+import { EntradaDeLaCarrera } from '../../carrera/components/EntradaDeLaCarrera';
 import { TEXTOS_DE_PASOS } from '../../pasos/utils/textosDePasos';
 import { abreLaHojaDeKilometros } from '../../pasos/utils/vistaDeKilometros';
 
@@ -242,11 +243,16 @@ export function FilaDelDia({
 
   // La línea de los pasos (el enlace, la barra o «Todavía no vemos pasos hoy») va debajo de la fila, a la altura del nombre: fuera del
   // área táctil de la fila, para que su enlace sea un botón propio y no quede dentro de otro.
-  const conLinea = pasos && esHoy && pasos.vista.modo !== 'captura' ? (
+  // Spec 042: «Correr con GPS» va en el mismo lugar, debajo de la línea de los pasos (o sola, si los pasos no ofrecen nada).
+  const conCarrera = !!pasos?.carrera && esHoy && modo !== 'cerrado';
+  const conLinea = pasos && esHoy && (pasos.vista.modo !== 'captura' || conCarrera) ? (
     <View>
       {cuerpo}
-      <View style={{ paddingLeft: anchoDeLaHora + 10 }}>
-        <LineaDeKilometros vista={pasos.vista} onConectar={pasos.onConectar} onActualizar={pasos.onActualizar} />
+      <View style={{ paddingLeft: anchoDeLaHora + 10, gap: 4, paddingBottom: conCarrera ? 8 : 0 }}>
+        {pasos.vista.modo !== 'captura' ? (
+          <LineaDeKilometros vista={pasos.vista} onConectar={pasos.onConectar} onActualizar={pasos.onActualizar} />
+        ) : null}
+        {conCarrera ? <EntradaDeLaCarrera registroId={pasos.registroId} /> : null}
       </View>
     </View>
   ) : (
