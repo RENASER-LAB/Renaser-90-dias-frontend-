@@ -193,7 +193,8 @@ export function usePasosDelDia({
     reconciliandoElIntento.current = true;
     try {
       if (!(await hayUnIntentoReciente(cuentaId, new Date()))) return;
-      if ((await permisosDeSalud({ reintentos: 0 })) !== 'otorgados') return;
+      // Con relecturas: al volver del diálogo, en algunos teléfonos el permiso aparece unos instantes después.
+      if ((await permisosDeSalud()) !== 'otorgados') return;
       await quedarConectada();
     } finally {
       reconciliandoElIntento.current = false;
@@ -253,7 +254,9 @@ export function usePasosDelDia({
     // Antes del diálogo: si Android cierra la app mientras está abierto, esta nota permite terminar de conectar al volver.
     await anotarElIntento(cuentaId, new Date());
     if (!(await pedirPermisosDeSalud())) {
-      await borrarElIntento(cuentaId);
+      // La nota del intento NO se borra (#127): en algunos teléfonos el diálogo contesta «vacío» apenas se abre, mientras la persona
+      // todavía está eligiendo. Si después acepta, al volver a primer plano `reconciliarElIntento` encuentra el permiso y termina de
+      // conectar sin otro toque. La nota vence sola a los 15 minutos; sin el permiso en el sistema no conecta nada.
       if (montado.current) setPermisos('faltan');
       return false;
     }

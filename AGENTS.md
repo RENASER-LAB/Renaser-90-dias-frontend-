@@ -2530,6 +2530,13 @@ actividad de «por qué pedimos esto» y el alias de «ver uso de permisos» en 
   sistema, `usePasosDelDia` termina de conectar sola (al montar y al volver a primer plano). **Sin un intento reciente no se conecta nada
   solo**, aunque el permiso exista: el consentimiento es el toque en «Conectar» (el que pide Google Play, spec 037).
 * **No cambian**: ningún diseño ni texto, la lectura de pasos, el registro de los km, «Desconectar», ni el backend.
+* **Corregido el mismo día (E2E integrado del 05/11, el bug que vio el dueño en su teléfono).** El primer «Permitir» seguía perdiéndose:
+  el diálogo contestaba «vacío» **mientras la persona todavía elegía** (el registro decía «el diálogo… no devolvió el permiso; se comprueba
+  con el sistema»), las relecturas daban «faltan», `conectar` **borraba la nota del intento** y, al volver con el permiso ya concedido, ya
+  no había intento con qué terminar de conectar: la hoja volvía a ofrecer «Conectar» y recién el segundo toque conectaba. Ahora un «no» del
+  diálogo **no borra el intento** (vence solo a los 15 min) y `reconciliarElIntento`, al volver a primer plano, relee el permiso con las
+  relecturas: con el permiso en el sistema queda conectada sin otro toque. Sin el permiso sigue sin conectar nada. Pruebas: dos nuevas en
+  `usePasosDelDia` (fallan con el código anterior).
 * **Comprobado en el emulador** (Pixel 6, API 37, debug local, sin cuentas ni producción): camino normal (acepta todo → conectada) y la app
   muerta con el diálogo abierto (acepta todo → al reabrir queda conectada sin otro toque). **Sin comprobar:** el teléfono real del reporte; si
   el bucle vuelve, el registro ahora dice qué falló (`[pasos] falló el diálogo de permisos…`).

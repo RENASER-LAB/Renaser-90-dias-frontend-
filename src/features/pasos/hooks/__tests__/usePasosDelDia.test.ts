@@ -4,7 +4,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import React from 'react';
-import { Alert } from 'react-native';
+import { Alert, AppState } from 'react-native';
 import TestRenderer, { act, type ReactTestRenderer } from 'react-test-renderer';
 
 import { ApiError } from '../../../../services/http/apiClient';
@@ -282,7 +282,8 @@ describe('conectar y desconectar', () => {
     expect(anotarIntento).toHaveBeenCalledWith('ana', expect.any(Date));
   });
 
-  it('si la persona NO deja el permiso, el intento se borra: lo que conceda después por su cuenta no conecta nada solo', async () => {
+  // spec 037 FR-003 (issue #127)
+  it('si el diálogo contesta que no, el intento se conserva: no queda conectada y sigue ofreciéndose «Conectar»', async () => {
     leerConexion.mockResolvedValue({ conectadoEn: null });
     pedirPermisos.mockResolvedValue(false);
     await montar();
@@ -291,7 +292,44 @@ describe('conectar y desconectar', () => {
       await resultado.conectar();
     });
 
-    expect(borrarIntento).toHaveBeenCalledWith('ana');
+    expect(borrarIntento).not.toHaveBeenCalled();
+    expect(guardarConexion).not.toHaveBeenCalled();
+    expect(resultado.vista).toEqual({ modo: 'ofrecer', soporte: 'disponible' });
+  });
+
+  // spec 037 FR-003 (issue #127, E2E del 05/11): el diálogo contesta «vacío» mientras la persona todavía elige; acepta, vuelve y
+  // queda conectada SIN un segundo toque en «Conectar».
+  it('el diálogo contestó antes de que la persona aceptara: al volver a primer plano con el permiso concedido, queda conectada sola', async () => {
+    const oyentes: Array<(estado: string) => void> = [];
+    jest.spyOn(AppState, 'addEventListener').mockImplementation(((_tipo: string, oyente: (estado: string) => void) => {
+      oyentes.push(oyente);
+      return { remove: () => undefined };
+    }) as unknown as typeof AppState.addEventListener);
+    // La nota del intento como en el teléfono: anotar la deja, borrar la quita.
+    let intentoAnotado = false;
+    anotarIntento.mockImplementation(async () => void (intentoAnotado = true));
+    borrarIntento.mockImplementation(async () => void (intentoAnotado = false));
+    hayIntento.mockImplementation(async () => intentoAnotado);
+    leerConexion.mockResolvedValue({ conectadoEn: null });
+    pedirPermisos.mockResolvedValue(false);
+    permisos.mockResolvedValue('faltan');
+    await montar({ habito: habito({ fechaEjecucion: hoyLocal() }) });
+
+    await act(async () => {
+      await resultado.conectar();
+    });
+    expect(guardarConexion).not.toHaveBeenCalled();
+
+    // La persona aceptó en Health Connect y vuelve a la app: el sistema ya tiene el permiso.
+    permisos.mockResolvedValue('otorgados');
+    await act(async () => {
+      for (const oyente of oyentes) oyente('active');
+    });
+    await vaciar();
+
+    expect(pedirPermisos).toHaveBeenCalledTimes(1);
+    expect(guardarConexion).toHaveBeenCalledWith('ana', expect.any(Date));
+    expect(resultado.vista.modo).not.toBe('ofrecer');
   });
 
   it('la app murió con el diálogo abierto: la persona aceptó, el sistema guardó el permiso y la respuesta se perdió; al volver queda conectada SIN otro toque', async () => {
