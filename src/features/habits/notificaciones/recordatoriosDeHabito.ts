@@ -43,6 +43,7 @@ import {
 import { planDelPuente, puenteQueCorresponde } from './utils/puenteDeAlarmas';
 import { fechaCompacta, type EntradaDeRepeticiones } from './utils/repeticionesDeAlarma';
 import { vigenciaDelAvisoMin } from './utils/vigenciaDelAviso';
+import { esAvisoDeCarrera } from '../../carrera/utils/avisoDeCarrera';
 // SOLO tipos: `import type` se borra al compilar, así que esto NO carga el módulo en runtime. Ver
 // el bloque "POR QUÉ NO SE IMPORTA ARRIBA" más abajo — importarlo de verdad rompe Expo Go.
 import type * as TipoNotificaciones from 'expo-notifications';
@@ -245,6 +246,10 @@ function notificaciones(): typeof TipoNotificaciones | null {
         // se relee (`features/chat/avisos`). Los demás avisos, como siempre.
         if (avisoDeChatAtendidoEnLaApp(notificacion.request.content.data)) {
           return { shouldShowBanner: false, shouldShowList: false, shouldPlaySound: false, shouldSetBadge: false };
+        }
+        // Spec 042: la notificación fija de la carrera se actualiza sola; con la app abierta queda en la lista, sin banner ni sonido.
+        if (esAvisoDeCarrera(notificacion.request.identifier)) {
+          return { shouldShowBanner: false, shouldShowList: true, shouldPlaySound: false, shouldSetBadge: false };
         }
         return {
           shouldShowBanner: true,
