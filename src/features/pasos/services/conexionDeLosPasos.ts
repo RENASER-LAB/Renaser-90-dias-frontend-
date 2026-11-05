@@ -44,3 +44,44 @@ export async function borrarLaConexion(cuentaId: string): Promise<void> {
     /* ídem */
   }
 }
+
+/**
+ * La nota «la persona tocó Conectar y se abrió el diálogo del sistema» (issue #127). Se anota ANTES de abrirlo y se borra al terminar.
+ * Existe para un caso: Android mató la app (poca memoria, ahorro de batería) mientras el diálogo estaba abierto; la persona aceptó, el
+ * sistema guardó el permiso, pero la respuesta se perdió con el proceso y la conexión nunca se anotó. Con esta nota, al volver, la app
+ * ve el permiso concedido y termina de conectar sin pedir nada otra vez. Vale poco tiempo: pasado el límite ya no es «lo que la persona
+ * acaba de hacer» y no se conecta nada solo.
+ */
+const PREFIJO_DEL_INTENTO = 'renaser.pasos.intento.';
+export const VIGENCIA_DEL_INTENTO_MS = 15 * 60 * 1000;
+
+const claveDelIntento = (cuentaId: string) => `${PREFIJO_DEL_INTENTO}${cuentaId}`;
+
+export async function anotarElIntento(cuentaId: string, ahora: Date): Promise<void> {
+  try {
+    await AsyncStorage.setItem(claveDelIntento(cuentaId), ahora.toISOString());
+  } catch {
+    /* sin almacenamiento solo se pierde la recuperación automática: la persona vuelve a tocar «Conectar» */
+  }
+}
+
+export async function hayUnIntentoReciente(cuentaId: string, ahora: Date): Promise<boolean> {
+  try {
+    const crudo = await AsyncStorage.getItem(claveDelIntento(cuentaId));
+    if (!crudo) return false;
+    const cuando = Date.parse(crudo);
+    if (Number.isNaN(cuando)) return false;
+    const pasado = ahora.getTime() - cuando;
+    return pasado >= 0 && pasado <= VIGENCIA_DEL_INTENTO_MS;
+  } catch {
+    return false;
+  }
+}
+
+export async function borrarElIntento(cuentaId: string): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(claveDelIntento(cuentaId));
+  } catch {
+    /* ídem */
+  }
+}

@@ -8,6 +8,7 @@ import { conexionChat } from '../../chat/tiempoReal/conexionStomp';
 import * as onboardingApi from '../../onboarding/api/onboardingApi';
 import { aUsuario } from '../api/usuarioMapper';
 import { prepararAlarmasPara, soltarAlarmasDeLaCuenta } from '../../alarmas/alarmasDeLaCuenta';
+import { apagarLaCarreraAlSalir } from '../../carrera/servicios/tareaDeUbicacion';
 import { borrarTodosLosBorradores as borrarBorradoresDelRadar } from '../../radar/storage/borradorRadar';
 import { loginConGoogle } from '../api/googleAuth';
 /* `mentorApi` es el único dueño del cliente de `/mentor/context`, así que la pregunta se hace
@@ -521,6 +522,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // E-413: las alarmas locales son de esta cuenta; al salir se cancelan todas. Quien entre después
     // espera a que termine (`alarmasListas`).
     soltando = soltarAlarmasDeLaCuenta().catch(() => undefined);
+    // Spec 042: el GPS de una carrera en curso no sigue sin sesión (la carrera queda guardada por cuenta en el teléfono).
+    void apagarLaCarreraAlSalir().catch(() => undefined);
     // Lo que se escribía en el Código Renaser a medias es de quien se va: no queda en un teléfono sin sesión (2026-11-03).
     void borrarBorradoresDelRadar();
     void authApi.cerrarSesion().catch(() => undefined);

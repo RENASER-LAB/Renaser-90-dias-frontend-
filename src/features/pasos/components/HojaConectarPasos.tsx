@@ -26,6 +26,7 @@ import { textoDesdeCuando, TEXTOS_DE_PASOS } from '../utils/textosDePasos';
 export function HojaConectarPasos({
   visible,
   soporte,
+  conectada = false,
   conectar,
   fuente,
   desdeLasHoy,
@@ -36,6 +37,12 @@ export function HojaConectarPasos({
 }: {
   visible: boolean;
   soporte: 'disponible' | 'no-disponible';
+  /**
+   * La conexión ya quedó anotada (issue #137). Puede pasar SIN que `conectar` devuelva `true`: en algunos teléfonos el diálogo
+   * contesta «no» mientras la persona todavía elige, y la conexión la termina la app al volver a primer plano. La hoja pasa a
+   * «Ya contamos tus pasos» igual, en vez de quedarse en «Conectar».
+   */
+  conectada?: boolean;
   /** Pide el permiso y guarda la conexión. `true` si quedó conectado. */
   conectar: () => Promise<boolean>;
   /** La fuente que ya se leyó («Tu teléfono»); `null` hasta la primera lectura. */
@@ -62,6 +69,13 @@ export function HojaConectarPasos({
       setFallo(false);
     }
   }, [visible]);
+
+  useEffect(() => {
+    if (visible && conectada) {
+      setPaso('listo');
+      setFallo(false);
+    }
+  }, [visible, conectada]);
 
   const alConectar = async () => {
     if (enCurso.current) return;

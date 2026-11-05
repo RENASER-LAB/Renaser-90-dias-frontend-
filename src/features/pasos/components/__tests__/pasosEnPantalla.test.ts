@@ -179,6 +179,23 @@ describe('la hoja para conectar', () => {
     expect(p.onAbrirHealthConnect).toHaveBeenCalledTimes(1);
   });
 
+  // spec 037 FR-003 (issue #137): el diálogo contestó «no» mientras la persona elegía; la app termina de conectar al volver.
+  it('si la conexión queda anotada aunque el diálogo dijo que no, la hoja pasa a «Ya contamos tus pasos» sin otro toque', async () => {
+    const p = props({ conectar: jest.fn<() => Promise<boolean>>().mockResolvedValue(false) });
+    montar(React.createElement(HojaConectarPasos, p));
+    await act(async () => {
+      boton('Conectar')!.props.onPress();
+    });
+    expect(textos()).toContain('No pudimos conectar tus pasos. Intenta de nuevo.');
+
+    act(() => raiz!.update(React.createElement(HojaConectarPasos, { ...p, conectada: true })));
+
+    expect(textos()).toContain('Ya contamos tus pasos');
+    expect(textos()).not.toContain('No pudimos conectar tus pasos. Intenta de nuevo.');
+    expect(boton('Conectar')).toBeUndefined();
+    expect(p.conectar).toHaveBeenCalledTimes(1);
+  });
+
   it('«Ahora no» cierra sin pedir nada', () => {
     const p = props();
     montar(React.createElement(HojaConectarPasos, p));

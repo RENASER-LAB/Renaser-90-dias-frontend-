@@ -21,6 +21,12 @@ export function LineaDeLaMedicion({ medicion }: { medicion: MedicionDeLaFicha })
       </Text>
       {textos.detalle ? <Text style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 22 }]}>{textos.detalle}</Text> : null}
       {textos.fuente ? <Text style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 22 }]}>{textos.fuente}</Text> : null}
+      {/* Spec 042 (FR-044): una línea por carrera con GPS. El mapa de la ruta todavía no se abre desde aquí (pendiente). */}
+      {textos.carreras.map((linea, i) => (
+        <Text key={i} style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 22, fontVariant: ['tabular-nums'] }]}>
+          {linea}
+        </Text>
+      ))}
       {textos.porRevisar ? (
         <View style={[estilos.etiqueta, { borderColor: c.danger, backgroundColor: c.dangerWash }]}>
           <Icon name="info" size={TAMANO_ICONO.chico} color={c.danger} />

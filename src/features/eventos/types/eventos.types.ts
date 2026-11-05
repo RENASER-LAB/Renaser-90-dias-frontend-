@@ -36,6 +36,12 @@ export interface ResumenDeMeet {
   mensaje: string | null;
   fechasConSala: number;
   fechasConProblema: number;
+  /**
+   * Spec 040, decisión del dueño del 2026-11-05: la sala se pide grabando y transcribiendo sola. Si la cuenta de Google conectada no tiene el
+   * plan, el servidor manda qué falta («Para grabar hace falta Google One de 2 TB o más…»). No es un error: el evento y el enlace están bien,
+   * así que no ofrece «Reintentar». `null` sin nada que avisar (o con un servidor anterior).
+   */
+  avisoDelPlan: string | null;
 }
 
 export interface Evento {

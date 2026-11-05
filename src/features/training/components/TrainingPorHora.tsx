@@ -36,6 +36,9 @@ import { HojaDeKilometros } from '../../pasos/components/HojaDeKilometros';
 import { ProveedorDePasosDeLaLista, type PasosDeLaLista } from '../../pasos/components/PasosDeLaLista';
 import type { PasosEnTraining } from '../../pasos/hooks/usePasosDelDia';
 import { abreLaHojaDeKilometros } from '../../pasos/utils/vistaDeKilometros';
+import { useCarreraEnVivo } from '../../carrera/hooks/useCarreraEnVivo';
+import { pedirLaCarrera } from '../../carrera/servicios/pedidosDeLaCarrera';
+import { lugarDeLaCarrera } from '../../carrera/utils/entradaDeLaCarrera';
 import { FilaDeSemana } from './FilaDeSemana';
 import { HojaDelHabito } from './HojaDelHabito';
 import { ListaDeHoy } from './ListaDeHoy';
@@ -76,6 +79,7 @@ export function TrainingPorHora({
   onMarcar,
   onAbrirEvento,
   pasos,
+  ofrecerCarrera = false,
 }: {
   activa: boolean;
   /**
@@ -111,6 +115,8 @@ export function TrainingPorHora({
   onAbrirEvento: (eventoId: string) => void;
   /** Spec 037 (D-310): los pasos del teléfono para «Kilómetros diarios». Ausente = la fila de siempre. */
   pasos?: PasosEnTraining;
+  /** Spec 042: ofrecer «Correr con GPS» en la fila de «Kilómetros diarios» de hoy. */
+  ofrecerCarrera?: boolean;
 }) {
   const { c, t } = useTheme();
   // Con el día de hoy del servidor como llave: al pasar la medianoche la hora de «ahora» se toma de nuevo en ese mismo render.
@@ -171,6 +177,17 @@ export function TrainingPorHora({
   const [hojaAbierta, setHojaAbierta] = useState(false);
   /** Lo que se hace cuando la hoja termina de irse: el registro no puede abrirse con la hoja todavía encima (Android). */
   const despuesDeLaHoja = useRef<(() => void) | null>(null);
+  /** Spec 042 (2026-11-05): ¿esta fila es «Kilómetros diarios» por cumplir hoy en un teléfono que puede correr con GPS? */
+  const carreraEnCurso = useCarreraEnVivo() != null;
+  const esLaFilaDeLaCarrera = useCallback(
+    (item: ItemDelDia, modo: ModoDeLaFila, deHoy: boolean) =>
+      deHoy &&
+      ofrecerCarrera &&
+      !!pasos?.registroId &&
+      item.habit?.id === pasos.registroId &&
+      lugarDeLaCarrera({ ofrecida: true, modo, hecho: item.hecho, conAvanceDePasos: false }) === 'fila',
+    [ofrecerCarrera, pasos?.registroId],
+  );
 
   /* Spec 037: las dos hojas de los pasos (conectar y la de los km). Se abren solo en HOY. */
   const [conectarAbierta, setConectarAbierta] = useState(false);
@@ -193,7 +210,15 @@ export function TrainingPorHora({
         setKmAbierta(true);
         return;
       }
-      switch (destinoDelToque(item, modo, deHoy)) {
+      const destino = destinoDelToque(item, modo, deHoy);
+      // Spec 042 (2026-11-05): con la carrera, «Kilómetros diarios» por cumplir abre su hoja («Correr con GPS» y «Subir captura»)
+      // en vez de la cámara directa: la captura ya no es el botón principal.
+      if (destino === 'registro' && esLaFilaDeLaCarrera(item, modo, deHoy)) {
+        setHoja({ item, modo });
+        setHojaAbierta(true);
+        return;
+      }
+      switch (destino) {
         case 'ya-hecho':
           setAvisoDeFila({ clave: Date.now(), texto: TEXTO_YA_HECHO, icono: 'check' });
           return;
@@ -214,17 +239,24 @@ export function TrainingPorHora({
           return;
       }
     },
-    [onAbrirEvento, onRegistrar, pasos],
+    [onAbrirEvento, onRegistrar, pasos, esLaFilaDeLaCarrera],
   );
   const alTocarLaFila = useCallback((item: ItemDelDia, modo: ModoDeLaFila) => abrirFila(item, modo, esHoy), [abrirFila, esHoy]);
 
   const alElegirLaAccion = useCallback(
     (item: ItemDelDia, accion: AccionDeLaHoja) => {
       const habit = item.habit;
-      if (habit) despuesDeLaHoja.current = accion.tipo === 'marcar' ? () => onMarcar(habit) : () => onRegistrar(habit);
+      if (habit) {
+        despuesDeLaHoja.current =
+          accion.tipo === 'marcar'
+            ? () => onMarcar(habit)
+            : accion.tipo === 'correr'
+              ? () => pedirLaCarrera(carreraEnCurso ? { tipo: 'volver' } : { tipo: 'empezar', registroId: habit.id })
+              : () => onRegistrar(habit);
+      }
       setHojaAbierta(false);
     },
-    [onMarcar, onRegistrar],
+    [onMarcar, onRegistrar, carreraEnCurso],
   );
 
   /* Si cambia el día (la persona elige otro, o pasa la medianoche) la hoja de un hábito no se queda: se cierra y no
@@ -301,9 +333,10 @@ export function TrainingPorHora({
             onConectar: () => setConectarAbierta(true),
             onActualizar: () => void pasos.actualizar(),
             onRegistrar: () => void pasos.registrar(),
+            carrera: ofrecerCarrera,
           }
         : null,
-    [pasos],
+    [pasos, ofrecerCarrera],
   );
   const itemDeKilometros = pasos?.registroId ? itemsHoy.find(x => x.habit?.id === pasos.registroId) ?? null : null;
   /** La captura de siempre: se abre cuando la hoja de los pasos ya se fue (en Android una ventana apilada se come los toques). */
@@ -393,6 +426,7 @@ export function TrainingPorHora({
         onCerrar={() => setHojaAbierta(false)}
         alTerminarDeCerrar={alIrseLaHoja}
         onAccion={alElegirLaAccion}
+        carrera={hoja && esLaFilaDeLaCarrera(hoja.item, hoja.modo, true) ? { enCurso: carreraEnCurso } : null}
       />
 
       {pasos && pasos.registroId ? (
@@ -400,6 +434,7 @@ export function TrainingPorHora({
           <HojaConectarPasos
             visible={conectarAbierta}
             soporte={pasos.vista.modo === 'ofrecer' ? pasos.vista.soporte : 'disponible'}
+            conectada={pasos.vista.modo !== 'ofrecer'}
             conectar={pasos.conectar}
             fuente={pasos.vista.modo === 'avance' ? pasos.vista.fuente.etiqueta : null}
             desdeLasHoy={pasos.conectadoHoyA}

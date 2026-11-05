@@ -245,3 +245,19 @@ describe('cuando una publicación del Muro no se abre', () => {
     }
   });
 });
+
+describe('los km medidos por el teléfono son su constancia (issue #134)', () => {
+  // spec 042 FR-044
+  const medicion = (origen: string, valor = 2.53) => ({
+    valor, origen, pasos: null, fuente: null, dispositivo: null, leidaEn: null, porRevisar: false, carreras: [],
+  });
+  it('Kilómetros diarios cumplido con GPS o con Health Connect no dice «Evidencia sin entregar»', () => {
+    expect(entregaEnPalabras(o({ entrega: 'SIN_ENTREGA', medicion: medicion('GPS') }))).toBeNull();
+    expect(entregaEnPalabras(o({ entrega: 'SIN_ENTREGA', medicion: medicion('HEALTH_CONNECT') }))).toBeNull();
+  });
+  it('con la captura (MANUAL) o sin km, sigue diciendo que falta la evidencia', () => {
+    expect(entregaEnPalabras(o({ entrega: 'SIN_ENTREGA', medicion: medicion('MANUAL') }))).toBe('Evidencia sin entregar');
+    expect(entregaEnPalabras(o({ entrega: 'SIN_ENTREGA', medicion: medicion('GPS', 0) }))).toBe('Evidencia sin entregar');
+    expect(entregaEnPalabras(o({ entrega: 'SIN_ENTREGA', medicion: null }))).toBe('Evidencia sin entregar');
+  });
+});

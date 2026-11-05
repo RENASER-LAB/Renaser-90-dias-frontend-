@@ -30,6 +30,8 @@ const meetSchema = z
     mensaje: z.string().nullish(),
     fechasConSala: z.number().nullish(),
     fechasConProblema: z.number().nullish(),
+    /** Decisión del dueño del 2026-11-05: qué plan de Google falta para grabar o transcribir. Roto o ausente = sin aviso. */
+    avisoDelPlan: z.string().nullish().catch(null),
   })
   .passthrough()
   .nullish()
@@ -125,6 +127,7 @@ function aResumenDeMeet(crudo: EventoCrudo['meet']): ResumenDeMeet | null {
     mensaje: crudo.mensaje?.trim() || null,
     fechasConSala: crudo.fechasConSala ?? 0,
     fechasConProblema: crudo.fechasConProblema ?? 0,
+    avisoDelPlan: crudo.avisoDelPlan?.trim() || null,
   };
 }
 

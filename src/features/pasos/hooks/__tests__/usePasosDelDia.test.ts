@@ -4,13 +4,20 @@
  */
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import React from 'react';
-import { Alert } from 'react-native';
+import { Alert, AppState } from 'react-native';
 import TestRenderer, { act, type ReactTestRenderer } from 'react-test-renderer';
 
 import { ApiError } from '../../../../services/http/apiClient';
 import { DiaDeHabitosCambiadoError } from '../../../habits/api/registroVigente';
 import { registrarKilometrosAutomaticos } from '../../api/pasosApi';
-import { borrarLaConexion, guardarLaConexion, leerLaConexion } from '../../services/conexionDeLosPasos';
+import {
+  anotarElIntento,
+  borrarElIntento,
+  borrarLaConexion,
+  guardarLaConexion,
+  hayUnIntentoReciente,
+  leerLaConexion,
+} from '../../services/conexionDeLosPasos';
 import {
   abrirHealthConnect,
   leerLosPasosDelDia,
@@ -32,6 +39,9 @@ jest.mock('../../services/conexionDeLosPasos', () => ({
   leerLaConexion: jest.fn(),
   guardarLaConexion: jest.fn(),
   borrarLaConexion: jest.fn(),
+  anotarElIntento: jest.fn(),
+  borrarElIntento: jest.fn(),
+  hayUnIntentoReciente: jest.fn(),
 }));
 jest.mock('../../api/pasosApi', () => ({ registrarKilometrosAutomaticos: jest.fn() }));
 
@@ -44,6 +54,9 @@ const leer = leerLosPasosDelDia as jest.MockedFunction<typeof leerLosPasosDelDia
 const leerConexion = leerLaConexion as jest.MockedFunction<typeof leerLaConexion>;
 const guardarConexion = guardarLaConexion as jest.MockedFunction<typeof guardarLaConexion>;
 const borrarConexion = borrarLaConexion as jest.MockedFunction<typeof borrarLaConexion>;
+const anotarIntento = anotarElIntento as jest.MockedFunction<typeof anotarElIntento>;
+const borrarIntento = borrarElIntento as jest.MockedFunction<typeof borrarElIntento>;
+const hayIntento = hayUnIntentoReciente as jest.MockedFunction<typeof hayUnIntentoReciente>;
 const registrarApi = registrarKilometrosAutomaticos as jest.MockedFunction<typeof registrarKilometrosAutomaticos>;
 
 const TELEFONO = 'com.android.healthconnect.phone.abc';
@@ -105,6 +118,9 @@ beforeEach(() => {
   leerConexion.mockResolvedValue({ conectadoEn: '2026-11-04T19:05:00.000Z' });
   guardarConexion.mockResolvedValue(undefined);
   borrarConexion.mockResolvedValue(undefined);
+  anotarIntento.mockResolvedValue(undefined);
+  borrarIntento.mockResolvedValue(undefined);
+  hayIntento.mockResolvedValue(false);
   registrarApi.mockResolvedValue({ id: 'r-km', estado: 'COMPLETADO', puntosOtorgados: 8 });
   jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
 });
@@ -113,7 +129,7 @@ afterEach(() => {
   act(() => raiz?.unmount());
   raiz = null;
   jest.restoreAllMocks();
-  for (const doble of [soporte, permisos, pedirPermisos, leer, leerConexion, guardarConexion, borrarConexion, registrarApi, alRegistrado, alCambiarElDia]) {
+  for (const doble of [soporte, permisos, pedirPermisos, leer, leerConexion, guardarConexion, borrarConexion, anotarIntento, borrarIntento, hayIntento, registrarApi, alRegistrado, alCambiarElDia]) {
     doble.mockReset();
   }
   (abrirHealthConnect as jest.Mock).mockReset();
@@ -243,6 +259,115 @@ describe('conectar y desconectar', () => {
     expect(ok).toBe(false);
     expect(guardarConexion).not.toHaveBeenCalled();
     expect(leer).not.toHaveBeenCalled();
+    expect(resultado.vista).toEqual({ modo: 'ofrecer', soporte: 'disponible' });
+  });
+
+  // issue #127: «acepto todos los permisos y vuelve a pedirlos»
+  it('«Conectar» anota el intento ANTES de abrir el diálogo del sistema y lo borra al quedar conectada', async () => {
+    leerConexion.mockResolvedValue({ conectadoEn: null });
+    const orden: string[] = [];
+    anotarIntento.mockImplementation(async () => void orden.push('anotar'));
+    pedirPermisos.mockImplementation(async () => {
+      orden.push('diálogo');
+      return true;
+    });
+    borrarIntento.mockImplementation(async () => void orden.push('borrar'));
+    await montar({ habito: habito({ fechaEjecucion: hoyLocal() }) });
+
+    await act(async () => {
+      await resultado.conectar();
+    });
+
+    expect(orden).toEqual(['anotar', 'diálogo', 'borrar']);
+    expect(anotarIntento).toHaveBeenCalledWith('ana', expect.any(Date));
+  });
+
+  // spec 037 FR-003 (issue #127)
+  it('si el diálogo contesta que no, el intento se conserva: no queda conectada y sigue ofreciéndose «Conectar»', async () => {
+    leerConexion.mockResolvedValue({ conectadoEn: null });
+    pedirPermisos.mockResolvedValue(false);
+    await montar();
+
+    await act(async () => {
+      await resultado.conectar();
+    });
+
+    expect(borrarIntento).not.toHaveBeenCalled();
+    expect(guardarConexion).not.toHaveBeenCalled();
+    expect(resultado.vista).toEqual({ modo: 'ofrecer', soporte: 'disponible' });
+  });
+
+  // spec 037 FR-003 (issue #127, E2E del 05/11): el diálogo contesta «vacío» mientras la persona todavía elige; acepta, vuelve y
+  // queda conectada SIN un segundo toque en «Conectar».
+  it('el diálogo contestó antes de que la persona aceptara: al volver a primer plano con el permiso concedido, queda conectada sola', async () => {
+    const oyentes: Array<(estado: string) => void> = [];
+    jest.spyOn(AppState, 'addEventListener').mockImplementation(((_tipo: string, oyente: (estado: string) => void) => {
+      oyentes.push(oyente);
+      return { remove: () => undefined };
+    }) as unknown as typeof AppState.addEventListener);
+    // La nota del intento como en el teléfono: anotar la deja, borrar la quita.
+    let intentoAnotado = false;
+    anotarIntento.mockImplementation(async () => void (intentoAnotado = true));
+    borrarIntento.mockImplementation(async () => void (intentoAnotado = false));
+    hayIntento.mockImplementation(async () => intentoAnotado);
+    leerConexion.mockResolvedValue({ conectadoEn: null });
+    pedirPermisos.mockResolvedValue(false);
+    permisos.mockResolvedValue('faltan');
+    await montar({ habito: habito({ fechaEjecucion: hoyLocal() }) });
+
+    await act(async () => {
+      await resultado.conectar();
+    });
+    expect(guardarConexion).not.toHaveBeenCalled();
+
+    // La persona aceptó en Health Connect y vuelve a la app: el sistema ya tiene el permiso.
+    permisos.mockResolvedValue('otorgados');
+    await act(async () => {
+      for (const oyente of oyentes) oyente('active');
+    });
+    await vaciar();
+
+    expect(pedirPermisos).toHaveBeenCalledTimes(1);
+    expect(guardarConexion).toHaveBeenCalledWith('ana', expect.any(Date));
+    expect(resultado.vista.modo).not.toBe('ofrecer');
+  });
+
+  it('la app murió con el diálogo abierto: la persona aceptó, el sistema guardó el permiso y la respuesta se perdió; al volver queda conectada SIN otro toque', async () => {
+    leerConexion.mockResolvedValue({ conectadoEn: null });
+    hayIntento.mockResolvedValue(true);
+    permisos.mockResolvedValue('otorgados');
+
+    await montar({ habito: habito({ fechaEjecucion: hoyLocal() }) });
+    await vaciar();
+
+    expect(pedirPermisos).not.toHaveBeenCalled();
+    expect(guardarConexion).toHaveBeenCalledWith('ana', expect.any(Date));
+    expect(borrarIntento).toHaveBeenCalledWith('ana');
+    expect(resultado.vista.modo).not.toBe('ofrecer');
+    expect(leer).toHaveBeenCalledTimes(1);
+  });
+
+  it('sin intento reciente NO se conecta sola, aunque el sistema tenga el permiso (el consentimiento es el toque en «Conectar»)', async () => {
+    leerConexion.mockResolvedValue({ conectadoEn: null });
+    hayIntento.mockResolvedValue(false);
+    permisos.mockResolvedValue('otorgados');
+
+    await montar();
+    await vaciar();
+
+    expect(guardarConexion).not.toHaveBeenCalled();
+    expect(resultado.vista).toEqual({ modo: 'ofrecer', soporte: 'disponible' });
+  });
+
+  it('con intento reciente pero SIN permiso en el sistema (la persona no aceptó) tampoco se conecta', async () => {
+    leerConexion.mockResolvedValue({ conectadoEn: null });
+    hayIntento.mockResolvedValue(true);
+    permisos.mockResolvedValue('faltan');
+
+    await montar();
+    await vaciar();
+
+    expect(guardarConexion).not.toHaveBeenCalled();
     expect(resultado.vista).toEqual({ modo: 'ofrecer', soporte: 'disponible' });
   });
 

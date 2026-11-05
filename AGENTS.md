@@ -2440,6 +2440,15 @@ Lo que cambia y nada más (el aprendiz, el mentor y el líder no ven ninguna pan
 > acceso, lugar y otro enlace), `meetApi` y `reglasDeEventos` ajustadas. Hace falta el backend con esta corrección (un backend de la versión anterior también deja la sala abierta
 > cuando no recibe el acceso).
 
+> **Agregado 2026-11-05 (decisión 6 del dueño: «que el administrador o alquimista, jalando su correo, sea el que tenga permisos, y que el Meet ya venga grabando
+> y transcribiendo»; backend FR-035 a FR-037, V171).** Todo lo hace el servidor: invita al evento de Calendar a quien crea o edita el evento (sin correos de Google) y
+> pide que la sala grabe, transcriba y tome notas sola. En la app cambia **solo esto**: `ResumenDeMeet` suma `avisoDelPlan` (esquema tolerante: roto, vacío o ausente
+> = `null`) y el detalle del evento, para Administración y Alquimista, muestra ese aviso en una línea de texto normal (no roja) cuando la cuenta de Google conectada no
+> tiene el plan (por ejemplo «Para grabar hace falta Google One de 2 TB o más en la cuenta conectada; para transcribir, Google Workspace.»), **sin «Reintentar»** (no es un
+> error: el evento y el enlace están bien; `avisoDelPlanDeGoogle` en `utils/enlaceDeMeet`). El aprendiz, el mentor y el líder no ven nada. Sin diseño, textos del
+> formulario ni pantallas nuevas. Pruebas: `meetApi`, `enlaceDeMeetAutomatico` y `enlaceDeMeetEnElFormulario`. Hace falta un APK nuevo (solo JavaScript) y el backend
+> con V171; contra un backend anterior no llega el campo y la pantalla queda igual.
+
 ## Cambio por pedido del dueño — 2026-11-04 — Recordatorios de eventos por el chat y por WhatsApp: la baja en Yo → Notificaciones y el aviso de finalidad (spec 041)
 
 Pedido del dueño (textual): «Quiero lo mismo [que RenaserOs]… los recordatorios dentro del mismo chat y la app, y también con otro número que pondré». Spec, plan y decisiones en el backend
@@ -2499,13 +2508,166 @@ nada más:
   (miniatura de 66, «+N», sin foto a todo el ancho, insignia del día, «…» solo para quien modera, abrir, comentarios, «me gusta», 44 de alto) y
   `screens/__tests__/muroCompactoEnComunidad` (la lista dibuja filas, la publicación abierta usa la tarjeta completa, el atrás y la barra); se
   ajustó `moderarElMuroEnComunidad`. Maestro, **escrito y sin correr** (el emulador estaba ocupado): `.maestro/muro-compacto/01-lista-y-publicacion-abierta.yaml`.
+* **Corregido 2026-11-05 (pendiente del E2E): deslizar hacia abajo recarga el Muro.** La lista compacta suma `RefreshControl` (dorado del tema, bajo el
+  encabezado): con publicaciones a la vista relee la primera página en silencio (`useWallFeed.refrescar` → `releerEnSilencio`: sin «Cargando el muro…», sin
+  vaciar ni volver arriba, `refrescando` mueve el círculo); con la lista vacía o tras un error es la carga de siempre. Pruebas: `muroSeReleeAlModerar` y
+  `muroCompactoEnComunidad`.
+
+## Corrección — 2026-11-05 — «Kilómetros diarios»: aceptar los permisos de Health Connect ya no depende de una sola respuesta (issue #127)
+
+Un usuario real (Play Store, 1.7.1 y 1.7.2) tocaba «Cuenta tus pasos solo» → «Conectar», aceptaba TODOS los permisos de Health Connect y la
+pantalla de permisos volvía a salir, sin quedar nunca conectado. **La causa exacta en ese teléfono NO se pudo reproducir ni confirmar**: en
+un emulador Android 37 con Health Connect real el flujo completo funciona. Lo comprobado y lo que se endureció (solo JavaScript, sin
+dependencias ni código nativo; `app.json`, el manifiesto y `plugins/withHealthConnect.js` ya estaban bien: están los dos permisos, la
+actividad de «por qué pedimos esto» y el alias de «ver uso de permisos» en el APK 1.7.2 publicado):
+* **La app dependía de UNA sola respuesta del diálogo** (`requestPermission`), y la conexión solo se anotaba si esa respuesta llegaba bien. Dos
+  caminos la perdían sin avisar: (1) Android cierra la app con el diálogo abierto (poca memoria, ahorro de batería, `singleTask` + el
+  proceso que muere): la persona acepta, el sistema GUARDA el permiso, pero la respuesta se pierde con el proceso; al volver la app no se
+  había anotado conectada y volvía a ofrecer «Conectar» (medido en el emulador: permiso concedido en el sistema, app «sin conectar»). (2) La
+  librería lanza o devuelve vacío: `pedirPermisosDeSalud` se tragaba el error sin dejar nada en el registro.
+* **`pedirPermisosDeSalud`** (`pasos/services/saludConectada`): si el sistema ya tiene el permiso de pasos no abre el diálogo; si el diálogo
+  no devuelve los pasos (vacío, error o se perdió), le pregunta al SISTEMA (`getGrantedPermissions`) antes de decir que no; y un fallo queda en
+  el registro de la app (`[pasos] …`). `permisosDeSalud` confirma un «faltan» con dos relecturas más (350 ms entre una y otra) para que un
+  teléfono lento no «pierda» los pasos por una lectura vacía. Sigue pidiéndose SOLO la lectura de pasos y de distancia (spec 037 FR-003).
+* **El intento de conectar se anota ANTES de abrir el diálogo** (`pasos/services/conexionDeLosPasos`: `renaser.pasos.intento.<cuenta>`, vale 15
+  minutos, se borra al terminar). Si la app vuelve sin conexión anotada, con un intento reciente y el permiso de pasos ya concedido en el
+  sistema, `usePasosDelDia` termina de conectar sola (al montar y al volver a primer plano). **Sin un intento reciente no se conecta nada
+  solo**, aunque el permiso exista: el consentimiento es el toque en «Conectar» (el que pide Google Play, spec 037).
+* **No cambian**: ningún diseño ni texto, la lectura de pasos, el registro de los km, «Desconectar», ni el backend.
+* **Corregido el mismo día (E2E integrado del 05/11, el bug que vio el dueño en su teléfono).** El primer «Permitir» seguía perdiéndose:
+  el diálogo contestaba «vacío» **mientras la persona todavía elegía** (el registro decía «el diálogo… no devolvió el permiso; se comprueba
+  con el sistema»), las relecturas daban «faltan», `conectar` **borraba la nota del intento** y, al volver con el permiso ya concedido, ya
+  no había intento con qué terminar de conectar: la hoja volvía a ofrecer «Conectar» y recién el segundo toque conectaba. Ahora un «no» del
+  diálogo **no borra el intento** (vence solo a los 15 min) y `reconciliarElIntento`, al volver a primer plano, relee el permiso con las
+  relecturas: con el permiso en el sistema queda conectada sin otro toque. Sin el permiso sigue sin conectar nada. Pruebas: dos nuevas en
+  `usePasosDelDia` (fallan con el código anterior).
+* **Y la hoja se entera (issue #137, E2E del mapa del 05/11).** Con la conexión ya terminada al volver a primer plano, la hoja «Cuenta tus km solo»
+  seguía en «Conectar» (solo pasaba a «Ya contamos tus pasos» si el diálogo contestaba que sí). Ahora recibe `conectada` (Training le pasa
+  `vista.modo !== 'ofrecer'`) y, con la hoja abierta y la conexión anotada, pasa a «Ya contamos tus pasos» y borra el aviso de error. Prueba en
+  `pasosEnPantalla` (falla con la hoja anterior).
+* **Comprobado en el emulador** (Pixel 6, API 37, debug local, sin cuentas ni producción): camino normal (acepta todo → conectada) y la app
+  muerta con el diálogo abierto (acepta todo → al reabrir queda conectada sin otro toque). **Sin comprobar:** el teléfono real del reporte; si
+  el bucle vuelve, el registro ahora dice qué falló (`[pasos] falló el diálogo de permisos…`).
+* **Pruebas:** Jest `saludConectada` (qué se pide, cuándo cuenta como concedido, relecturas, errores), `intentoDeConectar` y las nuevas de
+  `usePasosDelDia` (el intento antes del diálogo, la app muerta, sin intento no conecta, sin permiso tampoco).
 * **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
+
+## Cambio por pedido del dueño — 2026-11-05 — tab `Training` → Kilómetros en vivo con GPS (spec 042)
+
+Decisiones del dueño del 2026-11-05 sobre el lienzo de diseño (fila «Elegida»: estilo adidas Running con los botones de Renaser) y sus respuestas a los
+supuestos (spec, plan, contrato y «Decisiones del dueño» en el backend, `specs/042-kilometros-en-vivo-gps/`, D-323, V170). Pedido explícito: **que no se
+llame al servidor a cada rato y que nada se duplique**, y **«el avatar debe reflejar el movimiento real al instante, incluso 4 pasos»**. Todo vive en
+`src/features/carrera/`. Lo que cambia y nada más:
+* **La entrada** (`EntradaDeLaCarrera`): bajo el nombre de «Kilómetros diarios», en la lista de HOY de Training, una píldora con borde dorado de 48,
+  **«Correr con GPS»** (con una carrera en curso, «Carrera en curso · Volver»). Solo si `seOfreceLaCarrera`: Android, hoy, la agenda trae
+  `medicion.carrerasDelDia` (un backend anterior no lo manda y la entrada no existe) y el interruptor `habitos.km.carreras` (`CLAVES.habitosKmCarreras`)
+  disponible y prendido. Se ofrece también con el hábito ya cumplido (correr más sube los km del día, FR-022). La fila de siempre (la captura, los pasos
+  de la spec 037) no cambia: `PasosDeLaLista` suma `carrera` y `FilaDelDia` dibuja la píldora debajo de la línea de los pasos. En la web no hay carrera.
+  > **Corregido 2026-11-05 (pedido del dueño: «que se detecte el dispositivo solo»).** Donde la carrera se ofrece (misma `seOfreceLaCarrera`), el botón de
+  > la DERECHA de «Kilómetros diarios» por cumplir hoy ya no es «Subir»: es **«Correr»** (`BotonCorrerDeLaFila`, ícono `footprints`, la misma píldora de
+  > «Subir», 48 de área con el `hitSlop`), o **«Volver»** con una carrera en curso; abre la cuenta 3, 2, 1. Debajo queda «Cuenta tus pasos solo ›» solo si
+  > Health Connect está disponible (spec 037). **La captura no desaparece:** tocar el nombre abre la hoja del hábito con «Correr con GPS» como botón principal y
+  > **«Subir captura»** como secundario (`accionesDeLaHojaConCarrera`; antes el toque abría la cámara directo). Ya cumplido, o con la barra de avance de los pasos a
+  > la derecha, la píldora «Correr con GPS» sigue debajo del nombre como antes (`lugarDeLaCarrera`, pura: `'fila' | 'debajo' | null`). **En cualquier otro caso**
+  > (web, iPhone, backend sin `carrerasDelDia`, interruptor apagado) la fila es exactamente la de antes, con «Subir». Sin parpadeo: la decisión sale de la misma
+  > agenda que dibuja la fila (`carrerasDelDia`) y de la lectura de interruptores guardada por cuenta, así que la fila nace con su botón. Sin animación nueva.
+  > Pruebas: `filaDeKilometrosConCarrera`.
+* **La pantalla vive sobre el navegador** (`AnfitrionDeLaCarrera`, montado en `App.tsx`; Training solo la pide con `pedirLaCarrera`): así la carrera sigue
+  a la vista aunque se cambie de pestaña, y el atrás del sistema la deja seguir y vuelve a la app (la entrada dice «Volver»). Flujo: pedir ubicación
+  precisa «mientras se usa la app» (sin permiso no empieza y lo dice; queda la captura) y, opcional, actividad física → leer el peso y el sexo ANTES de la
+  cuenta (cada lectura con 4 s de tope) → generar la `carreraId` (UUID v4, `expo-crypto`) y guardarla en pausa (no cuenta tiempo) → arrancar el GPS →
+  **cuenta regresiva** 3, 2, 1 dorada a pantalla completa con el número blanco en un aro, pitido (la campana de Renaser), voz y vibración en cada número,
+  «Empezar ya» y «Cancelar» → **Corriendo**: el tiempo grande «00:14:32 / Duración», la fila Distancia km · Ritmo min/km · Calorías, las cuatro pestañas
+  con íconos (Mapa, Estadísticas, Tramos, Voz), el mapa y abajo la píldora dorada **«Desliza para pausar»** (deslizar o un golpe rápido; mantener
+  presionado medio segundo o la acción «activar» del lector de pantalla también pausan) → **Pausa**: franja «En pausa», números atenuados, «Tu carrera
+  queda guardada, aunque cierres la app» en verde, Ver mis tramos / Ver estadísticas / Voz y sonidos / Bloquear la pantalla (una capa que se quita
+  manteniendo presionado), «Seguir» dorado, «Terminar» con borde y «Descartar esta carrera» en rojo (pide confirmación, borra y no envía nada) →
+  **Terminaste**: «¡Carrera terminada!», el mapa, km, duración, ritmo, calorías aprox., tramos (el mejor km en verde), la línea del hábito y «Compartir en
+  el Muro» (abre la publicación de siempre). La pausa automática (sin pasos y quieto 10 s) dice «En pausa automática · sigue al moverte» y sigue sola.
+* **El mapa** (`MapaDeCarrera`): `react-native-maps` con Google, cámara inclinada 60° con edificios que sigue el rumbo, sin botón 2D/3D, sin gestos; la ruta
+  dorada (#B2924F) que crece; la chapita «Km 3 · 0,47 en 2:44». **El avatar va FIJO al centro y se mueve la cámara** (un `Marker` animado en Android se
+  dibuja como imagen fija). **Sin la clave de Maps** (`extra.mapaGoogle` de `app.config.js`, variable de EAS `GOOGLE_MAPS_ANDROID_KEY`) o sin el módulo
+  nativo, fondo neutro con el avatar y «El mapa todavía no está disponible. Tu carrera se cuenta igual.». En la web, `MapaDeCarrera.web.tsx` (sin el módulo).
+* **El avatar** (`AvatarCaminante`) es **arte provisional**: un círculo con la foto o las iniciales y borde dorado, con un vaivén de 3 px mientras camina
+  (quieto en pausa y con «reducir movimiento»). La figura (hombre, mujer o neutral) sale de `sex` de la Ficha Inicial (`figuraDelAvatar`) y ya viaja en
+  las props: el arte final reemplaza SOLO `DibujoDelAvatar`. **Fusión** (`fusionDelAvatar`, FR-031/032): cada paso del podómetro lo adelanta una zancada en el
+  rumbo en el mismo instante (aunque el GPS no cambie); cada punto GPS bueno lo reconcilia en ≤ 600 ms, o lo coloca sin animar si saltó más de 30 m.
+* **El motor** (`utils/motorDeCarrera`, puro): descarta puntos con precisión peor que 20 m y saltos de más de 25 km/h; suaviza con los últimos 4 puntos
+  ponderados por 1/precisión²; distancia haversine; **quieto no suma** (sin pasos recientes y sin desplazarse más que el ruido del GPS en 10 s); huecos sin
+  señal de menos de 60 s con pasos se rellenan con pasos × zancada (calibrada con el GPS de la carrera; si no, 0,75 m caminando y 1,0 m corriendo) y quedan
+  como `metrosSinGps`; de 60 s o más no suman; tramos por km; ritmo actual de los últimos 30 s; subida con altitud suavizada (solo subidas de más de 2 m);
+  **calorías** MET × peso × horas con el peso del objetivo de 90 días de Cuerpo si está en kilos (el avance o, si no, la línea base; 30–300 kg), si no 70
+  kg (decisión 5 del dueño, `pesoParaCalorias`). Carreras de menos de 100 m o de menos de 1 minuto activo no se envían: «Muy corta para guardarla» con
+  Seguir / Descartar.
+* **Cero pedidos durante la carrera** (FR-004): el estado vive en `servicios/carreraEnVivo` y se guarda en el teléfono (AsyncStorage, clave
+  `renaser.carrera.enCurso`, con la cuenta adentro) como mucho cada 5 s o cada 10 puntos. **Si Android mata la app**, al reabrir se retoma esa carrera de
+  esa cuenta en pausa, sin contar el tiempo muerto (FR-006). La única lectura de red es antes de la cuenta regresiva (peso y sexo).
+* **Un solo envío al terminar** (FR-016): `POST /api/v1/carreras` con la `carreraId`, el resumen, los tramos completos y la ruta (COMPLETA,
+  Douglas-Peucker a 5 m, polyline de Google, ≤ 3000 puntos y ≤ 100 KB; sin ruta si la persona apagó «Guardar mi ruta», encendido por defecto). El
+  cuerpo se arma UNA vez y va a la **cola por cuenta** (`renaser.carreras.cola.<cuenta>`) ANTES de borrar la carrera de «en curso»: los reintentos mandan los
+  mismos bytes (misma huella).
+  > **Corregido 2026-11-05 (FR-043, decisión del coordinador): la zona de privacidad la quita el SERVIDOR, no el teléfono.** `rutaParaEnviar` ya no recorta
+  > (se borraron `recortarPrivacidad` y `ZONA_DE_PRIVACIDAD_M`): manda la ruta completa por HTTPS y el servidor le quita los primeros y los últimos 200 m
+  > —cortando en el punto exacto, con el mismo algoritmo que tenía la app— antes de guardarla; si no quedan 2 puntos, la carrera se guarda sin ruta. Así ni
+  > una app modificada logra que se guarde dónde empieza o termina una carrera (la casa de alguien). Nunca se recorta en los dos lados (se perderían 400 m por
+  > punta). Lo que leen la persona, el mentor, el líder y Administración (`GET …/ruta`) ya viene recortado; «Terminaste» dibuja la ruta completa porque es la
+  > propia pantalla de la persona. No hay imagen de la ruta para el Muro: «Compartir en el Muro» abre el compositor vacío. Prueba: `rutaYCuerpo` («manda la
+  > ruta completa»). Hace falta el backend con este cambio a la vez que la app (un backend anterior guardaría la ruta entera). Sin red o 5xx/503/404: espera creciente 5 s, 15 s, 1 min, 5 min, 15 min y luego 30 min; con la app al frente nunca más de 1 min
+  (no hay detector de red en la app). 2xx —también `repetida: true`— o 409 `CARRERA_YA_REGISTRADA` la sacan de la cola; otro 4xx queda marcado con el motivo.
+  La línea del hábito (FR-018): «Registrando 3,2 km en tu hábito…», «Registramos 3,2 km en tu hábito», «Guardada en tu teléfono, se enviará al tener señal», o
+  por qué no entró (captura, día cerrado, sin hábito, no cuenta). Si la carrera cerró el hábito (`CERRADO`, no repetida) se emite `habitoCumplido` (alarmas,
+  celebración, semáforo, FR-027). La cola se procesa al abrir, al volver al frente y cada 15 s con la app abierta.
+* **Fuera de la app** (FR-011): el GPS corre en un servicio en primer plano de `expo-location` (`foregroundService`, iniciado con la app visible: **no pide
+  ubicación en segundo plano**, lo confirma el código del módulo). La tarea se define al cargar la app (`index.ts`). La notificación del servicio no admite
+  acciones ni se puede cambiar con la app atrás, así que hay una segunda **notificación fija propia** (`expo-notifications`, canal silencioso
+  `carrera-en-vivo`) con km, tiempo y ritmo, actualizada como mucho cada 10 s desde la tarea, con «Pausar» y «Abrir» (los dos abren la app; «Pausar» además
+  pausa). Con la app abierta no sale como banner (`recordatoriosDeHabito` la reconoce por su identificador).
+  > **Corregido 2026-11-05 (pedido del dueño: una sola notificación).** Ya no son dos: `scripts/arreglar-notificacion-de-carrera.js` (postinstall; `expo-location` y `expo-notifications` en `buildFromSource`) fija el id del servicio (481756) y publica la de la carrera con ese id y sin tag, así REEMPLAZA a la del servicio: una sola, fija, con «Pausar» (o «Seguir» y «Carrera en pausa» en pausa) y «Abrir», al día también con la app abierta y desde que termina la cuenta regresiva; al terminar o descartar desaparece. «Pausar»/«Seguir» funcionan también con la app cerrada desde recientes (se lee la última respuesta al abrir), y tras morir el proceso el GPS se reinicia con su servicio al seguir (antes quedaba sin servicio ni notificación). E2E en el emulador: `~/Imágenes/e2e-2026-11-05/una-notificacion/`. Hace falta un APK nuevo (código nativo).
+* **Voz y sonidos** (FR-010, `PanelVoz`, por cuenta en el teléfono): avisos cada 1 km (por defecto) / cada 5 min / nunca; qué dice (distancia, tiempo, ritmo,
+  ritmo del último km); pitidos; pausa automática; pantalla siempre encendida (`expo-keep-awake`, apagada por defecto); «Guardar mi ruta». La voz es el texto
+  a voz del teléfono (`expo-speech`, `es-419`).
+* **Lo que se lee de un día con carreras**: `origenDelDia: GPS` dice «6,2 km · Carrera con GPS» en Training y en las fichas (`detalleDeLosKm`,
+  `quienLoMidio`). En las fichas del mentor, el líder y Administración (`LineaDeLaMedicion`), cada carrera del día (`medicion.carreras[]`) es una
+  línea «6,21 km · 36:55 · 5:57 min/km», con «No cuenta» o «Por revisar» si el servidor lo dijo. Las rutas por rol ya tienen su función
+  (`leerRutaDeLaCarrera`: la propia, la del mentor o guía y la del liderazgo con y sin grupo, contracts/api.md §3), pero **el mapa de la ruta en
+  las fichas todavía no se abre** (pendiente). En «Terminaste», `NO_CUENTA` dice el `motivoNoCuenta` del servidor y una carrera `porRevisar` lo
+  avisa; un 409 que no sea `CARRERA_YA_REGISTRADA` queda marcado y no se toma por éxito.
+* **Cerrar sesión** apaga el GPS y la notificación (`apagarLaCarreraAlSalir`); la carrera y la cola quedan guardadas por cuenta (no salen con otra sesión).
+  Falta el aviso «tienes una carrera sin enviar» antes de cerrar sesión.
+* **Dependencias nuevas, revisadas antes de instalar** (`npm view` y el tarball, integridad igual a la del lock, sin `preinstall`/`install`/`postinstall`, sin
+  `child_process`/`eval`/red en el código; instaladas con `--ignore-scripts` y versión exacta de al menos dos semanas): `expo-location@57.0.22`,
+  `expo-task-manager@57.0.21` (y su dependencia `unimodules-app-loader@57.0.2`), `expo-sensors@57.0.3`, `expo-keep-awake@57.0.2` (ya venía dentro de `expo`)
+  — todas de Expo (650 Industries, repo `expo/expo`) — y `react-native-maps@1.27.2` (repo `react-native-maps/react-native-maps`, MIT, su única dependencia es
+  `@types/geojson`; su script `prepare` no corre al instalar desde el registro). El lock dejó `@expo/image-utils` en 0.11.6 y `@expo/require-utils` en 57.0.6
+  (las 0.11.7 y 57.0.7 salieron el mismo día). **Sin AsyncStorage nuevo ni `expo-sqlite`.** `app.json` suma el plugin de `expo-location` (foreground service
+  y actividad física sí, ubicación en segundo plano no); `app.config.js` (nuevo) suma `react-native-maps` con la clave si existe.
+* **No cambian**: la captura, los pasos de Health Connect (spec 037), los demás hábitos, los demás tabs ni la barra. Sin backend, la entrada no existe.
+* **Pruebas:** Jest `motorDeCarrera`, `rutaYCuerpo`, `colaAvatarYTextos` y `carreraSinPedidos` (cero pedidos durante la carrera y uno al terminar, sin red y
+  reintento repetido sin duplicar, cola por cuenta, retomar tras morir la app). Maestro, **escritos y sin correr**: `.maestro/carrera-gps/` (01 a 04).
+* **Hace falta**: el backend de la spec 042 antes; **un APK nuevo** (código nativo); la clave de Maps SDK for Android restringida (variable de EAS
+  `GOOGLE_MAPS_ANDROID_KEY`); en Play Console la declaración del servicio en primer plano de tipo ubicación (con video) y Data safety (ubicación precisa,
+  actividad física); la política de privacidad con la ubicación y la ruta; el arte final del avatar; y probar en un teléfono real (latencia del podómetro,
+  batería, pantalla bloqueada 10 min, SC-007 y SC-011).
+* **Corregido 2026-11-05 (pendientes del E2E):**
+  * **Los km, un solo formato.** «Registramos X km en tu hábito» usa `formatoKm`, el de la tarjeta: dos decimales («Registramos 0,40 km», no «0,4»).
+  * **Las calorías salen de la distancia** (FR-015). Antes, parada, el reloj sumaba el MET de estar quieta y subían con 0 m. Ahora cada tramo usa los
+    metros recorridos desde el último cálculo (`ultimoCalculoCaloriasDistanciaM`, opcional para estados guardados antes); sin metros nuevos no suma, y por
+    debajo de 1 km/h `caloriasDelTramo` da 0. Con 0 m, 0 kcal; al pararse, dejan de subir.
+  * **Sin el cuadro gris detrás del avatar** en «Terminaste» (visto al volver de modo avión). Era el resaltado de foco de Android: `accessible` volvía al
+    avatar (72 × 80) enfocable y, fuera del modo táctil, tomaba el foco. `AvatarCaminante` ahora es decorativo y no enfocable (`focusable={false}`,
+    oculto para el lector, como el mapa); los datos los leen las tarjetas. Causa deducida por la medida del cuadro, sin emulador: falta confirmarlo en pantalla.
 
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
 Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel especializado en React Native, Expo y TypeScript. Al crear, refactorizar o modificar cualquier pantalla o componente, debes cumplir OBLIGATORIAMENTE con los siguientes estándares:
 
 ---
+* **Decisión del dueño (05/11): cerrar la app NO pausa la carrera** («Seguir grabando», como Strava, Nike Run y adidas Running). Mientras esté la
+  notificación «Carrera en curso», la carrera sigue (servicio en primer plano con `killServiceOnDestroy: false` y la tarea `renaser-carrera-gps`
+  definida al cargar la app). Comprobado en el emulador con la ruta simulada: botón Inicio, 60 s → sigue sumando; **cerrar desde recientes**, 90 s →
+  la notificación sigue y al reabrir retoma corriendo con lo recorrido mientras estuvo cerrada; **forzar detención** → al reabrir vuelve «En pausa» sin
+  contar el tiempo muerto (FR-006). Las marcas que matan la app al deslizarla (Xiaomi, Huawei, Honor) caen en este último caso. No se pausa sola al
+  cerrar: mucha gente cierra las apps por costumbre mientras corre y perdería esos km.
 
 ## 1. 🏗️ ARQUITECTURA LIMPIA Y SEPARACIÓN DE RESPONSABILIDADES
 * **Estructura Modular por Feature**: Agrupa el código bajo `src/features/<nombre_modulo>/`:

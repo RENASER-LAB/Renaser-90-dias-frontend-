@@ -117,7 +117,16 @@
           "backgroundColor": "#FFFFFF"
         }
       ],
-      "./plugins/withHealthConnect"
+      "./plugins/withHealthConnect",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Renaser usa tu ubicación solo mientras corres con «Correr con GPS», para contar tus kilómetros y dibujar tu ruta.",
+          "isAndroidBackgroundLocationEnabled": false,
+          "isAndroidForegroundServiceEnabled": true,
+          "isAndroidMotionActivityEnabled": true
+        }
+      ]
     ],
     "extra": {
       "eas": {

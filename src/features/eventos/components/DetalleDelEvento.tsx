@@ -10,7 +10,7 @@ import { useAhora } from '../hooks/useAhora';
 import { useAsistenciaDelEvento } from '../hooks/useAsistenciaDelEvento';
 import { useMeetDelEvento } from '../hooks/useMeetDelEvento';
 import type { Asistencia, Evento, Ocurrencia } from '../types/eventos.types';
-import { ETIQUETA_REINTENTAR, lineaDeLaSala, lineaDeLaSerie, sePuedeReintentar } from '../utils/enlaceDeMeet';
+import { ETIQUETA_REINTENTAR, avisoDelPlanDeGoogle, lineaDeLaSala, lineaDeLaSerie, sePuedeReintentar } from '../utils/enlaceDeMeet';
 import { sePuedeEditarEnLaApp } from '../utils/formularioDeEvento';
 import { linkParaUnirme, marcaDelLink, nombreDelLink } from '../utils/linkDelEvento';
 import { duracionEnPalabras, fechaYHora } from '../utils/textosDeFecha';
@@ -75,6 +75,7 @@ export function DetalleDelEvento({
   );
   const meet = fresco?.meet ?? null;
   const avisoDeLaSala = lineaDeLaSala(meet);
+  const avisoDelPlan = avisoDelPlanDeGoogle(meet);
   const lineaSerie = fresco ? lineaDeLaSerie(fresco) : null;
 
   const unirme = async () => {
@@ -136,6 +137,7 @@ export function DetalleDelEvento({
         <View style={{ gap: 8 }}>
           {lineaSerie ? <Parrafo>{lineaSerie}</Parrafo> : null}
           {avisoDeLaSala ? <Parrafo tono="peligro">{avisoDeLaSala}</Parrafo> : null}
+          {avisoDelPlan ? <Parrafo>{avisoDelPlan}</Parrafo> : null}
           {falloAlReintentar ? <Parrafo tono="peligro">No se pudo reintentar. Intenta de nuevo en un rato.</Parrafo> : null}
           {sePuedeReintentar(meet) ? (
             <BotonSecundario

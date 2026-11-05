@@ -98,7 +98,23 @@ describe('el resumen de la sala en el evento (FR-019, SC-007, FR-020)', () => {
       mensaje: 'No pudimos crear el enlace de Meet.',
       fechasConSala: 0,
       fechasConProblema: 2,
+      avisoDelPlan: null,
     });
+  });
+
+  // spec 040 FR-037
+  it('lee el aviso del plan de Google; si viene roto o vacío, el resumen sigue sin aviso (esquema tolerante)', () => {
+    const aviso = 'Para grabar hace falta Google One de 2 TB o más en la cuenta conectada; para transcribir, Google Workspace.';
+    const conAviso = leerEvento(eventoCrudo({ meet: { estado: 'CREADO', accesoAplicado: true, mensaje: null, fechasConSala: 1, fechasConProblema: 0, avisoDelPlan: ` ${aviso} ` } }));
+    expect(conAviso.meet?.avisoDelPlan).toBe(aviso);
+    expect(conAviso.meet?.estado).toBe('CREADO');
+
+    const roto = leerEvento(eventoCrudo({ meet: { estado: 'CREADO', accesoAplicado: true, mensaje: null, fechasConSala: 1, fechasConProblema: 0, avisoDelPlan: 42 } }));
+    expect(roto.meet?.avisoDelPlan).toBeNull();
+    expect(roto.meet?.estado).toBe('CREADO');
+
+    const vacio = leerEvento(eventoCrudo({ meet: { estado: 'CREADO', avisoDelPlan: '   ' } }));
+    expect(vacio.meet?.avisoDelPlan).toBeNull();
   });
 
   // spec 040 SC-007, FR-020

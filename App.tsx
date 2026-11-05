@@ -23,6 +23,7 @@ import { CargadorDeCategoriasDeHabito } from './src/features/habits/categorias/c
 import { SincronizadorDeAcciones } from './src/features/objetivos/components/SincronizadorDeAcciones';
 import { SincronizadorDePagos } from './src/features/pagos/components/SincronizadorDePagos';
 import { AnfitrionDeCelebraciones } from './src/features/fenix/components/AnfitrionDeCelebraciones';
+import { AnfitrionDeLaCarrera } from './src/features/carrera/components/AnfitrionDeLaCarrera';
 import { FormacionProvider } from './src/features/formaciones/context/FormacionContext';
 import { SincronizadorDeLaFormacionDeLaComunidad } from './src/features/formaciones/components/SincronizadorDeLaFormacionDeLaComunidad';
 import { FuncionalidadesProvider } from './src/features/plataforma/estado/FuncionalidadesProvider';
@@ -88,6 +89,9 @@ function Shell() {
           donde ocurra el hito. Aca arriba por el mismo motivo que los otros: ninguna pantalla la dibuja. Se quita
           borrando esta linea. Ver `features/fenix/components/AnfitrionDeCelebraciones.tsx`. */}
       <AnfitrionDeCelebraciones />
+      {/* La carrera con GPS (spec 042): la cuenta regresiva, «Corriendo», la pausa y «Terminaste», y la cola de envíos. Aca arriba
+          para que la carrera siga a la vista aunque la persona cambie de pestaña; Training solo la pide. Solo Android. */}
+      <AnfitrionDeLaCarrera />
       {/* Dibuja los Alert en el build web, donde el Alert de react-native-web es un metodo vacio
           que nunca ejecuta los onPress de sus botones (E-144). En movil no pinta nada. */}
       <AnfitrionAlerta />

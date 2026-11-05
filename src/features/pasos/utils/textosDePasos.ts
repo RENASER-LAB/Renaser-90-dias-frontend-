@@ -118,5 +118,7 @@ export function detalleDeLosKm(
 ): string | null {
   if (km == null || !Number.isFinite(km)) return null;
   if (origen === 'HEALTH_CONNECT') return [kmConUnidad(km), 'Health Connect', fuente].filter(Boolean).join(' · ');
+  // Spec 042: los km del día salieron de una carrera con GPS.
+  if (origen === 'GPS') return kmConUnidad(km) + ' · Carrera con GPS';
   return `${kmConUnidad(km)}${origen === 'MANUAL' ? ' · Captura' : ''}`;
 }
