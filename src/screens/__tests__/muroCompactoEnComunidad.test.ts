@@ -9,7 +9,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import React from 'react';
 import { Text } from 'react-native';
-import TestRenderer, { act, type ReactTestRenderer } from 'react-test-renderer';
+import TestRenderer, { act, type ReactTestInstance, type ReactTestRenderer } from 'react-test-renderer';
 
 jest.mock('../../theme/ThemeContext', () => {
   const tokens = jest.requireActual<typeof import('../../theme/tokens')>('../../theme/tokens');
@@ -56,10 +56,10 @@ describe('el Muro compacto en Comunidad', () => {
     let raiz!: ReactTestRenderer;
     act(() => {
       raiz = TestRenderer.create(
-        React.createElement(PublicacionAbierta, { onVolver }, React.createElement(Text, null, 'la tarjeta completa'))
+        React.createElement(PublicacionAbierta, { onVolver, children: React.createElement(Text, null, 'la tarjeta completa') })
       );
     });
-    const textos = raiz.root.findAllByType(Text).map(n => n.props.children);
+    const textos = raiz.root.findAll((n: ReactTestInstance) => (n.type as unknown) === Text).map(n => n.props.children);
     expect(textos).toContain('Publicación');
     expect(textos).toContain('la tarjeta completa');
     const volver = raiz.root.findAll(n => n.props.accessibilityLabel === 'Volver' && typeof n.props.onPress === 'function')[0];

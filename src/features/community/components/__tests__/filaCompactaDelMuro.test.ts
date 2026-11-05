@@ -60,7 +60,9 @@ function dibujar(post: PostItem, puedeModerar?: boolean, acciones: Partial<Accio
 }
 
 const textos = (raiz: ReactTestRenderer) =>
-  raiz.root.findAllByType(Text).map(n => (Array.isArray(n.props.children) ? n.props.children.join('') : String(n.props.children)));
+  raiz.root
+    .findAll((n: ReactTestInstance) => (n.type as unknown) === Text)
+    .map((n: ReactTestInstance): string => (Array.isArray(n.props.children) ? n.props.children.join('') : String(n.props.children)));
 const conEtiqueta = (raiz: ReactTestRenderer, etiqueta: string | RegExp): ReactTestInstance | undefined =>
   raiz.root.findAll(
     n =>
@@ -90,7 +92,7 @@ describe('la fila compacta del Muro', () => {
   it('sin fotos: no hay miniatura y el texto usa todo el ancho, cortado a 3 líneas', () => {
     const raiz = dibujar(publicacion());
     expect(miniatura(raiz)).toBeUndefined();
-    const texto = raiz.root.findAllByType(Text).find(n => n.props.children === publicacion().text)!;
+    const texto = raiz.root.findAll((n: ReactTestInstance) => (n.type as unknown) === Text).find(n => n.props.children === publicacion().text)!;
     expect(texto.props.numberOfLines).toBe(3);
   });
 
