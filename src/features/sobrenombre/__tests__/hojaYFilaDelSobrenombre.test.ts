@@ -2,7 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import React from 'react';
 import { Text, TextInput } from 'react-native';
-import TestRenderer, { act, type ReactTestRenderer } from 'react-test-renderer';
+import TestRenderer, { act, type ReactTestInstance, type ReactTestRenderer } from 'react-test-renderer';
 
 import type { MiSobrenombre } from '../api/sobrenombreApi';
 
@@ -45,7 +45,7 @@ function escribir(valor: string) {
   act(() => campo.props.onChangeText(valor));
 }
 async function guardar() {
-  const boton = raiz!.root.findAll(n => typeof n.props.onPress === 'function' && n.findAll(x => (x.type as unknown) === Text).some(t => [t.props.children].flat().join('') === 'Guardar'))[0];
+  const boton = raiz!.root.findAll(n => typeof n.props.onPress === 'function' && n.findAll((x: ReactTestInstance) => (x.type as unknown) === Text).some(t => [t.props.children].flat().join('') === 'Guardar'))[0];
   await act(async () => boton.props.onPress());
 }
 
@@ -82,7 +82,7 @@ describe('la hoja del sobrenombre', () => {
         React.createElement(HojaDelSobrenombre, { visible: true, mio: { ...sin, sobrenombre: 'Fénix', puedeCambiarDesde: futuro }, alCerrar: () => undefined, alGuardar: () => undefined }),
       );
     });
-    expect(textos().some(x => x.startsWith('Puedes cambiarlo de nuevo desde el'))).toBe(true);
+    expect(textos().some((x: string) => x.startsWith('Puedes cambiarlo de nuevo desde el'))).toBe(true);
   });
 });
 

@@ -36,7 +36,7 @@ describe('Hoy: el orden de arriba abajo', () => {
 
 describe('Hoy: sin hueco vacío antes del fénix', () => {
   it('el bloque de la fila y la acción solo existe si tiene algo que dibujar', () => {
-    expect(HOY).toMatch(/\{programaPropio\.visible \|\| hayTarjetaDeAccion \|\| errorResumen \? \(\s*<Aparicion retardo=\{70\}/);
+    expect(HOY).toMatch(/\{programaPropio\.visible \|\| filaDelSobrenombre \|\| hayTarjetaDeAccion \|\| errorResumen \? \(\s*<Aparicion retardo=\{70\}/);
     expect(HOY).toContain('const hayTarjetaDeAccion = Boolean(vistaDeLaAccion && metaDeLaAccion.lista);');
   });
 
