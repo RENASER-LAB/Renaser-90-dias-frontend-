@@ -112,3 +112,19 @@ describe('TabBar al desplazar', () => {
     expect(barra!.escondida.value).toBe(0);
   });
 });
+
+/** Issue #152 (E2E de regresión del 06/11): con la letra del sistema grande, «ENTRENAR» y «COMUNIDAD» quedaban pegadas. */
+describe('TabBar con letra grande', () => {
+  it('cada pestaña deja aire a los lados y su etiqueta se achica para caber en una línea', () => {
+    const raiz = dibujar(OPCIONES_CON_PESTANAS);
+    const pestanas = raiz.root.findAll(n => n.props.accessibilityRole === 'tab' && typeof n.props.onPress === 'function');
+    expect(pestanas.length).toBe(5);
+    for (const p of pestanas) {
+      const estilo = StyleSheet.flatten(p.props.style) as { paddingHorizontal?: number };
+      expect(estilo.paddingHorizontal ?? 0).toBeGreaterThanOrEqual(3);
+      const [etiqueta] = p.findAll(n => (n.type as unknown) === 'Text');
+      expect(etiqueta.props.numberOfLines).toBe(1);
+      expect(etiqueta.props.adjustsFontSizeToFit).toBe(true);
+    }
+  });
+});
