@@ -65,3 +65,6 @@ playwright-report/
 
 # Definiciones de skills locales: no son del producto.
 .agents/
+
+### Estado de la tarea del arnés de agentes: es de cada worktree, no se versiona ###
+.arnes/

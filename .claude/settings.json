@@ -1,5 +1,19 @@
 {
   "enabledPlugins": {
     "expo@claude-plugins-official": true
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/scripts/inicio-de-sesion.mjs\" 2>/dev/null || true",
+            "timeout": 15,
+            "statusMessage": "Leyendo PROGRESO.md y los bugs abiertos…"
+          }
+        ]
+      }
+    ]
   }
 }

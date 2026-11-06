@@ -1,0 +1,124 @@
+# Reglas de la app como estaban en `AGENTS.md` hasta el 2026-11-06
+
+Copia literal de la sección «REGLAS Y BUENAS PRÁCTICAS» antes de ordenar el arnés, con sus notas `> **Corregido …**`.
+Se guarda para no perder el rastro de qué decía cada regla y por qué cambió. **No es la versión vigente**: la vigente
+está al final de `AGENTS.md`, ya sin contradicciones (por ejemplo, la fuente es Inter por `src/theme/fuentes.ts`, no
+Jost ni Fraunces).
+
+---
+
+# 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
+
+Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel especializado en React Native, Expo y TypeScript. Al crear, refactorizar o modificar cualquier pantalla o componente, debes cumplir OBLIGATORIAMENTE con los siguientes estándares:
+
+## 1. 🏗️ ARQUITECTURA LIMPIA Y SEPARACIÓN DE RESPONSABILIDADES
+* **Estructura Modular por Feature**: Agrupa el código bajo `src/features/<nombre_modulo>/`:
+  * `screens/`: Coordinadores y pantallas completas.
+  * `components/`: Subcomponentes visuales reutilizables.
+  * `types/`: Tipos TypeScript (`.types.ts`).
+  * `data/`: Constantes, cláusulas, configuraciones estáticas.
+* **Componentes de UI Atómicos**: Utiliza componentes compartidos bajo `src/components/` (`FormField`, `GoldButton`, `SliderRating`, `Checkbox`, `SignatureCanvas`, `Icon`, `LogoDeMarca`).
+  * **Logos de marcas (Google, Apple, Google Meet, Zoom, Google Drive) → `LogoDeMarca`, nunca `Icon`**
+    (2026-10-05, pedido del dueño de usar svgl). Son los SVG oficiales de svgl con sus colores, sin
+    redibujar ni recolorear; Apple cambia a blanco en modo oscuro. Una marca nueva se agrega desde
+    `static/library/` de svgl siguiendo la cabecera de `LogoDeMarca.tsx`. Los casos `google` y `apple`
+    de `Icon` quedan solo hasta que `LoginScreen` pase a `LogoDeMarca`; no sumarles usos.
+  * **`Icon`: un solo grosor real y tres tamaños** (decisión del dueño, 2026-10-05). El trazo se dibuja a
+    **1,75 px reales** a cualquier tamaño (`GROSOR_TRAZO_PX`, `grosorDelTrazo`): antes era `strokeWidth = 1.1`
+    en la caja de 20 y a 14 px quedaba en 0,77 px. Un `strokeWidth` explícito se respeta solo si es más grueso
+    (el ✓ sobre dorado); nunca deja el trazo más fino. Tamaños de uso **16 / 20 / 24** (`TAMANO_ICONO`); la
+    flecha de volver, 24 en un área de 48. Un ícono nuevo se dibuja con forma de **Lucide** (ISC) en caja de 24
+    y usa **`s24`** —con `s` saldría a 1,46 px; `grosorDeIconos.test.ts` lo frena—. Nada de emojis como
+    íconos: cambian de forma entre Android, iOS y web e ignoran el color del tema.
+* **Integridad del Core**: NUNCA alterar, romper ni desconfigurar las pantallas existentes ni los tabs principales (`Hoy`, `Plan`, `Training`, `Comunidad`, `Yo`).
+
+  *(Aquí iban las entradas de autorizaciones de los tabs: ahora están en los demás archivos de esta carpeta.)*
+
+---
+
+## 2. 📱 RESPONSIVIDAD UNIVERSAL (XIAOMI, ANDROID, IOS Y TABLETS)
+* **Cero Doble Scroll**: NUNCA coloques un contenedor con `maxHeight` fijo o scroll interno dentro de otro `ScrollView`. Toda pantalla debe tener UN ÚNICO contenedor de scroll fluido con `contentContainerStyle={{ flexGrow: 1, paddingBottom: 36 }}`.
+* **Adaptabilidad a Xiaomi y Pantallas Altas (20:9 / 19.5:9)**:
+  * Utiliza márgenes dinámicos basados en `useResponsive()`:
+    * Pantallas compactas (<360px): `paddingHorizontal: 14`
+    * Móviles estándar y Xiaomi (360px - 440px): `paddingHorizontal: 18`
+    * Tablets (≥768px): `paddingHorizontal: 32` con tarjeta centrada a `maxWidth: 560`.
+* **Cero Desbordamientos**:
+  * Utiliza `width: '100%'`, `flexShrink: 1` y `flexWrap: 'wrap'` en filas y tarjetas para evitar que botones o textos sobresalgan de la pantalla.
+* **Manejo de Teclado**: Envuelve siempre los formularios con `keyboardShouldPersistTaps="handled"`.
+
+---
+
+## 3. ✍️ MANEJO DE GESTOS TÁCTILES Y FIRMA DIGITAL
+* **Prevención de Cancelación Táctil en Android / Xiaomi**:
+  * Al implementar lienzos o componentes táctiles (ej. `SignatureCanvas` con `PanResponder` o `react-native-svg`), SIEMPRE declara:
+    * `onStartShouldSetPanResponderCapture: () => true`
+    * `onPanResponderTerminationRequest: () => false`
+    * `onShouldBlockNativeResponder: () => true`
+  * Esto impide que el `ScrollView` nativo de Android intercepte y borre los trazos del dedo.
+* **Persistencia Incondicional**: Las firmas y respuestas de formularios deben guardarse en el estado raíz o contexto (`OnboardingFlow` / `AuthContext`) para que NO se pierdan al retroceder, avanzar o abrir el teclado.
+* **Modo Dual**: Proveer modo de trazado con el dedo (dibujo vectorial) y modo de firma electrónica estilizada (nombre caligráfico).
+* **Parche Seguro de JSON**: Utilizar `safeParsePaths` al deserializar datos de firma para evitar excepciones `JSON.parse`.
+
+---
+
+## 4. 👁️ TIPOGRAFÍA, CONTRASTE Y ACCESIBILIDAD (UX/IA)
+* **Grosor y Claridad**: Prohibido usar fuentes ultrafinas (`300Light` o `200ExtraLight`) para lectura prolongada. Usar siempre **`Jost_400Regular`**, **`Jost_500Medium`** y **`Jost_700Bold`**.
+  > **Corregido 2026-10-31 (pedido del dueño).** La fuente de la app es **Inter**, no Jost: usa siempre los roles de `src/theme/fuentes.ts`
+  > (`fuentes.regular`, `.media`, `.seminegrita`, `.negrita`), nunca un nombre de archivo. Las pesas ultrafinas siguen prohibidas (ni se cargan).
+* **Serif editorial, SOLO en display** *(agregado 2026-09-14)*: **`Fraunces_600SemiBold`** y **`Fraunces_700Bold`** se usan únicamente en los tokens `t.hero` y `t.screenTitle` (≥ 24 px). **Nada que se lea en párrafo la toca**: texto corrido, inputs, cláusulas y etiquetas siguen en Jost, que es lo que esta regla protege. Entró porque la jerarquía estaba construida sobre `letterSpacing` (el `hero` llegaba a 8) en vez de sobre familia y peso, y eso hacía que cada pantalla se leyera como plantilla. Si alguna vez se quiere volver atrás, es un valor en `theme/tokens.ts` y dos imports en `App.tsx`.
+  > **Corregido 2026-10-31 (pedido del dueño).** Ya no hay serif: el display también es Inter (`fuentes.display`, hoy la Bold, porque el paquete no trae el corte Display); la regla de que **nada que se lea en párrafo usa el display** sigue. Fraunces se fue del proyecto.
+* **La fuente es una regla global, en un solo archivo** *(agregado 2026-10-31, pedido del dueño: «como un CSS global»)*: el nombre de la fuente se escribe **solo** en `src/theme/fuentes.ts`, que exporta **roles** (`fuentes.regular`, `.media`, `.seminegrita`, `.negrita`, `.display`). Ningún otro archivo de `src/` (ni `App.tsx`) escribe `Inter_…`, `Jost_…` ni `Fraunces_…`, ni un `fontFamily` con un texto: pide el rol o usa los tokens `t.*`. `theme/__tests__/fuenteUnica.test.ts` lo vigila. Cambiar la fuente de toda la app es tocar ese archivo.
+* **El espaciado de letras no es jerarquía** *(agregado 2026-09-14)*: un titular grande lleva tracking **negativo** (junta, pesa); sólo los rótulos chicos en versales (`micro`, `sectionTitle`) llevan tracking positivo, y por debajo de 1.5. Estirar un texto para que parezca importante es el gesto que hay que evitar.
+  > **Corregido 2026-10-05 (decisión del dueño).** Un rótulo en **tipo oración** no lleva espaciado: `MicroLabel` (el rótulo de sección de toda la app) pasó a 13 px, `Jost_700Bold` y `letterSpacing: 0`; con el 1,1 de `t.micro` se leía «H á b i t o s». El tracking positivo queda solo para lo que todavía va en versales.
+* **Cifras que cambian, tabulares**: todo número que se actualiza en pantalla (día de programa, puntos, racha) va con `fontVariant: ['tabular-nums']` — ya está en el token `t.metric`. Sin eso, pasar de 9 a 10 corre de lugar todo lo que tenga al lado.
+* **Tamaño Mínimo de Lectura**:
+  * Textos de párrafo / cláusulas / inputs: **14px a 15.5px**.
+  * Etiquetas de ayuda / subtítulos: **12px a 13.5px**.
+  * Badges: **10px a 11.5px (Medium/Bold)**.
+  * Rótulos de sección (`MicroLabel`): **13px, Bold, sin espaciar**.
+    > **Corregido 2026-10-05.** Decía «Badges / MicroLabels: 10px a 11.5px (Medium/Bold)». `MicroLabel` se leía chico y estirado en tipo oración; el dueño pidió quitarle el espaciado en toda la app, y con 13 px en negrita queda como «Coherencia» y «Racha» de Hoy.
+* **Alto Contraste de Color**:
+  * Modo Oscuro: Texto principal `#FFFFFF` / `#F6F4EE`, secundario `#C5BEB3`.
+  * Modo Claro: Texto principal `#1E1B18`, secundario `#4A453D`.
+* **Touch Targets Cómodos**: Botones y casillas de checkbox con altura mínima de **48px - 52px** para pulsación cómoda con una sola mano.
+
+---
+
+## 5. 🔒 VALIDACIÓN ESTRICTA Y EXPERIENCIA DE USUARIO
+* **Validación Antes de Avanzar**: Validar campos requeridos por cada paso o capítulo antes de cambiar de pantalla.
+* **Feedback Visual y Alertas Amigables**: Mostrar con precisión qué campo falta por completar mediante alertas claras (`Alert.alert`) y bordes de estado de error (`#E06A66`).
+* **Seguridad TypeScript**: Todo código nuevo debe compilar con 0 errores mediante `npx tsc --noEmit`.
+
+---
+
+## 6. 📱 NAVEGACIÓN UNIVERSAL POR GESTOS DEL SISTEMA (EDGE SWIPE & BACKHANDLER)
+* **Soporte Obligatorio para Pantallas Táctiles y Gestos (Xiaomi / Android / iOS)**:
+  * En dispositivos modernos con navegación por gestos en pantalla (deslizar desde el borde lateral para volver atrás sin botones físicos), toda subpantalla, modal o flujo multinivel DEBE implementar `useSystemBackHandler`:
+    * Si hay un **modal abierto** (ej. Subir Evidencia, Agregar Hábito): el gesto lateral debe cerrar el modal.
+    * Si está en el **detalle de una categoría/dimensión**: el gesto lateral debe regresar al menú principal.
+    * Si está en un **formulario por pasos / onboarding**: el gesto lateral debe retroceder al paso anterior.
+  * **Prohibido**: Permitir que el gesto lateral del sistema cierre o minimice la aplicación cuando el usuario se encuentre en una vista hija o modal.
+
+---
+
+> **Nota del arnés (2026-11-06).** La sección de abajo estaba en `AGENTS.md` de `master`; en `AGENTS.md` quedó
+> resumida como la regla 8. Se copia aquí tal cual para no perder ningún detalle.
+
+## Trazabilidad de specs — la marca `spec NNN FR-NNN` en cada prueba
+
+Cada requisito (`FR-NNN`) y criterio de éxito (`SC-NNN`) de una spec que se exige tiene que tener una
+prueba que lo cubra, y la prueba lo dice con una marca en un comentario (o en el nombre del `it`):
+
+```ts
+// spec 037 FR-006, SC-002
+it('km = distancia agregada; sin ella, pasos × 0,75 m', () => { … });
+```
+
+En los flujos de Maestro (`.maestro/**.yaml`): `# spec 037 FR-007`. Solo cuentan las marcas en pruebas:
+Jest bajo `src/` (`__tests__` o `*.test.*` / `*.spec.*`) y Maestro; en código de producción o en un `.md`
+no cubren nada. El número es el de la spec, no el de la issue. **No se marca por marcar**: si la prueba no
+falla cuando el requisito se rompe, no lleva la marca. Lo comprueba `scripts/trazabilidad-specs.mjs` del
+backend, que recibe la ruta de esta app (`node scripts/trazabilidad-specs.mjs <ruta-de-la-app>`); la regla
+completa es `.claude/rules/06-trazabilidad-de-specs.md` del backend. Las specs de la app viven en el
+backend (ver `specs/README.md`), así que la lista de las que se exigen es `specs/trazabilidad.json` de allá.

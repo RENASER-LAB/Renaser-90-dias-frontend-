@@ -1,0 +1,16 @@
+{
+  "$comentario": "Violaciones que ya existían el día que nació cada chequeo de familiasDeErrores.test.ts. Solo se achica: al arreglar una, se borra. Ver docs/arnes/familias-de-errores.md.",
+  "alertDeReactNative": {
+    "fecha": "2026-11-06",
+    "motivo": "Alerta.tsx y admin/utils/dialogo.ts envuelven el Alert nativo a propósito (con el camino de la web). No son violaciones: las otras dos se arreglaron en #144.",
+    "archivos": [
+      "src/components/Alerta.tsx",
+      "src/features/admin/utils/dialogo.ts"
+    ]
+  },
+  "crlf": {
+    "fecha": "2026-11-06",
+    "motivo": "Sin excepciones: ningún archivo de texto de la app tiene CRLF.",
+    "archivos": []
+  }
+}
