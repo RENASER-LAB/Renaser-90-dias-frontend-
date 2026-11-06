@@ -9,6 +9,7 @@ import { Presionable } from '../../../components/Presionable';
 import { fuentes } from '../../../theme/fuentes';
 import { useTheme } from '../../../theme/ThemeContext';
 import { useEstadoDelEnvio, useRelojDeLaCarrera } from '../hooks/useCarreraEnVivo';
+import { useCentroDelMapa } from '../servicios/centroDelMapa';
 import type { EstadoDeLaCarrera, PreferenciasDeLaCarrera } from '../types/carrera.types';
 import {
   alDarPasos,
@@ -53,7 +54,10 @@ export function PantallaCorriendo({
   alCambiarPanel,
   bloqueada,
   alBloquear,
+  detrasDeLaCuenta = false,
 }: {
+  /** Montada detrás de la cuenta 3, 2, 1: el mapa ya carga y la pantalla es la de correr aunque la carrera siga en pausa. */
+  detrasDeLaCuenta?: boolean;
   e: EstadoDeLaCarrera;
   prefs: PreferenciasDeLaCarrera;
   persona: DatosDeLaPersona;
@@ -69,8 +73,11 @@ export function PantallaCorriendo({
 }) {
   const { c } = useTheme();
   const insets = useSafeAreaInsets();
-  const enPausa = e.fase === 'pausa';
+  const enPausa = e.fase === 'pausa' && !detrasDeLaCuenta;
   const ahora = useRelojDeLaCarrera(true);
+  const centroDeVista = useCentroDelMapa();
+  // Detrás de la cuenta solo se deja ver el mapa: lo demás ocupa su lugar (el mapa no se mueve al terminar) pero no se ve.
+  const soloElMapa = detrasDeLaCuenta ? estilos.invisible : null;
   const [pestana, setPestana] = useState<PestanaDeLaCarrera>('mapa');
   const avatar = useAvatarFusionado(e, ahora);
 
@@ -108,6 +115,7 @@ export function PantallaCorriendo({
           <MapaDeCarrera
             ruta={e.ruta}
             posicion={avatar.estado.posicion}
+            centroDeVista={centroDeVista}
             rumbo={avatar.estado.rumbo}
             duracionMs={avatar.duracionMs}
             figura={persona.figura}
@@ -115,6 +123,7 @@ export function PantallaCorriendo({
             iniciales={persona.iniciales}
             fotoUrl={persona.fotoUrl}
             chapa={chapa}
+            cuentaId={e.cuentaId}
           />
         );
     }
@@ -151,11 +160,13 @@ export function PantallaCorriendo({
           </Text>
         </View>
       ) : null}
-      <View style={estilos.tiempo} accessible accessibilityLabel={`${TEXTOS_DE_LA_CARRERA.duracion}: ${formatoDuracion(act)}`}>
+      <View style={[estilos.tiempo, soloElMapa]} accessible accessibilityLabel={`${TEXTOS_DE_LA_CARRERA.duracion}: ${formatoDuracion(act)}`}>
         <Text style={[estilos.tiempoGrande, { color: enPausa ? c.textSoft : c.textStrong }]}>{formatoDuracion(act)}</Text>
         <Text style={[estilos.rotuloTiempo, { color: c.textSoft }]}>{TEXTOS_DE_LA_CARRERA.duracion}</Text>
       </View>
-      <FilaDeTresDatos e={e} ahora={ahora} atenuado={enPausa} />
+      <View style={soloElMapa}>
+        <FilaDeTresDatos e={e} ahora={ahora} atenuado={enPausa} />
+      </View>
 
       {enPausa && !e.pausaAutomatica ? (
         <ScrollView style={{ flex: 1 }} contentContainerStyle={estilos.pausa}>
@@ -177,14 +188,18 @@ export function PantallaCorriendo({
         </ScrollView>
       ) : (
         <>
-          <PestanasDeLaCarrera valor={pestana} onCambiar={setPestana} />
+          <View style={soloElMapa}>
+            <PestanasDeLaCarrera valor={pestana} onCambiar={setPestana} />
+          </View>
           <View style={{ flex: 1 }}>
             {pestana === 'mapa' ? contenidoDePestana() : <ScrollView contentContainerStyle={estilos.scrollInterno}>{contenidoDePestana()}</ScrollView>}
           </View>
           {enPausa ? (
             <GoldButton label={TEXTOS_DE_LA_CARRERA.seguir} icon="play" iconPosition="left" onPress={alSeguir} />
           ) : (
-            <BarraDeslizarParaPausar alPausar={alPausar} />
+            <View style={soloElMapa}>
+              <BarraDeslizarParaPausar alPausar={alPausar} />
+            </View>
           )}
         </>
       )}
@@ -289,6 +304,7 @@ export function PantallaTerminaste({
         posicion={ultimo}
         rumbo={0}
         duracionMs={0}
+        modo="resumen"
         figura={persona.figura}
         caminando={false}
         iniciales={persona.iniciales}
@@ -336,6 +352,7 @@ function DatoFinal({ valor, rotulo }: { valor: string; rotulo: string }) {
 }
 
 const estilos = StyleSheet.create({
+  invisible: { opacity: 0 },
   pantalla: { flex: 1, paddingHorizontal: 18, gap: 12 },
   franja: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderRadius: 14, paddingHorizontal: 14, minHeight: 40 },
   textoFranja: { fontFamily: fuentes.seminegrita, fontSize: 15, flexShrink: 1 },

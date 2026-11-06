@@ -2584,7 +2584,7 @@ llame al servidor a cada rato y que nada se duplique**, y **«el avatar debe ref
   manteniendo presionado), «Seguir» dorado, «Terminar» con borde y «Descartar esta carrera» en rojo (pide confirmación, borra y no envía nada) →
   **Terminaste**: «¡Carrera terminada!», el mapa, km, duración, ritmo, calorías aprox., tramos (el mejor km en verde), la línea del hábito y «Compartir en
   el Muro» (abre la publicación de siempre). La pausa automática (sin pasos y quieto 10 s) dice «En pausa automática · sigue al moverte» y sigue sola.
-* **El mapa** (`MapaDeCarrera`): `react-native-maps` con Google, cámara inclinada 60° con edificios que sigue el rumbo, sin botón 2D/3D, sin gestos; la ruta
+* **El mapa** (`MapaDeCarrera`): `react-native-maps` con Google, cámara inclinada con edificios que sigue el rumbo, sin gestos (**2D/3D: ver «Corregido 2026-11-05 (mapa)»**); la ruta
   dorada (#B2924F) que crece; la chapita «Km 3 · 0,47 en 2:44». **El avatar va FIJO al centro y se mueve la cámara** (un `Marker` animado en Android se
   dibuja como imagen fija). **Sin la clave de Maps** (`extra.mapaGoogle` de `app.config.js`, variable de EAS `GOOGLE_MAPS_ANDROID_KEY`) o sin el módulo
   nativo, fondo neutro con el avatar y «El mapa todavía no está disponible. Tu carrera se cuenta igual.». En la web, `MapaDeCarrera.web.tsx` (sin el módulo).
@@ -2656,6 +2656,14 @@ llame al servidor a cada rato y que nada se duplique**, y **«el avatar debe ref
   * **Sin el cuadro gris detrás del avatar** en «Terminaste» (visto al volver de modo avión). Era el resaltado de foco de Android: `accessible` volvía al
     avatar (72 × 80) enfocable y, fuera del modo táctil, tomaba el foco. `AvatarCaminante` ahora es decorativo y no enfocable (`focusable={false}`,
     oculto para el lector, como el mapa); los datos los leen las tarjetas. Causa deducida por la medida del cuadro, sin emulador: falta confirmarlo en pantalla.
+* **Corregido 2026-11-05 (mapa, pedido del dueño en su teléfono; rama `042-mapa-rapido-y-diagonal`).** (1) **El mapa sale en la cuenta 3, 2, 1**: antes esperaba
+  el primer punto del GPS (5–30 s en frío). Se centra con la última posición conocida, la aproximada (`mayShowUserSettingsDialog: false`: si no, Android tapaba
+  la cuenta con su diálogo) o el primer punto crudo del GPS (`servicios/centroDelMapa`, **solo para mirar: nunca entra a la ruta ni a la distancia**), y la
+  pantalla de correr se monta detrás de la cuenta (dorado al 86 %, solo el mapa se ve) para que al terminar el «1» sea el mismo mapa. (2) **Cámara en diagonal**:
+  67,5°, acercamiento 18,5 y el avatar en el tercio de abajo (`mapPadding`). (3) **Cambia la decisión de «sin botón 2D/3D»**: un botón redondo de 48 arriba a la
+  derecha del mapa («2D» / «3D», «Ver el mapa en 2D/3D», `tacto.seleccion()`) pasa a la vista desde arriba (0°, rumbo hacia arriba, avatar al centro) en 400 ms
+  (en el acto con «reducir movimiento») y se recuerda por cuenta en el teléfono (`renaser.carrera.vistaDelMapa.<cuenta>`). Solo con el mapa de Google, corriendo y
+  en la pausa automática; «Terminaste» sigue igual. Jest `mapaRapidoYDiagonal` y `centroDelMapaNoSeMide`. Solo JavaScript: hace falta un APK nuevo.
 
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
