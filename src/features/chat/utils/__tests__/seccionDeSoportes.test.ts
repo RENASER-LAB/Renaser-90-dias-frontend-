@@ -21,12 +21,13 @@ const conv = (id: string, type: ChatConversation['type'] = 'soporte', unreadCoun
   ({ id, type, unreadCount, lastMessage: '', messages: [] }) as unknown as ChatConversation;
 
 describe('quién ve la sección de soportes', () => {
-  it('solo Admin y Alquimista; ellos ya no ven los soportes entre los grupos', () => {
-    for (const rol of ['ADMIN', 'ALCHEMIST', 'admin']) {
+  // spec 044 FR-042
+  it('Admin, Alquimista y el líder de mentores (spec 044); ellos ya no ven los soportes entre los grupos', () => {
+    for (const rol of ['ADMIN', 'ALCHEMIST', 'admin', 'MENTOR_LEAD']) {
       expect(veLaSeccionDeSoportes(rol)).toBe(true);
       expect(tiposDeFormacion(rol)).toEqual(['global', 'celula']);
     }
-    for (const rol of ['TRAINEE', 'MENTOR', 'MENTOR_LEAD', null, undefined]) {
+    for (const rol of ['TRAINEE', 'MENTOR', 'TRAINEE_GUIDE', null, undefined]) {
       expect(veLaSeccionDeSoportes(rol)).toBe(false);
       // El aprendiz sigue viendo su único soporte entre sus grupos, como antes.
       expect(tiposDeFormacion(rol)).toEqual(['global', 'celula', 'soporte']);

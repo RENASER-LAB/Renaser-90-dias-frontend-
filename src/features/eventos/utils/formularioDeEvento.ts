@@ -1,5 +1,6 @@
 import type { Evento, ReglaDeAviso } from '../types/eventos.types';
 import { esLinkSeguro, tipoDeUbicacionDelLink } from './linkDelEvento';
+import { camposDeAudiencia, eligioAlgo, type AudienciaDelFormulario } from './audienciaDelFormulario';
 import { fechaEnZona, horaEnZona, instanteEnZona, zonaDelTelefono } from './zonaHoraria';
 
 /**
@@ -100,7 +101,8 @@ export function formularioVacio(ahoraMs: number, zona: string = zonaDelTelefono(
  */
 export function sePuedeEditarEnLaApp(evento: Evento): boolean {
   if (evento.recurrente) return false;
-  return evento.audiencia === null || evento.audiencia === 'ALL_MEMBERS' || evento.audiencia === 'ROLES';
+  // Spec 044: un evento con audiencia elegida se edita en la app (el servidor conserva la audiencia si no se manda, FR-030).
+  return evento.audiencia === null || evento.audiencia === 'ALL_MEMBERS' || evento.audiencia === 'ROLES' || evento.audiencia === 'SELECTION';
 }
 
 export function formularioDesdeEvento(evento: Evento): FormularioDeEvento {
@@ -141,7 +143,10 @@ export function armarCuerpo(
   form: FormularioDeEvento,
   ahoraMs: number,
   original?: Evento | null,
+  audiencia?: AudienciaDelFormulario | null,
 ): ResultadoDelFormulario {
+  // Spec 044: con «¿Para quién es?» hay que elegir algo (FR-005).
+  if (audiencia && !eligioAlgo(audiencia)) return { ok: false, error: 'Elige para quién es el evento.' };
   const titulo = form.titulo.trim();
   if (!titulo) return { ok: false, error: 'Escribe el nombre del evento.' };
   if (titulo.length > MAX_TITULO) return { ok: false, error: `El nombre puede tener hasta ${MAX_TITULO} letras.` };
@@ -189,6 +194,8 @@ export function armarCuerpo(
     audienceType: original?.audiencia ?? 'ALL_MEMBERS',
     targetRoles: original?.audiencia === 'ROLES' ? original.rolesDestino : [],
     notifyOnCreate: form.notificarAlCrear,
+    // Spec 044: la audiencia elegida (o «Todos»). Sin el paso, lo de siempre: la que tenía el evento.
+    ...(audiencia ? camposDeAudiencia(audiencia) : {}),
   };
   if (form.donde === 'meet') {
     // La sala siempre es abierta (decisión del dueño del 2026-11-05): no viaja ningún acceso.
