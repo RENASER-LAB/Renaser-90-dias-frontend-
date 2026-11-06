@@ -2664,6 +2664,49 @@ llame al servidor a cada rato y que nada se duplique**, y **«el avatar debe ref
   derecha del mapa («2D» / «3D», «Ver el mapa en 2D/3D», `tacto.seleccion()`) pasa a la vista desde arriba (0°, rumbo hacia arriba, avatar al centro) en 400 ms
   (en el acto con «reducir movimiento») y se recuerda por cuenta en el teléfono (`renaser.carrera.vistaDelMapa.<cuenta>`). Solo con el mapa de Google, corriendo y
   en la pausa automática; «Terminaste» sigue igual. Jest `mapaRapidoYDiagonal` y `centroDelMapaNoSeMide`. Solo JavaScript: hace falta un APK nuevo.
+* **Corregido 2026-11-06 (el mapa en frío, pedido del dueño: «todavía tarda unos 3 s»; rama `042-mapa-aun-mas-rapido`).** Al verse la fila de «Kilómetros diarios»
+  se adelanta todo (`servicios/calentarLaCarrera`): Google Maps se calienta con un mapa de 1 × 1 invisible una vez por proceso (`CalentadorDelMapa`), el peso y el sexo
+  se leen ya (una sola lectura compartida) y la ubicación también (solo con el permiso ya dado); el último centro mostrado se guarda en el teléfono
+  (`renaser.carrera.ultimoCentroDelMapa`, solo para mirar). La cuenta ya no espera al servicio del GPS (~0,7 s), un velo del color de la tarjeta tapa el gris de
+  carga, y `mapPadding` va recién con el mapa listo (antes se caía con «setPadding on a null object»). En el emulador, en frío: de 1,5 s en blanco tras el «1» a 0 s.
+  Cancelar en la cuenta mientras el GPS arranca lo detiene igual (`detenerGps(true)`). Jest `mapaAunMasRapido`. Solo JavaScript: hace falta un APK nuevo.
+  **Privacidad (decisión del coordinador, 2026-11-06):** cerrar sesión borra ese centro guardado y lo adelantado (`borrarCentroGuardadoDelMapa`, desde
+  `apagarLaCarreraAlSalir`), para que en un teléfono compartido la cuenta que entra no vea dónde corrió la anterior. Jest `alarmasDeLaCuentaAlSalir`.
+
+## Cambio por pedido del dueño — 2026-11-06 — el código de verificación también por WhatsApp (spec 043)
+
+Textual: «si no llega o está lleno el correo… otras empresas usan SMS o WhatsApp». Decisiones del dueño del 06/11: **solo WhatsApp** (nada de SMS, Amazon SES ni
+ayuda desde Administración); **al solicitar acceso se pide el WhatsApp** con el selector de país de la Ficha Inicial y, aceptada la solicitud, **rellena la ficha**;
+**al recuperar la contraseña el código va al WhatsApp que la cuenta ya tiene guardado, nunca a uno que se escriba en ese momento**. Spec, plantilla y decisión en el
+backend (`specs/043-codigo-por-whatsapp/`, D-325). Toca el ingreso (`LoginScreen`, el diseño del 2026-10-05 no cambia más que esto). Lo que cambia y nada más:
+* **Solo con el canal disponible** (`GET /api/v1/auth/whatsapp-code` → `available: true`; el interruptor de Soporte TI `auth.codigo_whatsapp` **nace apagado** hasta que
+  Meta apruebe la plantilla). Se pregunta una vez al abrir el ingreso (`codigoPorWhatsAppDisponible`, que nunca lanza): **un 404 (apagado o backend anterior) o cualquier
+  error = no hay canal, y el ingreso queda exactamente como hoy**: ni el campo ni el enlace.
+* **«Solicitar acceso» suma el campo «WhatsApp»** entre el correo y la contraseña: el mismo `PhoneCountryInput` de la ficha (píldora del país + número), con la ayuda «Por si el
+  código no te llega al correo.». Es obligatorio y se valida con la regla de la ficha (`validarWhatsapp`) más la forma que el servidor puede usar (`+`, código de país y de
+  8 a 15 dígitos; `avisoDelWhatsappDelRegistro`). Viaja como `phone` de la solicitud (`"+51 987654321"`, el campo existía y nadie lo llenaba); al aceptarla, el servidor lo
+  deja en la respuesta `whatsapp` de la Ficha Inicial sin pisar una existente, y la ficha lo trae ya escrito (ya leía lo guardado).
+* **La pantalla del código, más limpia** (pedido del dueño del mismo día, con captura: «mucho texto, más limpio»; vale para el alta y para recuperar la
+  contraseña, con el mismo estilo, `pantallaDelCodigo` en `LoginScreen`): el título **«Ingresa tu código»** (se fue «Verificación de seguridad» y el «INGRESA
+  TU CÓDIGO» en versalitas), **una línea** «Te lo enviamos a ana@…» (en la recuperación, «Si tu correo tiene cuenta, te lo enviamos a ana@…»; se fue la
+  caja que lo repetía), las seis casillas, **una línea chica** «¿No te llegó? Reenviar» (o «Reenviar en 43 s»; era «¿NO RECIBISTE EL CÓDIGO? REENVIAR»), el
+  botón dorado **«Confirmar»** en tipo oración (era «CONFIRMAR Y ENVIAR SOLICITUD» / «VERIFICAR CÓDIGO») y nada más: **volver es la flecha de la cabecera**
+  (se fueron «VOLVER AL INICIO DE SESIÓN» y «CAMBIAR DE CORREO»; en la recuperación la flecha vuelve un paso, a cambiar el correo). El aviso de reenvío y los
+  errores son una línea chica, sin caja. Las etiquetas para el lector de pantalla no cambiaron («Verificar el código», «Verificar el código de recuperación»).
+* **A los 60 segundos, en esa misma línea**, aparece **«· Por WhatsApp»** (`EnlaceDeWhatsApp`, 48 de alto táctil; el lector oye «Envíamelo por WhatsApp. Va a
+  +51 9•• ••• •21» en el alta y «Envíamelo por WhatsApp» en la recuperación). Al tocarlo, debajo: en el **alta** «Te lo enviamos por WhatsApp a +51 9•• ••• •21»
+  (enmascarado como el servidor, `enmascararWhatsapp`); en la **recuperación** siempre «Si tu cuenta tiene un WhatsApp guardado, te lo enviamos ahí»: la app no
+  sabe (ni debe saber) si la cuenta tiene número, porque mostrarlo diría que el correo tiene cuenta (anti-enumeración; el servidor responde 202 sin cuerpo en
+  todos los casos). Un error (429 por los límites, 409, red) se dice en esa línea con el texto del servidor y el enlace sigue para reintentar;
+  `tacto.logro()` / `tacto.error()`. Reenviar por correo no reinicia la espera. **El código es el mismo** (el servidor manda el vigente del correo) y se escribe
+  en las mismas casillas: nada más cambia en la verificación.
+* **Política de privacidad** (`public/privacidad/index.html`): el WhatsApp se pide desde que se solicita acceso y se usa también para mandar el código de verificación cuando no
+  llega al correo (al número escrito en el alta; al guardado, en la recuperación). Sale con el deploy de Vercel.
+* **No cambian**: el login, los textos y el orden del alta sin canal, la verificación del código, la Ficha Inicial, los cinco tabs. Sin dependencias ni código nativo.
+* **Pruebas:** Jest `codigoPorWhatsApp` (los 60 s, la máscara, la validación, los textos), `codigoPorWhatsAppApi` (404 = sin canal, la recuperación no lleva número),
+  `loginCodigoPorWhatsApp` (sin canal todo como hoy; con canal el campo, el enlace a los 60 s, el número enmascarado, el WhatsApp en la solicitud, la recuperación sin número, la pantalla del código sin versalitas ni caja repetida)
+  y `privacidadCodigoPorWhatsApp`. E2E en el emulador contra el backend local y un YCloud falso (capturas en el PR).
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire) **y el backend de la spec 043 antes**. Contra un backend anterior la app queda como hoy.
 
 ## Cambio por pedido del dueño — 2026-11-06 — recorrido de bienvenida hasta el primer post, con confeti, y la pestaña «Entrenar» (spec 045)
 

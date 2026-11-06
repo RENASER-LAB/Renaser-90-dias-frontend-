@@ -35,6 +35,11 @@ export type DatosRegistro = {
   email: string;
   city?: string;
   contrasena: string;
+  /**
+   * Spec 043: el WhatsApp de «Solicitar acceso» (`"+51 987654321"`), solo cuando el servidor ofrece mandar el código por ahí. Viaja como `phone` de la
+   * solicitud y, al aceptarla, queda en la Ficha Inicial. Sin el canal no se pide y no viaja (como siempre).
+   */
+  whatsapp?: string;
 };
 
 /** El backend espera un único `fullName`; partirlo en la BD sería una migración, no un ajuste. */
@@ -155,6 +160,7 @@ export function useRegistroConOtp() {
         email: datos.email,
         fullName: nombreCompleto(datos),
         city: datos.city,
+        phone: datos.whatsapp,
         contrasena: datos.contrasena,
         verificationToken,
       });

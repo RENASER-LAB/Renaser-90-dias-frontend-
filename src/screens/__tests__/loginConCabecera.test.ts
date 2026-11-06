@@ -72,6 +72,12 @@ jest.mock('../../features/auth/hooks/useRecuperacionContrasena', () => ({
 const mockAbrirPolitica = jest.fn();
 jest.mock('../../features/legal/enlacesLegales', () => ({ abrirPoliticaDePrivacidad: () => mockAbrirPolitica() }));
 jest.mock('../../features/auth/hooks/useDisponibilidadCorreo', () => ({ useDisponibilidadCorreo: () => 'idle' }));
+// Spec 043: sin el canal de WhatsApp (como contra un backend anterior), el ingreso es el de siempre.
+jest.mock('../../features/auth/api/codigoPorWhatsAppApi', () => ({
+  codigoPorWhatsAppDisponible: () => Promise.resolve(false),
+  pedirCodigoDelRegistroPorWhatsApp: jest.fn(),
+  pedirCodigoDeRecuperacionPorWhatsApp: jest.fn(),
+}));
 
 import { ApiError } from '../../services/http/apiClient';
 import LoginScreen from '../LoginScreen';

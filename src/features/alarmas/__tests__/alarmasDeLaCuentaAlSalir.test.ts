@@ -116,6 +116,20 @@ beforeEach(async () => {
 });
 
 describe('las alarmas locales son de una cuenta (E-413)', () => {
+  // spec 042 FR-037 (privacidad, 2026-11-06)
+  it('al cerrar sesión se borra el último centro del mapa de la carrera: quien entra después no ve dónde corrió la anterior', async () => {
+    const { sesion } = await montar();
+    await entrarComo(sesion, 'u-admin');
+    await AsyncStorage.setItem('renaser.carrera.ultimoCentroDelMapa', JSON.stringify({ lat: -12.12, lng: -77.03 }));
+
+    await act(async () => {
+      sesion().logout();
+      await new Promise(r => setTimeout(r, 0));
+    });
+
+    expect(await AsyncStorage.getItem('renaser.carrera.ultimoCentroDelMapa')).toBeNull();
+  });
+
   it('al cerrar sesión no queda ninguna alarma programada', async () => {
     const { sesion } = await montar();
     await entrarComo(sesion, 'u-admin');
