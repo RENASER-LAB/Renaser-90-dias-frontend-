@@ -31,6 +31,9 @@ funcionalidad vive en su spec (backend, `specs/`) y los bugs en los issues de Gi
 
 ## A medias o pendiente
 
+- **#144**: `AlumnoScreen` y `usePasosDelDia` usan el `Alert` de react-native (excepción con fecha en el arnés).
+- **Worktrees fusionados sin cerrar**: `scripts/worktree-viejos.sh` los lista; cerrarlos con `scripts/worktree-cerrar.sh`.
+
 - **Ninguna prueba ejecuta las reglas de diseño que todavía son solo texto** en `AGENTS.md` (márgenes de
   `useResponsive`, un solo scroll, `useSystemBackHandler`). Candidatas a volverse pruebas como `fuenteUnica.test.ts`.
 - **No hay linter (ESLint)** en la app: tipos y pruebas sí. Sumarlo es una dependencia nueva y una tanda de arreglos;
@@ -38,6 +41,12 @@ funcionalidad vive en su spec (backend, `specs/`) y los bugs en los issues de Gi
 - **5 PR de Dependabot abiertos** (#109–#112, #138) y 3 viejos (#23–#25): revisar y fusionar o cerrar.
 
 ## Sesiones (las cinco últimas)
+
+- **2026-11-06 — arnés: familias de errores, worktrees y grafo.** Chequeos nuevos en
+  `src/__tests__/harness/familiasDeErrores.test.ts` (fechas UTC, `Alert` de react-native, pruebas que no corren, parches
+  nativos y `buildFromSource`, CRLF), scripts de worktree con el grafo primero (probado: creado en 2 min con grafo y
+  `npm ci`, cerrado liberando 2,2 GB), estado del grafo en el hook de inicio y `docs/arnes/`. El inventario de familias y
+  la metodología viven en el backend (`docs/arnes/`).
 
 - **2026-11-06 — arnés propio.** `AGENTS.md` de 6064 líneas a menos de 150: el historial de decisiones pasó tal cual a
   `docs/decisiones/` (147 entradas, 0 líneas perdidas), las reglas quedaron al día y sin notas «Corregido», un solo

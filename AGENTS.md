@@ -16,7 +16,9 @@ dueño, un plan o un informe nunca se escriben acá (`src/__tests__/harness/agen
    `gh issue list --label bug --state open`. En Claude Code el hook de inicio (`scripts/inicio-de-sesion.mjs`) ya te
    pone ese resumen al abrir la sesión.
 3. **Antes de tocar uno de los cinco tabs**, lee sus entradas en `docs/decisiones/README.md` (columna «Tabs»).
-4. Para entender código, primero el grafo (`graphify query "…"`, ver `CLAUDE.md`); después los archivos.
+4. **Grafo primero**: `graphify query "…"` (o `path` / `explain`) antes de abrir archivos; después lee solo los que
+   nombra. Un worktree nuevo se crea con `scripts/worktree-nuevo.sh <rama>`, que arma el grafo antes que nada; en un
+   worktree el hook de graphify no corre: `scripts/grafo-al-dia.sh`. Qué cargar según lo que tocas: `docs/arnes/README.md`.
 5. Si la verificación ya está en rojo antes de empezar, arréglala primero o dilo: no apiles trabajo encima.
 
 ## Dónde está cada cosa
@@ -29,6 +31,7 @@ dueño, un plan o un informe nunca se escriben acá (`src/__tests__/harness/agen
 | Constitución de spec-kit (la misma en los dos repos) | `.specify/memory/constitution.md` |
 | E2E nativo (Maestro) y web (Playwright) | `.maestro/README.md`, `e2e/` |
 | Mapa de los demás documentos (vigentes e históricos) | `docs/README.md` |
+| El arnés (metodología, ciclo de una spec, módulos, grafo) y las familias de errores con su chequeo | `docs/arnes/README.md`, `docs/arnes/familias-de-errores.md` |
 | Backend: reglas, bitácora de errores (E-NN) y decisiones (D-NN) | `../Renaser-90-dias-backend/AGENTS.md` |
 | Un comentario del código dice «ver `AGENTS.md`» sobre una excepción o una autorización | Búscala por fecha en `docs/decisiones/README.md`; las reglas §1–§6 siguen al final de este archivo |
 
@@ -57,6 +60,16 @@ dueño, un plan o un informe nunca se escriben acá (`src/__tests__/harness/agen
     `interruptoresDeLaApp.test.ts`). El mensaje de la prueba dice qué está mal y cómo se arregla.
 11. **No toques lo que no te pidieron.** Un segundo bug encontrado de paso se reporta (issue), no se mezcla.
 
+## Errores que se repiten y no tienen chequeo automático
+
+Los que sí lo tienen fallan solos (`src/__tests__/harness/familiasDeErrores.test.ts` y las guardas de texto). Estos
+dependen de ti (detalle y ejemplos en `docs/arnes/familias-de-errores.md`):
+
+- **Un toque, un pedido**: botón apagado mientras el pedido viaja; una lectura vieja nunca pisa a la nueva (E-380, E-597).
+- **El motivo del servidor se muestra**: un 409 o un 404 con `codigo` no es «No se pudo…» genérico (E-373, E-416, #81).
+- **Cada rol y cada estado** (sin programa, Día 0, suspendido) ve lo suyo, sin huecos en blanco (#82, #101, #107).
+- **Lo que cambia se ve**: tras guardar, la pantalla relee o refleja lo confirmado por el servidor (E-315, #106, #133).
+
 ## Cómo se verifica
 
 Un solo camino, el mismo que corre el CI:
@@ -74,20 +87,23 @@ verde: dilo en el PR). Si ve el emulador, Maestro o Gradle ocupados, no corre lo
 
 Solo con evidencia que se pueda volver a correr, no porque el código «se ve bien»:
 
-1. `npm run verificar` en 0, con su resumen pegado en el PR.
+1. `npm run verificar` en 0, con su resumen pegado en el PR, y el CI del PR en verde.
 2. Si se ve en la app: la suite de Maestro y los casos de la spec con mobile-mcp en el emulador, con capturas. Solo
    JavaScript → build debug instalado + Metro del worktree; cambios nativos → build nuevo. Revisa todos los estados y
    roles: un hueco en blanco anómalo es un bug bloqueante.
 3. **Un flujo de Maestro «escrito y sin correr» no es evidencia.** Cuando lo corras en verde, cambia en su cabecera
    «sin correr» por `# corrido: AAAA-MM-DD` (`node scripts/flujos-sin-correr.mjs` lleva la cuenta).
 4. Lo que no se pudo verificar se dice con todas sus letras, en el PR y en `PROGRESO.md`.
-5. Docs al día (spec, `docs/decisiones/`) y `graphify update .`.
+5. **Un PR no está listo sin el E2E de su spec y los logs revisados**: el del backend local y `adb logcat` de la app,
+   sin errores nuevos (pégalo en el PR).
+6. Docs al día (spec, `docs/decisiones/`) y `scripts/grafo-al-dia.sh`.
 
 ## Al cerrar la sesión
 
 1. `PROGRESO.md`: estado verificado, siguiente paso, lo que quedó a medias y tu sesión (solo las cinco últimas).
 2. El trabajo seguro, commiteado en su rama; nada a medio hacer sin anotar; sin archivos temporales en el repo.
-3. `graphify update .` (el hook no corre en los worktrees).
+3. `scripts/grafo-al-dia.sh` (el hook no corre en los worktrees). Si la rama ya se fusionó: `scripts/worktree-cerrar.sh
+   <rama>` (nunca borra cambios sin commitear ni ramas sin fusionar); `scripts/worktree-viejos.sh` lista qué limpiar.
 
 ---
 

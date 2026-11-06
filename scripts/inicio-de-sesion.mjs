@@ -47,11 +47,16 @@ try {
   const bugsJson = correr('gh', ['issue', 'list', '--label', 'bug', '--state', 'open', '--limit', '15', '--json', 'number,title']);
   const bugs = bugsJson ? JSON.parse(bugsJson) : null;
 
+  // Grafo primero (arnés, 2026-11-06): el hook de graphify no corre en worktrees; se dice si está al día.
+  const grafo = spawnSync('bash', [path.join(RAIZ, 'scripts', 'grafo-al-dia.sh'), '--estado'], { cwd: RAIZ, encoding: 'utf8', timeout: 5000 }).stdout?.trim() || 'graphify no disponible';
+
   const lineas = [
     'Estado al abrir la sesión (scripts/inicio-de-sesion.mjs; el detalle está en PROGRESO.md):',
     `- Rama: ${rama}${enWorktree ? ' (worktree)' : ''} · ${sinCommitear ? `${sinCommitear} ${sinCommitear === 1 ? 'archivo' : 'archivos'} sin commitear: no los mezcles con tu trabajo` : 'sin cambios sin commitear'}`,
     `- Siguiente paso: ${siguiente || '(PROGRESO.md no lo dice)'}`,
     `- Pendientes: ${pendientes.length ? pendientes.join(' · ') : 'ninguno anotado'}`,
+    `- Grafo: ${grafo}. Navega con graphify query/path/explain ANTES de abrir archivos.`,
+    `- Un PR no está listo sin npm run verificar en 0, el E2E de su spec y los logs del backend y logcat sin errores nuevos.`,
     `- Maestro: ${maestro} (un flujo sin correr no es evidencia)`,
     `- Bugs abiertos: ${bugs === null ? 'GitHub no respondió (gh issue list --label bug)' : bugs.length ? bugs.map((b) => `#${b.number} ${b.title}`).join(' · ') : 'ninguno'}`,
   ];
