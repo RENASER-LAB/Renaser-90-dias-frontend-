@@ -17,6 +17,8 @@ type Props = {
   puedeReenviar: boolean;
   onReenviar: () => void;
   deshabilitado?: boolean;
+  /** Lo que va en la misma línea después de «Reenviar»: la opción de WhatsApp (spec 043). */
+  otraOpcion?: React.ReactNode;
 };
 
 /**
@@ -33,6 +35,7 @@ export function CodigoOtpInput({
   puedeReenviar,
   onReenviar,
   deshabilitado = false,
+  otraOpcion,
 }: Props) {
   const { c, t } = useTheme();
 
@@ -80,18 +83,29 @@ export function CodigoOtpInput({
         autoFocus
       />
 
+      {/* Una sola línea chica, en tipo oración (pedido del dueño del 06/11: «mucho texto, más limpio»): «¿No te llegó? Reenviar» y, a los
+          60 s, «· Por WhatsApp». Cada opción mide 48 de alto táctil. */}
       <View style={styles.reenvio}>
+        <Text style={[t.small, styles.textoReenvio, { color: c.textSoft }]}>¿No te llegó?</Text>
         {puedeReenviar ? (
-          <Pressable onPress={onReenviar} disabled={deshabilitado} hitSlop={10}>
-            <Text style={[t.micro, { color: c.goldInk, letterSpacing: 1.2, fontFamily: fuentes.media }]}>
-              ¿NO RECIBISTE EL CÓDIGO? REENVIAR
-            </Text>
+          <Pressable
+            onPress={onReenviar}
+            disabled={deshabilitado}
+            accessibilityRole="button"
+            accessibilityLabel="Reenviar el código al correo"
+            style={styles.opcion}
+          >
+            <Text style={[t.small, styles.textoReenvio, { color: c.goldInk, fontFamily: fuentes.media }]}>Reenviar</Text>
           </Pressable>
         ) : (
-          <Text style={[t.micro, { color: c.tabInactive, letterSpacing: 1.1 }]}>
-            Reenviar nuevo código en {segundosParaReenviar}s
-          </Text>
+          <View style={styles.opcion}>
+            <Text style={[t.small, styles.textoReenvio, { color: c.tabInactive, fontVariant: ['tabular-nums'] }]}>
+              Reenviar en {segundosParaReenviar} s
+            </Text>
+          </View>
         )}
+        {otraOpcion ? <Text style={[t.small, styles.textoReenvio, { color: c.textSoft }]}>·</Text> : null}
+        {otraOpcion}
       </View>
     </>
   );
@@ -120,8 +134,12 @@ const styles = StyleSheet.create({
     opacity: 0,
   },
   reenvio: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
-    marginTop: 4,
-    marginBottom: 4,
+    justifyContent: 'center',
+    columnGap: 6,
   },
+  opcion: { minHeight: 48, justifyContent: 'center', paddingHorizontal: 4 },
+  textoReenvio: { fontSize: 15 },
 });
