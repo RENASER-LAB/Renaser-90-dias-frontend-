@@ -92,6 +92,44 @@ describe('vencimiento de sesión', () => {
     baja();
   });
 
+  // Issue #150 (E2E de regresión del 06/11): con el token vencido el backend responde el 403 POR DEFECTO de Spring Security. La app
+  // lo mostraba como «Forbidden» y, a mitad del recorrido de bienvenida (que bloquea Yo → Cerrar sesión), la persona quedaba atrapada.
+  it('spec 045 FR-014: el 403 por defecto del filtro de seguridad (token sin sesión) SÍ es la sesión vencida', async () => {
+    setTokenSesion('token-muerto');
+    const avisos = jest.fn();
+    const baja = suscribirSesionVencida(avisos);
+    (globalThis as unknown as { fetch: unknown }).fetch = jest.fn(async () =>
+      respuestaCon(403, '{"timestamp":"2026-11-06T19:25:13.605Z","status":403,"error":"Forbidden","message":"Forbidden","path":"/api/v1/wall"}'),
+    );
+
+    const error = (await apiFetch<void>('/api/v1/wall').catch((e: unknown) => e)) as ApiError;
+
+    expect(error.sesionVencida).toBe(true);
+    expect(avisos).toHaveBeenCalledTimes(1);
+    expect(getTokenSesion()).toBeNull();
+    expect(mensajeDeError(error, 'algo falló')).toBe('Tu sesión venció. Vuelve a entrar.');
+    expect(mensajeDeError(error, 'algo falló')).not.toMatch(/Forbidden/);
+    baja();
+  });
+
+  it('un 403 del negocio (cuenta suspendida, con mensaje en castellano o con código) sigue sin cerrar la sesión', async () => {
+    setTokenSesion('token-vivo');
+    const avisos = jest.fn();
+    const baja = suscribirSesionVencida(avisos);
+    for (const cuerpo of [
+      '{"message":"Tu cuenta está suspendida.","timestamp":"2026-11-06T19:25:13Z","codigo":"CUENTA_SUSPENDIDA"}',
+      '{"message":"No tienes permiso para esto.","timestamp":"2026-11-06T19:25:13Z"}',
+      '{"status":403,"error":"Forbidden","message":"Forbidden","path":"/api/v1/x","codigo":"MODO_SOLO_LECTURA"}',
+    ]) {
+      (globalThis as unknown as { fetch: unknown }).fetch = jest.fn(async () => respuestaCon(403, cuerpo));
+      const error = (await apiFetch<void>('/api/v1/home').catch((e: unknown) => e)) as ApiError;
+      expect(error.sesionVencida).toBe(false);
+    }
+    expect(avisos).not.toHaveBeenCalled();
+    expect(getTokenSesion()).toBe('token-vivo');
+    baja();
+  });
+
   it('una sesión nueva rearma el aviso, para que el próximo vencimiento se vea', async () => {
     setTokenSesion('token-viejo');
     const avisos = jest.fn();

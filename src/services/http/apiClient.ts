@@ -465,7 +465,14 @@ async function pedir<T>(ruta: string, opciones: OpcionesPeticion, aceptar304: bo
       //
       // Deliberadamente NO incluye al 403: ahí el backend también responde "cuenta suspendida", y
       // tratarlo como vencimiento mandaría a loguearse una y otra vez a quien no puede entrar.
-      const sesionVencida = respuesta.status === 401 && tokenEnviado !== null && !el401EsContrasena && !sesionPropia;
+      //
+      // Issue #150: la excepción es el 403 POR DEFECTO de Spring Security (`{"error":"Forbidden","message":"Forbidden","path":…}`, sin
+      // `codigo`), que el backend responde cuando el token ya no corresponde a ninguna sesión. Ese no es «cuenta suspendida» (esa trae
+      // un mensaje en castellano escrito por `GlobalExceptionHandler`): es la sesión vencida. Antes la app lo mostraba como
+      // «Forbidden» y, a mitad del recorrido de bienvenida (que bloquea Yo → Cerrar sesión), la persona quedaba atrapada.
+      const vencidaPorElFiltro = respuesta.status === 403 && esRechazoSinSesionDeSpring(cuerpo);
+      const sesionVencida =
+        (respuesta.status === 401 || vencidaPorElFiltro) && tokenEnviado !== null && !el401EsContrasena && !sesionPropia;
       if (sesionVencida) {
         notificarSesionVencida();
       }
@@ -496,6 +503,10 @@ async function pedir<T>(ruta: string, opciones: OpcionesPeticion, aceptar304: bo
 export function mensajeDeError(error: unknown, porDefecto: string): string {
   if (!(error instanceof ApiError)) {
     return porDefecto;
+  }
+  // Issue #150: también llega como 403 (el rechazo por defecto del filtro de seguridad); nunca se dice «Forbidden».
+  if (error.sesionVencida) {
+    return 'Tu sesión venció. Vuelve a entrar.';
   }
   if (error.esDeRed) {
     return error.message;
@@ -533,4 +544,16 @@ export function mensajeDeError(error: unknown, porDefecto: string): string {
  */
 function pareceInterno(mensaje: string | undefined): boolean {
   return !!mensaje && /^[A-Z][A-Za-z0-9]*(\.[A-Za-z0-9_]+)+\s*:/.test(mensaje.trim());
+}
+
+/**
+ * Issue #150: ¿es el 403 POR DEFECTO de Spring Security? El backend lo responde cuando el token no corresponde a ninguna sesión
+ * (todas las rutas de la app son `authenticated()`; ninguna regla del filtro rechaza por rol). Tiene la forma
+ * `{"status":403,"error":"Forbidden","message":"Forbidden","path":"/api/v1/…"}` y nunca trae `codigo`. Un 403 del negocio
+ * (cuenta suspendida, sin permiso, solo lectura) lo escribe `GlobalExceptionHandler`, en castellano y sin `error`/`path`.
+ */
+export function esRechazoSinSesionDeSpring(cuerpo: unknown): boolean {
+  if (!cuerpo || typeof cuerpo !== 'object') return false;
+  const c = cuerpo as { error?: unknown; message?: unknown; path?: unknown; codigo?: unknown };
+  return c.error === 'Forbidden' && c.message === 'Forbidden' && typeof c.path === 'string' && c.codigo === undefined;
 }
