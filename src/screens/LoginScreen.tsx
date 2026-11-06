@@ -135,8 +135,9 @@ export default function LoginScreen() {
   const [canalWhatsapp, setCanalWhatsapp] = useState(false);
   useEffect(() => {
     let vigente = true;
+    // Solo se toca el estado si hay canal: sin canal (lo de siempre) no hay ni un render de más.
     void codigoPorWhatsAppDisponible().then(disponible => {
-      if (vigente) setCanalWhatsapp(disponible);
+      if (vigente && disponible) setCanalWhatsapp(true);
     });
     return () => {
       vigente = false;
