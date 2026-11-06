@@ -12,7 +12,7 @@ import { ApiError } from '../../../services/http/apiClient';
 import { tacto } from '../../../utils/tacto';
 import { useAuth } from '../../auth/context/AuthContext';
 import { elegirSobrenombre, quitarMiSobrenombre, type MiSobrenombre } from '../api/sobrenombreApi';
-import { MAXIMO, MENSAJE_DEL_PROBLEMA, TEXTOS_DEL_SOBRENOMBRE as T, problemaDeLaForma, textoDeLaEspera } from '../utils/reglasDelSobrenombre';
+import { MAXIMO, MENSAJE_DEL_PROBLEMA, TEXTOS_DEL_SOBRENOMBRE as T, limpiarSobrenombre, problemaDeLaForma, textoDeLaEspera } from '../utils/reglasDelSobrenombre';
 
 /**
  * Spec 046: la hoja para elegir, cambiar o quitar el sobrenombre en el Muro. El campo con su contador, una vista previa de cómo se
@@ -46,7 +46,7 @@ export function HojaDelSobrenombre({
   }, [visible, mio?.sobrenombre]);
 
   const espera = textoDeLaEspera(mio?.puedeCambiarDesde ?? null);
-  const limpio = texto.trim();
+  const limpio = limpiarSobrenombre(texto);
   const problema = limpio ? problemaDeLaForma(limpio) : null;
   const sinCambios = limpio === (mio?.sobrenombre ?? '');
   const puedeGuardar = !!limpio && !problema && !sinCambios && !espera && !guardando;

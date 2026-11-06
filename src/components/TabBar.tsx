@@ -225,7 +225,10 @@ const styles = StyleSheet.create({
   bar: { flexDirection: 'row', alignItems: 'flex-end' },
   /* 48px minimos de zona pulsable por pestana (AGENTS.md 4); antes el alto lo definia el
      contenido (icono 20 + gap + etiqueta) y se quedaba en ~38. */
-  item: { flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: 48, gap: 7 },
+  /* Issue #152: 3px a cada lado para que dos etiquetas vecinas nunca se toquen. Con la letra del sistema grande, «ENTRENAR»
+     (más larga que el «TRAINING» de antes) y «COMUNIDAD» llenaban su caja entera y quedaban pegadas; con este aire,
+     `adjustsFontSizeToFit` las achica un poco antes. */
+  item: { flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: 48, gap: 7, paddingHorizontal: 3 },
   centerWrap: { marginTop: -22, borderRadius: 29, borderWidth: 6, shadowOpacity: 0.45, shadowRadius: 12, shadowOffset: { width: 0, height: 8 }, elevation: 6 },
   center: { alignItems: 'center', justifyContent: 'center' },
   pastilla: { position: 'absolute' },

@@ -44,7 +44,7 @@ import {
   marcarEsperandoPrimerPost,
   useEstadoDelRecorrido,
 } from '../estado/recorridoEnCurso';
-import { alVolverAtras, cantidadDePasos, pasoParaRetomar, puedeArrancar, sePausa } from '../utils/cuandoSaleElRecorrido';
+import { alVolverAtras, cantidadDePasos, esToqueDemasiadoPronto, pasoParaRetomar, puedeArrancar, sePausa } from '../utils/cuandoSaleElRecorrido';
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
@@ -198,6 +198,17 @@ export function RecorridoDeBienvenida() {
     }
     irAlPaso(paso + 1);
   }, [actual, paso, cantidad, terminar, irAlPaso, obligatorio]);
+
+  // Issue #151: tocar dentro del foco avanza, pero el foco tarda en moverse a la pestaña nueva y su área tocable sigue un instante
+  // en la anterior. Se anota cuándo cambió el paso y un toque en el foco que llegue antes de la pausa se ignora.
+  const ultimoCambioDePaso = useRef<number | null>(null);
+  useEffect(() => {
+    ultimoCambioDePaso.current = Date.now();
+  }, [paso]);
+  const alTocarElFoco = useCallback(() => {
+    if (esToqueDemasiadoPronto(ultimoCambioDePaso.current, Date.now())) return;
+    alPrincipal();
+  }, [alPrincipal]);
 
   const alSecundario = useCallback(() => {
     if (actual?.pestana === 'Comunidad') terminar('SALTO');
@@ -385,7 +396,7 @@ export function RecorridoDeBienvenida() {
           {/* Tocar dentro del foco avanza igual que «Siguiente»; tocar fuera no hace nada. */}
           {conFoco && actual?.pestana !== 'Comunidad' ? (
             <Pressable
-              onPress={alPrincipal}
+              onPress={alTocarElFoco}
               accessibilityElementsHidden
               importantForAccessibility="no"
               style={{ position: 'absolute', left: focoY!.cx - 40, top: focoY!.arriba, width: 80, height: 80 }}
