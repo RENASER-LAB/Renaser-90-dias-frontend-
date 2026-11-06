@@ -18,6 +18,7 @@ import {
 import type { ListRenderItemInfo, NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
 import { Image as ImagenDelChat, type ImageSource } from 'expo-image';
 import { Alert } from '../components/Alerta';
+import { mensajeDeFalloAlPublicar } from '../features/community/utils/mensajeDeFalloAlPublicar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
@@ -1540,6 +1541,8 @@ function ComunidadPorFormacion({
   const [attachedPhotos, setAttachedPhotos] = useState<FotoMuroNormalizada[]>([]);
   const [agregandoFoto, setAgregandoFoto] = useState(false);
   const [subiendoPublicacion, setSubiendoPublicacion] = useState(false);
+  /** Issue #149: por qué falló la última publicación; se muestra dentro del compositor. */
+  const [errorAlPublicar, setErrorAlPublicar] = useState<string | null>(null);
 
   // Proporción real (ancho ÷ alto) de la foto de cada publicación que tiene UNA sola, indexada por
   // id de publicación. El feed no manda el tamaño de la foto (`WallMedia` es solo `url` +
@@ -2625,13 +2628,6 @@ function ComunidadPorFormacion({
   // sin subir por S3 sin configurar, PUT a S3 fallido) — esos ya traen un mensaje específico y
   // accionable, así que se muestran tal cual en vez de pisarlos con el genérico de
   // `mensajeDeError`.
-  const mensajeDeFalloAlPublicar = (error: unknown): string => {
-    const porDefecto = 'No pudimos publicar. Intenta de nuevo en un momento.';
-    if (error instanceof ApiError) {
-      return mensajeDeError(error, porDefecto);
-    }
-    return error instanceof Error && error.message ? error.message : porDefecto;
-  };
 
   /**
    * Pide el cierre del hábito de post diario y, solo si de verdad se cerró recién, se lo dice a la
@@ -2668,6 +2664,7 @@ function ComunidadPorFormacion({
       return;
     }
     if (subiendoPublicacion) return;
+    setErrorAlPublicar(null);
 
     // El modal se cierra YA y la publicación aparece en el muro en el mismo gesto: la subida a S3
     // y el POST siguen en segundo plano (ver `useWallFeed.publicarOptimista`). Antes esto esperaba
@@ -2710,7 +2707,9 @@ function ComunidadPorFormacion({
       setAttachedPhotos(fotos);
       setCategoriaSeleccionada(categoria);
       setCreatePostModalVisible(true);
-      Alert.alert('No se pudo publicar', mensajeDeFalloAlPublicar(error));
+      // Issue #149: el motivo va DENTRO del compositor, con «Reintentar». Un `Alert` acá quedaba detrás del compositor que se
+      // acaba de reabrir (y, en el recorrido de bienvenida, detrás de su velo): parecía que «Publicar» no hacía nada.
+      setErrorAlPublicar(mensajeDeFalloAlPublicar(error));
     } finally {
       setSubiendoPublicacion(false);
     }
@@ -4987,9 +4986,13 @@ function ComunidadPorFormacion({
       <NuevaPublicacion
         visible={createPostModalVisible}
         textoDeAyuda={ayudaDelComposer}
-        alCancelar={() => setCreatePostModalVisible(false)}
+        alCancelar={() => {
+          setErrorAlPublicar(null);
+          setCreatePostModalVisible(false);
+        }}
         alPublicar={handlePublishPost}
         publicando={subiendoPublicacion}
+        errorAlPublicar={errorAlPublicar}
         autor={{ nombre: nombreEnElCompositor, firma: firmaDePublicacion, avatarUrl: user?.avatarUrl }}
         texto={newPostText}
         alCambiarTexto={setNewPostText}
