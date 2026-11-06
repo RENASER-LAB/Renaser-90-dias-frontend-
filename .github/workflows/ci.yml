@@ -1,4 +1,4 @@
-# Integracion continua del frontend: comprobar tipos y correr las pruebas de Jest.
+# Integracion continua del frontend: el mismo `npm run verificar` que se corre en local (tipos, Jest y reglas del arnés).
 #
 # Deliberadamente corto. NO corre el E2E de Playwright ni el smoke nativo de Maestro: los dos
 # necesitan un backend de pruebas levantado y siete pares de credenciales que viven fuera de Git
@@ -49,10 +49,9 @@ jobs:
       - name: Instalar dependencias
         run: npm ci
 
-      - name: Comprobar tipos
-        run: npm run typecheck
-
-      # `--ci` hace fallar los snapshots nuevos en vez de escribirlos: en CI, un snapshot que no
-      # existia no es algo para crear al vuelo.
-      - name: Pruebas unitarias
-        run: npm test -- --ci
+      # Lo mismo que se corre en local antes de decir «terminado» (AGENTS.md, «Cómo se verifica»): parches de
+      # postinstall, tipos y Jest completo, con las reglas del arnés adentro. `--ci` hace fallar los snapshots nuevos
+      # en vez de escribirlos y marca como «no aplica» la trazabilidad de specs, que corre el CI del backend contra
+      # esta rama (trazabilidad.yml). Un solo camino: si cambia lo que se verifica, cambia en scripts/verificar.mjs.
+      - name: Verificar (tipos, pruebas y reglas del arnés)
+        run: npm run verificar -- --ci
