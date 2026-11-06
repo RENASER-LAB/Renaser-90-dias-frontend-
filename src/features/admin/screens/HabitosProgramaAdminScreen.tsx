@@ -124,7 +124,7 @@ export function HabitosProgramaAdminScreen({
             </View>
             <View style={{ flex: 1, flexShrink: 1, gap: 2 }}>
               <Text style={[t.body, { color: c.textStrong, fontSize: 16, fontFamily: fuentes.media }]}>Categorías</Text>
-              <Text style={cuerpo}>Las dimensiones que ve esta formación en Training</Text>
+              <Text style={cuerpo}>Las dimensiones que ve esta formación en Entrenar</Text>
             </View>
             <Icon name="chevron" size={16} color={c.chevron} />
           </Presionable>

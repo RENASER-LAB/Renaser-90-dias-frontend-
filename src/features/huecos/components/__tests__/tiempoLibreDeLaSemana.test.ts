@@ -423,7 +423,7 @@ describe('TiempoLibreDeLaSemana: si falta la hora de Despertar o de Dormir', () 
     const r = await dibujar(cargar);
     const t = textos(r);
     expect(t).toContain('Falta su hora de Despertar');
-    expect(t).toContain('Training → Planificar');
+    expect(t).toContain('Entrenar → Planificar');
     expect(t).toContain('— | libres esta semana');
     expect(etiquetas(r)).toContain('Tiempo libre de la semana: no se calcula');
     expect(t.split('Falta su hora de Despertar').length - 1).toBe(1);

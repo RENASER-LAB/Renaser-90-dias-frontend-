@@ -19,7 +19,8 @@ const FASE_VISTA = 'yo.faseVista.';
 type Registro = { dia: string | null; racha: number | null };
 
 /** Lo que se muestra: la pantalla de mayor jerarquía y, como líneas, los otros hitos que coincidieron. */
-export type CelebracionDeHoy = { principal: HitoDelFenix; otros: HitoDelFenix[] };
+/** `primerPost` (spec 045, D7) no es un hito del día: lo pide el recorrido de bienvenida una sola vez, con confeti. */
+export type CelebracionDeHoy = { principal: HitoDelFenix | 'primerPost'; otros: HitoDelFenix[] };
 
 export type DatosParaCelebrar = Omit<DatosDelDia, 'faseNueva'> & {
   /** El número de la fase de `/home` (1–4), o `null` si no se sabe. */

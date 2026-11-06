@@ -76,6 +76,8 @@ import {
 import { FilaCompactaDelMuro, type AccionesDeLaFila } from '../features/community/components/FilaCompactaDelMuro';
 import { PublicacionAbierta } from '../features/community/components/PublicacionAbierta';
 import { avisarPostPublicado } from '../features/sparkie/events/avisoPrimerPost';
+import { AYUDA_DEL_PRIMER_POST } from '../features/recorrido/data/pasosDelRecorrido';
+import { marcarComposerDelMuroAbierto } from '../features/recorrido/estado/recorridoEnCurso';
 import { cerrarHabitoPostDiarioComunidad } from '../features/habits/api/postDiarioComunidad';
 import { avisarPostDiarioCerrado } from '../features/habits/events/avisoPostDiarioCerrado';
 import { ImageViewerModal, type ImageViewerItem } from '../features/community/components/ImageViewerModal';
@@ -565,7 +567,7 @@ export const SECCIONES: { id: SeccionComunidad; icon: IconName; label: string }[
      clave `classroom` sigue siendo la de siempre en el estado, las rutas y los atajos desde Training. */
   { id: 'classroom', icon: 'bookOpen', label: 'Cursos' },
   { id: 'tribu', icon: 'users', label: 'Tribu' },
-  { id: 'ranking', icon: 'trophy', label: 'Ranking' },
+  { id: 'ranking', icon: 'trophy', label: 'Tabla' },
   { id: 'testimonios', icon: 'quote', label: 'Testimonios' },
 ];
 
@@ -1503,6 +1505,13 @@ function ComunidadPorFormacion({
 
   // Ventana Externa de Publicación a Pantalla Completa
   const [createPostModalVisible, setCreatePostModalVisible] = useState(false);
+  /** Spec 045: la ayuda del compositor cuando lo abre el recorrido de bienvenida (sin ella, la de siempre). */
+  const [ayudaDelComposer, setAyudaDelComposer] = useState<string | undefined>(undefined);
+  /* Spec 045: el recorrido no dibuja su pastilla «Tu primera publicación» encima del compositor abierto. */
+  useEffect(() => {
+    marcarComposerDelMuroAbierto(createPostModalVisible);
+    if (!createPostModalVisible) setAyudaDelComposer(undefined);
+  }, [createPostModalVisible]);
   const [newPostText, setNewPostText] = useState('');
   /**
    * Clave de la categoría elegida (`REVELACIONES`, `AGRADECIMIENTO`, …) o `null` si la persona no
@@ -2048,8 +2057,10 @@ function ComunidadPorFormacion({
    * las hereda solas.
    */
   useEffect(() => {
-    const params = route.params as { abrirComposerMuro?: boolean } | undefined;
+    const params = route.params as { abrirComposerMuro?: boolean; desdeElRecorrido?: boolean } | undefined;
     if (!params?.abrirComposerMuro) return;
+    // Spec 045: desde el recorrido de bienvenida, el compositor de siempre con otra ayuda («¿Quién eres y qué vienes a cambiar?»).
+    setAyudaDelComposer(params.desdeElRecorrido ? AYUDA_DEL_PRIMER_POST : undefined);
 
     // Misma razón que el atajo de la Clase Diaria de arriba: `irASeccion` apaga Classroom si el
     // aprendiz venía de ahí. Este era el camino con el que el dueño del proyecto encontró el bug
@@ -2059,7 +2070,7 @@ function ComunidadPorFormacion({
     abrirElComposer();
     // Se consume una sola vez, igual que `abrirCursoId`: sin esto, volver a esta pestaña
     // reabriría el composer aunque la persona lo hubiera cerrado a propósito.
-    (navigation as any).setParams({ abrirComposerMuro: undefined });
+    (navigation as any).setParams({ abrirComposerMuro: undefined, desdeElRecorrido: undefined });
   }, [route.params, navigation, abrirElComposer]);
 
   /**
@@ -3421,7 +3432,7 @@ function ComunidadPorFormacion({
                   }))}
                   valor={tipoRanking}
                   onCambiar={setTipoRanking}
-                  accessibilityLabel="Tabla del ranking"
+                  accessibilityLabel="Tabla de posiciones"
                   achicarTexto
                 />
               </View>
@@ -4694,7 +4705,7 @@ function ComunidadPorFormacion({
                     disabled={enviandoMedia}
                     style={[styles.mediaOptionBtn, { opacity: enviandoMedia ? 0.4 : 1 }]}
                     accessibilityRole="button"
-                    accessibilityLabel="Enviar un sticker"
+                    accessibilityLabel="Enviar una figurita"
                   >
                     <Icon name="smile" size={24} color={c.goldInk} />
                   </Presionable>
@@ -4975,6 +4986,7 @@ function ComunidadPorFormacion({
       {/* ========================================================================= */}
       <NuevaPublicacion
         visible={createPostModalVisible}
+        textoDeAyuda={ayudaDelComposer}
         alCancelar={() => setCreatePostModalVisible(false)}
         alPublicar={handlePublishPost}
         publicando={subiendoPublicacion}

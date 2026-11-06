@@ -19,8 +19,8 @@ appId: com.renaser.app
 - takeScreenshot: P06a-ficha-del-mentor
 # El ranking de km: «auto» junto al total de quien tiene días leídos por el teléfono.
 - tapOn: "Comunidad"
-- tapOn: "Ranking"
+- tapOn: "Tabla"
 - tapOn: "Kilómetros"
 - assertVisible: "Km de tus pasos o de tu captura\\."
-- assertVisible: ".* km · auto"
+- assertVisible: ".* km · del teléfono"
 - takeScreenshot: P06b-ranking-con-auto

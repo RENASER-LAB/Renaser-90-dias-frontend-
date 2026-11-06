@@ -208,7 +208,7 @@ export function BurbujaDeMensaje({
             contentFit="contain"
             cachePolicy="memory-disk"
             transition={TRANSICION_MS}
-            accessibilityLabel={mensaje.stickerNombre ?? 'Sticker Renaser'}
+            accessibilityLabel={mensaje.stickerNombre ?? 'Figurita Renaser'}
           />
         )}
 

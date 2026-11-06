@@ -45,7 +45,7 @@ export function entradasDeLaTabla(datos: RankingAgregadoDto | null, clave: Clave
  */
 export function textoDelPuntaje(clave: ClaveDeTabla, puntaje: number, automatico = false): string {
   // Spec 037 (D-310): «auto» junto a los km de quien tiene días leídos por el teléfono. No cambia la cifra.
-  if (clave === 'kilometros') return `${formatoKm(puntaje)} km${automatico ? ' · auto' : ''}`;
+  if (clave === 'kilometros') return `${formatoKm(puntaje)} km${automatico ? ' · del teléfono' : ''}`;
   if (clave === 'gimnasio') return textoDeDias(puntaje);
   return `${puntaje} pts`;
 }

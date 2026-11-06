@@ -4,6 +4,8 @@ import { AppState } from 'react-native';
 import * as onboardingApi from '../../onboarding/api/onboardingApi';
 import * as wallApi from '../../community/api/wallApi';
 import { escucharPostPublicado } from '../events/avisoPrimerPost';
+import { obtenerRecorrido, type EstadoDelRecorrido } from '../../recorrido/api/recorridoApi';
+import { alTerminarElRecorrido } from '../../recorrido/estado/recorridoEnCurso';
 
 /**
  * En qué punto del arranque guiado está el aprendiz, apenas activó su programa.
@@ -76,9 +78,11 @@ export function useArranqueGuiado(habilitado: boolean) {
 
       // Las dos que quedan sí van juntas: son independientes y quien está en el arranque está
       // mirando la pantalla.
-      const [activacion, conteoPosts] = await Promise.all([
+      const [activacion, conteoPosts, recorrido] = await Promise.all([
         onboardingApi.consultarActivacionPrograma(),
         wallApi.contarMisPublicaciones(),
+        // Spec 045: un backend anterior responde 404 y la guía sigue como siempre.
+        obtenerRecorrido().catch((): EstadoDelRecorrido | null => null),
       ]);
       if (!vigente()) return;
 
@@ -86,6 +90,13 @@ export function useArranqueGuiado(habilitado: boolean) {
       // (`ActivarProgramaScreen`), y el saludo llegaría antes de tiempo.
       if (!activacion.activated) {
         setEstado({ paso: 'NINGUNO' });
+        return;
+      }
+
+      // Spec 045, D1 (06/11): el recorrido de bienvenida reemplaza el saludo y la guía al Muro. Mientras le toca el
+      // recorrido, la burbuja no dice nada; cuando terminó (publicó, lo saltó o es una cuenta anterior), solo queda el Pacto.
+      if (recorrido !== null) {
+        setEstado({ paso: recorrido.mostrar ? 'NINGUNO' : 'FIRMAR_PACTO' });
         return;
       }
 
@@ -109,6 +120,14 @@ export function useArranqueGuiado(habilitado: boolean) {
   useEffect(() => {
     if (!habilitado) return;
     return escucharPostPublicado(() => {
+      void revisar();
+    });
+  }, [habilitado, revisar]);
+
+  // Spec 045: al terminar el recorrido (y cerrarse la felicitación), la burbuja pasa al Pacto en el acto.
+  useEffect(() => {
+    if (!habilitado) return;
+    return alTerminarElRecorrido(() => {
       void revisar();
     });
   }, [habilitado, revisar]);

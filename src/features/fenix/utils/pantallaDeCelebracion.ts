@@ -58,11 +58,14 @@ function principal(m: MomentoGrande): Pick<TextosDeLaPantalla, 'titulo' | 'numer
       return { titulo: 'días seguidos', numeroGrande: 7, bajada: null };
     case 'todosLosHabitos':
       return { titulo: '¡Día completo!', numeroGrande: null, bajada: 'Cumpliste todos tus hábitos de hoy' };
+    case 'primerPost':
+      return { titulo: '¡Tu primera publicación!', numeroGrande: null, bajada: 'Ya eres parte del grupo.' };
   }
 }
 
 function contadores(m: MomentoGrande): TextosDeLaPantalla['contadores'] {
   const lista: TextosDeLaPantalla['contadores'] = [];
+  if (m.principal === 'primerPost') return lista;
   if (m.puntosHoy !== null && m.puntosHoy > 0) lista.push({ clave: 'puntos', valor: m.puntosHoy, rotulo: 'puntos hoy' });
   const esRacha = m.principal === 'racha7' || m.principal === 'racha30';
   if (!esRacha && m.rachaActual !== null && m.rachaActual > 0) {
@@ -87,4 +90,9 @@ export function planDeLaPantalla(reducido: boolean): PlanDeLaPantalla {
   return reducido
     ? { fenix: 'imagen', entrada: 'fundido', brasas: false, contadoresSuben: false }
     : { fenix: 'rive', entrada: 'resorte', brasas: true, contadoresSuben: true };
+}
+
+/** Spec 045 FR-007 (D7): confeti solo en el primer post, y nunca con «reducir movimiento». */
+export function llevaConfeti(m: Pick<MomentoGrande, 'principal'>, plan: PlanDeLaPantalla): boolean {
+  return m.principal === 'primerPost' && plan.brasas;
 }

@@ -181,8 +181,8 @@ export function MasOpcionesScreen({
       motivo: 'Necesita el alta completa con contraseña temporal y envío de correo.',
     },
     {
-      titulo: 'Soporte y tickets',
-      detalle: 'Bandeja de soporte y tickets de mentoría',
+      titulo: 'Soporte y consultas',
+      detalle: 'Bandeja de soporte y consultas de mentoría',
       motivo: 'Es una bandeja de trabajo con respuestas largas: pide teclado y pantalla.',
     },
     {

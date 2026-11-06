@@ -276,7 +276,7 @@ export function HabitoProgramaFormScreen({
           numberOfLines={3}
         />
 
-        <Seccion titulo="Categoría" detalle={`Las de ${nombreCortoDeFormacion(formacionDelHabito)}: son las dimensiones que ve en Training.`}>
+        <Seccion titulo="Categoría" detalle={`Las de ${nombreCortoDeFormacion(formacionDelHabito)}: son las dimensiones que ve en Entrenar.`}>
           {categoriasDisponibles.length === 0 ? (
             <Text style={ayuda}>
               Esta formación todavía no tiene categorías activas. Crea una en «Categorías» y vuelve a este hábito.

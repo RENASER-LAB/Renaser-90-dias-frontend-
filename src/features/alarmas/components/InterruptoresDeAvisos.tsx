@@ -91,7 +91,7 @@ export function InterruptoresDeAvisos() {
         ))}
       </View>
       {errorAlGuardar ? <Text style={[texto, { color: c.danger }]}>{errorAlGuardar}</Text> : null}
-      <Text style={texto}>Los recordatorios de cada hábito se eligen en el hábito, desde Plan o Training.</Text>
+      <Text style={texto}>Los recordatorios de cada hábito se eligen en el hábito, desde Plan o Entrenar.</Text>
     </View>
   );
 }

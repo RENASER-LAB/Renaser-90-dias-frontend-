@@ -137,7 +137,7 @@ describe('el ranking de kilómetros', () => {
   it('no cambia el número: «auto» se suma solo a quien tiene días leídos por el teléfono', () => {
     expect(textoDelPuntaje('kilometros', 117.8)).toBe('117,8 km');
     expect(textoDelPuntaje('kilometros', 117.8, false)).toBe('117,8 km');
-    expect(textoDelPuntaje('kilometros', 117.8, true)).toBe('117,8 km · auto');
+    expect(textoDelPuntaje('kilometros', 117.8, true)).toBe('117,8 km · del teléfono');
     // Las demás tablas no llevan «auto».
     expect(textoDelPuntaje('gimnasio', 12, true)).toBe('12 días');
     expect(textoDelPuntaje('general', 80, true)).toBe('80 pts');

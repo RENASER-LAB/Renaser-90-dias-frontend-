@@ -287,7 +287,7 @@ export function mapearMensaje(wire: WireMensaje, actorId: string | null | undefi
     // Respaldo para los mensajes sin URL firmada: se sigue rotulando el adjunto en vez de dejar
     // la burbuja vacía. Con `mediaUrl` presente la burbuja muestra la foto y esto no se usa.
     mediaList: wire.type === 'IMAGE' && !wire.mediaUrl
-      ? [stickerNombre ? 'Sticker no disponible' : wire.text?.trim() || '📷 Imagen adjunta']
+      ? [stickerNombre ? 'Figurita no disponible' : wire.text?.trim() || '📷 Imagen adjunta']
       : undefined,
     status: estadoDeEntrega(wire.status),
     createdAt: wire.createdAt,
@@ -322,7 +322,7 @@ export function resumenDelUltimoMensaje(
   const conAdjunto = tipo === 'image_grid' || tipo === 'video' || tipo === 'audio';
   return {
     lastMessage: nombreDelSticker(ultimo)
-      ? `${!!actorId && ultimo.senderId === actorId ? 'Tú: ' : ''}Sticker`
+      ? `${!!actorId && ultimo.senderId === actorId ? 'Tú: ' : ''}Figurita`
       : vistaPreviaDelMensaje({
       tipo,
       texto: conAdjunto ? ultimo.text : textoPorTipo(ultimo),

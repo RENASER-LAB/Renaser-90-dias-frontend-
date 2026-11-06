@@ -369,8 +369,8 @@ export function MiCelulaScreen({
                       ) : ranking ? (
                         <Text style={[t.body, { color: c.textSoft, fontSize: 16 }]}>
                           {mesDelRanking === 'actual'
-                            ? 'Tu grupo todavía no figura en el ranking de este mes'
-                            : 'Tu grupo no figuró en el ranking de ese mes'}
+                            ? 'Tu grupo todavía no figura en la tabla de este mes'
+                            : 'Tu grupo no figuró en la tabla de ese mes'}
                         </Text>
                       ) : null}
                     </View>

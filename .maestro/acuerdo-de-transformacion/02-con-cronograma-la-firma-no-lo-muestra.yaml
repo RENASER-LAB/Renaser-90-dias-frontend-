@@ -35,7 +35,7 @@ appId: com.renaser.app
     timeout: 60000
 - tapOn: "Entendido"
 - extendedWaitUntil:
-    visible: "TRAINING"
+    visible: "ENTRENAR"
     timeout: 60000
 # Firmar los términos no confirmó nada del cronograma: «Mi ingreso» lo sigue pidiendo, como en la spec 032.
 - runFlow: ../pagos/comun-abrir-mi-ingreso.yaml

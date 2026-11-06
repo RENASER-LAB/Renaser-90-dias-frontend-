@@ -27,7 +27,7 @@ appId: com.renaser.app
 - assertNotVisible: "Un ajuste para tus alarmas"
 - assertNotVisible: "Ajustarlo"
 # La app quedó normal: la barra de pestañas está y se puede navegar.
-- assertVisible: "TRAINING"
+- assertVisible: "ENTRENAR"
 - tapOn: "YO"
 - assertVisible: "Tu evolución"
 - takeScreenshot: 01a-sin-hoja-tras-cerrar-a-la-fuerza

@@ -486,7 +486,7 @@ export default function HoyScreen() {
             habitos={{
               cifra: cifrasDeHabitos(resumen?.habitosHoy),
               titulo: tituloHabitoAhora,
-              etiquetaAccesible: habitoAhora.titulo ? `Abrir Training: ${tituloEnTipoOracion(habitoAhora.titulo)}` : 'Abrir Training',
+              etiquetaAccesible: habitoAhora.titulo ? `Abrir Entrenar: ${tituloEnTipoOracion(habitoAhora.titulo)}` : 'Abrir Entrenar',
             }}
             onAbrirTraining={() => (navigation as any).navigate('Training')}
             diaPrograma={resumen?.diaPrograma}

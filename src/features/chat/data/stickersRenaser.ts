@@ -6,7 +6,7 @@ export const STICKERS_RENASER: readonly StickerRenaser[] = [
   { id: 'muy-bien', nombre: '¡Muy bien!', imagen: require('../../../../assets/stickers/renaser/muy-bien.webp') },
   { id: 'paquete-enviado', nombre: 'Paquete enviado', imagen: require('../../../../assets/stickers/renaser/paquete-enviado.webp') },
   { id: 'superaste-fase', nombre: 'Superaste la fase', imagen: require('../../../../assets/stickers/renaser/superaste-fase.webp') },
-  { id: 'checklist', nombre: 'No enviaste tu checklist', imagen: require('../../../../assets/stickers/renaser/checklist.webp') },
+  { id: 'checklist', nombre: 'No enviaste tu lista', imagen: require('../../../../assets/stickers/renaser/checklist.webp') },
   { id: 'vence-macaco', nombre: 'Vence a tu macaco', imagen: require('../../../../assets/stickers/renaser/vence-macaco.webp') },
   { id: 'bienvenido', nombre: '¡Bienvenido a tu RENASER!', imagen: require('../../../../assets/stickers/renaser/bienvenido.webp') },
   { id: 'llamada', nombre: 'No ingresaste a tu llamada', imagen: require('../../../../assets/stickers/renaser/llamada.webp') },

@@ -2,6 +2,7 @@ import { fuentes } from '../theme/fuentes';
 import { HojaDelSobrenombre } from '../features/sobrenombre/components/HojaDelSobrenombre';
 import { useMiSobrenombre } from '../features/sobrenombre/hooks/useMiSobrenombre';
 import { TEXTOS_DEL_SOBRENOMBRE } from '../features/sobrenombre/utils/reglasDelSobrenombre';
+import { pedirVerElRecorrido } from '../features/recorrido/estado/recorridoEnCurso';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Image,
@@ -1206,7 +1207,7 @@ export default function YoScreen() {
             <GrupoDeAjustes titulo="Tu proceso">
               <FilaDeAjuste
                 icono="listChecks"
-                titulo="Mi onboarding"
+                titulo="Mis documentos"
                 detalle="Tu Pacto de Renacimiento"
                 onPress={() => setActiveView('onboarding')}
               />
@@ -1236,6 +1237,16 @@ export default function YoScreen() {
                 titulo="El Método Renaser"
                 detalle={`${METODO_FASES.length} fases para comprenderte y sostener tu transformación`}
                 onPress={() => setActiveView('metodo')}
+              />
+              {/* Spec 045 (US5): volver a ver el recorrido de bienvenida. Lleva a Hoy y lo empieza desde el principio. */}
+              <FilaDeAjuste
+                icono="map"
+                titulo="Ver el recorrido"
+                detalle="Dónde está cada cosa: Hoy, Plan y Entrenar"
+                onPress={() => {
+                  setActiveView('main');
+                  pedirVerElRecorrido();
+                }}
               />
             </GrupoDeAjustes>
 
@@ -1533,7 +1544,7 @@ export default function YoScreen() {
             <TerminosAceptadosVista aceptados={terminosAceptados.aceptados} />
           ) : (
             <Text style={[t.body, { color: c.textSoft }]}>
-              {terminosAceptados ? 'No pudimos leer tus términos. Vuelve a Mi onboarding e inténtalo de nuevo.' : 'Cargando tus términos…'}
+              {terminosAceptados ? 'No pudimos leer tus términos. Vuelve a Mis documentos e inténtalo de nuevo.' : 'Cargando tus términos…'}
             </Text>
           )}
         </ScrollView>
