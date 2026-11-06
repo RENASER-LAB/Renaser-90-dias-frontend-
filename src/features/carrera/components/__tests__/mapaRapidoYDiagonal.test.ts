@@ -24,6 +24,10 @@ jest.mock('react-native-maps', () => {
   const { View } = jest.requireActual<typeof import('react-native')>('react-native');
   const MapView = R.forwardRef((props: Record<string, unknown>, ref) => {
     R.useImperativeHandle(ref, () => ({ animateCamera: (...a: unknown[]) => mockAnimar(...a) }));
+    // Como el nativo: Google Maps avisa que está listo después de montarse.
+    R.useEffect(() => {
+      (props.onMapReady as (() => void) | undefined)?.();
+    }, []);
     return R.createElement(View, { testID: 'mapa-google', ...props });
   });
   const Polyline = (props: Record<string, unknown>) => R.createElement(View, { testID: 'ruta-dorada', ...props });
@@ -135,7 +139,7 @@ describe('la cámara en diagonal, estilo navegación', () => {
     expect(mapa.props.mapPadding.top).toBe(relleno);
     // El centro de la cámara cae en P + (alto − P) / 2 = 544, el 68 % del alto: ahí va el avatar.
     expect(relleno + (800 - relleno) / 2).toBeCloseTo(800 * 0.68, 0);
-    const capa = raiz.findAll(n => typeof n.type === 'string' && n.props.pointerEvents === 'none')[0];
+    const capa = raiz.findAll(n => typeof n.type === 'string' && n.props.pointerEvents === 'none' && n.props.testID !== 'velo-del-mapa')[0];
     expect(capa.findAll(n => typeof n.props.accessibilityLabel === 'string' && n.props.accessibilityLabel.startsWith('Tu avatar')).length).toBeGreaterThan(0);
     // El avatar baja P / 2 desde el centro del recuadro (400 + 144 = 544): queda justo en el centro de la cámara.
     expect(bajadaDelAvatar(800, 'navegacion')).toBe(144);

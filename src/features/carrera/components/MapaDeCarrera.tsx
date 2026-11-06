@@ -8,6 +8,7 @@ import { CURVA_SALIDA } from '../../../theme/movimiento';
 import { fuentes } from '../../../theme/fuentes';
 import { useTheme } from '../../../theme/ThemeContext';
 import { tacto } from '../../../utils/tacto';
+import { marcarMapaCalentado } from '../servicios/calentarLaCarrera';
 import { useVistaDelMapa, type VistaDelMapa } from '../servicios/vistaDelMapa';
 import { distanciaM, type Coordenada } from '../utils/geo';
 import type { FiguraDelAvatar } from '../utils/fusionDelAvatar';
@@ -29,13 +30,18 @@ import { AvatarCaminante } from './AvatarCaminante';
  * aproximada o el primer punto crudo del GPS, ver `centroDelMapa`) se monta ya en la cuenta 3, 2, 1, y cuando llega la `posicion`
  * del motor la cámara va hasta ella. El centro de vista nunca se dibuja en la ruta ni se mide.
  *
+ * **Mientras Google Maps dibuja las calles** (2026-11-06) no se ve su gris de carga: encima va un velo del color de la tarjeta, con el
+ * avatar ya en su lugar, que se funde (`DURACION_DEL_VELO_MS`) cuando Google Maps avisa que cargó, o a los `TOPE_DEL_VELO_MS` aunque
+ * no avise. Con «reducir movimiento», se quita sin fundido. Y el mapa avisa que Google Maps ya está cargado en este proceso
+ * (`marcarMapaCalentado`), para que no se vuelva a calentar.
+ *
  * **Sin clave de Google Maps** (`extra.mapaGoogle` en `app.config.js`, de la variable de EAS `GOOGLE_MAPS_ANDROID_KEY`) o sin el
  * módulo nativo, se dibuja un fondo neutro con el avatar y una línea que lo dice: la carrera se cuenta igual. Sin botón 2D/3D.
  */
 
 type ModuloMapas = typeof import('react-native-maps');
 
-function cargarMapas(): ModuloMapas | null {
+export function cargarMapas(): ModuloMapas | null {
   if (Constants.expoConfig?.extra?.mapaGoogle !== true) return null;
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -74,6 +80,11 @@ export function rellenoDeArriba(alto: number, avatarAlto: number): number {
 export function bajadaDelAvatar(alto: number, camara: CamaraDelMapa): number {
   return rellenoDeArriba(alto, CAMARA[camara].avatarAlto) / 2;
 }
+
+/** El fundido del velo cuando aparecen las calles. */
+export const DURACION_DEL_VELO_MS = 220;
+/** Lo más que el velo espera a que Google Maps avise que cargó: después se ve el mapa como esté. */
+export const TOPE_DEL_VELO_MS = 2500;
 
 /** Más lejos que esto, del centro de vista al primer punto real, la cámara salta en vez de viajar. */
 const VIAJE_MAXIMO_M = 2000;
@@ -134,13 +145,39 @@ export function MapaDeCarrera({
     );
   }, [destinoDeLaBajada, claveDeCamara, reducir, bajada]);
   const estiloDelAvatar = useAnimatedStyle(() => ({ transform: [{ translateY: bajada.get() }] }));
+  // El velo de carga: tapa el gris de Google Maps hasta que dibuja las calles (o hasta el tope).
+  // `mapPadding` solo cuando Google Maps está listo: si cambia antes (el recuadro ya medido y el mapa todavía sin crear),
+  // react-native-maps llama a `setPadding` sobre un mapa nulo y la app se cae (visto el 2026-11-06 con Google Maps ya calentado).
+  const [listo, setListo] = useState(false);
+  const [calles, setCalles] = useState(false);
+  const [veloQuitado, setVeloQuitado] = useState(false);
+  const velo = useSharedValue(1);
+  const hayMapa = Mapas != null && (posicion ?? centroDeVista) != null;
+  useEffect(() => {
+    if (!hayMapa || calles) return;
+    const id = setTimeout(() => setCalles(true), TOPE_DEL_VELO_MS);
+    return () => clearTimeout(id);
+  }, [hayMapa, calles]);
+  useEffect(() => {
+    if (!calles) return;
+    if (reducir) {
+      velo.set(0);
+      setVeloQuitado(true);
+      return;
+    }
+    velo.set(withTiming(0, { duration: DURACION_DEL_VELO_MS, easing: CURVA_SALIDA }));
+    const id = setTimeout(() => setVeloQuitado(true), DURACION_DEL_VELO_MS);
+    return () => clearTimeout(id);
+  }, [calles, reducir, velo]);
+  const estiloDelVelo = useAnimatedStyle(() => ({ opacity: velo.get() }));
   const centro = posicion ?? centroDeVista;
   const dibujada = useMemo(() => ruta.slice(-PUNTOS_DIBUJADOS).map(p => ({ latitude: p.lat, longitude: p.lng })), [ruta]);
   /** El último centro al que se llevó la cámara, y si era el de vista (todavía sin punto del motor). */
   const anterior = useRef<{ pos: Coordenada; deVista: boolean } | null>(null);
 
   useEffect(() => {
-    if (!centro || !mapa.current) return;
+    // Antes de que Google Maps esté listo la cámara no se puede mover (se pierde): se mueve al quedar listo.
+    if (!centro || !mapa.current || !listo) return;
     const previo = anterior.current;
     anterior.current = { pos: centro, deVista: posicion == null };
     const cambioDeVista = camaraPrevia.current !== claveDeCamara;
@@ -153,7 +190,8 @@ export function MapaDeCarrera({
       // Del centro de vista al primer punto real: un viaje corto (sin animar con «reducir movimiento» o si está lejos).
       duracion = reducir || distanciaM(previo.pos, posicion) > VIAJE_MAXIMO_M ? 0 : DURACION_AL_PRIMER_PUNTO_MS;
     } else if (!posicion) {
-      duracion = reducir ? 0 : DURACION_AL_PRIMER_PUNTO_MS;
+      // Entre centros de vista (el guardado → la última conocida → la aproximada): un viaje corto, o un salto si está lejos.
+      duracion = reducir || (previo && distanciaM(previo.pos, centro) > VIAJE_MAXIMO_M) ? 0 : DURACION_AL_PRIMER_PUNTO_MS;
     }
     mapa.current.animateCamera(
       { center: { latitude: centro.lat, longitude: centro.lng }, heading: rumbo, pitch: camara.inclinacion, zoom: camara.acercamiento },
@@ -161,7 +199,7 @@ export function MapaDeCarrera({
     );
     // Solo cambia la cámara cuando cambia dónde mirar o el rumbo; las demás dependencias se leen en ese momento.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [centro?.lat, centro?.lng, rumbo, duracionMs, claveDeCamara]);
+  }, [centro?.lat, centro?.lng, rumbo, duracionMs, claveDeCamara, listo]);
 
   return (
     <View
@@ -180,8 +218,13 @@ export function MapaDeCarrera({
             zoom: camara.acercamiento,
             altitude: 0,
           }}
-          mapPadding={{ top: relleno, right: 0, bottom: 0, left: 0 }}
+          mapPadding={listo ? { top: relleno, right: 0, bottom: 0, left: 0 } : undefined}
           googleRenderer="LATEST"
+          onMapReady={() => {
+            marcarMapaCalentado();
+            setListo(true);
+          }}
+          onMapLoaded={() => setCalles(true)}
           loadingEnabled={false}
           loadingBackgroundColor={c.cardBgAlt}
           showsBuildings
@@ -205,6 +248,9 @@ export function MapaDeCarrera({
           ) : null}
         </View>
       )}
+      {Mapas && centro && !veloQuitado ? (
+        <Animated.View testID="velo-del-mapa" pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: c.cardBgAlt }, estiloDelVelo]} />
+      ) : null}
       <Animated.View pointerEvents="none" style={[estilos.centro, estiloDelAvatar]}>
         <AvatarCaminante figura={figura} caminando={caminando} iniciales={iniciales} fotoUrl={fotoUrl} />
       </Animated.View>
