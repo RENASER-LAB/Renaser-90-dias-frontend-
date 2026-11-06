@@ -2771,6 +2771,35 @@ Entrenar) y lleve hasta el primer post en el Muro; al publicar, confeti; y «el 
 > * Pruebas: `recorridoDeBienvenida` (bloqueo, atrás, otras pestañas, reabrir, sin red, sesión que parpadea, lecturas al revés), `reglasDelRecorrido`, `confetiDelPrimerPost`;
 >   Maestro `recorrido-de-bienvenida/02-el-primer-post-es-obligatorio.yaml` (reemplaza a `02-saltar…`).
 
+## Cambio por pedido del dueño — 2026-11-06 — Comunidad → Eventos: eventos para quien tú elijas, y el líder en el chat de soporte (spec 044, D-326)
+
+Textual (resumido): «El líder de mentores puede agendar una sesión de Meet para un mentor o una persona específica, o para todos los de semáforo verde,
+rojo o amarillo… también con el alquimista o administrador. Y el mentor también puede crear una sesión con todos sus alumnos, con alumnos específicos, o
+por semáforo. Prioridad: los eventos y los recordatorios a los números específicos.» Spec, decisiones (P1 a P9) y contrato en el backend
+(`specs/044-eventos-por-audiencia/`). Vista previa aprobada: https://claude.ai/artifact/EVHGP8P1mWqgwz7B7Nu3Uc. Lo que cambia y nada más:
+* **Quién crea eventos** lo dice el servidor (`GET /api/v1/calendar/audience/options`, `useOpcionesDeAudiencia`), no una lista de roles: además de
+  Administración y Alquimista, el **líder de mentores**, el **mentor** y la **guía de aprendiz** ven «Crear evento» (corrige la decisión del 26/09 de
+  `permisosDeEventos.ts`, que ahora solo dice quién ADMINISTRA todo el calendario). El mentor y el líder solo eligen «Sesión especial» y «Encuentro
+  espontáneo». Con el interruptor `eventos.convocar` apagado o contra un backend anterior, el formulario es el de siempre (para todos).
+* **El formulario suma «¿Para quién es?»** (`components/audiencia/ParaQuienEs.tsx`), en el mismo scroll, entre «Dónde es» y la descripción: chips de 48
+  con ícono y palabra de lo que el servidor ofrece (Todos, Mis alumnos, Personas, Grupos, Mentores, Por semáforo, Personal), que se suman. Por semáforo:
+  Verde, Amarillo y Rojo con ícono, palabra, ayuda y la cifra de hoy (nunca solo color). Personas: «Elegir personas» abre una `HojaDesdeAbajo` con
+  buscador al servidor (foto o iniciales, nombre, rol y grupo; nunca el semáforo; `ElegirPersonasHoja`); lo elegido queda en píldoras con su ✕.
+  Personal: «Todo el personal» o por nombre. Al editar con colores, «Volver a calcular» (la foto del semáforo es la del día en que se guardó). Una nota
+  dice «Tus invitados no ven por qué los elegiste ni a quién más invitaste». Sobre el botón, **«Llega a N personas»** («alumnos» para el mentor), que
+  cuenta el servidor 300 ms después del último cambio (`useVistaPreviaDeAudiencia`). Abre en «Todos» para Administración, en «Mis alumnos» para el
+  mentor y sin elección para el líder.
+* **El detalle**: al invitado, «Te invitó Rocío, líder de mentores» (nunca el motivo ni el color). A quien lo creó o lo gestiona (Administración,
+  Alquimista y el líder si lo creó uno de sus mentores), **«Para quién es · Solo lo ves tú»** con cada parte y su cifra («Rojo · Según el semáforo del 6
+  de noviembre · 15», las personas por nombre) y «Llega a N personas»; y la sección Administrar de ESE evento (`ParaQuienEsDelEvento`). Un evento con
+  audiencia elegida se lee fresco al abrirlo (`GET /events/{id}`), y se puede editar en la app.
+* **Comunidad → Tribu**: la sección «Soporte · N» también se le muestra al **líder de mentores** (`veLaSeccionDeSoportes`), que desde la spec 044 está en
+  el chat de soporte de los aprendices de su formación.
+* **No cambian**: el resto de Eventos (calendario, tarjetas, «Mi agenda», «Voy» / «No voy», pasar lista), los demás tabs ni el chat. Sin dependencias
+  nuevas, sin código nativo y sin animaciones nuevas (`Presionable` y el «tic» de selección).
+* **Pruebas:** Jest `audienciaDelFormulario`, `audienciaSchemas`, `paraQuienEs` y `seccionDeSoportes`. **Hace falta el backend con la spec 044 (V182 y
+  V183) y un APK nuevo** (solo JavaScript: la app no se actualiza por aire).
+
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
 Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel especializado en React Native, Expo y TypeScript. Al crear, refactorizar o modificar cualquier pantalla o componente, debes cumplir OBLIGATORIAMENTE con los siguientes estándares:

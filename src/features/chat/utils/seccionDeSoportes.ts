@@ -15,9 +15,12 @@ export const ESPERA_DE_BUSQUEDA_MS = 300;
 /** A cuántos px del final se pide la página siguiente: antes de llegar, para que no se note. */
 export const MARGEN_PARA_PEDIR_MAS = 600;
 
-/** Solo ADMIN y ALCHEMIST, que están en todos los soportes. El aprendiz sigue viendo el suyo como antes. */
+/**
+ * ADMIN y ALCHEMIST, que están en todos los soportes, y desde la spec 044 (FR-042) el líder de mentores, que está en los de su formación. El
+ * aprendiz sigue viendo el suyo como antes.
+ */
 export function veLaSeccionDeSoportes(rol: string | null | undefined): boolean {
-  return esAdministracionDeGrupos(rol);
+  return esAdministracionDeGrupos(rol) || (rol ?? '').trim().toUpperCase() === 'MENTOR_LEAD';
 }
 
 /** Qué entra en «Formación Renaser»: para quien ve la sección, los soportes ya no (van en su sección). */

@@ -37,7 +37,9 @@ import { vistaPideReleer } from '../utils/lecturaVigente';
 import { subirPortada, type PortadaElegida } from '../utils/portadaDelEvento';
 import { guardarVistaPreferida, leerVistaPreferida, VISTA_POR_DEFECTO, type VistaDeEventos } from '../utils/vistaPreferida';
 import { fechaEnZona, zonaDelTelefono } from '../utils/zonaHoraria';
-import { puedeGestionarEventos } from '../utils/permisosDeEventos';
+import { puedeGestionarEventos, rolVeTodas } from '../utils/permisosDeEventos';
+import { useOpcionesDeAudiencia } from '../hooks/useOpcionesDeAudiencia';
+import type { AudienciaDelFormulario } from '../utils/audienciaDelFormulario';
 import { useDisponibilidad } from '../../plataforma/estado/useFuncionalidad';
 import { CLAVES } from '../../plataforma/utils/clavesDeLaApp';
 import { puedeVerAsistencia } from '../utils/asistencia';
@@ -126,7 +128,13 @@ export function SeccionEventos({
   /* Spec 002, fase 2: crear/editar (`eventos.gestion`) y la asistencia (`eventos.asistencia`) que esta cuenta todavía no
      tiene (despliegue, rol personalizado) no se dibujan. */
   const esDisponible = useDisponibilidad();
-  const gestiona = puedeGestionarEventos(rol) && esDisponible(CLAVES.eventosGestion);
+  /* Administración y Alquimista administran todo el calendario (lo de siempre). */
+  const administra = puedeGestionarEventos(rol) && esDisponible(CLAVES.eventosGestion);
+  /* Spec 044 (FR-029): quién más crea (el líder, el mentor, la guía) lo dice el servidor, no una lista de roles. */
+  const { codigoDeLaQueSeMira, hayQueElegirParaCrear } = useFormacionDeLaComunidad();
+  const formacionDeLaAudiencia = rolVeTodas(rol) ? codigoDeLaQueSeMira : null;
+  const { opciones } = useOpcionesDeAudiencia(!!userId, userId, formacionDeLaAudiencia);
+  const gestiona = administra || opciones.puedeCrear;
   const asistenciaDisponible = esDisponible('eventos.asistencia');
   const { ocurrencias, cargando, refrescando, fallo, yaLeido, recargar, responder, quitarDeLaLista } = useEventos(
     userId,
@@ -135,7 +143,6 @@ export function SeccionEventos({
   const [vista, setVista] = useState<Vista>({ nombre: 'lista' });
   /* Spec 024: Administración con «Todas» elegida no puede crear un evento (nace en una formación). En vez de abrir el formulario,
      una línea dice qué falta; nada se envía. Las demás cuentas nunca la ven. */
-  const { hayQueElegirParaCrear } = useFormacionDeLaComunidad();
   const [pidioCrearSinFormacion, setPidioCrearSinFormacion] = useState(false);
   /* E-516 (2026-10-05). Cada vista de la sección es OTRA lista, y se le dice a la barra con `vista`:
      al cambiar, la barra y el encabezado de Comunidad vuelven a la vista. En Android el
@@ -309,8 +316,13 @@ export function SeccionEventos({
     }
   };
 
-  const alGuardar = async (form: FormularioDeEvento, original: Evento | null, portada: PortadaElegida | null) => {
-    const armado = armarCuerpo(form, Date.now(), original);
+  const alGuardar = async (
+    form: FormularioDeEvento,
+    original: Evento | null,
+    portada: PortadaElegida | null,
+    audiencia: AudienciaDelFormulario | null,
+  ) => {
+    const armado = armarCuerpo(form, Date.now(), original, audiencia);
     if (!armado.ok) {
       setErrorFormulario(armado.error);
       return;
@@ -342,6 +354,10 @@ export function SeccionEventos({
       setErrorFormulario(
         e instanceof FormacionPorElegirError
           ? e.message
+          : e instanceof ApiError && e.status === 403 && /FUERA_DE_TU_ALCANCE/.test(JSON.stringify(e.body ?? ''))
+          ? 'Hay personas que no puedes invitar. Revisa a quién elegiste.'
+          : e instanceof ApiError && e.status === 400 && /AUDIENCIA_VACIA/.test(JSON.stringify(e.body ?? ''))
+          ? 'Hoy no hay nadie en lo que elegiste. Elige otra opción o suma personas.'
           : e instanceof ApiError && e.status === 403
           ? 'Tu cuenta no puede crear ni editar eventos.'
           : mensajeDeError(e, 'No se pudo guardar el evento. Intenta de nuevo.'),
@@ -397,7 +413,9 @@ export function SeccionEventos({
         error={errorFormulario}
         guardando={enviando}
         onVolver={volverALista}
-        onGuardar={(form, portada) => void alGuardar(form, vista.original, portada)}
+        onGuardar={(form, portada, audiencia) => void alGuardar(form, vista.original, portada, audiencia)}
+        opciones={opciones}
+        formation={formacionDeLaAudiencia}
       />
     );
   }
@@ -438,7 +456,7 @@ export function SeccionEventos({
     return envolver(
       <DetalleDelEvento
         oc={oc}
-        puedeGestionar={gestiona}
+        puedeGestionar={administra}
         verAsistencia={asistenciaDisponible && puedeVerAsistencia(rol, userId, oc.evento.creadoPor)}
         enviando={enviando}
         onVolver={volverALista}

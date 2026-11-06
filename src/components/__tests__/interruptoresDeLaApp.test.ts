@@ -46,7 +46,8 @@ describe('los interruptores de la app', () => {
       /<Interruptor\s+valor=\{vista\.diario\.valor\}\s+deshabilitado=\{ocupado\}\s+onCambiar=\{v => void tocarElDiario\(v\)\}\s+etiqueta="Recordarme mis acciones del día"/,
     );
     expect(leer('features/eventos/components/FormularioDelEvento.tsx')).toMatch(
-      /<Interruptor\s+valor=\{form\.notificarAlCrear\}\s+onCambiar=\{v => cambiar\('notificarAlCrear', v\)\}\s+etiqueta="Avisar a todos al guardarlo"/,
+      // Spec 044: con una audiencia elegida dice «Avisar al guardarlo» (no llega a todos).
+      /<Interruptor\s+valor=\{form\.notificarAlCrear\}\s+onCambiar=\{v => cambiar\('notificarAlCrear', v\)\}\s+etiqueta=\{audiencia && !audiencia\.todos \? 'Avisar al guardarlo' : 'Avisar a todos al guardarlo'\}/,
     );
   });
 });
