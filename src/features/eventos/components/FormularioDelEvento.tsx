@@ -1,5 +1,5 @@
 import { fuentes } from '../../../theme/fuentes';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Icon } from '../../../components/Icon';
@@ -24,6 +24,17 @@ import { duracionEnPalabras, diaRelativo } from '../utils/textosDeFecha';
 import { fechaEnZona, sumarDiasIso } from '../utils/zonaHoraria';
 import { BotonVolver, CampoDeTexto, LETRA, Parrafo } from './piezas';
 import { DondeEsElEvento } from './DondeEsElEvento';
+import { ParaQuienEs } from './audiencia/ParaQuienEs';
+import { useVistaPreviaDeAudiencia } from '../hooks/useVistaPreviaDeAudiencia';
+import type { OpcionesDeAudiencia } from '../types/audiencia.types';
+import {
+  audienciaDesdeElResumen,
+  audienciaInicial,
+  eligioAlgo,
+  partesDelCable,
+  textoLlegaA,
+  type AudienciaDelFormulario,
+} from '../utils/audienciaDelFormulario';
 
 /**
  * Crear o editar un evento (E-6), para ADMIN y ALCHEMIST. Mínimo a propósito: nombre, día, hora,
@@ -44,13 +55,19 @@ export function FormularioDelEvento({
   guardando,
   onVolver,
   onGuardar,
+  opciones,
+  formation = null,
 }: {
   inicial: FormularioDeEvento;
   original: Evento | null;
   error: string | null;
   guardando: boolean;
   onVolver: () => void;
-  onGuardar: (form: FormularioDeEvento, portada: PortadaElegida | null) => void;
+  /** `audiencia` (spec 044) es `null` si el formulario no la ofrece (un servidor anterior o el interruptor apagado): todo es como antes. */
+  onGuardar: (form: FormularioDeEvento, portada: PortadaElegida | null, audiencia: AudienciaDelFormulario | null) => void;
+  /** Spec 044: lo que el servidor deja elegir a esta cuenta. Sin partes, el formulario es el de siempre (para todos). */
+  opciones?: OpcionesDeAudiencia;
+  formation?: string | null;
 }) {
   const { c } = useTheme();
   const [form, setForm] = useState<FormularioDeEvento>(inicial);
@@ -68,6 +85,28 @@ export function FormularioDelEvento({
   const donde = dondeQueSeGuarda(form.donde, meetPosible);
   const cambiar = <K extends keyof FormularioDeEvento>(campo: K, valor: FormularioDeEvento[K]) =>
     setForm(f => ({ ...f, [campo]: valor }));
+
+  /* Spec 044: «¿Para quién es?», solo si el servidor ofrece partes a esta cuenta. Un evento con audiencia elegida abre con la suya; uno para todos,
+     en «Todos». */
+  const conAudiencia = !!opciones && opciones.partes.length > 0;
+  const [audiencia, setAudiencia] = useState<AudienciaDelFormulario | null>(() => {
+    if (!conAudiencia || !opciones) return null;
+    if (original?.audienciaElegida) return audienciaDesdeElResumen(original.audienciaElegida);
+    if (original) return { ...audienciaInicial(opciones), todos: original.audiencia !== 'SELECTION' && opciones.todos };
+    return audienciaInicial(opciones);
+  });
+  /* Un error que se dijo antes (p. ej. «Elige para quién es el evento.») no queda a la vista después de cambiar a quién va: vuelve a decirse, si
+     sigue, al tocar el botón. */
+  const [errorOculto, setErrorOculto] = useState(false);
+  useEffect(() => setErrorOculto(false), [error]);
+  const cambiarAudiencia = (a: AudienciaDelFormulario) => {
+    setAudiencia(a);
+    setErrorOculto(true);
+  };
+  const partes = audiencia && !audiencia.todos && eligioAlgo(audiencia) ? partesDelCable(audiencia) : null;
+  const llega = useVistaPreviaDeAudiencia(partes, formation);
+  const soloAlumnos = !!opciones && opciones.partes.includes('MY_LEARNERS');
+  const tipos = opciones && opciones.tiposDeEvento.length > 0 ? TIPOS_DE_EVENTO.filter(t => opciones.tiposDeEvento.includes(t.clave)) : TIPOS_DE_EVENTO;
 
   const hoy = fechaEnZona(Date.now(), form.zona);
   const manana = sumarDiasIso(hoy, 1);
@@ -92,7 +131,7 @@ export function FormularioDelEvento({
       {!original ? (
         <View style={{ gap: 8 }}>
           <Text style={[estilos.rotulo, { color: c.textStrong }]}>Tipo</Text>
-          {TIPOS_DE_EVENTO.map(tipo => {
+          {tipos.map(tipo => {
             const elegido = form.tipoEvento === tipo.clave;
             return (
               <Pressable
@@ -193,6 +232,16 @@ export function FormularioDelEvento({
         />
       ) : null}
 
+      {conAudiencia && opciones && audiencia ? (
+        <ParaQuienEs
+          opciones={opciones}
+          valor={audiencia}
+          onCambiar={cambiarAudiencia}
+          editando={!!original}
+          formation={formation}
+        />
+      ) : null}
+
       <CampoDeTexto
         rotulo="Descripción (opcional)"
         value={form.descripcion}
@@ -219,23 +268,35 @@ export function FormularioDelEvento({
 
       <View style={[estilos.interruptor, { borderColor: c.border, backgroundColor: c.cardBg }]}>
         <View style={{ flex: 1 }}>
-          <Text style={[estilos.opcionTexto, { color: c.textStrong }]}>Avisar a todos al guardarlo</Text>
+          <Text style={[estilos.opcionTexto, { color: c.textStrong }]}>{audiencia && !audiencia.todos ? 'Avisar al guardarlo' : 'Avisar a todos al guardarlo'}</Text>
           <Parrafo>Les llega un aviso con el nombre del evento.</Parrafo>
         </View>
         {/* `Interruptor` y no el `Switch` con colores a mano (prueba en Android, 2026-10-05). */}
         <Interruptor
           valor={form.notificarAlCrear}
           onCambiar={v => cambiar('notificarAlCrear', v)}
-          etiqueta="Avisar a todos al guardarlo"
+          etiqueta={audiencia && !audiencia.todos ? 'Avisar al guardarlo' : 'Avisar a todos al guardarlo'}
         />
       </View>
 
-      {error ? <Parrafo tono="peligro">{error}</Parrafo> : null}
+      {partes ? (
+        <View style={estilos.llega} accessibilityLiveRegion="polite">
+          <Icon name="users" size={22} color={c.goldInk} />
+          <Text style={[estilos.llegaTexto, { color: c.textStrong }]}>
+            {llega.total !== null ? textoLlegaA(llega.total, soloAlumnos) : llega.fallo ? 'No se pudo contar a cuántos llega.' : 'Contando…'}
+          </Text>
+        </View>
+      ) : null}
+
+      {error && !errorOculto ? <Parrafo tono="peligro">{error}</Parrafo> : null}
 
       <BotonPrincipal
         etiqueta={original ? 'Guardar cambios' : 'Crear evento'}
         cargando={guardando}
-        onPress={() => onGuardar({ ...form, donde }, portada)}
+        onPress={() => {
+          setErrorOculto(false);
+          onGuardar({ ...form, donde }, portada, audiencia);
+        }}
       />
 
       <HoraPickerModal
@@ -263,5 +324,7 @@ const estilos = StyleSheet.create({
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   chip: { minHeight: 52, borderWidth: 1.5, borderRadius: 14, paddingHorizontal: 16, justifyContent: 'center' },
   portada: { height: 185, borderRadius: 20, borderWidth: 1, overflow: 'hidden' },
+  llega: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  llegaTexto: { fontFamily: fuentes.seminegrita, fontSize: 17, fontVariant: ['tabular-nums'] },
   interruptor: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderRadius: 16, padding: 14 },
 });

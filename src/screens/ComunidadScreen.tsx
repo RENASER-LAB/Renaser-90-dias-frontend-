@@ -18,6 +18,7 @@ import {
 import type { ListRenderItemInfo, NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
 import { Image as ImagenDelChat, type ImageSource } from 'expo-image';
 import { Alert } from '../components/Alerta';
+import { mensajeDeFalloAlPublicar } from '../features/community/utils/mensajeDeFalloAlPublicar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
@@ -44,6 +45,7 @@ import { AvisoDeAbajo } from '../components/AvisoDeAbajo';
 import { ConfirmacionEnLinea } from '../components/ConfirmacionEnLinea';
 import { tacto } from '../utils/tacto';
 import { separacionDeLaFila } from '../features/community/utils/filaDeMedallones';
+import { useMiSobrenombre } from '../features/sobrenombre/hooks/useMiSobrenombre';
 import { useAuth } from '../features/auth/context/AuthContext';
 import { useWallFeed } from '../features/community/hooks/useWallFeed';
 import { useWallReactions } from '../features/community/hooks/useWallReactions';
@@ -75,6 +77,8 @@ import {
 import { FilaCompactaDelMuro, type AccionesDeLaFila } from '../features/community/components/FilaCompactaDelMuro';
 import { PublicacionAbierta } from '../features/community/components/PublicacionAbierta';
 import { avisarPostPublicado } from '../features/sparkie/events/avisoPrimerPost';
+import { AYUDA_DEL_PRIMER_POST } from '../features/recorrido/data/pasosDelRecorrido';
+import { marcarComposerDelMuroAbierto } from '../features/recorrido/estado/recorridoEnCurso';
 import { cerrarHabitoPostDiarioComunidad } from '../features/habits/api/postDiarioComunidad';
 import { avisarPostDiarioCerrado } from '../features/habits/events/avisoPostDiarioCerrado';
 import { ImageViewerModal, type ImageViewerItem } from '../features/community/components/ImageViewerModal';
@@ -259,6 +263,8 @@ export interface CourseItem {
 export interface CommentItem {
   id: string;
   author: string;
+  /** Spec 046: el nombre real de quien tiene sobrenombre, solo si quien mira es del equipo (lo decide el servidor). */
+  nombreReal?: string | null;
   avatar: string;
   role?: string;
   text: string;
@@ -271,7 +277,10 @@ export interface CommentItem {
 
 export interface PostItem {
   id: string;
+  /** Spec 046: como se le nombra en el Muro (su sobrenombre si tiene uno). */
   author: string;
+  /** Spec 046: su nombre real, solo para el equipo y si tiene sobrenombre (lo decide el servidor). */
+  nombreReal?: string | null;
   avatar: string;
   /** La foto del autor (`WallPostResponse.authorAvatarUrl`); sin ella, sus iniciales (`AvatarPersona`). */
   avatarUrl?: string | null;
@@ -320,6 +329,8 @@ export interface PostItem {
 export interface ReactionUser {
   id: string;
   name: string;
+  /** Spec 046: el nombre real de quien tiene sobrenombre, solo para el equipo. */
+  nombreReal?: string | null;
   role: string;
   avatar: string;
   /** La foto de la persona (URL pública de S3) o `null`: la hoja de reacciones dibuja sus iniciales. */
@@ -557,7 +568,7 @@ export const SECCIONES: { id: SeccionComunidad; icon: IconName; label: string }[
      clave `classroom` sigue siendo la de siempre en el estado, las rutas y los atajos desde Training. */
   { id: 'classroom', icon: 'bookOpen', label: 'Cursos' },
   { id: 'tribu', icon: 'users', label: 'Tribu' },
-  { id: 'ranking', icon: 'trophy', label: 'Ranking' },
+  { id: 'ranking', icon: 'trophy', label: 'Tabla' },
   { id: 'testimonios', icon: 'quote', label: 'Testimonios' },
 ];
 
@@ -699,6 +710,9 @@ function ComunidadPorFormacion({
   // Nombre real de quien está usando la app, para las publicaciones y comentarios propios del
   // Muro — reemplaza el "Kelin Arango" fijo del mock por el dato de la sesión.
   const nombreUsuario = user?.name?.trim() || 'Tú';
+  // Spec 046 (D3): el compositor muestra cómo te verán en el Muro: con tu sobrenombre, si lo elegiste.
+  const { mio: miSobrenombre } = useMiSobrenombre();
+  const nombreEnElCompositor = miSobrenombre?.sobrenombre?.trim() || nombreUsuario;
   const primerNombreUsuario = nombreUsuario.split(' ')[0];
 
   /*
@@ -1492,6 +1506,13 @@ function ComunidadPorFormacion({
 
   // Ventana Externa de Publicación a Pantalla Completa
   const [createPostModalVisible, setCreatePostModalVisible] = useState(false);
+  /** Spec 045: la ayuda del compositor cuando lo abre el recorrido de bienvenida (sin ella, la de siempre). */
+  const [ayudaDelComposer, setAyudaDelComposer] = useState<string | undefined>(undefined);
+  /* Spec 045: el recorrido no dibuja su pastilla «Tu primera publicación» encima del compositor abierto. */
+  useEffect(() => {
+    marcarComposerDelMuroAbierto(createPostModalVisible);
+    if (!createPostModalVisible) setAyudaDelComposer(undefined);
+  }, [createPostModalVisible]);
   const [newPostText, setNewPostText] = useState('');
   /**
    * Clave de la categoría elegida (`REVELACIONES`, `AGRADECIMIENTO`, …) o `null` si la persona no
@@ -1520,6 +1541,8 @@ function ComunidadPorFormacion({
   const [attachedPhotos, setAttachedPhotos] = useState<FotoMuroNormalizada[]>([]);
   const [agregandoFoto, setAgregandoFoto] = useState(false);
   const [subiendoPublicacion, setSubiendoPublicacion] = useState(false);
+  /** Issue #149: por qué falló la última publicación; se muestra dentro del compositor. */
+  const [errorAlPublicar, setErrorAlPublicar] = useState<string | null>(null);
 
   // Proporción real (ancho ÷ alto) de la foto de cada publicación que tiene UNA sola, indexada por
   // id de publicación. El feed no manda el tamaño de la foto (`WallMedia` es solo `url` +
@@ -2037,8 +2060,10 @@ function ComunidadPorFormacion({
    * las hereda solas.
    */
   useEffect(() => {
-    const params = route.params as { abrirComposerMuro?: boolean } | undefined;
+    const params = route.params as { abrirComposerMuro?: boolean; desdeElRecorrido?: boolean } | undefined;
     if (!params?.abrirComposerMuro) return;
+    // Spec 045: desde el recorrido de bienvenida, el compositor de siempre con otra ayuda («¿Quién eres y qué vienes a cambiar?»).
+    setAyudaDelComposer(params.desdeElRecorrido ? AYUDA_DEL_PRIMER_POST : undefined);
 
     // Misma razón que el atajo de la Clase Diaria de arriba: `irASeccion` apaga Classroom si el
     // aprendiz venía de ahí. Este era el camino con el que el dueño del proyecto encontró el bug
@@ -2048,7 +2073,7 @@ function ComunidadPorFormacion({
     abrirElComposer();
     // Se consume una sola vez, igual que `abrirCursoId`: sin esto, volver a esta pestaña
     // reabriría el composer aunque la persona lo hubiera cerrado a propósito.
-    (navigation as any).setParams({ abrirComposerMuro: undefined });
+    (navigation as any).setParams({ abrirComposerMuro: undefined, desdeElRecorrido: undefined });
   }, [route.params, navigation, abrirElComposer]);
 
   /**
@@ -2603,13 +2628,6 @@ function ComunidadPorFormacion({
   // sin subir por S3 sin configurar, PUT a S3 fallido) — esos ya traen un mensaje específico y
   // accionable, así que se muestran tal cual en vez de pisarlos con el genérico de
   // `mensajeDeError`.
-  const mensajeDeFalloAlPublicar = (error: unknown): string => {
-    const porDefecto = 'No pudimos publicar. Intenta de nuevo en un momento.';
-    if (error instanceof ApiError) {
-      return mensajeDeError(error, porDefecto);
-    }
-    return error instanceof Error && error.message ? error.message : porDefecto;
-  };
 
   /**
    * Pide el cierre del hábito de post diario y, solo si de verdad se cerró recién, se lo dice a la
@@ -2646,6 +2664,7 @@ function ComunidadPorFormacion({
       return;
     }
     if (subiendoPublicacion) return;
+    setErrorAlPublicar(null);
 
     // El modal se cierra YA y la publicación aparece en el muro en el mismo gesto: la subida a S3
     // y el POST siguen en segundo plano (ver `useWallFeed.publicarOptimista`). Antes esto esperaba
@@ -2688,7 +2707,9 @@ function ComunidadPorFormacion({
       setAttachedPhotos(fotos);
       setCategoriaSeleccionada(categoria);
       setCreatePostModalVisible(true);
-      Alert.alert('No se pudo publicar', mensajeDeFalloAlPublicar(error));
+      // Issue #149: el motivo va DENTRO del compositor, con «Reintentar». Un `Alert` acá quedaba detrás del compositor que se
+      // acaba de reabrir (y, en el recorrido de bienvenida, detrás de su velo): parecía que «Publicar» no hacía nada.
+      setErrorAlPublicar(mensajeDeFalloAlPublicar(error));
     } finally {
       setSubiendoPublicacion(false);
     }
@@ -3410,7 +3431,7 @@ function ComunidadPorFormacion({
                   }))}
                   valor={tipoRanking}
                   onCambiar={setTipoRanking}
-                  accessibilityLabel="Tabla del ranking"
+                  accessibilityLabel="Tabla de posiciones"
                   achicarTexto
                 />
               </View>
@@ -4683,7 +4704,7 @@ function ComunidadPorFormacion({
                     disabled={enviandoMedia}
                     style={[styles.mediaOptionBtn, { opacity: enviandoMedia ? 0.4 : 1 }]}
                     accessibilityRole="button"
-                    accessibilityLabel="Enviar un sticker"
+                    accessibilityLabel="Enviar una figurita"
                   >
                     <Icon name="smile" size={24} color={c.goldInk} />
                   </Presionable>
@@ -4964,10 +4985,15 @@ function ComunidadPorFormacion({
       {/* ========================================================================= */}
       <NuevaPublicacion
         visible={createPostModalVisible}
-        alCancelar={() => setCreatePostModalVisible(false)}
+        textoDeAyuda={ayudaDelComposer}
+        alCancelar={() => {
+          setErrorAlPublicar(null);
+          setCreatePostModalVisible(false);
+        }}
         alPublicar={handlePublishPost}
         publicando={subiendoPublicacion}
-        autor={{ nombre: nombreUsuario, firma: firmaDePublicacion, avatarUrl: user?.avatarUrl }}
+        errorAlPublicar={errorAlPublicar}
+        autor={{ nombre: nombreEnElCompositor, firma: firmaDePublicacion, avatarUrl: user?.avatarUrl }}
         texto={newPostText}
         alCambiarTexto={setNewPostText}
         categorias={{

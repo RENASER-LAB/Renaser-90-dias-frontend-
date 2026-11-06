@@ -340,7 +340,7 @@ export function AccionesQueMuevenLaMeta({
               accion.titulo,
               etiquetaDeLaAccion(accion),
               accion.completada ? 'cumplida' : accion.bloqueada ? 'se abre al completar la primera' : null,
-              esDeHoy ? 'abre Training' : puedeAgendar ? 'abre Agendar' : null,
+              esDeHoy ? 'abre Entrenar' : puedeAgendar ? 'abre Agendar' : null,
             ]
               .filter(Boolean)
               .join(', ');

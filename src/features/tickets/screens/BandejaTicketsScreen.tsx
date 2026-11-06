@@ -65,7 +65,7 @@ export function BandejaTicketsScreen({ onVolver }: { onVolver: () => void }) {
         </Pressable>
         <View style={{ flex: 1, flexShrink: 1 }}>
           <Text style={[t.cardTitle, { color: c.textStrong }]} numberOfLines={1}>
-            Tickets de mentoría
+            Consultas de mentoría
           </Text>
           <Text style={[t.body, { color: c.textSoft, fontSize: 12.5 }]} numberOfLines={1}>
             Los bloqueos abiertos en toda la plataforma
@@ -91,7 +91,7 @@ export function BandejaTicketsScreen({ onVolver }: { onVolver: () => void }) {
         {!bandeja.cargando && !bandeja.fallo ? (
           <Text style={[t.body, { color: c.textSoft, fontSize: 13, lineHeight: 19 }]}>
             {resumen.total === 0
-              ? 'No hay tickets de mentoría.'
+              ? 'No hay consultas de mentoría.'
               : `${resumen.sinResponder} sin responder · ${resumen.respondidos} respondidos` +
                 (bandeja.hayMas ? `, de los ${resumen.total} cargados hasta acá.` : '.')}
           </Text>
@@ -120,7 +120,7 @@ export function BandejaTicketsScreen({ onVolver }: { onVolver: () => void }) {
             onPress={bandeja.verMas}
             disabled={bandeja.cargandoMas}
             accessibilityRole="button"
-            accessibilityLabel="Ver más tickets"
+            accessibilityLabel="Ver más consultas"
             style={[estilos.boton, { borderColor: c.border }]}
           >
             <Text style={[t.body, { color: c.textStrong, fontSize: 14, fontWeight: '500' }]}>
@@ -222,7 +222,7 @@ function Fallo({ bandeja }: { bandeja: ReturnType<typeof useBandejaDeTickets> })
         style={[t.body, { color: c.textSoft, fontSize: 13, textAlign: 'center', marginTop: 6, lineHeight: 19 }]}
       >
         {sinPermiso
-          ? 'Ver todos los tickets de mentoría es de líderes de mentores, administradores y alquimistas. Si crees que es un error, escríbelo por soporte.'
+          ? 'Ver todas las consultas de mentoría es de líderes de mentores, administradores y alquimistas. Si crees que es un error, escríbelo por soporte.'
           : bandeja.fallo === 'sin_red'
             ? 'Revisa tu conexión y vuelve a intentarlo.'
             : 'Vuelve a intentarlo. Si sigue pasando, avísanos por soporte.'}

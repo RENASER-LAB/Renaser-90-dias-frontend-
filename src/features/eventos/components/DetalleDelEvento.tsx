@@ -19,6 +19,9 @@ import { HojaQuienRespondio } from './asistencia/HojaQuienRespondio';
 import { TarjetaDeAsistencia } from './asistencia/TarjetaDeAsistencia';
 import { BotonVolver, EtiquetaAsistencia, LETRA, Parrafo } from './piezas';
 import { RotuloDeFormacion } from '../../formaciones/components/RotuloDeFormacion';
+import { Icon } from '../../../components/Icon';
+import { lineaDelOrganizador } from '../utils/audienciaDelFormulario';
+import { ParaQuienEsDelEvento } from './audiencia/ParaQuienEsDelEvento';
 
 /**
  * El detalle de un evento (E-5): cuándo, dónde, «Unirme» si hay link, y «Voy» / «No voy». Para
@@ -31,6 +34,9 @@ import { RotuloDeFormacion } from '../../formaciones/components/RotuloDeFormacio
  * mentores (`verAsistencia`), la tarjeta «Asistencia» con quién respondió y «Pasar lista». Si el
  * servidor no la entrega (backend viejo, 404; sin permiso, 403), no aparece.
  */
+/** Spec 047 (decisión P4-B del dueño): la única línea nueva en Comunidad → Eventos. Solo sale si Google confirmó que la sala graba o transcribe. */
+export const AVISO_DE_GRABACION = 'Esta sesión se graba y se transcribe.';
+
 export function DetalleDelEvento({
   oc,
   puedeGestionar,
@@ -69,10 +75,18 @@ export function DetalleDelEvento({
   const { lista } = useAsistenciaDelEvento(evento.id, oc.inicioOcurrencia, verAsistencia);
   const [hojaAbierta, setHojaAbierta] = useState(false);
   /* Spec 040: cómo va la sala de Meet, solo para quien administra y solo en un evento de Meet. */
+  /* Spec 044: un evento con audiencia elegida se lee fresco siempre (trae «Para quién es» para quien lo gestiona y quién lo organizó). */
+  const conAudienciaElegida = evento.audiencia === 'SELECTION';
   const { evento: fresco, lectura, reintentando, fallo: falloAlReintentar, reintentar } = useMeetDelEvento(
     evento.id,
-    puedeGestionar && evento.tipoUbicacion === 'MEET',
+    /* Spec 047 (P4-B): un evento por Meet se lee fresco para TODOS, para saber si la sesión se graba y se transcribe. */
+    evento.tipoUbicacion === 'MEET' || conAudienciaElegida,
   );
+  /* Quien creó el evento (o lo gestiona: el líder de sus mentores, Administración) recibe la audiencia; nadie más (FR-018). */
+  const gestionaEste = puedeGestionar || !!fresco?.audienciaElegida;
+  const invito = conAudienciaElegida && !fresco?.audienciaElegida && fresco?.organizador
+    ? lineaDelOrganizador(fresco.organizador.nombre, fresco.organizador.rol)
+    : null;
   const meet = fresco?.meet ?? null;
   const avisoDeLaSala = lineaDeLaSala(meet);
   const avisoDelPlan = avisoDelPlanDeGoogle(meet);
@@ -123,6 +137,7 @@ export function DetalleDelEvento({
             {marca ? <LogoDeMarca marca={marca} size={20} decorativo /> : null}
             <Parrafo>Es por {nombreDelLink(link)}.</Parrafo>
           </View>
+          {fresco?.seGrabaYTranscribe ? <Parrafo>{AVISO_DE_GRABACION}</Parrafo> : null}
           {vas ? (
             <BotonPrincipal etiqueta="Unirme" icono="play" onPress={unirme} accessibilityLabel={`Unirme por ${nombreDelLink(link)}`} />
           ) : (
@@ -133,7 +148,16 @@ export function DetalleDelEvento({
         <Parrafo tono="fuerte">Lugar: {evento.valorUbicacion}</Parrafo>
       ) : null}
 
-      {puedeGestionar && meet ? (
+      {invito ? (
+        <View style={estilos.porFila}>
+          <Icon name="user" size={20} color={c.goldInk} />
+          <Parrafo tono="fuerte">{invito}</Parrafo>
+        </View>
+      ) : null}
+
+      {fresco?.audienciaElegida ? <ParaQuienEsDelEvento resumen={fresco.audienciaElegida} zona={evento.zona} /> : null}
+
+      {gestionaEste && meet ? (
         <View style={{ gap: 8 }}>
           {lineaSerie ? <Parrafo>{lineaSerie}</Parrafo> : null}
           {avisoDeLaSala ? <Parrafo tono="peligro">{avisoDeLaSala}</Parrafo> : null}
@@ -182,7 +206,7 @@ export function DetalleDelEvento({
         </View>
       </View>
 
-      {puedeGestionar ? (
+      {gestionaEste ? (
         <View style={{ gap: 10, marginTop: 8 }}>
           <Text style={[estilos.subtitulo, { color: c.textStrong }]}>Administrar</Text>
           {sePuedeEditarEnLaApp(evento) ? (

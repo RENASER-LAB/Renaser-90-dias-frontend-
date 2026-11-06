@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { leerResumen, personaTolerante } from './audienciaSchemas';
 import { formacionTolerante } from '../../formaciones/api/formacionTolerante';
 import type { Asistencia, Evento, Ocurrencia, ReglaDeAviso, ResumenDeMeet, TipoUbicacion } from '../types/eventos.types';
 
@@ -59,6 +60,11 @@ const eventoSchema = z
     formation: formacionTolerante,
     // Spec 040: solo para ADMIN y ALCHEMIST, y solo en un evento con enlace automático.
     meet: meetSchema,
+    // Spec 044: «Para quién es» (solo para quien lo gestiona) y el organizador. Tolerantes: rotos o ausentes = no vinieron.
+    audience: z.unknown().optional(),
+    organizer: z.unknown().optional(),
+    // Spec 047 (P4-B): la sesión se graba y se transcribe (lo confirmó Google). Tolerante: cualquier cosa que no sea `true` es «no».
+    recordingNotice: z.unknown().optional(),
   })
   .passthrough();
 
@@ -133,6 +139,8 @@ function aResumenDeMeet(crudo: EventoCrudo['meet']): ResumenDeMeet | null {
 
 export function aEvento(crudo: EventoCrudo): Evento {
   const meet = aResumenDeMeet(crudo.meet);
+  const audienciaElegida = leerResumen(crudo.audience);
+  const organizador = crudo.organizer ? personaTolerante(crudo.organizer) : null;
   return {
     id: crudo.id,
     titulo: crudo.title.trim() || 'Evento',
@@ -158,6 +166,11 @@ export function aEvento(crudo: EventoCrudo): Evento {
     ...(crudo.formation ? { formacion: crudo.formation } : {}),
     // Solo si el servidor la mandó: el evento de un servidor anterior (y el de un aprendiz) queda idéntico al de siempre.
     ...(meet ? { meet } : {}),
+    // Spec 044: solo si el servidor los mandó (el detalle); la lista y un servidor anterior quedan como siempre.
+    ...(audienciaElegida ? { audienciaElegida } : {}),
+    ...(organizador ? { organizador } : {}),
+    // Spec 047: solo si el servidor lo afirma; un servidor anterior no lo manda y el evento queda igual.
+    ...(crudo.recordingNotice === true ? { seGrabaYTranscribe: true } : {}),
   };
 }
 

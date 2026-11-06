@@ -1,0 +1,62 @@
+# 01 — Cuenta nueva: al llegar a Hoy sale el recorrido (Hoy → Plan → Entrenar → primera publicación), se publica de verdad con el compositor
+# real del Muro y sale la felicitación con confeti. Después, la burbuja de SER solo ofrece el Pacto (D1).
+# Precondición: backend con V180; aprendiz NUEVO (creado después de la migración: sin fila en `recorrido_de_bienvenida`) con su programa activado,
+# sin publicaciones, y la galería del emulador con al menos una foto.
+# cuenta: aprendiz-nuevo
+# spec 045 FR-001, FR-002, FR-003, FR-006, FR-007, FR-011, FR-012
+appId: com.renaser.app
+---
+- extendedWaitUntil:
+    visible: "Te damos la bienvenida.*"
+    timeout: 60000
+- takeScreenshot: R01a-bienvenida
+- tapOn: "Empezar"
+- assertVisible: "2 de 5"
+- assertVisible: "Lo de hoy, de un vistazo.*"
+- takeScreenshot: R01b-hoy
+- tapOn: "Siguiente"
+- assertVisible: "Tus objetivos y la semana.*"
+- takeScreenshot: R01c-plan
+- tapOn: "Siguiente"
+- assertVisible: "Entrenar"
+- assertVisible: "Tus hábitos del día, hora por hora.*"
+- takeScreenshot: R01d-entrenar
+- tapOn: "Siguiente"
+- assertVisible: "Tu primera publicación"
+- takeScreenshot: R01e-muro
+- tapOn: "Escribir mi publicación"
+- extendedWaitUntil:
+    visible: "Nueva publicación"
+    timeout: 15000
+- assertVisible: "¿Quién eres y qué vienes a cambiar?"
+- tapOn: "Texto de la publicación"
+- inputText: "Hola, soy nueva y vengo a recuperar mi disciplina."
+- hideKeyboard
+- tapOn: "Agregar una foto"
+- extendedWaitUntil:
+    visible: "Photo taken on.*"
+    timeout: 20000
+- tapOn:
+    text: "Photo taken on.*"
+    index: 0
+- runFlow:
+    when:
+      visible: "Done|Listo"
+    commands:
+      - tapOn: "Done|Listo"
+- extendedWaitUntil:
+    visible: "Quitar la foto 1"
+    timeout: 20000
+- takeScreenshot: R01f-compositor
+- tapOn: "Publicar"
+- extendedWaitUntil:
+    visible: "¡Tu primera publicación!"
+    timeout: 30000
+- assertVisible: "Ya eres parte del grupo\\."
+- takeScreenshot: R01g-confeti
+- tapOn: "Seguir"
+# D1: después del recorrido, la burbuja de SER solo ofrece el Pacto.
+- extendedWaitUntil:
+    visible: "Leer y firmar el Pacto"
+    timeout: 30000
+- takeScreenshot: R01h-pacto

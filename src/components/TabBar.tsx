@@ -9,6 +9,7 @@ import { useResponsive } from '../theme/responsive';
 import { Icon, IconName } from './Icon';
 import { pestanasOcultas } from '../navigation/pestanasOcultas';
 import { useBarraInferior } from '../navigation/barraAlDesplazar/BarraInferior';
+import { avisarQueLaBarraSeMovio, registrarBotonDePestana } from '../features/recorrido/estado/focoDeLasPestanas';
 
 /**
  * El ícono de cada pestaña, **todos en este mapa** —también el del botón dorado de TRAINING—: cambiar
@@ -26,7 +27,7 @@ import { useBarraInferior } from '../navigation/barraAlDesplazar/BarraInferior';
  * > `barraDePestanasIconos.test.ts` frena que se repita un dibujo que ya significa otra cosa.
  */
 const ICONS: Record<string, IconName> = { Hoy: 'house', Plan: 'clipboardList', Training: 'bicepsFlexed', Comunidad: 'usersThree', Yo: 'circleUser' };
-const LABELS: Record<string, string> = { Hoy: 'HOY', Plan: 'PLAN', Training: 'TRAINING', Comunidad: 'COMUNIDAD', Yo: 'YO' };
+const LABELS: Record<string, string> = { Hoy: 'HOY', Plan: 'PLAN', Training: 'ENTRENAR', Comunidad: 'COMUNIDAD', Yo: 'YO' };
 
 /**
  * **Los cinco nombres se ven siempre**, y la pestaña activa se distingue por el color dorado
@@ -152,6 +153,7 @@ export function TabBar({ state, navigation, descriptors }: BottomTabBarProps) {
             if (isCenter) {
               return (
                 <Pressable key={route.key} onPress={onPress} style={styles.item} hitSlop={8}
+                ref={boton => registrarBotonDePestana(route.name, boton)} onLayout={avisarQueLaBarraSeMovio}
                 accessibilityRole="tab" accessibilityState={{ selected: focused }} accessibilityLabel={LABELS[route.name]}>
                   {/* `c.bg` y no `c.cardBg`: el aro es opaco a propósito (mismo bug de arriba) y
                       además separa el círculo tanto de la barra como del contenido de la pantalla,
@@ -175,6 +177,7 @@ export function TabBar({ state, navigation, descriptors }: BottomTabBarProps) {
 
             return (
               <Pressable key={route.key} onPress={onPress} style={styles.item} hitSlop={8}
+                ref={boton => registrarBotonDePestana(route.name, boton)} onLayout={avisarQueLaBarraSeMovio}
                 accessibilityRole="tab" accessibilityState={{ selected: focused }} accessibilityLabel={LABELS[route.name]}>
                 {/* La caja mide lo que el ícono: la pastilla va por fuera del flujo (`absolute`) y no
                     cambia el alto de la barra ni corre el nombre. */}
@@ -222,7 +225,10 @@ const styles = StyleSheet.create({
   bar: { flexDirection: 'row', alignItems: 'flex-end' },
   /* 48px minimos de zona pulsable por pestana (AGENTS.md 4); antes el alto lo definia el
      contenido (icono 20 + gap + etiqueta) y se quedaba en ~38. */
-  item: { flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: 48, gap: 7 },
+  /* Issue #152: 3px a cada lado para que dos etiquetas vecinas nunca se toquen. Con la letra del sistema grande, «ENTRENAR»
+     (más larga que el «TRAINING» de antes) y «COMUNIDAD» llenaban su caja entera y quedaban pegadas; con este aire,
+     `adjustsFontSizeToFit` las achica un poco antes. */
+  item: { flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: 48, gap: 7, paddingHorizontal: 3 },
   centerWrap: { marginTop: -22, borderRadius: 29, borderWidth: 6, shadowOpacity: 0.45, shadowRadius: 12, shadowOffset: { width: 0, height: 8 }, elevation: 6 },
   center: { alignItems: 'center', justifyContent: 'center' },
   pastilla: { position: 'absolute' },

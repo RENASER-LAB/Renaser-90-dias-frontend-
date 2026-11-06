@@ -1,4 +1,8 @@
 import { fuentes } from '../theme/fuentes';
+import { HojaDelSobrenombre } from '../features/sobrenombre/components/HojaDelSobrenombre';
+import { useMiSobrenombre } from '../features/sobrenombre/hooks/useMiSobrenombre';
+import { TEXTOS_DEL_SOBRENOMBRE } from '../features/sobrenombre/utils/reglasDelSobrenombre';
+import { pedirVerElRecorrido } from '../features/recorrido/estado/recorridoEnCurso';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Image,
@@ -313,6 +317,9 @@ export default function YoScreen() {
   const { rs, isTablet, horizontalPadding, contentMaxWidth } = useResponsive();
   const { user, logout, actualizarPerfil, refrescarPerfil } = useAuth();
   const { resumen, recargar: recargarResumen } = useResumenHome();
+  /* Spec 046: el sobrenombre del Muro (Ajustes → Perfil). */
+  const sobrenombre = useMiSobrenombre();
+  const [hojaDelSobrenombre, setHojaDelSobrenombre] = useState(false);
   /* La misma cuenta que «Fase actual» y «Arquitectura de tiempo» de Plan (`faseEnCurso`): número, nombre,
      rango y día dentro de la fase salen de un solo lugar, así Yo no puede decir otra cosa que Plan. */
   const faseActual = faseEnCurso(resumen?.fase, resumen?.diaPrograma, resumen?.duracionDias);
@@ -1179,13 +1186,28 @@ export default function YoScreen() {
                 detalle="Nombre, foto, WhatsApp y departamento"
                 onPress={() => setActiveView('editar_perfil')}
               />
+              {/* Spec 046: el sobrenombre que reemplaza su nombre en el Muro (solo si el servidor lo ofrece). */}
+              {sobrenombre.mio ? (
+                <FilaDeAjuste
+                  icono="pencil"
+                  titulo={TEXTOS_DEL_SOBRENOMBRE.filaDeYo}
+                  detalle={sobrenombre.mio.sobrenombre ?? TEXTOS_DEL_SOBRENOMBRE.sinSobrenombre}
+                  onPress={() => setHojaDelSobrenombre(true)}
+                />
+              ) : null}
             </GrupoDeAjustes>
             ) : null}
+            <HojaDelSobrenombre
+              visible={hojaDelSobrenombre}
+              mio={sobrenombre.mio}
+              alCerrar={() => setHojaDelSobrenombre(false)}
+              alGuardar={sobrenombre.actualizar}
+            />
 
             <GrupoDeAjustes titulo="Tu proceso">
               <FilaDeAjuste
                 icono="listChecks"
-                titulo="Mi onboarding"
+                titulo="Mis documentos"
                 detalle="Tu Pacto de Renacimiento"
                 onPress={() => setActiveView('onboarding')}
               />
@@ -1215,6 +1237,16 @@ export default function YoScreen() {
                 titulo="El Método Renaser"
                 detalle={`${METODO_FASES.length} fases para comprenderte y sostener tu transformación`}
                 onPress={() => setActiveView('metodo')}
+              />
+              {/* Spec 045 (US5): volver a ver el recorrido de bienvenida. Lleva a Hoy y lo empieza desde el principio. */}
+              <FilaDeAjuste
+                icono="map"
+                titulo="Ver el recorrido"
+                detalle="Dónde está cada cosa: Hoy, Plan y Entrenar"
+                onPress={() => {
+                  setActiveView('main');
+                  pedirVerElRecorrido();
+                }}
               />
             </GrupoDeAjustes>
 
@@ -1512,7 +1544,7 @@ export default function YoScreen() {
             <TerminosAceptadosVista aceptados={terminosAceptados.aceptados} />
           ) : (
             <Text style={[t.body, { color: c.textSoft }]}>
-              {terminosAceptados ? 'No pudimos leer tus términos. Vuelve a Mi onboarding e inténtalo de nuevo.' : 'Cargando tus términos…'}
+              {terminosAceptados ? 'No pudimos leer tus términos. Vuelve a Mis documentos e inténtalo de nuevo.' : 'Cargando tus términos…'}
             </Text>
           )}
         </ScrollView>

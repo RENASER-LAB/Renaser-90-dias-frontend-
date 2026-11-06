@@ -816,3 +816,69 @@ nada más:
   encabezado): con publicaciones a la vista relee la primera página en silencio (`useWallFeed.refrescar` → `releerEnSilencio`: sin «Cargando el muro…», sin
   vaciar ni volver arriba, `refrescando` mueve el círculo); con la lista vacía o tras un error es la carga de siempre. Pruebas: `muroSeReleeAlModerar` y
   `muroCompactoEnComunidad`.
+
+## Cambio por pedido del dueño — 2026-11-06 — el sobrenombre en el Muro (spec 046)
+
+Pedido del dueño (06/11): desde el día 7 la persona elige un sobrenombre que reemplaza su nombre en el Muro, y Administración lo puede configurar o editar.
+Spec, decisiones (D1–D9) y vista previa en el backend (`specs/046-sobrenombre-en-el-muro/`, D-331). **El dueño autorizó** tocar Hoy (la fila), Comunidad → Muro
+(el nombre real para el equipo) y Yo → Ajustes → Perfil. Lo que cambia y nada más:
+* **Hoy, desde el día 7** (`features/sobrenombre/`, `FilaDelSobrenombre`): bajo la frase, la fila compacta «Elige cómo te verán en el Muro · Tu sobrenombre ›» con «Ahora no» (✕);
+  **«Ahora no» no la vuelve a mostrar** (D2, lo guarda el servidor) y después se elige solo desde Yo. Sale hasta que elija uno o diga «Ahora no» (no solo el día 7). Sin lectura
+  del servidor no hay fila. Entra en el bloque de debajo de la frase sin dejar hueco.
+* **La hoja** (`HojaDelSobrenombre`, `HojaDesdeAbajo`): el campo con su contador «n / 20», «Así te verán en el Muro. Tu mentor y el equipo siguen viendo tu nombre.», la vista previa de
+  una publicación con el sobrenombre, «Guardar» y, si ya tiene uno, «Volver a mi nombre». Lo que rechaza el servidor (repetido en la formación, palabra prohibida, antes de los 30 días)
+  se dice bajo el campo, sin diálogos; `tacto.logro()` al guardar. Sin animación nueva.
+* **Yo → Ajustes → Perfil → «Sobrenombre en el Muro»**: abre la misma hoja; dice el sobrenombre o «Con tu nombre».
+* **El Muro** muestra lo que manda el servidor: `authorName` ya es el sobrenombre (un APK anterior también lo ve). Al equipo (mentor, guía, líder, Administración, Alquimista, Soporte TI) le
+  llega además el nombre real (`authorRealName` / `realName`) y se dibuja debajo en gris en la tarjeta, la fila compacta, los comentarios, el visor y «quién reaccionó». La foto se ve (D4).
+* **Administración**: en la ficha de la persona, «Sobrenombre en el Muro» con «Cambiar» / «Ponerle uno» y «Quitar», con motivo (se le avisa a la persona sin el motivo, D7); y Más
+  opciones → «Sobrenombres»: la lista con buscador y las palabras que no se pueden usar (agregar y quitar).
+* **Pruebas:** Jest `reglasDelSobrenombre`, `sobrenombreEnElMuro` y `hojaYFilaDelSobrenombre`. Maestro: `.maestro/sobrenombre/01–04`.
+* **Hace falta el backend con V181 antes y un APK nuevo** (solo JavaScript).
+
+## Cambio por pedido del dueño — 2026-11-06 — Comunidad → Eventos: eventos para quien tú elijas, y el líder en el chat de soporte (spec 044, D-326)
+
+Textual (resumido): «El líder de mentores puede agendar una sesión de Meet para un mentor o una persona específica, o para todos los de semáforo verde,
+rojo o amarillo… también con el alquimista o administrador. Y el mentor también puede crear una sesión con todos sus alumnos, con alumnos específicos, o
+por semáforo. Prioridad: los eventos y los recordatorios a los números específicos.» Spec, decisiones (P1 a P9) y contrato en el backend
+(`specs/044-eventos-por-audiencia/`). Vista previa aprobada: https://claude.ai/artifact/EVHGP8P1mWqgwz7B7Nu3Uc. Lo que cambia y nada más:
+* **Quién crea eventos** lo dice el servidor (`GET /api/v1/calendar/audience/options`, `useOpcionesDeAudiencia`), no una lista de roles: además de
+  Administración y Alquimista, el **líder de mentores**, el **mentor** y la **guía de aprendiz** ven «Crear evento» (corrige la decisión del 26/09 de
+  `permisosDeEventos.ts`, que ahora solo dice quién ADMINISTRA todo el calendario). El mentor y el líder solo eligen «Sesión especial» y «Encuentro
+  espontáneo». Con el interruptor `eventos.convocar` apagado o contra un backend anterior, el formulario es el de siempre (para todos).
+* **El formulario suma «¿Para quién es?»** (`components/audiencia/ParaQuienEs.tsx`), en el mismo scroll, entre «Dónde es» y la descripción: chips de 48
+  con ícono y palabra de lo que el servidor ofrece (Todos, Mis alumnos, Personas, Grupos, Mentores, Por semáforo, Personal), que se suman. Por semáforo:
+  Verde, Amarillo y Rojo con ícono, palabra, ayuda y la cifra de hoy (nunca solo color). Personas: «Elegir personas» abre una `HojaDesdeAbajo` con
+  buscador al servidor (foto o iniciales, nombre, rol y grupo; nunca el semáforo; `ElegirPersonasHoja`); lo elegido queda en píldoras con su ✕.
+  Personal: «Todo el personal» o por nombre. Al editar con colores, «Volver a calcular» (la foto del semáforo es la del día en que se guardó). Una nota
+  dice «Tus invitados no ven por qué los elegiste ni a quién más invitaste». Sobre el botón, **«Llega a N personas»** («alumnos» para el mentor), que
+  cuenta el servidor 300 ms después del último cambio (`useVistaPreviaDeAudiencia`). Abre en «Todos» para Administración, en «Mis alumnos» para el
+  mentor y sin elección para el líder.
+* **El detalle**: al invitado, «Te invitó Rocío, líder de mentores» (nunca el motivo ni el color). A quien lo creó o lo gestiona (Administración,
+  Alquimista y el líder si lo creó uno de sus mentores), **«Para quién es · Solo lo ves tú»** con cada parte y su cifra («Rojo · Según el semáforo del 6
+  de noviembre · 15», las personas por nombre) y «Llega a N personas»; y la sección Administrar de ESE evento (`ParaQuienEsDelEvento`). Un evento con
+  audiencia elegida se lee fresco al abrirlo (`GET /events/{id}`), y se puede editar en la app.
+* **Comunidad → Tribu**: la sección «Soporte · N» también se le muestra al **líder de mentores** (`veLaSeccionDeSoportes`), que desde la spec 044 está en
+  el chat de soporte de los aprendices de su formación.
+* **No cambian**: el resto de Eventos (calendario, tarjetas, «Mi agenda», «Voy» / «No voy», pasar lista), los demás tabs ni el chat. Sin dependencias
+  nuevas, sin código nativo y sin animaciones nuevas (`Presionable` y el «tic» de selección).
+* **Pruebas:** Jest `audienciaDelFormulario`, `audienciaSchemas`, `paraQuienEs` y `seccionDeSoportes`. **Hace falta el backend con la spec 044 (V182 y
+  V183) y un APK nuevo** (solo JavaScript: la app no se actualiza por aire).
+
+## Cambio por pedido del dueño — 2026-11-06 — la transcripción de las sesiones por Meet se guarda, cifrada y sin mostrarse (spec 047)
+
+Textual: «el link es automático pero lo más importante: que puede ingresar cualquier persona si está abierto y se guarde la transcripción, igual que el repo que
+te pasé guarda muy bien esa información, no mostrándola, pero que cumpla». Spec, plan y decisiones en el backend (`specs/047-transcripcion-de-eventos/`, D-332).
+Decisiones del dueño: P1-A (nadie la ve en la app; ADMIN y ALCHEMIST la sacan desde el servidor con motivo), P2-B (transcripción y enlace a la grabación),
+P3-B (6 meses), P4-B (una línea en el detalle del evento) y P5-A. **Casi todo es del servidor**; en la app cambia solo esto:
+* **Comunidad → Eventos, el detalle** (autorizado por el dueño solo para esta línea): bajo «Es por Google Meet.», la línea **«Esta sesión se graba y se
+  transcribe.»** (`AVISO_DE_GRABACION`, `Parrafo` de siempre, sin ícono ni animación), solo si el servidor lo afirma (`recordingNotice: true` en
+  `GET /calendar/events/{id}`: Google confirmó que la sala graba o transcribe). Para que la vea el aprendiz, el detalle de un evento por Meet ahora se lee fresco
+  para todos (`useMeetDelEvento` con `tipoUbicacion === 'MEET'`; antes solo para quien lo gestiona): un pedido más al abrir el detalle de un evento por Meet.
+  El esquema es tolerante: cualquier cosa que no sea `true` es «no», y un servidor anterior no lo manda. **La transcripción nunca llega a la app.**
+* **Política de privacidad** (`public/privacidad/index.html`): la sección «Las sesiones en vivo por Google Meet» (se graban y se transcriben, qué se guarda, para
+  qué, que no se muestra ni se usa con IA, que va cifrada, quién puede sacarla y que se borra a los 6 meses), la fila de Google en «Con quién los compartimos» y
+  una línea en «Cuánto tiempo los guardamos». **Debe publicarse antes de que Soporte TI prenda `eventos.meet.transcripcion`.**
+* **No cambian**: el resto del detalle, la lista, el calendario, el formulario, los demás tabs. Sin dependencias ni código nativo.
+* **Pruebas:** Jest `avisoDeGrabacion` y `paginaPoliticaDePrivacidad` (marcas `spec 047 FR-018`).
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire) y el backend con V184. Contra un backend anterior la línea no aparece.

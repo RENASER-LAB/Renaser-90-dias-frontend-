@@ -2,7 +2,7 @@ import { Platform } from 'react-native';
 
 import type { PuntoGps } from '../types/carrera.types';
 import { cargarCarrera, carreraActual, recibirPuntos, resumenParaLaNotificacion } from './carreraEnVivo';
-import { ponerCentroDelMapa } from './centroDelMapa';
+import { borrarCentroGuardadoDelMapa, ponerCentroDelMapa } from './centroDelMapa';
 import { leerCarreraEnCurso } from './almacenCarrera';
 import { mostrarNotificacionDeCarrera, quitarNotificacionDeCarrera } from './notificacionDeCarrera';
 import { laCarreraYaEmpezo } from '../utils/notificacionUnica';
@@ -142,12 +142,17 @@ export async function empezarGps(): Promise<boolean> {
   }
 }
 
-export async function detenerGps(): Promise<void> {
+/**
+ * Detiene el GPS y su servicio. `recienArrancado`: se acaba de arrancar (la carrera se canceló en la cuenta mientras arrancaba) y
+ * `hasStartedLocationUpdatesAsync` todavía puede decir que no, aunque el servicio ya esté en primer plano (visto el 2026-11-06):
+ * se detiene sin preguntar.
+ */
+export async function detenerGps(recienArrancado = false): Promise<void> {
   const m = cargar();
   if (!m) return;
   try {
     arrancadoEnEsteProceso = false;
-    if (await m.Location.hasStartedLocationUpdatesAsync(TAREA_GPS_DE_LA_CARRERA)) {
+    if (recienArrancado || (await m.Location.hasStartedLocationUpdatesAsync(TAREA_GPS_DE_LA_CARRERA))) {
       await m.Location.stopLocationUpdatesAsync(TAREA_GPS_DE_LA_CARRERA);
     }
   } catch {
@@ -176,6 +181,8 @@ export async function escucharRumbo(alCambiar: (grados: number) => void): Promis
  * nuevo (falta el aviso «tienes una carrera sin enviar» antes de cerrar sesión: queda anotado en el informe).
  */
 export async function apagarLaCarreraAlSalir(): Promise<void> {
+  // Privacidad (2026-11-06): dónde se vio el mapa por última vez es de quien se va.
+  await borrarCentroGuardadoDelMapa();
   await detenerGps();
   await quitarNotificacionDeCarrera();
 }

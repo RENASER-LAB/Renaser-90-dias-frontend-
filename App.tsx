@@ -12,6 +12,7 @@ import { BarraInferiorProvider } from './src/navigation/barraAlDesplazar/BarraIn
 import { navegacionRef } from './src/navigation/navegacionRef';
 import { RenasiaLauncher } from './src/features/renasia/components/RenasiaLauncher';
 import { SparkieOverlay } from './src/features/sparkie/components/SparkieOverlay';
+import { RecorridoDeBienvenida } from './src/features/recorrido/components/RecorridoDeBienvenida';
 import { AnfitrionAlerta } from './src/components/Alerta';
 import { RadarProvider } from './src/features/radar/RadarContext';
 import { CodigoRenaserOverlay } from './src/features/radar/components/CodigoRenaserOverlay';
@@ -55,6 +56,9 @@ function Shell() {
       {/* El arranque guiado (saludo -> primer post en el Muro -> Pacto), por el mismo motivo y
           con la misma forma. Se apaga solo cuando el Pacto queda firmado. */}
       <SparkieOverlay />
+      {/* El recorrido de bienvenida (spec 045): Hoy, Plan, Entrenar y el primer post en el Muro, una vez por cuenta. Por el mismo
+          motivo que el arranque guiado: ninguna de las cinco pantallas lo dibuja. Se quita borrando esta linea. */}
+      <RecorridoDeBienvenida />
       {/* El Codigo Renaser de esta hora (dias 1-7). Aca arriba y no dentro de Hoy porque para el
           aprendiz es innegociable: dentro de una pestaña se esquivaria tocando otra. */}
       <CodigoRenaserOverlay />

@@ -32,6 +32,7 @@ import { TerminosAdminScreen } from '../../onboarding/terminos/screens/TerminosA
 import { TerminosDeUnaFormacionScreen } from '../../onboarding/terminos/screens/TerminosDeUnaFormacionScreen';
 import { EditorDeTerminosScreen } from '../../onboarding/terminos/screens/EditorDeTerminosScreen';
 import { PublicacionesOcultasScreen } from './PublicacionesOcultasScreen';
+import { SobrenombresAdminScreen } from '../../sobrenombre/screens/SobrenombresAdminScreen';
 import { SemaforoAdminScreen } from './SemaforoAdminScreen';
 import { SemaforoGrupoAdminScreen } from './SemaforoGrupoAdminScreen';
 import { SolicitudesAdminScreen } from './SolicitudesAdminScreen';
@@ -81,6 +82,7 @@ type Vista =
   | { nombre: 'habito-programa'; id: string | null }
   | { nombre: 'categorias-habito' }
   | { nombre: 'publicaciones-ocultas' }
+  | { nombre: 'sobrenombres' }
   | { nombre: 'codigo-renaser-en-fichas' }
   /* La cuenta de Google que crea los enlaces de Meet de los eventos (spec 040). */
   | { nombre: 'cuenta-de-google' }
@@ -318,6 +320,8 @@ export function AdminScreen({ onSalir, abrirEn = 'inicio' }: { onSalir: () => vo
       return <HabitoProgramaFormScreen id={vista.id} estado={habitosDelPrograma} onVolver={volver} />;
     case 'publicaciones-ocultas':
       return <PublicacionesOcultasScreen onVolver={volver} />;
+    case 'sobrenombres':
+      return <SobrenombresAdminScreen onVolver={volver} onAbrirPersona={aprendiz => entrar({ nombre: 'ficha', aprendiz })} />;
     case 'codigo-renaser-en-fichas':
       return <CodigoRenaserEnFichasAdminScreen onVolver={volver} />;
     case 'cuenta-de-google':
@@ -348,6 +352,7 @@ export function AdminScreen({ onSalir, abrirEn = 'inicio' }: { onSalir: () => vo
           onAbrirHabitosDelPrograma={() => entrar({ nombre: 'habitos-programa' })}
           onAbrirFichas={() => entrar({ nombre: 'fichas' })}
           onAbrirPublicacionesOcultas={() => entrar({ nombre: 'publicaciones-ocultas' })}
+          onAbrirSobrenombres={() => entrar({ nombre: 'sobrenombres' })}
           onAbrirCodigoRenaserEnFichas={() => entrar({ nombre: 'codigo-renaser-en-fichas' })}
           onAbrirCuentaDeGoogle={() => entrar({ nombre: 'cuenta-de-google' })}
           onAbrirTerminos={() => entrar({ nombre: 'terminos' })}

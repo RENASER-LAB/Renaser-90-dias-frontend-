@@ -10,6 +10,8 @@
  * sección. Imprescindible es solo lo que permite mostrar y abrir un evento: `id`, título e inicio.
  */
 
+import type { PersonaConvocable, ResumenDeAudiencia } from './audiencia.types';
+
 /** Dónde ocurre. Mismo vocabulario que el cable; un valor desconocido llega como `OTRO`. */
 export type TipoUbicacion = 'INTERNAL_CALL' | 'WEBINAR' | 'ZOOM' | 'MEET' | 'ADDRESS' | 'LINK' | 'OTRO';
 
@@ -75,6 +77,15 @@ export interface Evento {
   formacion?: string | null;
   /** Spec 040: cómo va la sala de Meet automática. Ausente para quien no administra y con un servidor anterior. */
   meet?: ResumenDeMeet | null;
+  /** Spec 047 (P4-B): Google confirmó que la sala graba o transcribe. Solo viene en el detalle (`GET /events/{id}`). */
+  seGrabaYTranscribe?: boolean;
+  /**
+   * Spec 044: «Para quién es». Solo lo manda el servidor a quien creó el evento o lo gestiona (FR-018); para un invitado no existe (FR-016).
+   * Solo viene en el detalle (`GET /events/{id}`), no en la lista.
+   */
+  audienciaElegida?: ResumenDeAudiencia | null;
+  /** Spec 044 (FR-019): quién organizó el evento, para «Te invitó Rocío, líder de mentores». Solo en el detalle. */
+  organizador?: PersonaConvocable | null;
 }
 
 /** Una fecha concreta de un evento (un evento recurrente tiene varias). */

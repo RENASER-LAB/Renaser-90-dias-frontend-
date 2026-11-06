@@ -30,10 +30,10 @@ también en el texto (`grep -n "Plan" docs/decisiones/*.md`). Si dos entradas ch
 |---|---|---|
 | [alarmas.md](alarmas.md) | Alarmas y recordatorios: specs 007–010, voces, canales, el puente de #33 | 9 |
 | [codigo-renaser-y-mi-radar.md](codigo-renaser-y-mi-radar.md) | Código Renaser (días 1–7) y Mi Radar (desde el día 8) | 7 |
-| [comunidad.md](comunidad.md) | Comunidad: Muro, chat, Tribu, Eventos, Cursos y Ranking | 18 |
+| [comunidad.md](comunidad.md) | Comunidad: Muro, chat, Tribu, Eventos, Cursos y Ranking | 21 |
 | [formaciones.md](formaciones.md) | Formaciones (Escuela, Diplomado, Certificación): specs 022–025, 035 y el plazo de cada formación | 8 |
 | [hoy.md](hoy.md) | Hoy: tarjetas, frase del día, semáforo y lo que Hoy muestra | 8 |
-| [ingreso-y-onboarding.md](ingreso-y-onboarding.md) | Login, onboarding, ficha, diagnóstico, términos y el Día 1 | 8 |
+| [ingreso-y-onboarding.md](ingreso-y-onboarding.md) | Login, onboarding, ficha, diagnóstico, términos y el Día 1 | 9 |
 | [kilometros-y-carrera.md](kilometros-y-carrera.md) | Kilómetros diarios: captura, pasos (Health Connect) y la carrera con GPS | 5 |
 | [liderazgo-y-administracion.md](liderazgo-y-administracion.md) | Mentor, líder de mentores, Administración, Alquimista y sus fichas | 15 |
 | [pagos.md](pagos.md) | Cronograma de pagos y «Mi ingreso» (spec 032) | 2 |
@@ -41,7 +41,7 @@ también en el texto (`grep -n "Plan" docs/decisiones/*.md`). Si dos entradas ch
 | [ser-y-fenix.md](ser-y-fenix.md) | SER (el acompañante), el orbe, el fénix y las celebraciones | 9 |
 | [soporte-ti.md](soporte-ti.md) | Soporte TI: interruptores, despliegue, roles personalizados y «ver como» (spec 002) | 2 |
 | [training.md](training.md) | Training: lista por hora, hábitos, evidencias y el editor Planificar | 18 |
-| [transversal.md](transversal.md) | Lo que tocó varios tabs a la vez: diseño, fuentes, barra de pestañas, velocidad, CI y arreglos de E2E | 15 |
+| [transversal.md](transversal.md) | Lo que tocó varios tabs a la vez: diseño, fuentes, barra de pestañas, velocidad, CI y arreglos de E2E | 16 |
 | [yo.md](yo.md) | Yo: Ajustes, fase, evidencias, Caja, emergencia, perfil, cuenta y privacidad | 12 |
 | [reglas-historial.md](reglas-historial.md) | Las reglas de `AGENTS.md` tal como estaban, con sus notas «Corregido» | — |
 
@@ -49,6 +49,11 @@ también en el texto (`grep -n "Plan" docs/decisiones/*.md`). Si dos entradas ch
 
 | Fecha | Tabs | Tipo | Entrada | Archivo | Corregida |
 |---|---|---|---|---|---|
+| 2026-11-06 | Comunidad | Cambio | la transcripción de las sesiones por Meet se guarda, cifrada y sin mostrarse (spec 047) | [comunidad.md](comunidad.md) |  |
+| 2026-11-06 | Comunidad | Cambio | Comunidad → Eventos: eventos para quien tú elijas, y el líder en el chat de soporte (spec 044, D-326) | [comunidad.md](comunidad.md) |  |
+| 2026-11-06 | Hoy, Plan, Training, Comunidad, Yo | Cambio | recorrido de bienvenida hasta el primer post, con confeti, y la pestaña «Entrenar» (spec 045) | [transversal.md](transversal.md) | sí |
+| 2026-11-06 | Ingreso | Cambio | el código de verificación también por WhatsApp (spec 043) | [ingreso-y-onboarding.md](ingreso-y-onboarding.md) |  |
+| 2026-11-06 | Hoy, Comunidad, Yo, Administración | Cambio | el sobrenombre en el Muro (spec 046) | [comunidad.md](comunidad.md) |  |
 | 2026-11-05 | Training | Corrección | «Kilómetros diarios»: aceptar los permisos de Health Connect ya no depende de una sola respuesta (issue #127) | [kilometros-y-carrera.md](kilometros-y-carrera.md) | sí |
 | 2026-11-05 | Training | Cambio | tab `Training` → Kilómetros en vivo con GPS (spec 042) | [kilometros-y-carrera.md](kilometros-y-carrera.md) | sí |
 | 2026-11-05 | Comunidad | Cambio | tab `Comunidad` → Muro en lista compacta estilo Skool | [comunidad.md](comunidad.md) | sí |

@@ -6,6 +6,7 @@ import { Presionable } from '../../../components/Presionable';
 import { fuentes } from '../../../theme/fuentes';
 import { useTheme } from '../../../theme/ThemeContext';
 import { useCarreraEnVivo } from '../hooks/useCarreraEnVivo';
+import { usePrepararLaCarrera } from '../servicios/calentarLaCarrera';
 import { pedirLaCarrera } from '../servicios/pedidosDeLaCarrera';
 import { TEXTOS_DE_LA_CARRERA } from '../utils/textosDeLaCarrera';
 
@@ -17,6 +18,8 @@ import { TEXTOS_DE_LA_CARRERA } from '../utils/textosDeLaCarrera';
 export function EntradaDeLaCarrera({ registroId }: { registroId: string | null }) {
   const { c } = useTheme();
   const enCurso = useCarreraEnVivo() != null;
+  // Se ve la fila que ofrece correr: Google Maps y el peso se adelantan para que el mapa salga ya en la cuenta.
+  usePrepararLaCarrera(!enCurso);
   const texto = enCurso ? TEXTOS_DE_LA_CARRERA.entradaEnCurso : TEXTOS_DE_LA_CARRERA.entrada;
   return (
     <Presionable

@@ -142,7 +142,7 @@ describe('la hoja para conectar', () => {
     expect(textos()).toContain('Con Health Connect, de Google.');
     expect(textos()).toContain('Tu teléfono o tu reloj cuentan los pasos.');
     expect(textos()).toContain('Renaser solo lee pasos y distancia.');
-    expect(textos()).toContain('Tu mentor y el ranking ven tu total de km.');
+    expect(textos()).toContain('Tu mentor y la tabla de kilómetros ven tu total de km.');
     expect(boton('Conectar')).toBeDefined();
     expect(boton('Ahora no')).toBeDefined();
     expect(textos()).not.toMatch(/Instalar|Instala |Play Store/i);

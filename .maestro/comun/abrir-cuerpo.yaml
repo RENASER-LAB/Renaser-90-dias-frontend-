@@ -3,7 +3,7 @@
 # «Planificar Cuerpo» (ya no hay una pantalla de detalle en el medio).
 appId: com.renaser.app
 ---
-- tapOn: "TRAINING"
+- tapOn: "ENTRENAR"
 - tapOn: "Tus prácticas: planificar"
 - tapOn: "Cuerpo: .* de .* cumplidos hoy"
 - extendedWaitUntil:

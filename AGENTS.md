@@ -39,6 +39,7 @@ dueño, un plan o un informe nunca se escriben acá (`src/__tests__/harness/agen
 ## Reglas que no se negocian
 
 1. **Los cinco tabs (`Hoy`, `Plan`, `Training`, `Comunidad`, `Yo`) no cambian sin autorización explícita del dueño.**
+   Desde la spec 045 la pestaña `Training` se ve «Entrenar» (la ruta sigue siendo `'Training'`).
    Una autorización puntual no abre el tab. Lo autorizado se anota en `docs/decisiones/` (cómo: su `README.md`).
 2. **Una funcionalidad o un bug por rama y por commit.** Commits en castellano, en imperativo, diciendo qué cambia y
    por qué. Sin `Co-Authored-By` ni pie de herramienta en commits ni PR. Nunca `--no-verify`.
@@ -54,8 +55,9 @@ dueño, un plan o un informe nunca se escriben acá (`src/__tests__/harness/agen
    Nunca «90 días» escrito a mano (`ningunNoventaDiasEscrito.test.ts`).
 8. **Trazabilidad**: cada `FR-NNN` / `SC-NNN` de una spec exigida tiene una prueba con la marca `// spec NNN FR-NNN`
    (en Maestro, `# spec NNN FR-NNN`). Solo cuentan pruebas de Jest bajo `src/` y flujos de Maestro; no se marca por
-   marcar (si la prueba no falla cuando el requisito se rompe, no lleva marca). Regla completa:
-   `.claude/rules/06-trazabilidad-de-specs.md` del backend.
+   marcar (si la prueba no falla cuando el requisito se rompe, no lleva marca). El número es el de la spec, no el de
+   la issue. Lo comprueba `node scripts/trazabilidad-specs.mjs <ruta-de-la-app>` del backend; las specs exigidas están en
+   `specs/trazabilidad.json` de allá. Regla completa: `.claude/rules/06-trazabilidad-de-specs.md` del backend.
 9. **Si cambias un comportamiento**, en el mismo cambio: su spec, su entrada en `docs/decisiones/` y las pruebas.
 10. **Una corrección que se repite se vuelve prueba**, no un párrafo más (como `rotulosEnTipoOracion.test.ts` o
     `interruptoresDeLaApp.test.ts`). El mensaje de la prueba dice qué está mal y cómo se arregla.

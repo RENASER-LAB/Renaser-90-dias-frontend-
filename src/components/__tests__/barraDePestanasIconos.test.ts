@@ -30,12 +30,12 @@ import { GROSOR_TRAZO_PX, Icon, type IconName } from '../Icon';
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 const RUTAS = ['Hoy', 'Plan', 'Training', 'Comunidad', 'Yo'];
-const NOMBRES = ['HOY', 'PLAN', 'TRAINING', 'COMUNIDAD', 'YO'];
+const NOMBRES = ['HOY', 'PLAN', 'ENTRENAR', 'COMUNIDAD', 'YO'];
 
 const ESPERADOS: Record<string, IconName> = {
   HOY: 'house',
   PLAN: 'clipboardList',
-  TRAINING: 'bicepsFlexed',
+  ENTRENAR: 'bicepsFlexed',
   COMUNIDAD: 'usersThree',
   YO: 'circleUser',
 };
@@ -111,7 +111,7 @@ const iconoDeLaBarra = (raiz: ReactTestRenderer, nombre: string): IconName => {
 };
 
 describe('los íconos de la barra de pestañas', () => {
-  it('cada pestaña lleva el suyo, también el botón dorado de TRAINING', () => {
+  it('cada pestaña lleva el suyo, también el botón dorado de ENTRENAR', () => {
     const raiz = dibujar(0);
     const dibujados = Object.fromEntries(NOMBRES.map(n => [n, iconoDeLaBarra(raiz, n)]));
     expect(dibujados).toEqual(ESPERADOS);

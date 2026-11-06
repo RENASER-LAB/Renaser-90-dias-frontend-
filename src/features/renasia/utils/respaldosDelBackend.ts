@@ -23,7 +23,8 @@ export function plano(texto: string): string {
 const escaparParaRegex = (texto: string) => texto.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 /** Dónde manda el respaldo a registrar: antes decía «Hoy» y ahora «Training»; la forma larga «la pestaña …» también vale. */
-const DESDE_DONDE = '(?:la pestana )?(?:hoy|training)';
+// Spec 045 (D5): el servidor nuevo dice «desde Entrenar»; uno anterior, «desde Training».
+const DESDE_DONDE = '(?:la pestana )?(?:hoy|training|entrenar)';
 
 /** ¿Esta línea tiene la forma de un respaldo del backend, sea de cuál evento sea? Sirve para no leerlo en voz alta y para no repetirlo. */
 export function esLineaDeRespaldo(linea: string): boolean {

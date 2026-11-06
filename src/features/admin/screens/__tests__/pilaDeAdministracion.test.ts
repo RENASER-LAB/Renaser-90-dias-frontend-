@@ -20,6 +20,7 @@ jest.mock('../GuiasRecepcionScreen', () => ({}));
 jest.mock('../MasOpcionesScreen', () => ({}));
 jest.mock('../PersonasAdminScreen', () => ({}));
 jest.mock('../PublicacionesOcultasScreen', () => ({}));
+jest.mock('../../../sobrenombre/screens/SobrenombresAdminScreen', () => ({}));
 jest.mock('../SemaforoAdminScreen', () => ({}));
 jest.mock('../SemaforoGrupoAdminScreen', () => ({}));
 jest.mock('../SolicitudesAdminScreen', () => ({}));

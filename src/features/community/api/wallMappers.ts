@@ -65,6 +65,8 @@ export function mapearPublicacion(post: WallPost): PostItem {
   return {
     id: post.id,
     author: post.authorName?.trim() || 'Miembro Renaser',
+    // Spec 046: solo llega al equipo, y solo si el autor tiene sobrenombre.
+    ...(post.authorRealName?.trim() ? { nombreReal: post.authorRealName.trim() } : {}),
     avatar: AVATAR_POR_DEFECTO,
     // La tarjeta ya pinta la foto con `AvatarPersona` (2026-10-05): sin foto, las iniciales.
     avatarUrl: post.authorAvatarUrl ?? null,
@@ -103,6 +105,7 @@ export function mapearComentario(comment: WallComment): CommentItem {
   return {
     id: comment.id,
     author: comment.authorName?.trim() || 'Miembro Renaser',
+    ...(comment.authorRealName?.trim() ? { nombreReal: comment.authorRealName.trim() } : {}),
     avatar: AVATAR_POR_DEFECTO,
     text: cleanText,
     photoAttached,
@@ -148,6 +151,7 @@ export function mapearReaccion(item: WallReactionItem): ReactionUser {
   return {
     id: item.userId,
     name: item.name?.trim() || 'Miembro Renaser',
+    ...(item.realName?.trim() ? { nombreReal: item.realName.trim() } : {}),
     // Spec 002, fase 2: si el servidor manda el rol personalizado, se lee su nombre (aditivo y tolerante).
     role: nombreDelRolPersonalizado(item) ?? (item.role ? (ETIQUETA_ROL[item.role] ?? item.role) : ''),
     avatar: AVATAR_POR_DEFECTO,

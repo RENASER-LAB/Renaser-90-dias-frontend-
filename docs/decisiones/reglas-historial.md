@@ -99,3 +99,26 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     * Si está en el **detalle de una categoría/dimensión**: el gesto lateral debe regresar al menú principal.
     * Si está en un **formulario por pasos / onboarding**: el gesto lateral debe retroceder al paso anterior.
   * **Prohibido**: Permitir que el gesto lateral del sistema cierre o minimice la aplicación cuando el usuario se encuentre en una vista hija o modal.
+
+---
+
+> **Nota del arnés (2026-11-06).** La sección de abajo estaba en `AGENTS.md` de `master`; en `AGENTS.md` quedó
+> resumida como la regla 8. Se copia aquí tal cual para no perder ningún detalle.
+
+## Trazabilidad de specs — la marca `spec NNN FR-NNN` en cada prueba
+
+Cada requisito (`FR-NNN`) y criterio de éxito (`SC-NNN`) de una spec que se exige tiene que tener una
+prueba que lo cubra, y la prueba lo dice con una marca en un comentario (o en el nombre del `it`):
+
+```ts
+// spec 037 FR-006, SC-002
+it('km = distancia agregada; sin ella, pasos × 0,75 m', () => { … });
+```
+
+En los flujos de Maestro (`.maestro/**.yaml`): `# spec 037 FR-007`. Solo cuentan las marcas en pruebas:
+Jest bajo `src/` (`__tests__` o `*.test.*` / `*.spec.*`) y Maestro; en código de producción o en un `.md`
+no cubren nada. El número es el de la spec, no el de la issue. **No se marca por marcar**: si la prueba no
+falla cuando el requisito se rompe, no lleva la marca. Lo comprueba `scripts/trazabilidad-specs.mjs` del
+backend, que recibe la ruta de esta app (`node scripts/trazabilidad-specs.mjs <ruta-de-la-app>`); la regla
+completa es `.claude/rules/06-trazabilidad-de-specs.md` del backend. Las specs de la app viven en el
+backend (ver `specs/README.md`), así que la lista de las que se exigen es `specs/trazabilidad.json` de allá.

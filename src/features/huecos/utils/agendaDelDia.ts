@@ -223,7 +223,7 @@ export interface AvisoDeHoraQueFalta {
   detalle: string;
 }
 
-const COMO_ARREGLARLO = 'Pídele que la elija en Training → Planificar.';
+const COMO_ARREGLARLO = 'Pídele que la elija en Entrenar → Planificar.';
 
 /**
  * Qué decir cuando un día no tiene ventana: cuál hora falta y por qué eso importa. Sin motivo (el servidor no lo dijo, o
@@ -244,17 +244,17 @@ export function avisoDeHoraQueFalta(motivo: SinVentanaPor | null): AvisoDeHoraQu
     case 'DORMIR_ANTES_DE_DESPERTAR':
       return {
         titulo: 'Su hora de Dormir va antes que la de Despertar',
-        detalle: 'Así no se sabe de cuándo a cuándo es su día y no se calcula su tiempo libre. Pídele que las revise en Training → Planificar.',
+        detalle: 'Así no se sabe de cuándo a cuándo es su día y no se calcula su tiempo libre. Pídele que las revise en Entrenar → Planificar.',
       };
     case 'SIN_DESPERTAR_NI_DORMIR':
       return {
         titulo: 'Faltan sus horas de Despertar y de Dormir',
-        detalle: 'Sin ellas no se sabe de cuándo a cuándo es su día y no se calcula su tiempo libre. Pídele que las elija en Training → Planificar.',
+        detalle: 'Sin ellas no se sabe de cuándo a cuándo es su día y no se calcula su tiempo libre. Pídele que las elija en Entrenar → Planificar.',
       };
     default:
       return {
         titulo: 'Falta su hora de Despertar o de Dormir',
-        detalle: 'Sin ellas no se sabe de cuándo a cuándo es su día y no se calcula su tiempo libre. Pídele que las elija en Training → Planificar.',
+        detalle: 'Sin ellas no se sabe de cuándo a cuándo es su día y no se calcula su tiempo libre. Pídele que las elija en Entrenar → Planificar.',
       };
   }
 }

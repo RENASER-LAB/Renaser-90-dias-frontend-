@@ -53,7 +53,7 @@ export const TITULO_DE_VISTA: Record<Exclude<VistaDeYo, 'main'>, string> = {
   hub: 'Ajustes',
   editar_perfil: 'Editar perfil',
   evidencias: 'Mis evidencias',
-  onboarding: 'Mi onboarding',
+  onboarding: 'Mis documentos',
   pacto: 'El Pacto',
   terminos: 'Términos y condiciones',
   metodo: 'El Método Renaser',

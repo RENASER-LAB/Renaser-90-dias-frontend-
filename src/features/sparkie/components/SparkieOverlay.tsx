@@ -12,6 +12,7 @@ import { useResponsive } from '../../../theme/responsive';
 import { useTheme } from '../../../theme/ThemeContext';
 import { useAuth } from '../../auth/context/AuthContext';
 import { useHayPanelDeSerAbierto } from '../../renasia/state/panelDeSerAbierto';
+import { useMomentoGrande } from '../../fenix/estado/momentoGrande';
 import { PactoScreen } from '../../onboarding/screens/PactoScreen';
 import {
   ANTESALA_PACTO,
@@ -87,7 +88,9 @@ export function SparkieOverlay() {
   const panelDeSerAbierto = useHayPanelDeSerAbierto();
 
   const entradaDeLaTarjeta = { habilitado, minimizado, pactoAbierto, paso: estado.paso };
-  const tarjetaVisible = tarjetaSeDibuja({ ...entradaDeLaTarjeta, panelDeSerAbierto });
+  // Spec 045 (D1, D7): la burbuja espera a que se cierre la felicitación con confeti del primer post; nunca se monta encima.
+  const celebrando = useMomentoGrande() !== null;
+  const tarjetaVisible = tarjetaSeDibuja({ ...entradaDeLaTarjeta, panelDeSerAbierto }) && !celebrando;
 
   // D-218: con la tarjeta del arranque o el Pacto a la vista, tocar un aviso no navega por debajo:
   // espera a que se guarde la tarjeta o se firme el Pacto. Minimizada (la burbuja) ya no frena nada.

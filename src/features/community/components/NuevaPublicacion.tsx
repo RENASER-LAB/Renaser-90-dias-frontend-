@@ -22,7 +22,14 @@ export interface NuevaPublicacionProps {
    * qué falta con una alerta; acá solo se decide cómo se ve el botón y qué vibración acompaña.
    */
   alPublicar: () => void;
+  /** Spec 045: el texto de ayuda del campo cuando se abre desde el recorrido de bienvenida. Sin él, el de siempre. */
+  textoDeAyuda?: string;
   publicando: boolean;
+  /**
+   * Issue #149: por qué falló la última vez que se publicó, o `null`. Se dice DENTRO de esta pantalla, con «Reintentar»: antes era
+   * un `Alert` que quedaba escondido detrás de esta misma pantalla (y, en el recorrido de bienvenida, detrás de su velo).
+   */
+  errorAlPublicar?: string | null;
   autor: { nombre: string; firma: string; avatarUrl?: string | null };
   texto: string;
   alCambiarTexto: (texto: string) => void;
@@ -74,7 +81,9 @@ export function NuevaPublicacion({
   visible,
   alCancelar,
   alPublicar,
+  textoDeAyuda,
   publicando,
+  errorAlPublicar,
   autor,
   texto,
   alCambiarTexto,
@@ -131,6 +140,27 @@ export function NuevaPublicacion({
         </View>
 
         <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.cuerpo}>
+          {errorAlPublicar ? (
+            <View
+              testID="error-al-publicar"
+              accessibilityRole="alert"
+              accessibilityLiveRegion="assertive"
+              style={[styles.aviso, { borderColor: c.danger, backgroundColor: c.dangerWash }]}
+            >
+              <Icon name="alertTriangle" size={20} color={c.danger} />
+              <Text style={[t.body, styles.avisoTexto, { color: c.textStrong }]}>{errorAlPublicar}</Text>
+              <Pressable
+                onPress={publicar}
+                disabled={publicando}
+                accessibilityRole="button"
+                accessibilityLabel="Reintentar"
+                style={({ pressed }) => [styles.reintentar, { borderColor: c.gold, opacity: pressed || publicando ? 0.6 : 1 }]}
+              >
+                <Text style={[styles.chipTexto, { color: c.goldInk }]}>{publicando ? 'Publicando…' : 'Reintentar'}</Text>
+              </Pressable>
+            </View>
+          ) : null}
+
           <View style={styles.autor}>
             <AvatarPersona nombre={autor.nombre} avatarUrl={autor.avatarUrl} size={40} />
             <View style={styles.autorTextos}>
@@ -150,7 +180,7 @@ export function NuevaPublicacion({
           <TextInput
             value={texto}
             onChangeText={alCambiarTexto}
-            placeholder="Escribe tu reflexión, victoria o experiencia de hoy (sin límite de caracteres)..."
+            placeholder={textoDeAyuda ?? "Escribe tu reflexión, victoria o experiencia de hoy (sin límite de caracteres)..."}
             placeholderTextColor={c.textSoft}
             multiline
             textAlignVertical="top"
@@ -280,6 +310,27 @@ function FotosDelPost({ lista, agregando, alAgregar, alQuitar }: NuevaPublicacio
 const styles = StyleSheet.create({
   raiz: {
     flex: 1,
+  },
+  aviso: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 10,
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 14,
+  },
+  avisoTexto: {
+    flex: 1,
+    minWidth: 180,
+  },
+  reintentar: {
+    minHeight: 48,
+    paddingHorizontal: 18,
+    borderWidth: 1,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   cabecera: {
     minHeight: 56,
