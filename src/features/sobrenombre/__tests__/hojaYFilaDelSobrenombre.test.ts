@@ -107,6 +107,17 @@ describe('el compositor del Muro', () => {
   });
 });
 
+describe('Administración → Sobrenombres', () => {
+  it('spec 046 FR-005: tocar a una persona abre su ficha (ahí están «Cambiar» y «Quitar»); en el E2E la fila no hacía nada', () => {
+    const fs = jest.requireActual<typeof import('fs')>('fs');
+    const path = jest.requireActual<typeof import('path')>('path');
+    const admin = fs.readFileSync(path.join(__dirname, '../../admin/screens/AdminScreen.tsx'), 'utf8');
+    expect(admin).toMatch(/<SobrenombresAdminScreen onVolver=\{volver\} onAbrirPersona=\{aprendiz => entrar\(\{ nombre: 'ficha', aprendiz \}\)\} \/>/);
+    const pantalla = fs.readFileSync(path.join(__dirname, '../screens/SobrenombresAdminScreen.tsx'), 'utf8');
+    expect(pantalla).toMatch(/onAbrirPersona\(\{ id: f\.personaId, fullName: f\.nombreReal \|\| null \}\)/);
+  });
+});
+
 describe('la fila de Hoy', () => {
   it('spec 046 FR-001: «Ahora no» la esconde en el acto y lo guarda en el servidor (D2: no vuelve)', async () => {
     const actualizar = jest.fn();

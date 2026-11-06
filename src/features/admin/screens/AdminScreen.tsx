@@ -321,7 +321,7 @@ export function AdminScreen({ onSalir, abrirEn = 'inicio' }: { onSalir: () => vo
     case 'publicaciones-ocultas':
       return <PublicacionesOcultasScreen onVolver={volver} />;
     case 'sobrenombres':
-      return <SobrenombresAdminScreen onVolver={volver} />;
+      return <SobrenombresAdminScreen onVolver={volver} onAbrirPersona={aprendiz => entrar({ nombre: 'ficha', aprendiz })} />;
     case 'codigo-renaser-en-fichas':
       return <CodigoRenaserEnFichasAdminScreen onVolver={volver} />;
     case 'cuenta-de-google':

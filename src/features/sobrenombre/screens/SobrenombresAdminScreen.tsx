@@ -1,3 +1,4 @@
+import type { PersonaDeFicha } from '../../admin/types/admin.types';
 import React, { useEffect, useRef, useState } from 'react';
 import { ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -27,7 +28,7 @@ import {
  * cuándo), un buscador por cualquiera de los dos, y las palabras que no se pueden usar (agregar y quitar). Para cambiar uno, se abre la
  * ficha de la persona.
  */
-export function SobrenombresAdminScreen({ onVolver, onAbrirPersona }: { onVolver: () => void; onAbrirPersona?: (personaId: string) => void }) {
+export function SobrenombresAdminScreen({ onVolver, onAbrirPersona }: { onVolver: () => void; onAbrirPersona?: (persona: PersonaDeFicha) => void }) {
   const { c, t } = useTheme();
   const { horizontalPadding, contentMaxWidth } = useResponsive();
   const [buscar, setBuscar] = useState('');
@@ -99,7 +100,7 @@ export function SobrenombresAdminScreen({ onVolver, onAbrirPersona }: { onVolver
         {filas?.map(f => (
           <Presionable
             key={f.personaId}
-            onPress={onAbrirPersona ? () => onAbrirPersona(f.personaId) : undefined}
+            onPress={onAbrirPersona ? () => onAbrirPersona({ id: f.personaId, fullName: f.nombreReal || null }) : undefined}
             accessibilityRole={onAbrirPersona ? 'button' : undefined}
             accessibilityLabel={`${f.sobrenombre}, ${f.nombreReal}`}
             style={{ flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 56, borderBottomWidth: 1, borderBottomColor: c.divider, paddingVertical: 8 }}
