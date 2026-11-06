@@ -2800,6 +2800,24 @@ por semáforo. Prioridad: los eventos y los recordatorios a los números especí
 * **Pruebas:** Jest `audienciaDelFormulario`, `audienciaSchemas`, `paraQuienEs` y `seccionDeSoportes`. **Hace falta el backend con la spec 044 (V182 y
   V183) y un APK nuevo** (solo JavaScript: la app no se actualiza por aire).
 
+## Cambio por pedido del dueño — 2026-11-06 — la transcripción de las sesiones por Meet se guarda, cifrada y sin mostrarse (spec 047)
+
+Textual: «el link es automático pero lo más importante: que puede ingresar cualquier persona si está abierto y se guarde la transcripción, igual que el repo que
+te pasé guarda muy bien esa información, no mostrándola, pero que cumpla». Spec, plan y decisiones en el backend (`specs/047-transcripcion-de-eventos/`, D-332).
+Decisiones del dueño: P1-A (nadie la ve en la app; ADMIN y ALCHEMIST la sacan desde el servidor con motivo), P2-B (transcripción y enlace a la grabación),
+P3-B (6 meses), P4-B (una línea en el detalle del evento) y P5-A. **Casi todo es del servidor**; en la app cambia solo esto:
+* **Comunidad → Eventos, el detalle** (autorizado por el dueño solo para esta línea): bajo «Es por Google Meet.», la línea **«Esta sesión se graba y se
+  transcribe.»** (`AVISO_DE_GRABACION`, `Parrafo` de siempre, sin ícono ni animación), solo si el servidor lo afirma (`recordingNotice: true` en
+  `GET /calendar/events/{id}`: Google confirmó que la sala graba o transcribe). Para que la vea el aprendiz, el detalle de un evento por Meet ahora se lee fresco
+  para todos (`useMeetDelEvento` con `tipoUbicacion === 'MEET'`; antes solo para quien lo gestiona): un pedido más al abrir el detalle de un evento por Meet.
+  El esquema es tolerante: cualquier cosa que no sea `true` es «no», y un servidor anterior no lo manda. **La transcripción nunca llega a la app.**
+* **Política de privacidad** (`public/privacidad/index.html`): la sección «Las sesiones en vivo por Google Meet» (se graban y se transcriben, qué se guarda, para
+  qué, que no se muestra ni se usa con IA, que va cifrada, quién puede sacarla y que se borra a los 6 meses), la fila de Google en «Con quién los compartimos» y
+  una línea en «Cuánto tiempo los guardamos». **Debe publicarse antes de que Soporte TI prenda `eventos.meet.transcripcion`.**
+* **No cambian**: el resto del detalle, la lista, el calendario, el formulario, los demás tabs. Sin dependencias ni código nativo.
+* **Pruebas:** Jest `avisoDeGrabacion` y `paginaPoliticaDePrivacidad` (marcas `spec 047 FR-018`).
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire) y el backend con V184. Contra un backend anterior la línea no aparece.
+
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
 Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel especializado en React Native, Expo y TypeScript. Al crear, refactorizar o modificar cualquier pantalla o componente, debes cumplir OBLIGATORIAMENTE con los siguientes estándares:

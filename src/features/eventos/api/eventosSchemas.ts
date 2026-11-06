@@ -63,6 +63,8 @@ const eventoSchema = z
     // Spec 044: «Para quién es» (solo para quien lo gestiona) y el organizador. Tolerantes: rotos o ausentes = no vinieron.
     audience: z.unknown().optional(),
     organizer: z.unknown().optional(),
+    // Spec 047 (P4-B): la sesión se graba y se transcribe (lo confirmó Google). Tolerante: cualquier cosa que no sea `true` es «no».
+    recordingNotice: z.unknown().optional(),
   })
   .passthrough();
 
@@ -167,6 +169,8 @@ export function aEvento(crudo: EventoCrudo): Evento {
     // Spec 044: solo si el servidor los mandó (el detalle); la lista y un servidor anterior quedan como siempre.
     ...(audienciaElegida ? { audienciaElegida } : {}),
     ...(organizador ? { organizador } : {}),
+    // Spec 047: solo si el servidor lo afirma; un servidor anterior no lo manda y el evento queda igual.
+    ...(crudo.recordingNotice === true ? { seGrabaYTranscribe: true } : {}),
   };
 }
 

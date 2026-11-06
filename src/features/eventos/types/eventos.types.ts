@@ -77,6 +77,8 @@ export interface Evento {
   formacion?: string | null;
   /** Spec 040: cómo va la sala de Meet automática. Ausente para quien no administra y con un servidor anterior. */
   meet?: ResumenDeMeet | null;
+  /** Spec 047 (P4-B): Google confirmó que la sala graba o transcribe. Solo viene en el detalle (`GET /events/{id}`). */
+  seGrabaYTranscribe?: boolean;
   /**
    * Spec 044: «Para quién es». Solo lo manda el servidor a quien creó el evento o lo gestiona (FR-018); para un invitado no existe (FR-016).
    * Solo viene en el detalle (`GET /events/{id}`), no en la lista.
