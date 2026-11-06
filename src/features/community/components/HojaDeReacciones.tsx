@@ -77,6 +77,11 @@ export function HojaDeReacciones({
                   <Text numberOfLines={1} style={[styles.nombre, { color: c.textStrong }]}>
                     {persona.name}
                   </Text>
+                  {persona.nombreReal ? (
+                    <Text numberOfLines={1} style={[styles.rol, { color: c.textSoft }]}>
+                      {persona.nombreReal}
+                    </Text>
+                  ) : null}
                   {persona.role ? (
                     <Text numberOfLines={1} style={[styles.rol, { color: c.textSoft }]}>
                       {persona.role}

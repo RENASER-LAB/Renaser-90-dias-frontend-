@@ -11,7 +11,7 @@ appId: com.renaser.app
     visible: "Perfil"
     timeout: 10000
 - assertVisible: "Tu proceso"
-- assertVisible: "Mi onboarding"
+- assertVisible: "Mis documentos"
 - takeScreenshot: 07b-ajustes
 - scrollUntilVisible:
     element: "Cerrar sesión"

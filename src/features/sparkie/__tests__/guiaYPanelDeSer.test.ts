@@ -37,6 +37,7 @@ jest.mock('../../../navigation/navegacionRef', () => ({ irAPestana: (...args: un
 import { hayCapaObligatoriaAbierta, olvidarCapasObligatorias } from '../../../navigation/capasObligatorias';
 import { marcarPanelDeSerAbierto, olvidarPanelesDeSer } from '../../renasia/state/panelDeSerAbierto';
 import { SparkieOverlay } from '../components/SparkieOverlay';
+import { celebrarPrimerPost, cerrarMomentoGrande, reiniciarMomentoGrandeParaPruebas } from '../../fenix/estado/momentoGrande';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -74,6 +75,18 @@ afterEach(() => {
   raiz = null;
   olvidarPanelesDeSer();
   olvidarCapasObligatorias();
+});
+
+describe('la guía no se monta sobre la felicitación del primer post', () => {
+  it('spec 045 FR-011, D1: con la felicitación del primer post a la vista, el Pacto espera a que se cierre', () => {
+    reiniciarMomentoGrandeParaPruebas();
+    mockEstado.actual = { paso: 'FIRMAR_PACTO' } as PasoArranque;
+    act(() => celebrarPrimerPost());
+    dibujar();
+    expect(hayTarjeta()).toBe(false);
+    act(() => cerrarMomentoGrande());
+    expect(hayTarjeta()).toBe(true);
+  });
 });
 
 describe('la guía no se monta sobre el panel de SER', () => {

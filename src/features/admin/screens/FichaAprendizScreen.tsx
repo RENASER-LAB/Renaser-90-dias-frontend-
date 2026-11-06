@@ -53,6 +53,7 @@ import { FormacionDeLaPersona } from '../../formaciones/components/FormacionDeLa
 import { PagosDeLaPersona } from '../../pagos/components/PagosDeLaPersona';
 import { ConstanciaDeTerminos } from '../../onboarding/terminos/components/ConstanciaDeTerminos';
 import { AceptacionDeLaPersona } from '../components/AceptacionDeLaPersona';
+import { SobrenombreDeLaPersona } from '../../sobrenombre/components/SobrenombreDeLaPersona';
 import { useOcultarBarraAlDesplazar } from '../../../navigation/barraAlDesplazar/BarraInferior';
 
 /**
@@ -306,6 +307,8 @@ export function FichaAprendizScreen({
         {/* Su ficha de ingreso (spec 026-9): «Estándar» o «Con diagnóstico», con «Asignar el diagnóstico» a quien ya estaba dentro y
             «Volver a la ficha estándar». Si el servidor no la ofrece (backend anterior), no se dibuja. */}
         <FichaDeIngresoDeLaPersona personaId={aprendiz.id} nombre={nombre} alCambiar={setAvisoFinal} />
+        {/* Su sobrenombre en el Muro (spec 046): cambiar o quitar, con motivo. Sin permiso o con un servidor anterior, no se dibuja. */}
+        <SobrenombreDeLaPersona personaId={aprendiz.id} alCambiar={setAvisoFinal} />
 
         {/* Sus pagos (spec 032): el cronograma, marcar cada cuota pagada o pendiente, ajustar las pendientes y asignarlo a quien ya estaba dentro.
             Solo Administración y Alquimista (403 → no se dibuja). Si el servidor no lo ofrece (backend anterior), tampoco. */}

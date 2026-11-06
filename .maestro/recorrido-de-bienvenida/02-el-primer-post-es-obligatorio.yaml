@@ -1,0 +1,43 @@
+# 02 — Decisión del dueño (D9): para una cuenta nueva el primer post es obligatorio. Sin «Saltar» ni «Ahora no»; el atrás no lo
+# cierra; cerrar el compositor sin publicar vuelve al paso del Muro con los candados; cerrar la app y abrirla sigue ahí. Publicar
+# libera la app. Al final, «Ver el recorrido» desde Yo → Ajustes sí se puede cerrar.
+# Precondición: aprendiz nuevo como en 01 (otra cuenta), galería del emulador con al menos una foto.
+# cuenta: aprendiz-nuevo-2
+# spec 045 FR-004, FR-006, D9
+appId: com.renaser.app
+---
+- extendedWaitUntil:
+    visible: "Te damos la bienvenida.*"
+    timeout: 60000
+- assertNotVisible: "Saltar"
+- back
+- assertVisible: "Te damos la bienvenida.*"
+- tapOn: "Empezar"
+- tapOn: "Siguiente"
+- tapOn: "Siguiente"
+- tapOn: "Siguiente"
+- assertVisible: "Tu primera publicación"
+- assertVisible: "Lo demás se abre cuando publiques\\."
+- assertNotVisible: "Ahora no"
+- back
+- assertVisible: "Tu primera publicación"
+# Tocar otra pestaña no hace nada: el paso sigue encima.
+- tapOn: "PLAN"
+- assertVisible: "Tu primera publicación"
+- takeScreenshot: R02a-bloqueado
+# Cerrar el compositor sin publicar vuelve al paso del Muro.
+- tapOn: "Escribir mi publicación"
+- extendedWaitUntil:
+    visible: "Nueva publicación"
+    timeout: 15000
+- tapOn: "Cancelar"
+- extendedWaitUntil:
+    visible: "Tu primera publicación"
+    timeout: 5000
+# Cerrar la app y abrirla: sigue en el paso del Muro.
+- killApp
+- launchApp
+- extendedWaitUntil:
+    visible: "Tu primera publicación"
+    timeout: 60000
+- takeScreenshot: R02b-sigue-tras-reabrir

@@ -18,8 +18,8 @@ describe('stickers en el historial que recibe otra persona', () => {
     expect(mensaje.stickerNombre).toBe('Conéctate a tu sesión');
     expect(mensaje.text).toBeUndefined();
     expect(mensaje.mediaUrl).toBe(wire.mediaUrl);
-    expect(resumenDelUltimoMensaje(wire, 'mentor-1').lastMessage).toBe('Sticker');
-    expect(resumenDelUltimoMensaje(wire, 'aprendiz-1').lastMessage).toBe('Tú: Sticker');
+    expect(resumenDelUltimoMensaje(wire, 'mentor-1').lastMessage).toBe('Figurita');
+    expect(resumenDelUltimoMensaje(wire, 'aprendiz-1').lastMessage).toBe('Tú: Figurita');
   });
 
   it('una foto normal, incluso WebP, sigue mostrándose como foto con su texto', () => {
@@ -34,7 +34,7 @@ describe('stickers en el historial que recibe otra persona', () => {
 
   it('con la URL ausente muestra un respaldo y conserva la marca de leído', () => {
     const mensaje = mapearMensaje({ ...wire, mediaUrl: null, status: 'READ' }, 'aprendiz-1');
-    expect(mensaje.mediaList).toEqual(['Sticker no disponible']);
+    expect(mensaje.mediaList).toEqual(['Figurita no disponible']);
     expect(mensaje.status).toBe('read');
   });
 });

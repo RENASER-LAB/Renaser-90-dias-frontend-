@@ -1,0 +1,14 @@
+# 02 — Otro aprendiz de la misma formación ve el sobrenombre en el Muro y NO el nombre real.
+# Precondición: 01 corrido (la autora tiene SOBRENOMBRE y una publicación). NOMBRE_REAL: el nombre real de la autora.
+# cuenta: aprendiz-2
+# spec 046 FR-002, FR-003
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "COMUNIDAD"
+- tapOn: "Muro"
+- extendedWaitUntil:
+    visible: ${SOBRENOMBRE}
+    timeout: 20000
+- assertNotVisible: ${NOMBRE_REAL}
+- takeScreenshot: S02-otro-aprendiz

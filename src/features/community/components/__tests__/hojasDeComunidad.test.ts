@@ -230,7 +230,7 @@ describe('Stickers, en la hoja desde abajo', () => {
   it('tocar un sticker lo elige', async () => {
     const elegir = jest.fn();
     const r = montar(React.createElement(SelectorDeStickers, { visible: true, enviando: false, onCerrar: () => undefined, onElegir: elegir }));
-    const [primero] = r.root.findAll(n => typeof n.props.onPress === 'function' && /^Enviar sticker: /.test(n.props.accessibilityLabel ?? ''));
+    const [primero] = r.root.findAll(n => typeof n.props.onPress === 'function' && /^Enviar figurita: /.test(n.props.accessibilityLabel ?? ''));
     await act(async () => {
       primero.props.onPress();
     });

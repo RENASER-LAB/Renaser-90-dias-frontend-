@@ -25,7 +25,7 @@ appId: com.renaser.app
 - assertVisible: "Empezar mañana"
 - assertNotVisible: "Todavía no elegiste tu Día 1"
 - takeScreenshot: M03b-plan
-- tapOn: "TRAINING"
+- tapOn: "ENTRENAR"
 - extendedWaitUntil:
     visible: "Todavía no empezaste tu programa"
     timeout: 30000

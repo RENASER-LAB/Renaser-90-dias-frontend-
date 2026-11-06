@@ -37,6 +37,12 @@ export function hayCapaObligatoriaAbierta(): boolean {
 }
 
 /** Se entera de cada apertura o cierre. Devuelve la función para dejar de escuchar. */
+/** Spec 045: si hay alguna capa abierta además de {@code excepto} (el recorrido se registra a sí mismo y no puede pausarse por eso). */
+export function hayOtraCapaObligatoriaAbierta(excepto: string): boolean {
+  for (const nombre of abiertas) if (nombre !== excepto) return true;
+  return false;
+}
+
 export function alCambiarLasCapasObligatorias(oyente: () => void): () => void {
   oyentes.add(oyente);
   return () => {

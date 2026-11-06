@@ -6,7 +6,7 @@ appId: com.renaser.app
 - runFlow: ../comun/despejar-capas.yaml
 - tapOn: "Yo"
 - tapOn: "Ajustes"
-- tapOn: "Mi onboarding"
+- tapOn: "Mis documentos"
 - assertVisible: "Tu proceso"
 # La fila no es una etapa: la cuenta de etapas no cambia.
 - assertVisible: "de 2 etapas completadas"

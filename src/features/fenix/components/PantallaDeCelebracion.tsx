@@ -16,10 +16,12 @@ import {
   AMORTIGUACION_DE_ENTRADA,
   ESCALA_DE_ENTRADA,
   PANTALLA_MS,
+  llevaConfeti,
   planDeLaPantalla,
   textosDeLaPantalla,
 } from '../utils/pantallaDeCelebracion';
 import { BrasasDoradas } from './BrasasDoradas';
+import { Confeti } from './Confeti';
 import { ContadorQueSube } from './ContadorQueSube';
 
 const TAMANO_FENIX = 220;
@@ -72,7 +74,7 @@ export function PantallaDeCelebracion({
       >
         <View pointerEvents="none" style={estilos.escena}>
           <View style={[estilos.halo, { backgroundColor: c.goldWash }]} />
-          {plan.brasas ? <BrasasDoradas color={c.gold} /> : null}
+          {plan.brasas && !llevaConfeti(momento, plan) ? <BrasasDoradas color={c.gold} /> : null}
           <View style={estilos.fila}>
             {conAnimal ? (
               <Image
@@ -133,6 +135,7 @@ export function PantallaDeCelebracion({
 
         <GoldButton label="Seguir" onPress={cerrar.cerrar} style={estilos.boton} />
       </Animated.View>
+      {llevaConfeti(momento, plan) ? <Confeti /> : null}
     </Animated.View>
   );
 }

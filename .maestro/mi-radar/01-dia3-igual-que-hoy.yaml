@@ -12,7 +12,7 @@ appId: com.renaser.app
 - takeScreenshot: 01a-formulario-solo
 - runFlow: ../comun/llenar-formulario-radar.yaml
 - extendedWaitUntil:
-    visible: "TRAINING"
+    visible: "ENTRENAR"
     timeout: 30000
 - assertNotVisible: "Estoy…"
 # La mitad del Radar de Hoy (spec 016) dice «HH:00 · Registrado» en un solo texto.

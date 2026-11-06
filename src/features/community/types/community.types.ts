@@ -23,6 +23,8 @@ export interface WallPost {
   id: string;
   authorId: string;
   authorName: string | null;
+  /** Spec 046: el nombre real de quien tiene sobrenombre, solo para el equipo. */
+  authorRealName?: string | null;
   authorAvatarUrl: string | null;
   type: string;
   category: string | null;
@@ -47,6 +49,8 @@ export interface WallComment {
   id: string;
   postId: string;
   authorId: string;
+  /** Spec 046: solo para el equipo y si tiene sobrenombre. */
+  authorRealName?: string | null;
   authorName: string | null;
   authorAvatarUrl: string | null;
   text: string;
@@ -88,6 +92,8 @@ export interface WallUrlSubida {
 export interface WallReactionItem {
   userId: string;
   name: string | null;
+  /** Spec 046: solo para el equipo y si tiene sobrenombre. */
+  realName?: string | null;
   avatarUrl: string | null;
   role: string | null;
   type: WallReactionType;

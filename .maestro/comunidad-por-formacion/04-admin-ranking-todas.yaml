@@ -9,7 +9,7 @@ appId: com.renaser.app
     visible: "Todas"
     timeout: 30000
 - tapOn: "Todas"
-- tapOn: "Ranking"
+- tapOn: "Tabla"
 # Una sección por formación, cada una con su tabla.
 # La ficha «Escuela» del selector también se lee «Escuela Renaser» para el lector de pantalla: los encabezados de cada sección se buscan debajo de las pestañas
 # de la tabla (General / Coherencia / Kilómetros).

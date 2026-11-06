@@ -6,7 +6,7 @@ appId: com.renaser.app
 # Primero el permiso de avisos y las capas de siempre: el permiso puede tapar el Código Renaser.
 - runFlow: ../comun/despejar-capas.yaml
 - extendedWaitUntil:
-    visible: "TRAINING|Estoy…|Soporte · Equipo Renaser"
+    visible: "ENTRENAR|Estoy…|Soporte · Equipo Renaser"
     timeout: 20000
     optional: true
 - runFlow:
