@@ -8,7 +8,7 @@ import { fuentes } from '../../../theme/fuentes';
 import { useTheme } from '../../../theme/ThemeContext';
 import { tacto } from '../../../utils/tacto';
 import { cambiarSobrenombreDeLaPersona, quitarSobrenombreDeLaPersona, sobrenombreDeLaPersona } from '../api/sobrenombreApi';
-import { MENSAJE_DEL_PROBLEMA, problemaDeLaForma } from '../utils/reglasDelSobrenombre';
+import { MENSAJE_DEL_PROBLEMA, limpiarSobrenombre, problemaDeLaForma } from '../utils/reglasDelSobrenombre';
 
 /**
  * Spec 046 (US5): en la ficha de una persona (Administración y Alquimista), su sobrenombre en el Muro con «Cambiar» y «Quitar». Los dos
@@ -40,7 +40,7 @@ export function SobrenombreDeLaPersona({ personaId, alCambiar }: { personaId: st
 
   const guardar = useCallback(async () => {
     if (guardando) return;
-    const limpio = nuevo.trim();
+    const limpio = limpiarSobrenombre(nuevo);
     if (editando === 'cambiar' && problemaDeLaForma(limpio)) {
       setError(MENSAJE_DEL_PROBLEMA[problemaDeLaForma(limpio)!]);
       tacto.error();

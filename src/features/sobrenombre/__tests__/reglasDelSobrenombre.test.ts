@@ -1,7 +1,7 @@
 /** Spec 046: las reglas que la app revisa antes de mandar, cuándo sale la fila de Hoy y los textos. */
 import { describe, expect, it } from '@jest/globals';
 
-import { MENSAJE_DEL_PROBLEMA, TEXTOS_DEL_SOBRENOMBRE, muestraLaFilaEnHoy, problemaDeLaForma, textoDeLaEspera } from '../utils/reglasDelSobrenombre';
+import { MENSAJE_DEL_PROBLEMA, TEXTOS_DEL_SOBRENOMBRE, limpiarSobrenombre, muestraLaFilaEnHoy, problemaDeLaForma, textoDeLaEspera } from '../utils/reglasDelSobrenombre';
 
 describe('la forma', () => {
   it('spec 046 FR-004: de 3 a 20, letras con tildes, números, espacio, punto y guion', () => {
@@ -9,9 +9,17 @@ describe('la forma', () => {
     expect(problemaDeLaForma('León-23.Ñ')).toBeNull();
     expect(problemaDeLaForma('Yo')).toBe('largo');
     expect(problemaDeLaForma('Un sobrenombre muy muy largo')).toBe('largo');
-    expect(problemaDeLaForma('Dos  espacios')).toBe('largo');
+    expect(problemaDeLaForma('Dos  espacios')).toBe('espacios');
     expect(problemaDeLaForma('Fénix 🔥')).toBe('caracteres');
     expect(MENSAJE_DEL_PROBLEMA.largo).toBe('Usa de 3 a 20 letras.');
+  });
+
+  it('spec 046 FR-004 (issue #100): la tilde combinable (NFD) se acepta y se manda en NFC; dos espacios dicen por qué', () => {
+    const nfd = 'Jose\u0301 Luis';
+    expect(problemaDeLaForma(nfd)).toBeNull();
+    expect(limpiarSobrenombre(`  ${nfd} `)).toBe('José Luis');
+    expect(limpiarSobrenombre(nfd)).toBe('José Luis'.normalize('NFC'));
+    expect(MENSAJE_DEL_PROBLEMA.espacios).toBe('Usa un solo espacio entre palabras.');
   });
 });
 

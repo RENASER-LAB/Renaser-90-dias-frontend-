@@ -5,17 +5,28 @@
 export const MINIMO = 3;
 export const MAXIMO = 20;
 
-export type ProblemaDelSobrenombre = 'largo' | 'caracteres' | null;
+export type ProblemaDelSobrenombre = 'largo' | 'espacios' | 'caracteres' | null;
+
+/**
+ * El sobrenombre tal como se manda: en NFC y sin espacios a los lados (issue #100). Una tilde escrita como carácter combinable
+ * («e» + U+0301, que mandan algunos teclados y el copiar y pegar) se ve igual que «é», pero sin NFC no pasaba el patrón de letras.
+ */
+export function limpiarSobrenombre(texto: string): string {
+  return texto.normalize('NFC').trim();
+}
 
 export function problemaDeLaForma(texto: string): ProblemaDelSobrenombre {
-  const limpio = texto.trim();
-  if (limpio.length < MINIMO || limpio.length > MAXIMO || /\s{2,}/.test(limpio)) return 'largo';
+  const limpio = limpiarSobrenombre(texto);
+  if (limpio.length < MINIMO || limpio.length > MAXIMO) return 'largo';
+  if (/\s{2,}/.test(limpio)) return 'espacios';
   if (!/^[\p{L}\p{N} .\-]+$/u.test(limpio)) return 'caracteres';
   return null;
 }
 
 export const MENSAJE_DEL_PROBLEMA: Record<Exclude<ProblemaDelSobrenombre, null>, string> = {
   largo: 'Usa de 3 a 20 letras.',
+  // Issue #100: antes dos espacios seguidos decían «Usa de 3 a 20 letras.», que no explica el problema.
+  espacios: 'Usa un solo espacio entre palabras.',
   caracteres: 'Usa solo letras, números, espacios, puntos o guiones.',
 };
 
