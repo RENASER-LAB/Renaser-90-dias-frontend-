@@ -30,6 +30,13 @@ describe('el respaldo del ritual (lo que nadie quitaba)', () => {
     expect(quitarRespaldoDeFoto(`${INTRO}\n\n${conTraining}`, RITUAL)).toBe(INTRO);
   });
 
+  it('spec 045 FR-010: con «desde Entrenar», lo que dice el servidor desde que la pestaña se llama así (D5)', () => {
+    const conEntrenar = `Para registrar '${RITUAL}' cuenta cómo te sientes: si no ves el botón para escribir, hazlo desde Entrenar.`;
+    expect(quitarRespaldoDeFoto(`${INTRO}\n\n${conEntrenar}`, RITUAL)).toBe(INTRO);
+    const foto = "Foto para registrar 'KILÓMETROS DIARIOS': si no ves el botón de la cámara, súbela desde Entrenar.";
+    expect(quitarRespaldoDeFoto(`${INTRO}\n\n${foto}`, 'KILÓMETROS DIARIOS')).toBe(INTRO);
+  });
+
   it('no toca el de OTRO ritual', () => {
     const texto = `${INTRO}\n\n${RESPALDO_RITUAL}`;
     expect(quitarRespaldoDeFoto(texto, 'RITUAL DE MAÑANA (domingo)')).toBe(texto);

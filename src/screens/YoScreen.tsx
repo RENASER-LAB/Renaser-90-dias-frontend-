@@ -1,4 +1,5 @@
 import { fuentes } from '../theme/fuentes';
+import { pedirVerElRecorrido } from '../features/recorrido/estado/recorridoEnCurso';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Image,
@@ -1215,6 +1216,16 @@ export default function YoScreen() {
                 titulo="El Método Renaser"
                 detalle={`${METODO_FASES.length} fases para comprenderte y sostener tu transformación`}
                 onPress={() => setActiveView('metodo')}
+              />
+              {/* Spec 045 (US5): volver a ver el recorrido de bienvenida. Lleva a Hoy y lo empieza desde el principio. */}
+              <FilaDeAjuste
+                icono="map"
+                titulo="Ver el recorrido"
+                detalle="Dónde está cada cosa: Hoy, Plan y Entrenar"
+                onPress={() => {
+                  setActiveView('main');
+                  pedirVerElRecorrido();
+                }}
               />
             </GrupoDeAjustes>
 

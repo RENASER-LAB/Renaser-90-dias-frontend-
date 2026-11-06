@@ -22,6 +22,8 @@ export interface NuevaPublicacionProps {
    * qué falta con una alerta; acá solo se decide cómo se ve el botón y qué vibración acompaña.
    */
   alPublicar: () => void;
+  /** Spec 045: el texto de ayuda del campo cuando se abre desde el recorrido de bienvenida. Sin él, el de siempre. */
+  textoDeAyuda?: string;
   publicando: boolean;
   autor: { nombre: string; firma: string; avatarUrl?: string | null };
   texto: string;
@@ -74,6 +76,7 @@ export function NuevaPublicacion({
   visible,
   alCancelar,
   alPublicar,
+  textoDeAyuda,
   publicando,
   autor,
   texto,
@@ -150,7 +153,7 @@ export function NuevaPublicacion({
           <TextInput
             value={texto}
             onChangeText={alCambiarTexto}
-            placeholder="Escribe tu reflexión, victoria o experiencia de hoy (sin límite de caracteres)..."
+            placeholder={textoDeAyuda ?? "Escribe tu reflexión, victoria o experiencia de hoy (sin límite de caracteres)..."}
             placeholderTextColor={c.textSoft}
             multiline
             textAlignVertical="top"

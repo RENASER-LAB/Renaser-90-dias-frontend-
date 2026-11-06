@@ -1,0 +1,28 @@
+# 02 — «Saltar» pregunta y, al confirmar, el recorrido no vuelve solo; se puede volver a ver desde Yo → Ajustes → «Ver el recorrido».
+# Precondición: aprendiz nuevo como en 01 (otra cuenta: terminar el recorrido no se deshace).
+# cuenta: aprendiz-nuevo-2
+# spec 045 FR-004, FR-001
+appId: com.renaser.app
+---
+- extendedWaitUntil:
+    visible: "Te damos la bienvenida.*"
+    timeout: 60000
+- tapOn: "Saltar"
+- assertVisible: "¿Saltar el recorrido\\?"
+- tapOn: "SALTAR|Saltar"
+- assertNotVisible: "Te damos la bienvenida.*"
+- killApp
+- launchApp
+- extendedWaitUntil:
+    visible: "ENTRENAR"
+    timeout: 60000
+- assertNotVisible: "Te damos la bienvenida.*"
+- tapOn: "YO"
+- tapOn: "Ajustes"
+- scrollUntilVisible:
+    element: "Ver el recorrido"
+- tapOn: "Ver el recorrido"
+- extendedWaitUntil:
+    visible: "Te damos la bienvenida.*"
+    timeout: 10000
+- takeScreenshot: R02-recorrido-repetido

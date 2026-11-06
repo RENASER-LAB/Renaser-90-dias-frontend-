@@ -1,0 +1,9 @@
+# Spec 045: si el recorrido de bienvenida sale (cuenta nueva, una vez), se salta para seguir con el flujo. Opcional.
+appId: com.renaser.app
+---
+- runFlow:
+    when:
+      visible: "Te damos la bienvenida.*"
+    commands:
+      - tapOn: "Saltar"
+      - tapOn: "SALTAR|Saltar"

@@ -9,6 +9,7 @@
  * La única excepción es el prefijo técnico de las figuritas en el chat (`'Sticker Renaser: '`): viaja dentro del mensaje y las
  * versiones anteriores de la app lo usan para reconocerlas, así que no se puede cambiar sin romper los mensajes ya enviados.
  */
+import { describe, expect, it } from '@jest/globals';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -53,7 +54,7 @@ function esNombreInterno(texto: string): boolean {
 
 describe('ningún texto en inglés en lo que se ve (spec 045 FR-010, D8)', () => {
   const lista = [...archivos(path.join(RAIZ, 'src')), path.join(RAIZ, 'App.tsx')];
-  it.each(PROHIBIDOS)('no aparece «%s»', (_nombre, rx) => {
+  it.each(PROHIBIDOS)('no aparece «%s»', (_nombre: string, rx: RegExp) => {
     const hallados: string[] = [];
     for (const archivo of lista) {
       for (const texto of textos(sinComentarios(fs.readFileSync(archivo, 'utf8')))) {
