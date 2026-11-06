@@ -113,11 +113,14 @@ if (RAPIDO) {
 const backend = carpetaDelBackend();
 if (backend) {
   // La tabla completa es larga: se imprime solo la última línea, o todo si falla (para saber qué requisito falta).
-  console.log('\n▶ Trazabilidad de specs');
+  // Se lee el backend TAL COMO ESTÁ en esa carpeta: si quedó atrás de su origin/master, puede faltar una spec nueva. Por
+  // eso se dice qué commit se usó (otra carpeta: RENASER_BACKEND=<ruta>).
+  const commitDelBackend = spawnSync('git', ['-C', backend, 'log', '-1', '--format=%h %cs'], { encoding: 'utf8' }).stdout.trim() || '?';
+  console.log(`\n▶ Trazabilidad de specs (backend @ ${commitDelBackend})`);
   const r = spawnSync('node', [path.join(backend, 'scripts', 'trazabilidad-specs.mjs'), RAIZ], { cwd: RAIZ, encoding: 'utf8' });
   const salida = `${r.stdout ?? ''}${r.stderr ?? ''}`.trim();
   console.log(r.status === 0 ? salida.split('\n').pop() : salida);
-  resultados.push({ nombre: `Trazabilidad de specs (${backend})`, ok: r.status === 0, segundos: 0 });
+  resultados.push({ nombre: `Trazabilidad de specs (${backend} @ ${commitDelBackend}: ${salida.split('\n').pop()})`, ok: r.status === 0, segundos: 0 });
 } else {
   anotar('Trazabilidad de specs', CI ? 'na' : null, CI
     ? 'no aplica en el CI de la app: la corre el CI del backend (trazabilidad.yml) contra esta rama'
