@@ -242,7 +242,7 @@ describe('cuando falta una hora', () => {
     expect(avisoDeHoraQueFalta('SIN_DESPERTAR_NI_DORMIR').titulo).toBe('Faltan sus horas de Despertar y de Dormir');
     expect(avisoDeHoraQueFalta('DORMIR_ANTES_DE_DESPERTAR').titulo).toBe('Su hora de Dormir va antes que la de Despertar');
     for (const m of ['SIN_DESPERTAR', 'SIN_DORMIR', 'SIN_DESPERTAR_NI_DORMIR', 'DORMIR_ANTES_DE_DESPERTAR'] as const) {
-      expect(avisoDeHoraQueFalta(m).detalle).toContain('Training → Planificar');
+      expect(avisoDeHoraQueFalta(m).detalle).toContain('Entrenar → Planificar');
       expect(avisoDeHoraQueFalta(m).detalle).toContain('no se calcula su tiempo libre');
     }
   });

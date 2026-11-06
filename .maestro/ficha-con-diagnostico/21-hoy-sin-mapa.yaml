@@ -67,7 +67,7 @@ appId: com.renaser.app
           timeout: 30000
       - takeScreenshot: H21d-yo-completa-tu-diagnostico
       - tapOn: "Ajustes"
-      - tapOn: "Mi onboarding"
+      - tapOn: "Mis documentos"
       - extendedWaitUntil:
           visible: "El Pacto"
           timeout: 20000

@@ -63,10 +63,10 @@ export interface PodioParaCompartir {
 }
 
 const TITULOS: Record<ClaveDeTabla, { titulo: string; detalle: string }> = {
-  general: { titulo: 'Ranking general', detalle: 'Hábitos, acciones y lecciones, todo junto' },
-  coherencia: { titulo: 'Ranking de coherencia', detalle: 'Acciones diarias cumplidas de la semana' },
-  kilometros: { titulo: 'Ranking de kilómetros', detalle: 'Kilómetros recorridos desde el Día 1' },
-  gimnasio: { titulo: 'Ranking de gimnasio', detalle: 'Días de gimnasio desde el Día 1' },
+  general: { titulo: 'Tabla general', detalle: 'Hábitos, acciones y lecciones, todo junto' },
+  coherencia: { titulo: 'Tabla de coherencia', detalle: 'Acciones diarias cumplidas de la semana' },
+  kilometros: { titulo: 'Tabla de kilómetros', detalle: 'Kilómetros recorridos desde el Día 1' },
+  gimnasio: { titulo: 'Tabla de gimnasio', detalle: 'Días de gimnasio desde el Día 1' },
 };
 
 const MESES = [

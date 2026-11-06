@@ -16,7 +16,7 @@ env:
     timeout: 40000
 - assertVisible: "Lo que cambió"
 - assertVisible: "Nuevo Acuerdo de transformación"
-- assertNotVisible: "TRAINING"
+- assertNotVisible: "ENTRENAR"
 - scrollUntilVisible:
     element: "(?i)mi aceptación"
     direction: DOWN
@@ -33,7 +33,7 @@ env:
     env:
       BOTON: "Aceptar"
 - extendedWaitUntil:
-    visible: "TRAINING"
+    visible: "ENTRENAR"
     timeout: 60000
 # Firmar los términos no confirmó el cronograma: a quien ya estaba dentro se le sigue pidiendo en «Mi ingreso» (spec 032).
 - runFlow: ../pagos/comun-abrir-mi-ingreso.yaml

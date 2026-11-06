@@ -43,6 +43,14 @@ export function useMomentoGrande(): MomentoGrande | null {
   return useSyncExternalStore(suscribir, momentoGrandeActual, momentoGrandeActual);
 }
 
+/**
+ * Spec 045 FR-007: la felicitación del primer post. Es única (nunca se repite), así que no pasa por la regla de «una
+ * celebración por día» (`celebracionDelDia`): sale aunque ese día ya haya salido otra.
+ */
+export function celebrarPrimerPost(): void {
+  publicarMomentoGrande({ principal: 'primerPost', otros: [], rachaActual: null, puntosHoy: null, fase: null });
+}
+
 export function cerrarMomentoGrande(): void {
   publicarMomentoGrande(null);
 }

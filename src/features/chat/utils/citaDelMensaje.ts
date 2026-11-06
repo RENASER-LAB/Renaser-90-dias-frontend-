@@ -68,7 +68,7 @@ function resumenDe(clase: ClaseDeCita, texto: string | null | undefined, duracio
   const leido = extracto(texto);
   switch (clase) {
     case 'sticker':
-      return 'Sticker';
+      return 'Figurita';
     case 'audio':
       return rotuloDeAudio(duracion);
     case 'foto':

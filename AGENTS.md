@@ -2708,6 +2708,50 @@ backend (`specs/043-codigo-por-whatsapp/`, D-325). Toca el ingreso (`LoginScreen
   y `privacidadCodigoPorWhatsApp`. E2E en el emulador contra el backend local y un YCloud falso (capturas en el PR).
 * **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire) **y el backend de la spec 043 antes**. Contra un backend anterior la app queda como hoy.
 
+## Cambio por pedido del dueño — 2026-11-06 — recorrido de bienvenida hasta el primer post, con confeti, y la pestaña «Entrenar» (spec 045)
+
+Pedido del dueño (06/11): después de la ficha o del diagnóstico, un recorrido tipo tutorial, corto y no tan específico, que diga dónde está cada cosa (Hoy, Plan y
+Entrenar) y lleve hasta el primer post en el Muro; al publicar, confeti; y «el inglés con español se ve feo en una app». Spec, decisiones y vista previa en el backend
+(`specs/045-recorrido-de-bienvenida/`, D-330). **El dueño autorizó explícitamente** tocar los cinco tabs en lo que sigue, y el nombre de la pestaña del centro. Lo que cambia y nada más:
+* **La pestaña «TRAINING» se llama «ENTRENAR»** (D5), en la barra, en la cabecera de la pantalla y en todos los textos que la nombran («Abrir Entrenar», «aparecen en Entrenar»,
+  «Entrenar → Planificar»…). **La ruta interna sigue siendo `'Training'`** (navegación, avisos y pruebas no cambian).
+* **Ningún texto en inglés** (D8, commit aparte): «Ranking» → «Tabla» (sección de Comunidad, imagen del podio, avisos), «Stickers» → «Figuritas», «checklist» → «lista»,
+  «Tickets» → «Consultas», «Mi onboarding» → «Mis documentos», «· auto» → «· del teléfono». «chat» se queda. El prefijo técnico de las figuritas en el mensaje
+  (`'Sticker Renaser: '`) no cambia: lo usan las versiones anteriores para reconocerlas. `src/__tests__/sinTextosEnIngles.test.ts` barre `src/` para que no vuelvan.
+* **El recorrido** (`features/recorrido/`, montado en `App.tsx` como el arranque guiado): 5 pasos con una frase cada uno —«Te damos la bienvenida, Ana» (D6, sin género), Hoy,
+  Plan, Entrenar y «Tu primera publicación»—; los pasos 2 a 5 oscurecen la pantalla (velo SVG con un agujero) y dejan un foco circular con aro dorado sobre la pestaña,
+  **medida en la ventana** (`TabBar` registra sus botones en `recorrido/estado/focoDeLasPestanas`; no cambia su forma). El foco se desliza 240 ms y la tarjeta entra con
+  un fundido de 200 ms (con «reducir movimiento», al instante); `tacto.seleccion()` al pasar de paso. «Saltar» pregunta («¿Saltar el recorrido?»); el atrás del sistema vuelve
+  un paso y en el primero pregunta. La barra de pestañas queda a la vista mientras dura.
+* **Cuándo sale lo decide el servidor** (`GET /api/v1/me/recorrido`): una vez por cuenta, **solo cuentas nuevas** (D2: la migración deja terminadas las anteriores), con programa
+  propio activado (D4: el personal solo si hace el suyo). Solo arranca en Hoy, sin otra capa obligatoria ni el panel de SER encima, y nunca en «ver como». Si se cierra la app,
+  sigue en el mismo paso. Con 4 pasos si ya publicó o si el Muro no está disponible. Contra un backend anterior (404) no sale.
+* **El paso del Muro abre el compositor real** (`abrirComposerMuro` + `desdeElRecorrido`): solo cambia su texto de ayuda («¿Quién eres y qué vienes a cambiar?»); la foto sigue
+  siendo obligatoria (D3). Si cierra sin publicar, queda la pastilla «Tu primera publicación · Continuar» sobre la barra.
+* **Al publicar, la felicitación con confeti** (D7, solo el primer post): `PantallaDeCelebracion` con «¡Tu primera publicación!» y «Ya eres parte del grupo.», más `Confeti`
+  (36 piezas en la paleta de la marca, una ráfaga de 1,4 s, solo `transform` y `opacity`, sin bloquear toques; sin confeti con «reducir movimiento»). Una sola vibración
+  (`tacto.hito()`). Las otras celebraciones no cambian.
+* **La guía de SER** (D1): el recorrido reemplaza su saludo y su guía al Muro; la burbuja «✳ SER» queda solo para el Pacto, que aparece al cerrar la felicitación (o al
+  saltar el recorrido). Contra un backend anterior, la guía es la de siempre.
+* **Yo → Ajustes → «Ver el recorrido»** (ícono `map`): lo repite desde Hoy, sin escribir en el servidor.
+* **Pruebas:** Jest `reglasDelRecorrido`, `recorridoDeBienvenida`, `guiaSerTrasElRecorrido`, `confetiDelPrimerPost`, `respaldosDelBackend` y `sinTextosEnIngles`. Maestro:
+  `.maestro/recorrido-de-bienvenida/01` y `02`; `comun/despejar-capas.yaml` salta el recorrido si aparece.
+* **Hace falta el backend con V180 antes y un APK nuevo** (solo JavaScript).
+
+> **Corregido el mismo día (el dueño, tras probarlo: «el primer post es obligatorio», D9–D11 de la spec).** Lo de «Saltar», «el atrás en el primero pregunta»,
+> «Solo arranca en Hoy» y «la pastilla «Tu primera publicación · Continuar»» **ya no vale para una cuenta nueva**:
+> * **El primer post es obligatorio** (D9): no hay «Saltar» ni «Ahora no»; el atrás retrocede un paso y en el primero y en el del Muro no hace nada. En el paso del Muro
+>   un candado chico tapa Hoy, Plan, Entrenar y Yo, y la tarjeta dice «Lo demás se abre cuando publiques.». El paso tapa toda la app (también las otras secciones de
+>   Comunidad): solo se puede ir al compositor. Cerrar el compositor sin publicar vuelve al paso del Muro (tras 0,6 s, para no parpadear sobre la felicitación); se quitó
+>   la pastilla. Arranca sobre cualquiera de las cinco pestañas (un aviso pudo abrir otra al entrar). Mientras dura es la capa obligatoria `recorridoDeBienvenida`: los
+>   avisos del teléfono esperan; el Código Renaser y el panel de SER lo pausan y vuelve al cerrarse (`hayOtraCapaObligatoriaAbierta` para no pausarse a sí mismo).
+>   Repetido desde Yo → Ajustes sí se puede cerrar («Saltar», «Cerrar»).
+> * **Modo oscuro** (D10): el velo es el token nuevo `velo` (72 % en claro, 78 % en oscuro), la tarjeta `cardBgAlt` y el confeti `coloresDelConfeti(tema)`: nada fijo.
+> * **«Se reinicia cada rato»** (D11): se reiniciaba al parpadear la sesión (ahora solo al cambiar de cuenta) y al reabrir con un paso que no llegó al servidor (ahora
+>   también se guarda en el teléfono, `renaser.recorrido.paso.<cuenta>`, y se retoma desde el más adelantado).
+> * Pruebas: `recorridoDeBienvenida` (bloqueo, atrás, otras pestañas, reabrir, sin red, sesión que parpadea, lecturas al revés), `reglasDelRecorrido`, `confetiDelPrimerPost`;
+>   Maestro `recorrido-de-bienvenida/02-el-primer-post-es-obligatorio.yaml` (reemplaza a `02-saltar…`).
+
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
 Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel especializado en React Native, Expo y TypeScript. Al crear, refactorizar o modificar cualquier pantalla o componente, debes cumplir OBLIGATORIAMENTE con los siguientes estándares:

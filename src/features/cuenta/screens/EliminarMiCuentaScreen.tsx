@@ -126,7 +126,7 @@ export function EliminarMiCuentaScreen({ onVolver, onCerrada }: { onVolver: () =
         {como ? (
           <>
             <View style={{ gap: 10 }}>
-              <Linea texto="Tu cuenta se cierra al instante: ya no podrás entrar y sales de tus grupos, del ranking y de la comunidad." />
+              <Linea texto="Tu cuenta se cierra al instante: ya no podrás entrar y sales de tus grupos, de la tabla y de la comunidad." />
               <Linea texto={`Durante ${como.diasDeGracia} días puedes pedir a soporte que la recupere.`} />
               <Linea texto="Después, tus datos se borran para siempre." />
             </View>

@@ -37,7 +37,7 @@ describe('una sola entrada a «Mi onboarding»', () => {
     expect(yo.match(/onPress=\{\(\) => setActiveView\('onboarding'\)\}/g)).toHaveLength(1);
     const tuProceso = vista('hub').slice(vista('hub').indexOf('<GrupoDeAjustes titulo="Tu proceso">'));
     expect(tuProceso.slice(0, tuProceso.indexOf('</GrupoDeAjustes>'))).toMatch(
-      /titulo="Mi onboarding"\s+detalle="Tu Pacto de Renacimiento"\s+onPress=\{\(\) => setActiveView\('onboarding'\)\}/,
+      /titulo="Mis documentos"\s+detalle="Tu Pacto de Renacimiento"\s+onPress=\{\(\) => setActiveView\('onboarding'\)\}/,
     );
   });
 

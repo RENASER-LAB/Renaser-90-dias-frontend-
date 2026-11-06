@@ -6,14 +6,14 @@ appId: com.renaser.app
 - runFlow: despejar-capas.yaml
 - repeat:
     while:
-      notVisible: "TRAINING"
+      notVisible: "ENTRENAR"
     times: 3
     commands:
       - extendedWaitUntil:
-          visible: "TRAINING"
+          visible: "ENTRENAR"
           timeout: 5000
           optional: true
       - runFlow: despejar-capas.yaml
 - extendedWaitUntil:
-    visible: "TRAINING"
+    visible: "ENTRENAR"
     timeout: 30000

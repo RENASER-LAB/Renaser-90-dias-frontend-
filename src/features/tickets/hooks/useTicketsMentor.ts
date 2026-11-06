@@ -17,7 +17,7 @@ export function useTicketsMentor(habilitado: boolean = true) {
       const page = await obtenerTicketsMentor();
       setTickets(page.tickets);
     } catch (e) {
-      setError(mensajeDeError(e, 'No se pudieron cargar tus tickets.'));
+      setError(mensajeDeError(e, 'No se pudieron cargar tus consultas.'));
     } finally {
       setLoading(false);
     }

@@ -34,6 +34,8 @@ export type Palette = {
   chevron: string;
   placeholderA: string;
   placeholderB: string;
+  /** Spec 045: el velo que oscurece la pantalla detrás de una capa que guía (el recorrido de bienvenida). */
+  velo: string;
 };
 
 export const light: Palette = {
@@ -71,6 +73,7 @@ export const light: Palette = {
   chevron: '#847A68',
   placeholderA: '#EFEAE1',
   placeholderB: '#F7F3EC',
+  velo: 'rgba(17,16,13,0.72)',
 };
 
 export const dark: Palette = {
@@ -102,6 +105,7 @@ export const dark: Palette = {
   chevron: '#8F8678',
   placeholderA: '#14130F',
   placeholderB: '#1B1915',
+  velo: 'rgba(0,0,0,0.78)',
 };
 
 /**

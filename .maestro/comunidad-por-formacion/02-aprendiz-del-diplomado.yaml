@@ -23,7 +23,7 @@ appId: com.renaser.app
     timeout: 30000
 - assertNotVisible: "Formación Renaser Global"
 - takeScreenshot: C02b-tribu-del-diplomado
-- tapOn: "Ranking"
+- tapOn: "Tabla"
 - extendedWaitUntil:
     visible: "(?i)Tu posición.*"
     timeout: 30000

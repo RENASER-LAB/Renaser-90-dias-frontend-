@@ -19,4 +19,5 @@ appId: com.renaser.app
       visible: "Posponer la guía de SER"
     commands:
       - tapOn: "Posponer la guía de SER"
+- runFlow: saltar-recorrido.yaml
 - runFlow: cerrar-aviso-dev.yaml

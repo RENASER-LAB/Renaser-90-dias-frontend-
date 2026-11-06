@@ -1,0 +1,10 @@
+# Spec 045: si sale el recorrido repetido desde Yo (se puede cerrar), se cierra para seguir con el flujo. Opcional.
+# Una cuenta NUEVA no puede saltarlo (D9: el primer post es obligatorio): los flujos usan cuentas anteriores a V180, que no lo ven.
+appId: com.renaser.app
+---
+- runFlow:
+    when:
+      visible: "Saltar"
+    commands:
+      - tapOn: "Saltar"
+      - tapOn: "SALTAR|Saltar"

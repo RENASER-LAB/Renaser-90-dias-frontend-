@@ -38,7 +38,7 @@ export const TEXTOS_DE_PASOS = {
     lineas: [
       'Tu teléfono o tu reloj cuentan los pasos.',
       'Renaser solo lee pasos y distancia.',
-      'Tu mentor y el ranking ven tu total de km.',
+      'Tu mentor y la tabla de kilómetros ven tu total de km.',
     ] as const,
     boton: 'Conectar',
     ahoraNo: 'Ahora no',

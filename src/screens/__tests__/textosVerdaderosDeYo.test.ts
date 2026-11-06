@@ -43,7 +43,7 @@ describe('los textos del Centro de Perfil y Ajustes de Yo', () => {
      > etapas)`, y la prueba cuidaba que el número saliera de la lista. Con los textos cortos del
      > rediseño la fila dice «Mi onboarding», sin número: ya no hay un conteo que pueda mentir. */
   it('cuenta las fases del método de su lista, y la fila de onboarding no lleva un número escrito', () => {
-    expect(codigo).toContain('titulo="Mi onboarding"');
+    expect(codigo).toContain('titulo="Mis documentos"');
     expect(codigo).not.toMatch(/Mi [Oo]nboarding \(\d/);
     expect(codigo).toContain('detalle="Tu Pacto de Renacimiento"');
     expect(codigo).toContain('`${METODO_FASES.length} fases para comprenderte y sostener tu transformación`');

@@ -75,7 +75,7 @@ describe('la cita que manda el servidor (D-251)', () => {
         text: 'Sticker Renaser: ¡Muy bien!', mediaMime: 'image/webp', mediaUrl: 'https://s3/sticker.webp' },
     });
 
-    expect(mensaje.cita).toMatchObject({ autor: 'Luis Soto', esMia: false, clase: 'sticker', resumen: 'Sticker',
+    expect(mensaje.cita).toMatchObject({ autor: 'Luis Soto', esMia: false, clase: 'sticker', resumen: 'Figurita',
       miniatura: 'https://s3/sticker.webp' });
   });
 
