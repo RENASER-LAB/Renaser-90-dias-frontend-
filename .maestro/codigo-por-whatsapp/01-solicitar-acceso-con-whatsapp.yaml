@@ -1,0 +1,39 @@
+# Spec 043 — «Solicitar acceso» con WhatsApp y el código por WhatsApp a los 60 s.
+# Precondición: sesión cerrada; backend local con `auth.codigo_whatsapp` PRENDIDO, la configuración de YCloud apuntando a un YCloud FALSO en
+# 127.0.0.1 y los correos en noop (el código «no llega» al correo). Nunca contra producción.
+# Después del flujo: el YCloud falso anotó el código; se escribe con `CODIGO` (ver el README de la carpeta).
+appId: com.renaser.app
+env:
+  CORREO: e2e-043-${MAESTRO_RANDOM}@renaser.test
+---
+- launchApp
+# spec 043 FR-003
+- tapOn: "¿No tienes cuenta? Solicitar acceso"
+- tapOn: "Nombres"
+- inputText: "Ana"
+- tapOn: "Apellidos"
+- inputText: "Prueba"
+- tapOn: "Correo electrónico"
+- inputText: ${CORREO}
+- assertVisible: "WhatsApp"
+- tapOn: "WhatsApp"
+- inputText: "987654321"
+- tapOn: "Contraseña"
+- inputText: "una-clave-muy-larga"
+- tapOn: "Confirmar contraseña"
+- inputText: "una-clave-muy-larga"
+- hideKeyboard
+- tapOn: "Continuar y recibir código"
+- takeScreenshot: 01-codigo-sin-enlace
+# spec 043 FR-012
+- extendedWaitUntil:
+    visible: "¿No te llegó? Envíamelo por WhatsApp.*"
+    timeout: 75000
+- assertVisible: "Te lo enviamos a \\+51 9•• ••• •21\\."
+- takeScreenshot: 02-enlace-a-los-60-segundos
+- tapOn: "¿No te llegó? Envíamelo por WhatsApp.*"
+# spec 043 FR-015
+- extendedWaitUntil:
+    visible: "Te enviamos el código por WhatsApp a \\+51 9•• ••• •21\\."
+    timeout: 15000
+- takeScreenshot: 03-enviado-por-whatsapp

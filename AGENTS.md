@@ -2665,6 +2665,34 @@ llame al servidor a cada rato y que nada se duplique**, y **«el avatar debe ref
   (en el acto con «reducir movimiento») y se recuerda por cuenta en el teléfono (`renaser.carrera.vistaDelMapa.<cuenta>`). Solo con el mapa de Google, corriendo y
   en la pausa automática; «Terminaste» sigue igual. Jest `mapaRapidoYDiagonal` y `centroDelMapaNoSeMide`. Solo JavaScript: hace falta un APK nuevo.
 
+## Cambio por pedido del dueño — 2026-11-06 — el código de verificación también por WhatsApp (spec 043)
+
+Textual: «si no llega o está lleno el correo… otras empresas usan SMS o WhatsApp». Decisiones del dueño del 06/11: **solo WhatsApp** (nada de SMS, Amazon SES ni
+ayuda desde Administración); **al solicitar acceso se pide el WhatsApp** con el selector de país de la Ficha Inicial y, aceptada la solicitud, **rellena la ficha**;
+**al recuperar la contraseña el código va al WhatsApp que la cuenta ya tiene guardado, nunca a uno que se escriba en ese momento**. Spec, plantilla y decisión en el
+backend (`specs/043-codigo-por-whatsapp/`, D-325). Toca el ingreso (`LoginScreen`, el diseño del 2026-10-05 no cambia más que esto). Lo que cambia y nada más:
+* **Solo con el canal disponible** (`GET /api/v1/auth/whatsapp-code` → `available: true`; el interruptor de Soporte TI `auth.codigo_whatsapp` **nace apagado** hasta que
+  Meta apruebe la plantilla). Se pregunta una vez al abrir el ingreso (`codigoPorWhatsAppDisponible`, que nunca lanza): **un 404 (apagado o backend anterior) o cualquier
+  error = no hay canal, y el ingreso queda exactamente como hoy**: ni el campo ni el enlace.
+* **«Solicitar acceso» suma el campo «WhatsApp»** entre el correo y la contraseña: el mismo `PhoneCountryInput` de la ficha (píldora del país + número), con la ayuda «Por si el
+  código no te llega al correo.». Es obligatorio y se valida con la regla de la ficha (`validarWhatsapp`) más la forma que el servidor puede usar (`+`, código de país y de
+  8 a 15 dígitos; `avisoDelWhatsappDelRegistro`). Viaja como `phone` de la solicitud (`"+51 987654321"`, el campo existía y nadie lo llenaba); al aceptarla, el servidor lo
+  deja en la respuesta `whatsapp` de la Ficha Inicial sin pisar una existente, y la ficha lo trae ya escrito (ya leía lo guardado).
+* **En la pantalla del código** (alta y recuperación), **60 segundos** después de abrirla aparece **«¿No te llegó? Envíamelo por WhatsApp»** (`EnlaceDeWhatsApp`: botón de 48,
+  ícono `messageCircle`, texto de 16, entra con el fundido de `Aparicion`). En el **alta** dice debajo «Te lo enviamos a +51 9•• ••• •21.» (enmascarado como el servidor:
+  `enmascararWhatsapp`) y al tocarlo «Te enviamos el código por WhatsApp a +51 9•• ••• •21.». En la **recuperación no muestra ningún número** y al tocarlo dice siempre
+  «Si tu cuenta tiene un WhatsApp guardado, te enviamos el código ahí.»: la app no sabe (ni debe saber) si la cuenta tiene número, porque mostrarlo diría que el correo
+  tiene cuenta (anti-enumeración; el servidor responde 202 sin cuerpo en todos los casos). Un error (429 por los límites, 409, red) se dice con el texto del servidor y el
+  enlace sigue para reintentar; `tacto.logro()` / `tacto.error()`. Reenviar por correo no reinicia la espera. **El código es el mismo** (el servidor manda el vigente del
+  correo) y se escribe en las mismas casillas: nada más cambia en la verificación.
+* **Política de privacidad** (`public/privacidad/index.html`): el WhatsApp se pide desde que se solicita acceso y se usa también para mandar el código de verificación cuando no
+  llega al correo (al número escrito en el alta; al guardado, en la recuperación). Sale con el deploy de Vercel.
+* **No cambian**: el login, los textos y el orden del alta sin canal, la verificación del código, la Ficha Inicial, los cinco tabs. Sin dependencias ni código nativo.
+* **Pruebas:** Jest `codigoPorWhatsApp` (los 60 s, la máscara, la validación, los textos), `codigoPorWhatsAppApi` (404 = sin canal, la recuperación no lleva número),
+  `loginCodigoPorWhatsApp` (sin canal todo como hoy; con canal el campo, el enlace a los 60 s, el número enmascarado, el WhatsApp en la solicitud, la recuperación sin número)
+  y `privacidadCodigoPorWhatsApp`. E2E en el emulador contra el backend local y un YCloud falso (capturas en el PR).
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire) **y el backend de la spec 043 antes**. Contra un backend anterior la app queda como hoy.
+
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
 Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel especializado en React Native, Expo y TypeScript. Al crear, refactorizar o modificar cualquier pantalla o componente, debes cumplir OBLIGATORIAMENTE con los siguientes estándares:

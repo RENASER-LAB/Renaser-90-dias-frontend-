@@ -45,6 +45,12 @@ import { BotonDelIngreso } from '../features/auth/components/BotonDelIngreso';
 import { EntradaEscalonada } from '../features/auth/components/EntradaEscalonada';
 import { useSacudida } from '../features/auth/hooks/useSacudida';
 import { abrirPoliticaDePrivacidad } from '../features/legal/enlacesLegales';
+import { PhoneCountryInput } from '../components/PhoneCountryInput';
+import { validarWhatsapp } from '../features/onboarding/data/pasosFicha';
+import { codigoPorWhatsAppDisponible } from '../features/auth/api/codigoPorWhatsAppApi';
+import { useOfertaDeWhatsApp } from '../features/auth/hooks/useOfertaDeWhatsApp';
+import { EnlaceDeWhatsApp } from '../features/auth/components/EnlaceDeWhatsApp';
+import { avisoDelWhatsappDelRegistro, WHATSAPP_INICIAL } from '../features/auth/utils/codigoPorWhatsApp';
 
 /**
  * `forgot` → `forgot_otp` → `forgot_new_password` es la recuperación de contraseña dentro de la
@@ -123,6 +129,34 @@ export default function LoginScreen() {
   const [nombres, setNombres] = useState('');
   const [apellidos, setApellidos] = useState('');
   const [email, setEmail] = useState('');
+  /* Spec 043: el WhatsApp de «Solicitar acceso», solo si el servidor ofrece mandar el código por ahí (`canalWhatsapp`). Sin el canal, o contra un
+     backend anterior, el formulario es el de siempre (FR-013). */
+  const [whatsapp, setWhatsapp] = useState(WHATSAPP_INICIAL);
+  const [canalWhatsapp, setCanalWhatsapp] = useState(false);
+  useEffect(() => {
+    let vigente = true;
+    void codigoPorWhatsAppDisponible().then(disponible => {
+      if (vigente) setCanalWhatsapp(disponible);
+    });
+    return () => {
+      vigente = false;
+    };
+  }, []);
+  /* «¿No te llegó? Envíamelo por WhatsApp» a los 60 s de abrir la pantalla del código (FR-012). En el alta va al número que se escribió; en la
+     recuperación, al guardado de la cuenta, sin mostrarlo (FR-008, FR-009). */
+  const whatsappDelAlta = useOfertaDeWhatsApp({
+    flujo: 'registro',
+    disponible: canalWhatsapp,
+    enLaPantallaDelCodigo: step === 'otp',
+    email,
+    whatsapp,
+  });
+  const whatsappDeLaRecuperacion = useOfertaDeWhatsApp({
+    flujo: 'recuperacion',
+    disponible: canalWhatsapp,
+    enLaPantallaDelCodigo: step === 'forgot_otp',
+    email,
+  });
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -407,6 +441,11 @@ export default function LoginScreen() {
         setErrorMessage(errorDeValidacion);
         return;
       }
+      const avisoDelWhatsapp = canalWhatsapp ? avisoDelWhatsappDelRegistro(whatsapp, validarWhatsapp) : null;
+      if (avisoDelWhatsapp) {
+        setErrorMessage(avisoDelWhatsapp);
+        return;
+      }
 
       // Enviar código OTP y pasar a pantalla de verificación
       try {
@@ -472,7 +511,10 @@ export default function LoginScreen() {
       // El código verifica el correo y habilita el alta, pero NO abre sesión: la solicitud queda
       // pendiente de que un ADMIN/ALQUIMISTA la apruebe. Por eso la pantalla siguiente es el
       // acuse de recibo y no el home.
-      await confirmarYRegistrar({ nombres, apellidos, email, contrasena: password }, otpCode);
+      await confirmarYRegistrar(
+        { nombres, apellidos, email, contrasena: password, whatsapp: canalWhatsapp ? whatsapp : undefined },
+        otpCode,
+      );
       setSuccessMessage(null);
       setStep('solicitud_enviada');
     } catch (error) {
@@ -902,8 +944,21 @@ export default function LoginScreen() {
                     }
                   />
 
-                  {/* El teléfono se pide en la Ficha Inicial del onboarding, no acá: el alta tiene
-                      que ser lo más liviana posible para que nadie la abandone a mitad de camino. */}
+                  {/* El teléfono se pedía solo en la Ficha Inicial. Desde la spec 043 (decisión del dueño, 06/11) se pide también acá, pero SOLO
+                      si el servidor puede mandar el código por WhatsApp: es el canal de respaldo si el correo no llega, y al aceptar la
+                      solicitud rellena la ficha. Sin el canal, el formulario es el de siempre. */}
+                  {activeTab === 'register' && canalWhatsapp && (
+                    <View style={styles.campoWhatsapp}>
+                      <PhoneCountryInput
+                        label="WhatsApp"
+                        helperText="Por si el código no te llega al correo."
+                        value={whatsapp}
+                        onChange={valor => setWhatsapp(valor)}
+                        returnKeyType="next"
+                        onSubmitEditing={() => contrasenaRef.current?.focus()}
+                      />
+                    </View>
+                  )}
 
                   <CampoDelIngreso
                     ref={contrasenaRef}
@@ -1060,6 +1115,17 @@ export default function LoginScreen() {
                 onReenviar={handleResendOtp}
                 deshabilitado={loading}
               />
+
+              {whatsappDelAlta.visible ? (
+                <EnlaceDeWhatsApp
+                  flujo="registro"
+                  estado={whatsappDelAlta.estado}
+                  enmascarado={whatsappDelAlta.enmascarado}
+                  mensaje={whatsappDelAlta.mensaje}
+                  error={whatsappDelAlta.error}
+                  onEnviar={() => void whatsappDelAlta.enviar()}
+                />
+              ) : null}
 
               {/* Botón Confirmar Código OTP */}
               <Pressable
@@ -1239,6 +1305,17 @@ export default function LoginScreen() {
                 onReenviar={handleResendForgotOtp}
                 deshabilitado={loading}
               />
+
+              {whatsappDeLaRecuperacion.visible ? (
+                <EnlaceDeWhatsApp
+                  flujo="recuperacion"
+                  estado={whatsappDeLaRecuperacion.estado}
+                  enmascarado={null}
+                  mensaje={whatsappDeLaRecuperacion.mensaje}
+                  error={whatsappDeLaRecuperacion.error}
+                  onEnviar={() => void whatsappDeLaRecuperacion.enviar()}
+                />
+              ) : null}
 
               <Pressable
                 accessibilityRole="button"
@@ -1698,6 +1775,8 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
+  /** El WhatsApp de «Solicitar acceso» (spec 043) entre el correo y la contraseña. */
+  campoWhatsapp: { width: '100%' },
   raiz: {
     flex: 1,
   },

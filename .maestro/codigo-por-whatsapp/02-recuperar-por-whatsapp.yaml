@@ -1,0 +1,21 @@
+# Spec 043 — recuperar la contraseña con el código por WhatsApp (al WhatsApp GUARDADO de la cuenta, sin mostrar ningún número).
+# Precondición: la de 01; `CORREO` es una cuenta con contraseña y con WhatsApp en su Ficha Inicial.
+appId: com.renaser.app
+---
+- launchApp
+- tapOn: "Recuperar la contraseña"
+- tapOn: "Correo electrónico"
+- inputText: ${CORREO}
+- tapOn: "Enviar el código de recuperación"
+# spec 043 FR-012
+- extendedWaitUntil:
+    visible: "¿No te llegó? Envíamelo por WhatsApp"
+    timeout: 75000
+- assertNotVisible: ".*•.*"
+- takeScreenshot: 04-recuperar-enlace-sin-numero
+- tapOn: "¿No te llegó? Envíamelo por WhatsApp"
+# spec 043 FR-009
+- extendedWaitUntil:
+    visible: "Si tu cuenta tiene un WhatsApp guardado, te enviamos el código ahí\\."
+    timeout: 15000
+- takeScreenshot: 05-recuperar-enviado
