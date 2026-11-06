@@ -1185,7 +1185,7 @@ export default function YoScreen() {
             <GrupoDeAjustes titulo="Tu proceso">
               <FilaDeAjuste
                 icono="listChecks"
-                titulo="Mi onboarding"
+                titulo="Mis documentos"
                 detalle="Tu Pacto de Renacimiento"
                 onPress={() => setActiveView('onboarding')}
               />
@@ -1512,7 +1512,7 @@ export default function YoScreen() {
             <TerminosAceptadosVista aceptados={terminosAceptados.aceptados} />
           ) : (
             <Text style={[t.body, { color: c.textSoft }]}>
-              {terminosAceptados ? 'No pudimos leer tus términos. Vuelve a Mi onboarding e inténtalo de nuevo.' : 'Cargando tus términos…'}
+              {terminosAceptados ? 'No pudimos leer tus términos. Vuelve a Mis documentos e inténtalo de nuevo.' : 'Cargando tus términos…'}
             </Text>
           )}
         </ScrollView>

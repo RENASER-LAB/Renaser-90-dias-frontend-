@@ -26,7 +26,7 @@ import { useBarraInferior } from '../navigation/barraAlDesplazar/BarraInferior';
  * > `barraDePestanasIconos.test.ts` frena que se repita un dibujo que ya significa otra cosa.
  */
 const ICONS: Record<string, IconName> = { Hoy: 'house', Plan: 'clipboardList', Training: 'bicepsFlexed', Comunidad: 'usersThree', Yo: 'circleUser' };
-const LABELS: Record<string, string> = { Hoy: 'HOY', Plan: 'PLAN', Training: 'TRAINING', Comunidad: 'COMUNIDAD', Yo: 'YO' };
+const LABELS: Record<string, string> = { Hoy: 'HOY', Plan: 'PLAN', Training: 'ENTRENAR', Comunidad: 'COMUNIDAD', Yo: 'YO' };
 
 /**
  * **Los cinco nombres se ven siempre**, y la pestaña activa se distingue por el color dorado

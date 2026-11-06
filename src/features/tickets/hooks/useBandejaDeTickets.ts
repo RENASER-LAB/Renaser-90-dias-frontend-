@@ -53,7 +53,7 @@ export function useBandejaDeTickets(activo: boolean) {
           : e instanceof ApiError && e.esDeRed ? 'sin_red'
           : 'error',
         );
-        setDetalle(mensajeDeError(e, 'No se pudo cargar la bandeja de tickets.'));
+        setDetalle(mensajeDeError(e, 'No se pudo cargar la bandeja de consultas.'));
       } finally {
         enVuelo.current = false;
         setCargando(false);

@@ -89,7 +89,7 @@ describe('el puntaje y el título de cada tabla', () => {
       expect(p.nombreDelArchivo).toBe(`podio-${t}-2026-10-19.png`);
       return p.titulo;
     });
-    expect(titulos).toEqual(['Ranking general', 'Ranking de coherencia', 'Ranking de kilómetros', 'Ranking de gimnasio']);
+    expect(titulos).toEqual(['Tabla general', 'Tabla de coherencia', 'Tabla de kilómetros', 'Tabla de gimnasio']);
   });
 });
 

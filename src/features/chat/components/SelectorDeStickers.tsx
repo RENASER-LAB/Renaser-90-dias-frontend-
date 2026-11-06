@@ -35,7 +35,7 @@ export function SelectorDeStickers({ visible, enviando, onCerrar, onElegir }: {
   const columnas = ancho < 360 ? 3 : 4;
 
   return (
-    <HojaDesdeAbajo visible={visible} alCerrar={onCerrar} titulo="Stickers Renaser" etiquetaCerrar="Cerrar stickers">
+    <HojaDesdeAbajo visible={visible} alCerrar={onCerrar} titulo="Figuritas Renaser" etiquetaCerrar="Cerrar figuritas">
       <View onLayout={event => setAncho(event.nativeEvent.layout.width)}>
         <FlatList
           key={columnas}
@@ -52,7 +52,7 @@ export function SelectorDeStickers({ visible, enviando, onCerrar, onElegir }: {
               contenedorStyle={{ width: `${100 / columnas}%` }}
               style={[styles.sticker, { opacity: enviando ? 0.4 : 1 }]}
               accessibilityRole="button"
-              accessibilityLabel={`Enviar sticker: ${item.nombre}`}
+              accessibilityLabel={`Enviar figurita: ${item.nombre}`}
               accessibilityState={{ disabled: enviando }}
             >
               <Image source={item.imagen} style={styles.imagen} contentFit="contain" />

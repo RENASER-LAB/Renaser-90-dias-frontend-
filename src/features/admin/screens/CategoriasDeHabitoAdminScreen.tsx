@@ -124,7 +124,7 @@ export function CategoriasDeHabitoAdminScreen({
           <Text style={cuerpo}>Las categorías son de cada formación. Vuelve y elige una para verlas o cambiarlas.</Text>
         ) : (
           <Text style={cuerpo}>
-            Son las dimensiones que ven en Training quienes están en esta formación, en este orden. Una categoría sin hábitos que les toquen no se
+            Son las dimensiones que ven en Entrenar quienes están en esta formación, en este orden. Una categoría sin hábitos que les toquen no se
             dibuja.
           </Text>
         )}

@@ -971,7 +971,7 @@ export default function TrainingScreen() {
   if (!habitosPrendidos.disponible) {
     return (
       <SafeAreaView edges={BORDES_DE_UNA_PESTANA} style={{ flex: 1, backgroundColor: c.bg }}>
-        <ScreenHeader title="TRAINING" />
+        <ScreenHeader title="ENTRENAR" />
         <SeccionNoDisponible
           {...barraAlDesplazar}
           contentContainerStyle={[
@@ -987,7 +987,7 @@ export default function TrainingScreen() {
   if (!habitosPrendidos.prendida) {
     return (
       <SafeAreaView edges={BORDES_DE_UNA_PESTANA} style={{ flex: 1, backgroundColor: c.bg }}>
-        <ScreenHeader title="TRAINING" />
+        <ScreenHeader title="ENTRENAR" />
         <SeccionEnMantenimiento
           {...barraAlDesplazar}
           aviso={habitosPrendidos.aviso}
@@ -1032,7 +1032,7 @@ export default function TrainingScreen() {
         <>
           {/* El engranaje a la derecha (24 en una caja de 44 con `hitSlop`): «Tus prácticas», para planificar. */}
           <ScreenHeader
-            title="TRAINING"
+            title="ENTRENAR"
             right={programaEnOtraFormacion ? undefined : 'settings'}
             onPressRight={programaEnOtraFormacion ? undefined : () => setPracticas(PRACTICAS_ABIERTAS)}
             etiquetaRight="Tus prácticas: planificar"

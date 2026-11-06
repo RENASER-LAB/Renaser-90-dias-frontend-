@@ -39,7 +39,7 @@ function secciones(): { id: string; icon: string; label: string }[] {
 describe('Comunidad: secciones', () => {
   it('«Cursos» y no «Classroom»; la clave interna sigue siendo `classroom`', () => {
     const filas = secciones();
-    expect(filas.map(f => f.label)).toEqual(['Muro', 'Eventos', 'Cursos', 'Tribu', 'Ranking', 'Testimonios']);
+    expect(filas.map(f => f.label)).toEqual(['Muro', 'Eventos', 'Cursos', 'Tribu', 'Tabla', 'Testimonios']);
     expect(filas.find(f => f.label === 'Cursos')?.id).toBe('classroom');
   });
 
@@ -60,7 +60,7 @@ describe('Comunidad: secciones', () => {
       Eventos: 'calendar',
       Cursos: 'bookOpen',
       Tribu: 'users',
-      Ranking: 'trophy',
+      Tabla: 'trophy',
       Testimonios: 'quote',
     });
     for (const f of filas) expect(EMOJI.test(f.icon + f.label)).toBe(false);

@@ -280,7 +280,7 @@ export function AgendarAccionesModal({
             {/* Se muestra la fecha exacta que se va a mandar, en vez de decir "hoy": el
                 dispositivo puede estar en otro día que el participante. */}
             <Text style={[t.small, { color: c.textSoft, fontSize: 13, marginTop: 8, textAlign: 'center' }]}>
-              Se agendan para el {fechaAGuardar} y aparecen en Training, en la lista de ese día
+              Se agendan para el {fechaAGuardar} y aparecen en Entrenar, en la lista de ese día
             </Text>
           </View>
         )

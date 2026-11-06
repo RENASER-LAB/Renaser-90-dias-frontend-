@@ -40,7 +40,7 @@ appId: com.renaser.app
 # «Entendido» solo continúa: entra a la app y Hoy dice cuándo empieza (issue #72): el Día 1 es mañana, no hoy.
 - tapOn: "Entendido"
 - extendedWaitUntil:
-    visible: "TRAINING"
+    visible: "ENTRENAR"
     timeout: 60000
 - runFlow: ../comun/despejar-capas.yaml
 - tapOn: "HOY"

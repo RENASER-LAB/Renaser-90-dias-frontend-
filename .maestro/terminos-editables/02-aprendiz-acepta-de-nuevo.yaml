@@ -9,7 +9,7 @@ appId: com.renaser.app
     timeout: 40000
 - assertVisible: "Lo que cambió"
 - assertVisible: "Nota E2E"
-- assertNotVisible: "TRAINING"
+- assertNotVisible: "ENTRENAR"
 - takeScreenshot: T02a-pantalla-que-bloquea
 # Sin casilla ni firma no avanza y dice cuál falta.
 - tapOn: "Aceptar"

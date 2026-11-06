@@ -557,7 +557,7 @@ export const SECCIONES: { id: SeccionComunidad; icon: IconName; label: string }[
      clave `classroom` sigue siendo la de siempre en el estado, las rutas y los atajos desde Training. */
   { id: 'classroom', icon: 'bookOpen', label: 'Cursos' },
   { id: 'tribu', icon: 'users', label: 'Tribu' },
-  { id: 'ranking', icon: 'trophy', label: 'Ranking' },
+  { id: 'ranking', icon: 'trophy', label: 'Tabla' },
   { id: 'testimonios', icon: 'quote', label: 'Testimonios' },
 ];
 
@@ -3410,7 +3410,7 @@ function ComunidadPorFormacion({
                   }))}
                   valor={tipoRanking}
                   onCambiar={setTipoRanking}
-                  accessibilityLabel="Tabla del ranking"
+                  accessibilityLabel="Tabla de posiciones"
                   achicarTexto
                 />
               </View>
@@ -4683,7 +4683,7 @@ function ComunidadPorFormacion({
                     disabled={enviandoMedia}
                     style={[styles.mediaOptionBtn, { opacity: enviandoMedia ? 0.4 : 1 }]}
                     accessibilityRole="button"
-                    accessibilityLabel="Enviar un sticker"
+                    accessibilityLabel="Enviar una figurita"
                   >
                     <Icon name="smile" size={24} color={c.goldInk} />
                   </Presionable>

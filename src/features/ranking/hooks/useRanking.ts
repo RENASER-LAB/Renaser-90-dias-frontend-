@@ -22,7 +22,7 @@ export function useRanking(activo = true) {
       const data = await rankingApi.obtenerRankingAgregado(undefined, formacionDeLaLectura());
       setRankingData(data);
     } catch (e) {
-      setError(mensajeDeError(e, 'No pudimos cargar el ranking.'));
+      setError(mensajeDeError(e, 'No pudimos cargar la tabla.'));
     } finally {
       setLoading(false);
     }

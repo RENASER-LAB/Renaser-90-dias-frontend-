@@ -21,7 +21,7 @@ const leer = (relativo: string) =>
 describe('dónde se pinta el nombre de un hábito', () => {
   it.each([
     ['Hoy (la tarjeta «Hábitos de hoy»)', 'screens/HoyScreen.tsx', /if \(habitoAhora\.titulo\) return tituloEnTipoOracion\(habitoAhora\.titulo\);/],
-    ['Hoy (lo que dice el lector de pantalla)', 'screens/HoyScreen.tsx', /Abrir Training: \$\{tituloEnTipoOracion\(habitoAhora\.titulo\)\}/],
+    ['Hoy (lo que dice el lector de pantalla)', 'screens/HoyScreen.tsx', /Abrir Entrenar: \$\{tituloEnTipoOracion\(habitoAhora\.titulo\)\}/],
     ['Yo → «+ Subir foto»', 'screens/YoScreen.tsx', /titulo: tituloParaMostrar\(\{ id: track\.habitoId, title: track\.tituloHabito \}/],
     ['el elegir hábito para la foto', 'features/habits/components/ElegirHabitoParaFotoModal.tsx', /tituloParaMostrar\(\{ id: track\.habitoId/],
     ['la ficha del mentor (los 7 días)', 'features/mentor/screens/AlumnoScreen.tsx', /\{tituloEnTipoOracion\(o\.titulo\)\}/],

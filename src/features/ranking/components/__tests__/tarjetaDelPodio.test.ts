@@ -69,7 +69,7 @@ describe('lo que dice', () => {
   it('el nombre de la tabla, la fecha y el podio: oro, plata y bronce con nombre y puntaje', () => {
     const r = dibujar(DIEZ);
     const t = textos(r);
-    expect(t).toContain('Ranking general');
+    expect(t).toContain('Tabla general');
     expect(t).toContain('19 de octubre de 2026');
     // Issue #104: sin nombre de formación el respaldo es neutral, no «Renaser · 90 días» (un Diplomado no es de 90 días).
     expect(t).toContain('Renaser');
@@ -110,7 +110,7 @@ describe('lo que dice', () => {
   it('en la tabla de kilómetros el puntaje lleva «km»', () => {
     const r = dibujar([entrada(1, 'Ana', 42.2), entrada(2, 'Beto', 7.5)], 'kilometros');
     const t = textos(r);
-    expect(t).toContain('Ranking de kilómetros');
+    expect(t).toContain('Tabla de kilómetros');
     expect(t.filter(x => /km$/.test(x))).toHaveLength(2);
   });
 
