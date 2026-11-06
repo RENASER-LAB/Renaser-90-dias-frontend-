@@ -4,9 +4,10 @@
  */
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import React from 'react';
-import { Alert, AppState } from 'react-native';
+import { AppState } from 'react-native';
 import TestRenderer, { act, type ReactTestRenderer } from 'react-test-renderer';
 
+import { Alert } from '../../../../components/Alerta';
 import { ApiError } from '../../../../services/http/apiClient';
 import { DiaDeHabitosCambiadoError } from '../../../habits/api/registroVigente';
 import { registrarKilometrosAutomaticos } from '../../api/pasosApi';
@@ -28,6 +29,8 @@ import {
 import type { LecturaCrudaDelDia } from '../../types/pasos.types';
 import { horaDeConexionDeHoy, inicioDelDia, usePasosDelDia, type HabitoDeKilometros, type PasosEnTraining } from '../usePasosDelDia';
 
+// El aviso sale por `components/Alerta` (issue #144: el `Alert` de react-native no hace nada en la web).
+jest.mock('../../../../components/Alerta', () => ({ Alert: { alert: () => undefined } }));
 jest.mock('../../services/saludConectada', () => ({
   soporteDeSalud: jest.fn(),
   permisosDeSalud: jest.fn(),

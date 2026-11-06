@@ -1,9 +1,10 @@
 import { tituloEnTipoOracion } from '../../habits/utils/tituloEnTipoOracion';
 import { fuentes } from '../../../theme/fuentes';
 import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Alert } from '../../../components/Alerta';
 import { Icon } from '../../../components/Icon';
 import { Aparicion } from '../../../components/Aparicion';
 import { BotonPrincipal, SeccionPlegable } from '../../../components/Legible';
