@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, AppState } from 'react-native';
+import { AppState } from 'react-native';
 
+import { Alert } from '../../../components/Alerta';
 import { mensajeDeError } from '../../../services/http/apiClient';
 import { DiaDeHabitosCambiadoError } from '../../habits/api/registroVigente';
 import { registrarKilometrosAutomaticos } from '../api/pasosApi';

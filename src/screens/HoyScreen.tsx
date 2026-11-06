@@ -90,7 +90,7 @@ export default function HoyScreen() {
   /* El hábito de ESTA hora para la primera tarjeta. Vive acá y no dentro de la tarjeta porque
      `useFocusEffect` tiene que correr con la pantalla montada, y porque el pull-to-refresh de
      Hoy también lo recarga. */
-  const { habito: habitoAhora, recargar: recargarHabitoAhora, registrosLeidos, registrosDeHoy, claseDiaria } = useHabitoDelMomento();
+  const { habito: habitoAhora, recargar: recargarHabitoAhora, registrosLeidos, registrosDeHoy, claseDiaria } = useHabitoDelMomento(resumen?.inscrito);
   /* Spec 023: «Hábitos de hoy» es de la formación de la persona. Sin hábitos en su formación no se dibuja, y quien tiene su programa
      propio en OTRA formación que la activa ve una línea que lo dice en lugar de la tarjeta. */
   const categorias = useCategoriasDeHabito();
