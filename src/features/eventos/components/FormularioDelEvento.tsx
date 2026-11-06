@@ -1,5 +1,5 @@
 import { fuentes } from '../../../theme/fuentes';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Icon } from '../../../components/Icon';
@@ -95,6 +95,14 @@ export function FormularioDelEvento({
     if (original) return { ...audienciaInicial(opciones), todos: original.audiencia !== 'SELECTION' && opciones.todos };
     return audienciaInicial(opciones);
   });
+  /* Un error que se dijo antes (p. ej. «Elige para quién es el evento.») no queda a la vista después de cambiar a quién va: vuelve a decirse, si
+     sigue, al tocar el botón. */
+  const [errorOculto, setErrorOculto] = useState(false);
+  useEffect(() => setErrorOculto(false), [error]);
+  const cambiarAudiencia = (a: AudienciaDelFormulario) => {
+    setAudiencia(a);
+    setErrorOculto(true);
+  };
   const partes = audiencia && !audiencia.todos && eligioAlgo(audiencia) ? partesDelCable(audiencia) : null;
   const llega = useVistaPreviaDeAudiencia(partes, formation);
   const soloAlumnos = !!opciones && opciones.partes.includes('MY_LEARNERS');
@@ -228,7 +236,7 @@ export function FormularioDelEvento({
         <ParaQuienEs
           opciones={opciones}
           valor={audiencia}
-          onCambiar={setAudiencia}
+          onCambiar={cambiarAudiencia}
           editando={!!original}
           formation={formation}
         />
@@ -280,12 +288,15 @@ export function FormularioDelEvento({
         </View>
       ) : null}
 
-      {error ? <Parrafo tono="peligro">{error}</Parrafo> : null}
+      {error && !errorOculto ? <Parrafo tono="peligro">{error}</Parrafo> : null}
 
       <BotonPrincipal
         etiqueta={original ? 'Guardar cambios' : 'Crear evento'}
         cargando={guardando}
-        onPress={() => onGuardar({ ...form, donde }, portada, audiencia)}
+        onPress={() => {
+          setErrorOculto(false);
+          onGuardar({ ...form, donde }, portada, audiencia);
+        }}
       />
 
       <HoraPickerModal

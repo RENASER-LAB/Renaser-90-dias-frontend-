@@ -198,6 +198,8 @@ describe('el detalle', () => {
           { tipo: 'TRAFFIC_LIGHT', id: null, nombre: null, color: 'RED', cuantos: 15, resueltoEn: '2026-11-06T15:00:00Z', personas: [] },
           { tipo: 'PERSON', id: null, nombre: null, color: null, cuantos: 2, resueltoEn: null,
             personas: [{ id: 'a', nombre: 'Rosa Quispe', fotoUrl: null, rol: null, grupo: null }, { id: 'b', nombre: 'Jorge Torres', fotoUrl: null, rol: null, grupo: null }] },
+          { tipo: 'STAFF', id: null, nombre: null, color: null, cuantos: 1, resueltoEn: null,
+            personas: [{ id: 'c', nombre: 'Elena Alquimista', fotoUrl: null, rol: null, grupo: null }] },
         ],
       },
     });
@@ -207,7 +209,10 @@ describe('el detalle', () => {
     expect(hay(r, 'Solo lo ves tú')).toBe(true);
     expect(hay(r, 'Rojo')).toBe(true);
     expect(hay(r, 'Según el semáforo del 6 de noviembre')).toBe(true);
+    expect(hay(r, 'Personas')).toBe(true);
     expect(hay(r, 'Rosa Quispe, Jorge Torres')).toBe(true);
+    expect(hay(r, 'Personal')).toBe(true);
+    expect(hay(r, 'Elena Alquimista')).toBe(true);
     expect(hay(r, 'Llega a 17 personas')).toBe(true);
     expect(hay(r, 'Administrar')).toBe(true);
   });

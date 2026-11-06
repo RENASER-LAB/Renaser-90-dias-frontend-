@@ -13,7 +13,7 @@ import { buscarPersonas } from '../../api/audienciaApi';
 import type { PersonaConvocable } from '../../types/audiencia.types';
 import { alternarPersona } from '../../utils/audienciaDelFormulario';
 import { Parrafo } from '../piezas';
-import { PildorasDePersonas } from './ParaQuienEs';
+import { PildorasDePersonas } from './PildorasDePersonas';
 
 /** Cuánto se espera después de la última tecla para preguntar al servidor. */
 export const ESPERA_DEL_BUSCADOR_MS = 300;
@@ -101,16 +101,19 @@ export function ElegirPersonasHoja({
       }
     >
       {estado === 'fallo' && lista.length === 0 ? (
-        <View style={{ gap: 10 }}>
+        <View style={estilos.aviso}>
           <Parrafo tono="peligro">No se pudo cargar la lista.</Parrafo>
           <BotonSecundario etiqueta="Reintentar" icono="rotateCcw" onPress={() => leer(0, true)} />
         </View>
       ) : null}
       {estado === 'listo' && lista.length === 0 ? (
-        <Parrafo>{texto.trim() ? `Sin resultados para «${texto.trim()}».` : 'Todavía no hay personas que puedas invitar.'}</Parrafo>
+        <View style={estilos.aviso}>
+          <Parrafo>{texto.trim() ? `Sin resultados para «${texto.trim()}».` : 'Todavía no hay personas que puedas invitar.'}</Parrafo>
+        </View>
       ) : null}
       <FlatList
         style={{ flex: 1 }}
+        contentContainerStyle={estilos.lista}
         data={lista}
         keyExtractor={p => p.id}
         keyboardShouldPersistTaps="handled"
@@ -149,6 +152,9 @@ export function ElegirPersonasHoja({
 }
 
 const estilos = StyleSheet.create({
+  // El cuerpo de la hoja no lleva relleno lateral: lo pone cada lista (como «Quién respondió»).
+  lista: { paddingHorizontal: 20, paddingBottom: 12 },
+  aviso: { gap: 10, paddingHorizontal: 20, paddingTop: 8 },
   buscar: { minHeight: 48, borderWidth: 1, borderRadius: 14, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14 },
   entrada: { flex: 1, fontFamily: fuentes.regular, fontSize: 16, minHeight: 48 },
   fila: { minHeight: 56, flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 6 },

@@ -17,11 +17,13 @@ import {
   alternarColor,
   alternarGrupo,
   alternarPersona,
+  lineaDeMisAlumnos,
   partesEnOrden,
   type AudienciaDelFormulario,
 } from '../../utils/audienciaDelFormulario';
 import { Parrafo } from '../piezas';
 import { ElegirPersonasHoja } from './ElegirPersonasHoja';
+import { PildorasDePersonas } from './PildorasDePersonas';
 
 const ICONO_DE_LA_PARTE: Record<TipoDeParte | 'ALL', IconName> = {
   ALL: 'globe',
@@ -133,7 +135,7 @@ export function ParaQuienEs({
         })}
       </View>
 
-      {valor.misAlumnos ? <Parrafo>{`Tus ${opciones.misAlumnos} ${opciones.misAlumnos === 1 ? 'alumno' : 'alumnos'} de hoy.`}</Parrafo> : null}
+      {valor.misAlumnos ? <Parrafo>{lineaDeMisAlumnos(opciones.misAlumnos)}</Parrafo> : null}
       {valor.mentores ? <Parrafo>Todos los mentores y guías de tu formación.</Parrafo> : null}
 
       {abiertas.has('TRAFFIC_LIGHT') ? (
@@ -295,32 +297,6 @@ function FilaElegible({
   );
 }
 
-export function PildorasDePersonas({ personas, onQuitar }: { personas: PersonaConvocable[]; onQuitar: (p: PersonaConvocable) => void }) {
-  const { c } = useTheme();
-  if (personas.length === 0) return null;
-  return (
-    <View style={estilos.pildoras}>
-      {personas.map(p => (
-        <View key={p.id} style={[estilos.pildora, { borderColor: c.gold, backgroundColor: c.goldWash }]}>
-          <AvatarPersona nombre={p.nombre} avatarUrl={p.fotoUrl} size={28} />
-          <Text style={[estilos.pildoraTexto, { color: c.textStrong }]} numberOfLines={1}>
-            {p.nombre}
-          </Text>
-          <Presionable
-            onPress={() => onQuitar(p)}
-            accessibilityRole="button"
-            accessibilityLabel={`Quitar a ${p.nombre}`}
-            hitSlop={8}
-            style={estilos.quitar}
-          >
-            <Icon name="close" size={16} color={c.goldInk} />
-          </Presionable>
-        </View>
-      ))}
-    </View>
-  );
-}
-
 const estilos = StyleSheet.create({
   pregunta: { fontFamily: fuentes.negrita, fontSize: 22, lineHeight: 28 },
   rotulo: { fontFamily: fuentes.negrita, fontSize: 13, lineHeight: 18 },
@@ -336,8 +312,4 @@ const estilos = StyleSheet.create({
   interruptor: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderRadius: 16, padding: 14 },
   nota: { flexDirection: 'row', gap: 8, alignItems: 'flex-start', borderWidth: 1, borderStyle: 'dashed', borderRadius: 12, padding: 12 },
   notaTexto: { flex: 1, fontFamily: fuentes.regular, fontSize: 14, lineHeight: 20 },
-  pildoras: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  pildora: { minHeight: 40, borderWidth: 1, borderRadius: 20, flexDirection: 'row', alignItems: 'center', gap: 6, paddingLeft: 6, maxWidth: '100%' },
-  pildoraTexto: { fontFamily: fuentes.seminegrita, fontSize: 14, flexShrink: 1 },
-  quitar: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
 });

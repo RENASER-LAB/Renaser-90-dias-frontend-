@@ -42,11 +42,11 @@ function FilaDeLaParte({ parte, zona, primera }: { parte: ParteDelResumen; zona:
   const color = parte.color ? COLORES.find(x => x.clave === parte.color) : null;
   const titulo = color
     ? color.nombre
-    : parte.tipo === 'PERSON' || (parte.tipo === 'STAFF' && parte.personas.length > 0)
-      ? `${parte.cuantos} ${parte.cuantos === 1 ? 'persona' : 'personas'}`
-      : parte.tipo === 'STAFF'
-        ? 'Todo el personal'
-        : (parte.nombre ?? NOMBRE_DE_LA_PARTE[parte.tipo]);
+    : parte.tipo === 'STAFF'
+      ? parte.personas.length > 0
+        ? 'Personal'
+        : 'Todo el personal'
+      : (parte.nombre ?? NOMBRE_DE_LA_PARTE[parte.tipo]);
   const sub = color ? lineaDeLaFoto(parte.resueltoEn, zona) : parte.personas.map(p => p.nombre).join(', ') || null;
   return (
     <View style={[estilos.fila, !primera ? { borderTopWidth: 1, borderTopColor: c.border } : null]} accessible accessibilityLabel={`${titulo}, ${parte.cuantos}`}>

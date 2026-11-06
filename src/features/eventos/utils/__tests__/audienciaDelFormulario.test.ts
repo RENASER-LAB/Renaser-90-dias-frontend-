@@ -11,6 +11,7 @@ import {
   audienciaInicial,
   camposDeAudiencia,
   eligioAlgo,
+  lineaDeMisAlumnos,
   lineaDelOrganizador,
   partesDelCable,
   partesEnOrden,
@@ -113,5 +114,12 @@ describe('textos', () => {
     expect(lineaDelOrganizador('Rocío Díaz', 'Líder de mentores')).toBe('Te invitó Rocío, líder de mentores');
     expect(lineaDelOrganizador('Luis', null)).toBe('Te invitó Luis');
     expect(lineaDelOrganizador(null, 'Mentor')).toBeNull();
+  });
+
+  // spec 044 FR-034
+  it('bajo «Mis alumnos» dice cuántos tiene hoy, en singular o plural', () => {
+    expect(lineaDeMisAlumnos(1)).toBe('Tienes 1 alumno hoy.');
+    expect(lineaDeMisAlumnos(3)).toBe('Tienes 3 alumnos hoy.');
+    expect(lineaDeMisAlumnos(0)).toBe('Todavía no tienes alumnos en esta formación.');
   });
 });

@@ -149,6 +149,12 @@ export function textoLlegaA(total: number, soloAlumnos: boolean): string {
   return `Llega a ${total} ${total === 1 ? 'persona' : 'personas'}`;
 }
 
+/** Bajo «Mis alumnos»: cuántos tiene hoy el mentor en la formación del evento. */
+export function lineaDeMisAlumnos(cuantos: number): string {
+  if (cuantos <= 0) return 'Todavía no tienes alumnos en esta formación.';
+  return cuantos === 1 ? 'Tienes 1 alumno hoy.' : `Tienes ${cuantos} alumnos hoy.`;
+}
+
 /** «Te invitó Rocío, líder de mentores» (FR-019, S7): el primer nombre y el rol en minúscula. Sin datos, nada. */
 export function lineaDelOrganizador(nombre: string | null | undefined, rol: string | null | undefined): string | null {
   const primero = nombre?.trim().split(/\s+/)[0];
