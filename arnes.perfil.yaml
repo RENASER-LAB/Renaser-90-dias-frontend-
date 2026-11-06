@@ -5,6 +5,7 @@ version: 1
 nombre: app-expo
 stack: expo
 rutas:
+  incidentes: ~/.local/share/arnes/app-expo/incidentes.jsonl   # fuera del worktree: así se ve si un error se repite entre tareas
   instrucciones: AGENTS.md
   progreso: PROGRESO.md
   decisiones: docs/decisiones/README.md
@@ -22,6 +23,7 @@ comandos:
   verificar_rapido: "npm run verificar -- --rapido"
   e2e: "npm run verificar -- --e2e"
   logs: "manual: adb logcat filtrado por la app y el registro del backend local durante el E2E, sin errores nuevos"
+  mejorar: "agente: arnes incidente «qué pasó» --causa <qué le faltó al arnés>, la mejora (regla en AGENTS.md o el perfil, chequeo en verificar, prueba de familias de errores, hook o tope) y arnes incidente cerrar <id> --mejora <archivo> --tipo <tipo>"
   pr: "gh pr create (plantilla de PR con la verificación, el E2E y lo que no se pudo verificar)"
   cerrar: "manual: scripts/worktree-cerrar.sh <rama> (borra worktree, rama y grafo) y PROGRESO.md al día"
 reglas:
