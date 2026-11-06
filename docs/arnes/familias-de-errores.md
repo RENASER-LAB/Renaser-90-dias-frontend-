@@ -37,7 +37,7 @@ Cada uno se probó con una violación plantada (falla) y con el código actual (
 
 - `src/features/mentor/screens/AlumnoScreen.tsx` y `src/features/pasos/hooks/usePasosDelDia.ts` usan el `Alert` de
   react-native: en la web el aviso no sale. Issue [#144](https://github.com/RENASER-LAB/Renaser-90-dias-frontend-/issues/144).
-  Quedaron como excepción con fecha; no se tocó código de producto.
+  Quedaron como excepción con fecha hasta que #155 las arregló (2026-11-06); ya no están en `excepciones.json`.
 
 ## Sin chequeo automático
 
