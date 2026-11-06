@@ -1,5 +1,8 @@
 # El arnés de la app
 
+Esta app es un **perfil** del arnés de agentes de Ricardo (núcleo genérico aparte, en `~/Documentos/arnes`): el
+perfil es `arnes.perfil.yaml` y el mapa de las 14 fases del curso a este repositorio, `docs/arnes/fases.md`.
+
 El documento completo (lo que recomienda la comunidad en 2026 con sus fuentes, la metodología —spec-kit con un camino
 corto y la observación como paso obligatorio—, el ciclo spec → preguntas → plan → tareas → implementación → E2E → PR, qué
 cargar según lo que se toca, y el grafo primero con lo medido) vive en el backend, donde están las specs:

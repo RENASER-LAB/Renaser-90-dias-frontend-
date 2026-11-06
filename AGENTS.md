@@ -32,6 +32,7 @@ dueño, un plan o un informe nunca se escriben acá (`src/__tests__/harness/agen
 | E2E nativo (Maestro) y web (Playwright) | `.maestro/README.md`, `e2e/` |
 | Mapa de los demás documentos (vigentes e históricos) | `docs/README.md` |
 | El arnés (metodología, ciclo de una spec, módulos, grafo) y las familias de errores con su chequeo | `docs/arnes/README.md`, `docs/arnes/familias-de-errores.md` |
+| El perfil de este repo en el grafo de agentes (núcleo aparte) y las 14 fases | `arnes.perfil.yaml`, `docs/arnes/fases.md` |
 | Backend: reglas, bitácora de errores (E-NN) y decisiones (D-NN) | `../Renaser-90-dias-backend/AGENTS.md` |
 | Un comentario del código dice «ver `AGENTS.md`» sobre una excepción o una autorización | Búscala por fecha en `docs/decisiones/README.md`; las reglas §1–§6 siguen al final de este archivo |
 
@@ -76,7 +77,7 @@ Un solo camino, el mismo que corre el CI:
 
 | Comando | Qué corre | Cuándo |
 |---|---|---|
-| `npm run verificar` | parches de postinstall, tipos (`tsc`), Jest completo (incluye las reglas del arnés), trazabilidad de specs contra el backend y el conteo de flujos de Maestro sin correr | antes de decir «terminado» |
+| `npm run verificar` | parches de postinstall, tipos (`tsc`), Jest completo (incluye las reglas del arnés), trazabilidad de specs contra el backend, el grafo de agentes con este perfil (`arnes validar`) y el conteo de flujos de Maestro sin correr | antes de decir «terminado» |
 | `npm run verificar -- --rapido` | parches, tipos y solo las pruebas de lo cambiado | mientras trabajas: **no cierra nada** (sale con 2) |
 | `npm run verificar -- --e2e [flujo…]` | lo anterior + Maestro en el emulador | si el cambio se ve en la app |
 
