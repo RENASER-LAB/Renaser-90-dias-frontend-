@@ -1,9 +1,14 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { useReducedMotion } from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
 import Constants from 'expo-constants';
 
+import { Presionable } from '../../../components/Presionable';
+import { CURVA_SALIDA } from '../../../theme/movimiento';
+import { fuentes } from '../../../theme/fuentes';
 import { useTheme } from '../../../theme/ThemeContext';
+import { tacto } from '../../../utils/tacto';
+import { useVistaDelMapa, type VistaDelMapa } from '../servicios/vistaDelMapa';
 import { distanciaM, type Coordenada } from '../utils/geo';
 import type { FiguraDelAvatar } from '../utils/fusionDelAvatar';
 import { TEXTOS_DE_LA_CARRERA } from '../utils/textosDeLaCarrera';
@@ -43,14 +48,31 @@ function cargarMapas(): ModuloMapas | null {
 /** La cámara de cada modo. `avatarAlto`: a qué fracción del alto, desde arriba, cae el centro de la cámara (y el avatar). */
 export const CAMARA = {
   navegacion: { inclinacion: 67.5, acercamiento: 18.5, avatarAlto: 0.68 },
+  /** 2D (botón del mapa, 2026-11-05): desde arriba, con el rumbo hacia arriba y el avatar al centro. */
+  plano: { inclinacion: 0, acercamiento: 17.5, avatarAlto: 0.5 },
   resumen: { inclinacion: 60, acercamiento: 18, avatarAlto: 0.5 },
 } as const;
-export type ModoDelMapa = keyof typeof CAMARA;
+export type CamaraDelMapa = keyof typeof CAMARA;
+export type ModoDelMapa = 'navegacion' | 'resumen';
+
+/** Qué cámara usa el mapa: el resumen siempre la suya; corriendo, 3D (diagonal) o 2D (desde arriba) según el botón. */
+export function camaraDelMapa(modo: ModoDelMapa, vista: VistaDelMapa): CamaraDelMapa {
+  if (modo === 'resumen') return 'resumen';
+  return vista === '2d' ? 'plano' : 'navegacion';
+}
+
+/** Cuánto tarda la cámara en pasar de 3D a 2D o al revés. */
+export const DURACION_CAMBIO_DE_VISTA_MS = 400;
 
 /** El relleno de arriba que deja el centro de la cámara a `avatarAlto` del alto: el centro cae en `P + (alto − P) / 2`. */
 export function rellenoDeArriba(alto: number, avatarAlto: number): number {
   if (!(alto > 0)) return 0;
   return Math.max(0, Math.round(alto * (2 * avatarAlto - 1)));
+}
+
+/** Cuánto baja el avatar desde el centro del recuadro para quedar en el centro de la cámara: la mitad del relleno de arriba. */
+export function bajadaDelAvatar(alto: number, camara: CamaraDelMapa): number {
+  return rellenoDeArriba(alto, CAMARA[camara].avatarAlto) / 2;
 }
 
 /** Más lejos que esto, del centro de vista al primer punto real, la cámara salta en vez de viajar. */
@@ -72,7 +94,10 @@ export function MapaDeCarrera({
   alto,
   centroDeVista = null,
   modo = 'navegacion',
+  cuentaId = null,
 }: {
+  /** Para recordar 2D o 3D por cuenta en este teléfono. */
+  cuentaId?: string | null;
   ruta: readonly Coordenada[];
   posicion: Coordenada | null;
   /** Dónde mirar mientras el motor no tiene `posicion`. Solo para mirar: no entra a la ruta. */
@@ -91,9 +116,24 @@ export function MapaDeCarrera({
   const Mapas = useMemo(cargarMapas, []);
   const mapa = useRef<InstanceType<ModuloMapas['default']> | null>(null);
   const reducir = useReducedMotion();
-  const camara = CAMARA[modo];
+  const [vista, cambiarVista] = useVistaDelMapa(modo === 'navegacion' ? cuentaId : null);
+  const claveDeCamara = camaraDelMapa(modo, vista);
+  const camara = CAMARA[claveDeCamara];
   const [altoMedido, setAltoMedido] = useState(alto ?? 0);
   const relleno = rellenoDeArriba(altoMedido, camara.avatarAlto);
+  const camaraPrevia = useRef(claveDeCamara);
+  // El avatar baja con el centro de la cámara: P / 2 desde el centro del recuadro. Viaja junto con la cámara al cambiar de vista.
+  const destinoDeLaBajada = bajadaDelAvatar(altoMedido, claveDeCamara);
+  const bajada = useSharedValue(destinoDeLaBajada);
+  useEffect(() => {
+    const cambioDeVista = camaraPrevia.current !== claveDeCamara;
+    bajada.set(
+      cambioDeVista && !reducir
+        ? withTiming(destinoDeLaBajada, { duration: DURACION_CAMBIO_DE_VISTA_MS, easing: CURVA_SALIDA })
+        : destinoDeLaBajada,
+    );
+  }, [destinoDeLaBajada, claveDeCamara, reducir, bajada]);
+  const estiloDelAvatar = useAnimatedStyle(() => ({ transform: [{ translateY: bajada.get() }] }));
   const centro = posicion ?? centroDeVista;
   const dibujada = useMemo(() => ruta.slice(-PUNTOS_DIBUJADOS).map(p => ({ latitude: p.lat, longitude: p.lng })), [ruta]);
   /** El último centro al que se llevó la cámara, y si era el de vista (todavía sin punto del motor). */
@@ -103,9 +143,14 @@ export function MapaDeCarrera({
     if (!centro || !mapa.current) return;
     const previo = anterior.current;
     anterior.current = { pos: centro, deVista: posicion == null };
+    const cambioDeVista = camaraPrevia.current !== claveDeCamara;
+    camaraPrevia.current = claveDeCamara;
     let duracion = duracionMs;
-    // Del centro de vista al primer punto real: un viaje corto (sin animar con «reducir movimiento» o si está lejos).
-    if (posicion && previo?.deVista) {
+    if (cambioDeVista) {
+      // 3D ↔ 2D: un pase suave; con «reducir movimiento», en el acto.
+      duracion = reducir ? 0 : DURACION_CAMBIO_DE_VISTA_MS;
+    } else if (posicion && previo?.deVista) {
+      // Del centro de vista al primer punto real: un viaje corto (sin animar con «reducir movimiento» o si está lejos).
       duracion = reducir || distanciaM(previo.pos, posicion) > VIAJE_MAXIMO_M ? 0 : DURACION_AL_PRIMER_PUNTO_MS;
     } else if (!posicion) {
       duracion = reducir ? 0 : DURACION_AL_PRIMER_PUNTO_MS;
@@ -116,7 +161,7 @@ export function MapaDeCarrera({
     );
     // Solo cambia la cámara cuando cambia dónde mirar o el rumbo; las demás dependencias se leen en ese momento.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [centro?.lat, centro?.lng, rumbo, duracionMs]);
+  }, [centro?.lat, centro?.lng, rumbo, duracionMs, claveDeCamara]);
 
   return (
     <View
@@ -160,9 +205,22 @@ export function MapaDeCarrera({
           ) : null}
         </View>
       )}
-      <View pointerEvents="none" style={[estilos.centro, { top: relleno }]}>
+      <Animated.View pointerEvents="none" style={[estilos.centro, estiloDelAvatar]}>
         <AvatarCaminante figura={figura} caminando={caminando} iniciales={iniciales} fotoUrl={fotoUrl} />
-      </View>
+      </Animated.View>
+      {Mapas && centro && modo === 'navegacion' ? (
+        <Presionable
+          onPress={() => {
+            tacto.seleccion();
+            cambiarVista();
+          }}
+          accessibilityRole="button"
+          accessibilityLabel={vista === '3d' ? 'Ver el mapa en 2D' : 'Ver el mapa en 3D'}
+          style={[estilos.botonVista, { backgroundColor: c.cardBgAlt, borderColor: c.borderStrong }]}
+        >
+          <Text style={[estilos.textoVista, { color: c.textStrong }]}>{vista === '3d' ? '2D' : '3D'}</Text>
+        </Presionable>
+      ) : null}
       {chapa ? (
         <View style={[estilos.chapa, { backgroundColor: c.cardBgAlt, borderColor: c.borderStrong }]}>
           <Text style={[t.small, { color: c.textStrong, fontVariant: ['tabular-nums'] }]}>{chapa}</Text>
@@ -176,5 +234,18 @@ const estilos = StyleSheet.create({
   contenedor: { borderRadius: 20, overflow: 'hidden', borderWidth: 1 },
   neutro: { alignItems: 'center', justifyContent: 'flex-end', paddingBottom: 24 },
   centro: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' },
+  botonVista: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    width: 48,
+    height: 48,
+    minHeight: 48,
+    borderRadius: 24,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  textoVista: { fontFamily: fuentes.negrita, fontSize: 15, fontVariant: ['tabular-nums'] },
   chapa: { position: 'absolute', top: 12, left: 12, borderRadius: 14, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 6 },
 });

@@ -92,7 +92,9 @@ export async function prepararCentroDelMapa(): Promise<void> {
   const mia = vuelta;
   const L = cargarUbicacion();
   if (!L) return;
-  void L.getCurrentPositionAsync({ accuracy: L.Accuracy.Balanced })
+  // `mayShowUserSettingsDialog: false`: sin esto, con «Precisión de la ubicación» de Google apagada, Android muestra su diálogo
+  // encima de la cuenta y la frena (visto en el E2E del 05/11). Sin red de ubicación, la lectura simplemente no llega.
+  void L.getCurrentPositionAsync({ accuracy: L.Accuracy.Balanced, mayShowUserSettingsDialog: false })
     .then(p => {
       if (mia === vuelta) ponerCentroDelMapa({ lat: p.coords.latitude, lng: p.coords.longitude }, 'aproximada');
     })

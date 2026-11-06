@@ -337,13 +337,12 @@ function Anfitrion() {
         />
       ) : (
         // La cuenta va ENCIMA de la pantalla de correr, que ya está montada detrás: el mapa carga sus mosaicos durante el 3, 2, 1 y
-        // al terminar la cuenta es el mismo mapa (no se vuelve a montar).
+        // al terminar la cuenta es el mismo mapa (no se vuelve a montar). No se le cambia `importantForAccessibility` al pasar de la
+        // cuenta a la carrera: en Android eso dejaba el mapa en blanco ~1 s justo al terminar el «1» (visto en el E2E del 05/11).
         <View style={estilos.capas}>
           {e ? (
             <View
               style={estilos.capas}
-              importantForAccessibility={vista.tipo === 'cuenta' ? 'no-hide-descendants' : 'auto'}
-              accessibilityElementsHidden={vista.tipo === 'cuenta'}
             >
               <PantallaCorriendo
                 e={e}

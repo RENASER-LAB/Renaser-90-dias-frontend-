@@ -37,6 +37,8 @@ describe('el centro del mapa no se mide', () => {
     await prepararCentroDelMapa();
     await Promise.resolve();
     expect(centroDelMapa()?.pos).toEqual({ lat: -12.1205, lng: -77.0301 });
+    // Nunca el diálogo de «Precisión de la ubicación» encima de la cuenta.
+    expect(mockUbicacion.getCurrentPositionAsync).toHaveBeenCalledWith(expect.objectContaining({ mayShowUserSettingsDialog: false }));
     seguirCarrera();
     expect(carreraActual()!.ruta).toHaveLength(0);
     expect(carreraActual()!.distanciaM).toBe(0);
