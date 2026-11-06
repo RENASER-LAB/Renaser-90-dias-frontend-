@@ -71,9 +71,9 @@ async function dibujar() {
   });
 }
 const visible = () => raiz!.root.findAll(n => (n.type as unknown) === Modal && n.props.visible === true).length > 0;
-const textos = () => raiz!.root.findAllByType(Text).map(n => [n.props.children].flat().join(''));
+const textos = () => raiz!.root.findAll(n => (n.type as unknown) === Text).map(n => [n.props.children].flat().join(''));
 function tocar(texto: string) {
-  const nodo = raiz!.root.findAll(n => typeof n.props.onPress === 'function' && n.findAllByType(Text).some(t => [t.props.children].flat().join('') === texto))[0];
+  const nodo = raiz!.root.findAll(n => typeof n.props.onPress === 'function' && n.findAll(x => (x.type as unknown) === Text).some(t => [t.props.children].flat().join('') === texto))[0];
   if (!nodo) throw new Error(`no hay «${texto}»`);
   act(() => nodo.props.onPress());
 }
