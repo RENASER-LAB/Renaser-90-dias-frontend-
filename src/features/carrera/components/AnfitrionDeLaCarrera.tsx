@@ -22,6 +22,7 @@ import {
   resumenParaLaNotificacion,
   seguirCarrera,
 } from '../servicios/carreraEnVivo';
+import { pedirCalentarElMapa, ponerCuentaDeLaCarrera } from '../servicios/calentarLaCarrera';
 import { olvidarCentroDelMapa, prepararCentroDelMapa } from '../servicios/centroDelMapa';
 import { encolar, procesarCola } from '../servicios/colaDeCarreras';
 import { leerDatosDeLaPersona } from '../servicios/datosDeLaPersona';
@@ -37,6 +38,7 @@ import { nuevaCarreraId } from '../utils/idDeLaCarrera';
 import { esMuyCorta, pausar } from '../utils/motorDeCarrera';
 import { accionDelToque, laCarreraYaEmpezo, marcaDelToque, type ToqueEnLaNotificacion } from '../utils/notificacionUnica';
 import { TEXTOS_DE_LA_CARRERA } from '../utils/textosDeLaCarrera';
+import { CalentadorDelMapa } from './CalentadorDelMapa';
 import { CuentaRegresiva } from './CuentaRegresiva';
 import { PantallaCorriendo, PantallaTerminaste, type PanelDeLaPausa } from './PantallaDeCarrera';
 
@@ -89,6 +91,12 @@ function Anfitrion() {
   useEffect(() => {
     ponerEfectos({ alCambiar: efectoDeVoz });
   }, []);
+
+  // La fila de «Kilómetros diarios» adelanta lo de la carrera para la cuenta con sesión (`calentarLaCarrera`).
+  useEffect(() => {
+    ponerCuentaDeLaCarrera(cuentaId);
+    return () => ponerCuentaDeLaCarrera(null);
+  }, [cuentaId]);
 
   // Al entrar: preferencias, la carrera sin terminar (si hay) y la cola.
   useEffect(() => {
@@ -187,6 +195,12 @@ function Anfitrion() {
       .catch(() => undefined);
   }, [hayCarrera, atenderToque]);
 
+  const detenerTodo = useCallback(async () => {
+    olvidarCentroDelMapa();
+    await detenerGps();
+    await quitarNotificacionDeCarrera();
+  }, []);
+
   const empezar = useCallback(
     async (registroId: string | null) => {
       if (!cuentaId || empezando.current) return;
@@ -195,6 +209,8 @@ function Anfitrion() {
         return;
       }
       empezando.current = true;
+      // Si la fila no llegó a calentar Google Maps, empieza ahora, mientras se pide el permiso.
+      pedirCalentarElMapa();
       try {
         const permiso = await pedirPermisoDeUbicacion();
         if (permiso !== 'concedido') {
@@ -208,21 +224,33 @@ function Anfitrion() {
         const [datos, conPasos] = await Promise.all([leerDatosDeLaPersona(cuentaId), prepararPodometro(), prepararCentroDelMapa()]);
         setFigura(datos.figura);
         setConHabito(registroId != null);
-        empezarCarrera({ carreraId: nuevaCarreraId(), cuentaId, pesoKg: datos.pesoKg, conPasos });
+        const carreraId = nuevaCarreraId();
+        empezarCarrera({ carreraId, cuentaId, pesoKg: datos.pesoKg, conPasos });
         pausarCarrera();
-        if (!(await empezarGps())) {
-          await descartarCarrera();
-          Alert.alert('Ubicación', TEXTOS_DE_LA_CARRERA.sinGpsActivo);
-          return;
-        }
+        // La cuenta (y el mapa detrás) sale YA: arrancar el servicio del GPS tarda ~0,7 s y antes se esperaba con la pantalla
+        // quieta (2026-11-06). La carrera está en pausa: nada se cuenta hasta el final del «1».
         setPanel(null);
         setBloqueada(false);
         setVista({ tipo: 'cuenta' });
+        const conGps = await empezarGps();
+        const sigue = carreraActual()?.carreraId === carreraId;
+        if (!sigue) {
+          // Se canceló durante la cuenta mientras el GPS arrancaba: que no quede prendido.
+          if (conGps && !carreraActual()) await detenerGps(true);
+          return;
+        }
+        if (!conGps) {
+          await descartarCarrera();
+          await detenerTodo();
+          setVista({ tipo: 'cerrada' });
+          Alert.alert('Ubicación', TEXTOS_DE_LA_CARRERA.sinGpsActivo);
+          return;
+        }
       } finally {
         empezando.current = false;
       }
     },
-    [cuentaId],
+    [cuentaId, detenerTodo],
   );
 
   useEffect(
@@ -237,11 +265,6 @@ function Anfitrion() {
     [empezar],
   );
 
-  const detenerTodo = useCallback(async () => {
-    olvidarCentroDelMapa();
-    await detenerGps();
-    await quitarNotificacionDeCarrera();
-  }, []);
 
   const terminar = useCallback(async () => {
     const actual = carreraActual();
@@ -318,7 +341,8 @@ function Anfitrion() {
   }, [vista.tipo, bloqueada, panel, detenerTodo]);
   useSystemBackHandler(atras, vista.tipo !== 'cerrada');
 
-  if (vista.tipo === 'cerrada') return null;
+  // Sin carrera a la vista, el calentador de Google Maps (1 × 1, una vez por proceso: ver `calentarLaCarrera`).
+  if (vista.tipo === 'cerrada') return <CalentadorDelMapa />;
   const persona = { figura, iniciales: iniciales(user?.name), fotoUrl: user?.avatarUrl?.startsWith('http') ? user.avatarUrl : null };
 
   return (
