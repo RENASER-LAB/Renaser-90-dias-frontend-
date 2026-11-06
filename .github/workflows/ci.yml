@@ -37,7 +37,7 @@ jobs:
       # si alguna vez algo pasa acá y falla localmente, o al reves, esta es la primera diferencia
       # que hay que mirar.
       - name: Instalar Node 20
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: '20'
           cache: npm
