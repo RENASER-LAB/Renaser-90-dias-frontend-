@@ -29,7 +29,7 @@ import { HojaDelSobrenombre } from '../components/HojaDelSobrenombre';
 
 let raiz: ReactTestRenderer | null = null;
 const sin: MiSobrenombre = { sobrenombre: null, puedeCambiarDesde: null, invitacionDescartada: false };
-const textos = () => (raiz as unknown as ReactTestRenderer).root.findAllByType(Text).map(n => [n.props.children].flat().join(''));
+const textos = () => raiz!.root.findAll(n => (n.type as unknown) === Text).map(n => [n.props.children].flat().join(''));
 
 beforeEach(() => {
   mockElegir.mockReset();
@@ -41,11 +41,11 @@ afterEach(() => {
 });
 
 function escribir(valor: string) {
-  const campo = raiz!.root.findAllByType(TextInput).find(n => n.props.accessibilityLabel === 'Tu sobrenombre')!;
+  const campo = raiz!.root.findAll(n => (n.type as unknown) === TextInput && n.props.accessibilityLabel === 'Tu sobrenombre')[0];
   act(() => campo.props.onChangeText(valor));
 }
 async function guardar() {
-  const boton = raiz!.root.findAll(n => typeof n.props.onPress === 'function' && n.findAllByType(Text).some(t => [t.props.children].flat().join('') === 'Guardar'))[0];
+  const boton = raiz!.root.findAll(n => typeof n.props.onPress === 'function' && n.findAll(x => (x.type as unknown) === Text).some(t => [t.props.children].flat().join('') === 'Guardar'))[0];
   await act(async () => boton.props.onPress());
 }
 
