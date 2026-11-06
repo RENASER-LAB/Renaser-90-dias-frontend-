@@ -101,6 +101,7 @@ export function HojaDelSobrenombre({
       etiquetaCerrar="Cerrar"
       pie={<GoldButton label={guardando ? 'Guardando…' : T.guardar} onPress={() => void guardar()} disabled={!puedeGuardar} />}
     >
+      <View style={estilos.cuerpo} testID="cuerpo-de-la-hoja-del-sobrenombre">
       <Text style={[t.body, { color: c.textSoft, fontSize: 15, marginBottom: 14 }]}>{T.ayuda}</Text>
       <View
         style={[
@@ -151,11 +152,14 @@ export function HojaDelSobrenombre({
           <Text style={[t.body, { color: c.textSoft, fontFamily: fuentes.seminegrita, fontSize: 16 }]}>{T.quitar}</Text>
         </Presionable>
       ) : null}
+      </View>
     </HojaDesdeAbajo>
   );
 }
 
 const estilos = StyleSheet.create({
+  /** El cuerpo de `HojaDesdeAbajo` no trae relleno: cada hoja pone el suyo (20, como el título y el pie). */
+  cuerpo: { paddingHorizontal: 20, paddingBottom: 8 },
   campo: { minHeight: 52, borderWidth: 1.5, borderRadius: 14, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 8 },
   entrada: { flex: 1, fontSize: 16, paddingVertical: 12 },
   vista: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderRadius: 16, padding: 12 },

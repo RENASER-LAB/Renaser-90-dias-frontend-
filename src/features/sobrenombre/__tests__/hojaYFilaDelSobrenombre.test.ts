@@ -86,6 +86,27 @@ describe('la hoja del sobrenombre', () => {
   });
 });
 
+describe('la hoja tiene aire a los lados', () => {
+  it('spec 046 FR-001: el cuerpo lleva 20 de relleno lateral (en el E2E el texto y el campo tocaban el borde de la pantalla)', () => {
+    act(() => {
+      raiz = TestRenderer.create(React.createElement(HojaDelSobrenombre, { visible: true, mio: sin, alCerrar: () => undefined, alGuardar: () => undefined }));
+    });
+    const cuerpo = raiz!.root.findAll(n => n.props.testID === 'cuerpo-de-la-hoja-del-sobrenombre')[0];
+    const estilo = Object.assign({}, ...[cuerpo.props.style].flat());
+    expect(estilo.paddingHorizontal).toBe(20);
+  });
+});
+
+describe('el compositor del Muro', () => {
+  it('spec 046 FR-002: muestra el sobrenombre de quien escribe, si lo eligió (así lo verán)', () => {
+    const fs = jest.requireActual<typeof import('fs')>('fs');
+    const path = jest.requireActual<typeof import('path')>('path');
+    const fuente = fs.readFileSync(path.join(__dirname, '../../../screens/ComunidadScreen.tsx'), 'utf8');
+    expect(fuente).toMatch(/nombreEnElCompositor = miSobrenombre\?\.sobrenombre\?\.trim\(\) \|\| nombreUsuario/);
+    expect(fuente).toMatch(/autor=\{\{ nombre: nombreEnElCompositor/);
+  });
+});
+
 describe('la fila de Hoy', () => {
   it('spec 046 FR-001: «Ahora no» la esconde en el acto y lo guarda en el servidor (D2: no vuelve)', async () => {
     const actualizar = jest.fn();

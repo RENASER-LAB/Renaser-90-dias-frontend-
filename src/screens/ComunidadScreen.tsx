@@ -44,6 +44,7 @@ import { AvisoDeAbajo } from '../components/AvisoDeAbajo';
 import { ConfirmacionEnLinea } from '../components/ConfirmacionEnLinea';
 import { tacto } from '../utils/tacto';
 import { separacionDeLaFila } from '../features/community/utils/filaDeMedallones';
+import { useMiSobrenombre } from '../features/sobrenombre/hooks/useMiSobrenombre';
 import { useAuth } from '../features/auth/context/AuthContext';
 import { useWallFeed } from '../features/community/hooks/useWallFeed';
 import { useWallReactions } from '../features/community/hooks/useWallReactions';
@@ -706,6 +707,9 @@ function ComunidadPorFormacion({
   // Nombre real de quien está usando la app, para las publicaciones y comentarios propios del
   // Muro — reemplaza el "Kelin Arango" fijo del mock por el dato de la sesión.
   const nombreUsuario = user?.name?.trim() || 'Tú';
+  // Spec 046 (D3): el compositor muestra cómo te verán en el Muro: con tu sobrenombre, si lo elegiste.
+  const { mio: miSobrenombre } = useMiSobrenombre();
+  const nombreEnElCompositor = miSobrenombre?.sobrenombre?.trim() || nombreUsuario;
   const primerNombreUsuario = nombreUsuario.split(' ')[0];
 
   /*
@@ -4974,7 +4978,7 @@ function ComunidadPorFormacion({
         alCancelar={() => setCreatePostModalVisible(false)}
         alPublicar={handlePublishPost}
         publicando={subiendoPublicacion}
-        autor={{ nombre: nombreUsuario, firma: firmaDePublicacion, avatarUrl: user?.avatarUrl }}
+        autor={{ nombre: nombreEnElCompositor, firma: firmaDePublicacion, avatarUrl: user?.avatarUrl }}
         texto={newPostText}
         alCambiarTexto={setNewPostText}
         categorias={{
