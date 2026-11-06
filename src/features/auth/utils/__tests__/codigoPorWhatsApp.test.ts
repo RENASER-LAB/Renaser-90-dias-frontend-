@@ -18,7 +18,7 @@ describe('el código por WhatsApp, sin pantalla (spec 043)', () => {
     expect(SEGUNDOS_PARA_OFRECER_WHATSAPP).toBe(60);
     expect(seOfreceElWhatsapp(59)).toBe(false);
     expect(seOfreceElWhatsapp(60)).toBe(true);
-    expect(TEXTO_DEL_ENLACE).toBe('¿No te llegó? Envíamelo por WhatsApp');
+    expect(TEXTO_DEL_ENLACE).toBe('Por WhatsApp');
   });
 
   // spec 043 FR-012, SC-003
@@ -45,10 +45,10 @@ describe('el código por WhatsApp, sin pantalla (spec 043)', () => {
 
   // spec 043 FR-009, FR-012, FR-015
   it('en el alta dice a qué número va; en la recuperación nunca muestra un número ni da a entender que la cuenta tiene uno', () => {
-    expect(lineaAntesDeEnviar('registro', '+51 9•• ••• •21')).toBe('Te lo enviamos a +51 9•• ••• •21.');
+    expect(lineaAntesDeEnviar('registro', '+51 9•• ••• •21')).toBe('Va a +51 9•• ••• •21');
     expect(lineaAntesDeEnviar('recuperacion', '+51 9•• ••• •21')).toBeNull();
-    expect(textoDeEnviado('registro', '+51 9•• ••• •21')).toBe('Te enviamos el código por WhatsApp a +51 9•• ••• •21.');
-    expect(textoDeEnviado('recuperacion', '+51 9•• ••• •21')).toBe('Si tu cuenta tiene un WhatsApp guardado, te enviamos el código ahí.');
+    expect(textoDeEnviado('registro', '+51 9•• ••• •21')).toBe('Te lo enviamos por WhatsApp a +51 9•• ••• •21');
+    expect(textoDeEnviado('recuperacion', '+51 9•• ••• •21')).toBe('Si tu cuenta tiene un WhatsApp guardado, te lo enviamos ahí');
     expect(textoDeEnviado('recuperacion', null)).toBe(textoDeEnviado('recuperacion', '+51 9•• ••• •21'));
   });
 });

@@ -5,7 +5,12 @@
 /** A los 60 segundos de mandar el código al correo aparece «¿No te llegó? Envíamelo por WhatsApp» (FR-012). */
 export const SEGUNDOS_PARA_OFRECER_WHATSAPP = 60;
 
-export const TEXTO_DEL_ENLACE = '¿No te llegó? Envíamelo por WhatsApp';
+/**
+ * La opción va en la misma línea que «¿No te llegó? Reenviar» (pedido del dueño del 06/11: «mucho texto, más limpio»): se ve «Por WhatsApp» y el
+ * lector de pantalla oye la frase entera.
+ */
+export const TEXTO_DEL_ENLACE = 'Por WhatsApp';
+export const ETIQUETA_DEL_ENLACE = 'Envíamelo por WhatsApp';
 
 export type FlujoDelCodigo = 'registro' | 'recuperacion';
 
@@ -44,13 +49,13 @@ export function enmascararWhatsapp(texto: string): string | null {
  */
 export function lineaAntesDeEnviar(flujo: FlujoDelCodigo, enmascarado: string | null): string | null {
   if (flujo === 'recuperacion') return null;
-  return enmascarado ? `Te lo enviamos a ${enmascarado}.` : null;
+  return enmascarado ? `Va a ${enmascarado}` : null;
 }
 
 /** Lo que se dice al terminar (FR-015). En la recuperación es la misma frase siempre: tenga o no WhatsApp la cuenta. */
 export function textoDeEnviado(flujo: FlujoDelCodigo, enmascarado: string | null): string {
-  if (flujo === 'recuperacion') return 'Si tu cuenta tiene un WhatsApp guardado, te enviamos el código ahí.';
-  return enmascarado ? `Te enviamos el código por WhatsApp a ${enmascarado}.` : 'Te enviamos el código por WhatsApp.';
+  if (flujo === 'recuperacion') return 'Si tu cuenta tiene un WhatsApp guardado, te lo enviamos ahí';
+  return enmascarado ? `Te lo enviamos por WhatsApp a ${enmascarado}` : 'Te lo enviamos por WhatsApp';
 }
 
 /** ¿Ya se puede ofrecer? Desde que se mandó el código al correo pasaron 60 segundos o más. */

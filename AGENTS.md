@@ -2678,18 +2678,25 @@ backend (`specs/043-codigo-por-whatsapp/`, D-325). Toca el ingreso (`LoginScreen
   código no te llega al correo.». Es obligatorio y se valida con la regla de la ficha (`validarWhatsapp`) más la forma que el servidor puede usar (`+`, código de país y de
   8 a 15 dígitos; `avisoDelWhatsappDelRegistro`). Viaja como `phone` de la solicitud (`"+51 987654321"`, el campo existía y nadie lo llenaba); al aceptarla, el servidor lo
   deja en la respuesta `whatsapp` de la Ficha Inicial sin pisar una existente, y la ficha lo trae ya escrito (ya leía lo guardado).
-* **En la pantalla del código** (alta y recuperación), **60 segundos** después de abrirla aparece **«¿No te llegó? Envíamelo por WhatsApp»** (`EnlaceDeWhatsApp`: botón de 48,
-  ícono `messageCircle`, texto de 16, entra con el fundido de `Aparicion`). En el **alta** dice debajo «Te lo enviamos a +51 9•• ••• •21.» (enmascarado como el servidor:
-  `enmascararWhatsapp`) y al tocarlo «Te enviamos el código por WhatsApp a +51 9•• ••• •21.». En la **recuperación no muestra ningún número** y al tocarlo dice siempre
-  «Si tu cuenta tiene un WhatsApp guardado, te enviamos el código ahí.»: la app no sabe (ni debe saber) si la cuenta tiene número, porque mostrarlo diría que el correo
-  tiene cuenta (anti-enumeración; el servidor responde 202 sin cuerpo en todos los casos). Un error (429 por los límites, 409, red) se dice con el texto del servidor y el
-  enlace sigue para reintentar; `tacto.logro()` / `tacto.error()`. Reenviar por correo no reinicia la espera. **El código es el mismo** (el servidor manda el vigente del
-  correo) y se escribe en las mismas casillas: nada más cambia en la verificación.
+* **La pantalla del código, más limpia** (pedido del dueño del mismo día, con captura: «mucho texto, más limpio»; vale para el alta y para recuperar la
+  contraseña, con el mismo estilo, `pantallaDelCodigo` en `LoginScreen`): el título **«Ingresa tu código»** (se fue «Verificación de seguridad» y el «INGRESA
+  TU CÓDIGO» en versalitas), **una línea** «Te lo enviamos a ana@…» (en la recuperación, «Si tu correo tiene cuenta, te lo enviamos a ana@…»; se fue la
+  caja que lo repetía), las seis casillas, **una línea chica** «¿No te llegó? Reenviar» (o «Reenviar en 43 s»; era «¿NO RECIBISTE EL CÓDIGO? REENVIAR»), el
+  botón dorado **«Confirmar»** en tipo oración (era «CONFIRMAR Y ENVIAR SOLICITUD» / «VERIFICAR CÓDIGO») y nada más: **volver es la flecha de la cabecera**
+  (se fueron «VOLVER AL INICIO DE SESIÓN» y «CAMBIAR DE CORREO»; en la recuperación la flecha vuelve un paso, a cambiar el correo). El aviso de reenvío y los
+  errores son una línea chica, sin caja. Las etiquetas para el lector de pantalla no cambiaron («Verificar el código», «Verificar el código de recuperación»).
+* **A los 60 segundos, en esa misma línea**, aparece **«· Por WhatsApp»** (`EnlaceDeWhatsApp`, 48 de alto táctil; el lector oye «Envíamelo por WhatsApp. Va a
+  +51 9•• ••• •21» en el alta y «Envíamelo por WhatsApp» en la recuperación). Al tocarlo, debajo: en el **alta** «Te lo enviamos por WhatsApp a +51 9•• ••• •21»
+  (enmascarado como el servidor, `enmascararWhatsapp`); en la **recuperación** siempre «Si tu cuenta tiene un WhatsApp guardado, te lo enviamos ahí»: la app no
+  sabe (ni debe saber) si la cuenta tiene número, porque mostrarlo diría que el correo tiene cuenta (anti-enumeración; el servidor responde 202 sin cuerpo en
+  todos los casos). Un error (429 por los límites, 409, red) se dice en esa línea con el texto del servidor y el enlace sigue para reintentar;
+  `tacto.logro()` / `tacto.error()`. Reenviar por correo no reinicia la espera. **El código es el mismo** (el servidor manda el vigente del correo) y se escribe
+  en las mismas casillas: nada más cambia en la verificación.
 * **Política de privacidad** (`public/privacidad/index.html`): el WhatsApp se pide desde que se solicita acceso y se usa también para mandar el código de verificación cuando no
   llega al correo (al número escrito en el alta; al guardado, en la recuperación). Sale con el deploy de Vercel.
 * **No cambian**: el login, los textos y el orden del alta sin canal, la verificación del código, la Ficha Inicial, los cinco tabs. Sin dependencias ni código nativo.
 * **Pruebas:** Jest `codigoPorWhatsApp` (los 60 s, la máscara, la validación, los textos), `codigoPorWhatsAppApi` (404 = sin canal, la recuperación no lleva número),
-  `loginCodigoPorWhatsApp` (sin canal todo como hoy; con canal el campo, el enlace a los 60 s, el número enmascarado, el WhatsApp en la solicitud, la recuperación sin número)
+  `loginCodigoPorWhatsApp` (sin canal todo como hoy; con canal el campo, el enlace a los 60 s, el número enmascarado, el WhatsApp en la solicitud, la recuperación sin número, la pantalla del código sin versalitas ni caja repetida)
   y `privacidadCodigoPorWhatsApp`. E2E en el emulador contra el backend local y un YCloud falso (capturas en el PR).
 * **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire) **y el backend de la spec 043 antes**. Contra un backend anterior la app queda como hoy.
 

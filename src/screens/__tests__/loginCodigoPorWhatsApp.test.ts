@@ -67,14 +67,17 @@ import LoginScreen from '../LoginScreen';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
-const ENLACE = '¿No te llegó? Envíamelo por WhatsApp';
+const ENLACE = 'Envíamelo por WhatsApp';
 const EMPIEZA_CON_EL_ENLACE = new RegExp(`^${ENLACE.replace(/[?¿.]/g, m => `\\${m}`)}`);
+
+const montados: ReactTestRenderer[] = [];
 
 async function montar(): Promise<ReactTestRenderer> {
   let r!: ReactTestRenderer;
   await act(async () => {
     r = TestRenderer.create(React.createElement(LoginScreen));
   });
+  montados.push(r);
   return r;
 }
 
@@ -120,6 +123,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  act(() => montados.splice(0).forEach(r => r.unmount()));
   jest.useRealTimers();
 });
 
@@ -132,7 +136,7 @@ describe('el código por WhatsApp en el ingreso (spec 043)', () => {
     expect(mockEnviarCodigo).toHaveBeenCalledWith('ana@renaser.test');
     await pasar(120);
     expect(campo(r, 'WhatsApp')).toBeUndefined();
-    expect(textos(r)).not.toContain(ENLACE);
+    expect(textos(r)).not.toContain('Por WhatsApp');
   });
 
   // spec 043 FR-003
@@ -160,17 +164,17 @@ describe('el código por WhatsApp en el ingreso (spec 043)', () => {
     await solicitarAcceso(r, true);
 
     await pasar(59);
-    expect(textos(r)).not.toContain(ENLACE);
+    expect(textos(r)).not.toContain('Por WhatsApp');
     await pasar(2);
-    expect(textos(r)).toContain(ENLACE);
-    expect(textos(r)).toContain('Te lo enviamos a +51 9•• ••• •21.');
+    expect(textos(r)).toContain('Por WhatsApp');
     const enlace = tocable(r, EMPIEZA_CON_EL_ENLACE);
+    expect(enlace.props.accessibilityLabel).toBe('Envíamelo por WhatsApp. Va a +51 9•• ••• •21');
     const estilo = Object.assign({}, ...[enlace.props.style].flat(3).filter(Boolean));
     expect(estilo.minHeight).toBeGreaterThanOrEqual(48);
 
     await act(async () => enlace.props.onPress());
     expect(mockPedirRegistro).toHaveBeenCalledWith('ana@renaser.test', '+51 987654321');
-    expect(textos(r)).toContain('Te enviamos el código por WhatsApp a +51 9•• ••• •21.');
+    expect(textos(r)).toContain('Te lo enviamos por WhatsApp a +51 9•• ••• •21');
 
     // El WhatsApp viaja con la solicitud, para que al aceptarla quede en la ficha.
     const otp = r.root.findAll(n => typeof n.props.onChangeText === 'function' && n.props.maxLength === 6)[0]
@@ -208,6 +212,22 @@ describe('el código por WhatsApp en el ingreso (spec 043)', () => {
     expect(textos(r)).not.toMatch(/•/);
     await act(async () => enlace.props.onPress());
     expect(mockPedirRecuperacion).toHaveBeenCalledWith('ana@renaser.test');
-    expect(textos(r)).toContain('Si tu cuenta tiene un WhatsApp guardado, te enviamos el código ahí.');
+    expect(textos(r)).toContain('Si tu cuenta tiene un WhatsApp guardado, te lo enviamos ahí');
+  });
+});
+
+describe('la pantalla del código, más limpia (pedido del dueño del 06/11)', () => {
+  // spec 043 FR-012
+  it('dice «Ingresa tu código», a dónde se envió en una línea, «¿No te llegó? Reenviar» y «Confirmar», sin versalitas ni la caja repetida', async () => {
+    mockDisponible.mockResolvedValue(false);
+    const r = await montar();
+    await solicitarAcceso(r, false);
+    const todo = textos(r);
+    expect(todo).toContain('Ingresa tu código');
+    expect(todo).toContain('Te lo enviamos a ana@renaser.test');
+    expect(todo).toContain('¿No te llegó?');
+    expect(todo).toContain('Confirmar');
+    expect(todo).not.toMatch(/Verificación de seguridad|INGRESA TU CÓDIGO|CONFIRMAR Y ENVIAR|VOLVER AL INICIO|Código enviado a|NO RECIBISTE/);
+    expect(todo.match(/ana@renaser\.test/g)).toHaveLength(1);
   });
 });

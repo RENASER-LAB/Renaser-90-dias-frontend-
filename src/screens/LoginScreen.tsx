@@ -49,7 +49,7 @@ import { PhoneCountryInput } from '../components/PhoneCountryInput';
 import { validarWhatsapp } from '../features/onboarding/data/pasosFicha';
 import { codigoPorWhatsAppDisponible } from '../features/auth/api/codigoPorWhatsAppApi';
 import { useOfertaDeWhatsApp } from '../features/auth/hooks/useOfertaDeWhatsApp';
-import { EnlaceDeWhatsApp } from '../features/auth/components/EnlaceDeWhatsApp';
+import { EnlaceDeWhatsApp, LineaDeWhatsApp } from '../features/auth/components/EnlaceDeWhatsApp';
 import { avisoDelWhatsappDelRegistro, WHATSAPP_INICIAL } from '../features/auth/utils/codigoPorWhatsApp';
 
 /**
@@ -455,7 +455,8 @@ export default function LoginScreen() {
         setResendTimer(45);
         setCanResend(false);
         setOtpCode('');
-        setSuccessMessage(`Código enviado a ${email.trim()}`);
+        // La línea «Te lo enviamos a …» ya lo dice: sin una segunda caja con lo mismo.
+        setSuccessMessage(null);
         setTimeout(() => otpInputRef.current?.focus(), 300);
       } catch (error) {
         setErrorMessage(mensajeDeError(error, 'Error al enviar el código de confirmación'));
@@ -533,7 +534,7 @@ export default function LoginScreen() {
       await reenviarCodigo(email);
       setResendTimer(45);
       setCanResend(false);
-      setSuccessMessage('Nuevo código enviado a tu correo.');
+      setSuccessMessage('Te enviamos un código nuevo.');
       descartarCodigo();
     } catch (error) {
       setErrorMessage(mensajeDeError(error, 'No se pudo reenviar el código. Inténtalo más tarde.'));
@@ -587,7 +588,7 @@ export default function LoginScreen() {
       setOtpCode('');
       // El backend responde 202 exista o no la cuenta; el mensaje tiene que decir lo mismo en
       // los dos casos, si no la pantalla revelaría qué correos están registrados.
-      setSuccessMessage(`Si ${email.trim()} tiene cuenta, te enviamos un código.`);
+      setSuccessMessage(null);
       setTimeout(() => otpInputRef.current?.focus(), 300);
     } catch (error) {
       setErrorMessage(mensajeDeError(error, 'No pudimos enviar el código. Intenta más tarde.'));
@@ -604,7 +605,7 @@ export default function LoginScreen() {
       await recuperacion.enviarCodigo(email);
       setResendTimer(45);
       setCanResend(false);
-      setSuccessMessage('Nuevo código enviado a tu correo.');
+      setSuccessMessage('Te enviamos un código nuevo.');
       descartarCodigo();
     } catch (error) {
       setErrorMessage(mensajeDeError(error, 'No se pudo reenviar el código. Inténtalo más tarde.'));
@@ -785,6 +786,83 @@ export default function LoginScreen() {
     width: isTablet ? ('100%' as const) : undefined,
   };
 
+
+  /**
+   * La pantalla del código, la misma para el alta y para recuperar la contraseña (pedido del dueño del 06/11: «mucho texto, más limpio»):
+   * «Ingresa tu código», una línea con a dónde se envió, las seis casillas, una línea chica «¿No te llegó? Reenviar» (y a los 60 s
+   * «· Por WhatsApp», spec 043) y «Confirmar». Volver es la flecha de la cabecera. Todo en tipo oración y sin versalitas.
+   */
+  function pantallaDelCodigo(o: {
+    linea: string;
+    onReenviar: () => void;
+    onConfirmar: () => void;
+    etiquetaConfirmar: string;
+    whatsapp: ReturnType<typeof useOfertaDeWhatsApp>;
+    flujo: 'registro' | 'recuperacion';
+  }) {
+    const completo = otpCode.length === LARGO_CODIGO;
+    return (
+      <View style={styles.pantallaDelCodigo}>
+        <Text accessibilityRole="header" style={[styles.tituloDelCodigo, { color: c.textStrong }]}>
+          Ingresa tu código
+        </Text>
+        <Text style={[t.body, styles.lineaDelCodigo, { color: c.textSoft }]}>{o.linea}</Text>
+
+        <CodigoOtpInput
+          codigo={otpCode}
+          onChange={codigo => {
+            setOtpCode(codigo);
+            if (codigo.length === LARGO_CODIGO) {
+              setErrorMessage(null);
+            }
+          }}
+          inputRef={otpInputRef}
+          segundosParaReenviar={resendTimer}
+          puedeReenviar={canResend}
+          onReenviar={o.onReenviar}
+          deshabilitado={loading}
+          otraOpcion={
+            o.whatsapp.visible && o.whatsapp.estado !== 'enviado' ? (
+              <EnlaceDeWhatsApp
+                flujo={o.flujo}
+                estado={o.whatsapp.estado}
+                enmascarado={o.whatsapp.enmascarado}
+                onEnviar={() => void o.whatsapp.enviar()}
+              />
+            ) : undefined
+          }
+        />
+        <LineaDeWhatsApp mensaje={o.whatsapp.mensaje} error={o.whatsapp.error} />
+
+        {errorMessage ? (
+          <Text accessibilityLiveRegion="polite" style={[t.small, styles.avisoDelCodigo, { color: c.danger }]}>
+            {errorMessage}
+          </Text>
+        ) : successMessage ? (
+          <Text accessibilityLiveRegion="polite" style={[t.small, styles.avisoDelCodigo, { color: c.goldInk }]}>
+            {successMessage}
+          </Text>
+        ) : null}
+
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={o.etiquetaConfirmar}
+          onPress={o.onConfirmar}
+          disabled={loading || !completo}
+          style={[styles.submitBtn, { shadowColor: c.gold, opacity: completo ? 1 : 0.65 }]}
+        >
+          <LinearGradient colors={c.goldGrad} start={{ x: 0.1, y: 0 }} end={{ x: 0.9, y: 1 }} style={styles.gradientBtn}>
+            {loading ? (
+              <ActivityIndicator color={c.onGold} size="small" />
+            ) : (
+              <Text style={[styles.textoConfirmar, { color: c.onGold }]}>Confirmar</Text>
+            )}
+          </LinearGradient>
+        </Pressable>
+      </View>
+    );
+  }
+
   return (
     /*
       REDISEÑO DEL 2026-10-05 (pedido del dueño, con la imagen de cabecera que generó él): el fénix
@@ -833,7 +911,7 @@ export default function LoginScreen() {
           <CabeceraDelIngreso
             variante={enElLogin ? 'alta' : 'baja'}
             altoMaximo={topeDeLaCabecera}
-            alVolver={enElLogin ? undefined : step === 'form' ? () => irA('login') : handleReturnToLogin}
+            alVolver={enElLogin ? undefined : step === 'form' ? () => irA('login') : handleBack}
           />
 
           <View style={[styles.cuerpo, anchoDelContenido]} onLayout={alMedirElCuerpo}>
@@ -1075,99 +1153,15 @@ export default function LoginScreen() {
           {/* ========================================================================= */}
           {/* VISTA 2: VERIFICACIÓN DE CÓDIGO OTP DE 6 DÍGITOS                          */}
           {/* ========================================================================= */}
-          {step === 'otp' && (
-            <View style={[styles.card, { backgroundColor: c.cardBg, borderColor: c.border }]}>
-              <View style={{ alignItems: 'center', gap: 6 }}>
-                <MicroLabel>Verificación de seguridad</MicroLabel>
-                <Text style={[t.sectionTitle, { color: c.text, textAlign: 'center', marginTop: 4 }]}>
-                  INGRESA TU CÓDIGO
-                </Text>
-                <Text style={[t.small, { color: c.textSoft, textAlign: 'center', lineHeight: 18, marginTop: 4 }]}>
-                  Hemos enviado un código de 6 dígitos a:
-                </Text>
-                <Text style={[t.small, { color: c.goldInk, fontFamily: fuentes.media }]}>{email}</Text>
-              </View>
-
-              {errorMessage ? (
-                <View style={[styles.alertBox, { backgroundColor: 'rgba(217, 83, 79, 0.08)', borderColor: 'rgba(217, 83, 79, 0.25)' }]}>
-                  <Text style={[t.small, { color: c.danger, textAlign: 'center' }]}>{errorMessage}</Text>
-                </View>
-              ) : null}
-
-              {successMessage ? (
-                <View style={[styles.alertBox, { backgroundColor: c.goldWash, borderColor: c.borderStrong }]}>
-                  <Text style={[t.small, { color: c.goldInk, textAlign: 'center' }]}>{successMessage}</Text>
-                </View>
-              ) : null}
-
-              {/* Casillas del código + reenvío: el mismo componente que usa la recuperación */}
-              <CodigoOtpInput
-                codigo={otpCode}
-                onChange={codigo => {
-                  setOtpCode(codigo);
-                  if (codigo.length === LARGO_CODIGO) {
-                    setErrorMessage(null);
-                  }
-                }}
-                inputRef={otpInputRef}
-                segundosParaReenviar={resendTimer}
-                puedeReenviar={canResend}
-                onReenviar={handleResendOtp}
-                deshabilitado={loading}
-              />
-
-              {whatsappDelAlta.visible ? (
-                <EnlaceDeWhatsApp
-                  flujo="registro"
-                  estado={whatsappDelAlta.estado}
-                  enmascarado={whatsappDelAlta.enmascarado}
-                  mensaje={whatsappDelAlta.mensaje}
-                  error={whatsappDelAlta.error}
-                  onEnviar={() => void whatsappDelAlta.enviar()}
-                />
-              ) : null}
-
-              {/* Botón Confirmar Código OTP */}
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Verificar el código"
-                onPress={handleVerifyOtp}
-                disabled={loading || otpCode.length !== LARGO_CODIGO}
-                style={[
-                  styles.submitBtn,
-                  { shadowColor: c.gold, opacity: otpCode.length === LARGO_CODIGO ? 1 : 0.65 }
-                ]}
-              >
-                <LinearGradient
-                  colors={c.goldGrad}
-                  start={{ x: 0.1, y: 0 }}
-                  end={{ x: 0.9, y: 1 }}
-                  style={styles.gradientBtn}
-                >
-                  {loading ? (
-                    <ActivityIndicator color={c.onGold} size="small" />
-                  ) : (
-                    <Text style={[t.cardTitle, { color: c.onGold, letterSpacing: 0.1, fontFamily: fuentes.media, fontSize: 15 }]}>
-                      CONFIRMAR Y ENVIAR SOLICITUD
-                    </Text>
-                  )}
-                </LinearGradient>
-              </Pressable>
-
-              {/* Botón de Retorno al Login */}
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Volver a iniciar sesión"
-                onPress={handleReturnToLogin}
-                style={[styles.returnLoginBtn, { borderColor: c.border }]}
-              >
-                <Icon name="arrowLeft" size={14} color={c.textSoft} />
-                <Text style={[t.micro, { color: c.textSoft, letterSpacing: 1.5 }]}>
-                  VOLVER AL INICIO DE SESIÓN
-                </Text>
-              </Pressable>
-            </View>
-          )}
+          {step === 'otp' &&
+            pantallaDelCodigo({
+              linea: `Te lo enviamos a ${email.trim()}`,
+              onReenviar: handleResendOtp,
+              onConfirmar: handleVerifyOtp,
+              etiquetaConfirmar: 'Verificar el código',
+              whatsapp: whatsappDelAlta,
+              flujo: 'registro',
+            })}
 
           {/* ========================================================================= */}
           {/* VISTA 3: RECUPERACIÓN DE CONTRASEÑA (FORMULARIO)                          */}
@@ -1265,98 +1259,16 @@ export default function LoginScreen() {
           {/* ========================================================================= */}
           {/* VISTA 4: RECUPERACIÓN — CÓDIGO DE 6 DÍGITOS (D-102)                        */}
           {/* ========================================================================= */}
-          {step === 'forgot_otp' && (
-            <View style={[styles.card, { backgroundColor: c.cardBg, borderColor: c.border }]}>
-              <View style={{ alignItems: 'center', gap: 6 }}>
-                <MicroLabel>Recuperación de contraseña</MicroLabel>
-                <Text style={[t.sectionTitle, { color: c.text, textAlign: 'center', marginTop: 4 }]}>
-                  INGRESA TU CÓDIGO
-                </Text>
-                {/* "Si tiene cuenta": el backend no dice si el correo existe, y la pantalla tampoco. */}
-                <Text style={[t.small, { color: c.textSoft, textAlign: 'center', lineHeight: 18, marginTop: 4 }]}>
-                  Si el correo tiene cuenta, te enviamos un código de 6 dígitos a:
-                </Text>
-                <Text style={[t.small, { color: c.goldInk, fontFamily: fuentes.media }]}>{email}</Text>
-              </View>
-
-              {errorMessage ? (
-                <View style={[styles.alertBox, { backgroundColor: 'rgba(217, 83, 79, 0.08)', borderColor: 'rgba(217, 83, 79, 0.25)' }]}>
-                  <Text style={[t.small, { color: c.danger, textAlign: 'center' }]}>{errorMessage}</Text>
-                </View>
-              ) : null}
-
-              {successMessage ? (
-                <View style={[styles.alertBox, { backgroundColor: c.goldWash, borderColor: c.borderStrong }]}>
-                  <Text style={[t.small, { color: c.goldInk, textAlign: 'center' }]}>{successMessage}</Text>
-                </View>
-              ) : null}
-
-              <CodigoOtpInput
-                codigo={otpCode}
-                onChange={codigo => {
-                  setOtpCode(codigo);
-                  if (codigo.length === LARGO_CODIGO) {
-                    setErrorMessage(null);
-                  }
-                }}
-                inputRef={otpInputRef}
-                segundosParaReenviar={resendTimer}
-                puedeReenviar={canResend}
-                onReenviar={handleResendForgotOtp}
-                deshabilitado={loading}
-              />
-
-              {whatsappDeLaRecuperacion.visible ? (
-                <EnlaceDeWhatsApp
-                  flujo="recuperacion"
-                  estado={whatsappDeLaRecuperacion.estado}
-                  enmascarado={null}
-                  mensaje={whatsappDeLaRecuperacion.mensaje}
-                  error={whatsappDeLaRecuperacion.error}
-                  onEnviar={() => void whatsappDeLaRecuperacion.enviar()}
-                />
-              ) : null}
-
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Verificar el código de recuperación"
-                onPress={handleVerifyForgotOtp}
-                disabled={loading || otpCode.length !== LARGO_CODIGO}
-                style={[
-                  styles.submitBtn,
-                  { shadowColor: c.gold, opacity: otpCode.length === LARGO_CODIGO ? 1 : 0.65 }
-                ]}
-              >
-                <LinearGradient
-                  colors={c.goldGrad}
-                  start={{ x: 0.1, y: 0 }}
-                  end={{ x: 0.9, y: 1 }}
-                  style={styles.gradientBtn}
-                >
-                  {loading ? (
-                    <ActivityIndicator color={c.onGold} size="small" />
-                  ) : (
-                    <Text style={[t.cardTitle, { color: c.onGold, letterSpacing: 0.1, fontFamily: fuentes.media, fontSize: 15 }]}>
-                      VERIFICAR CÓDIGO
-                    </Text>
-                  )}
-                </LinearGradient>
-              </Pressable>
-
-              {/* Un paso atrás: cambiar el correo (mismo destino que el gesto lateral) */}
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Volver al paso anterior"
-                onPress={handleBack}
-                style={[styles.returnLoginBtn, { borderColor: c.border }]}
-              >
-                <Icon name="arrowLeft" size={14} color={c.textSoft} />
-                <Text style={[t.micro, { color: c.textSoft, letterSpacing: 1.5 }]}>
-                  CAMBIAR DE CORREO
-                </Text>
-              </Pressable>
-            </View>
-          )}
+          {step === 'forgot_otp' &&
+            pantallaDelCodigo({
+              // «Si tu correo tiene cuenta»: el backend no dice si el correo existe, y la pantalla tampoco.
+              linea: `Si tu correo tiene cuenta, te lo enviamos a ${email.trim()}`,
+              onReenviar: handleResendForgotOtp,
+              onConfirmar: handleVerifyForgotOtp,
+              etiquetaConfirmar: 'Verificar el código de recuperación',
+              whatsapp: whatsappDeLaRecuperacion,
+              flujo: 'recuperacion',
+            })}
 
           {/* ========================================================================= */}
           {/* VISTA 4b: RECUPERACIÓN — CONTRASEÑA NUEVA (D-102)                          */}
@@ -1777,6 +1689,11 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   /** El WhatsApp de «Solicitar acceso» (spec 043) entre el correo y la contraseña. */
   campoWhatsapp: { width: '100%' },
+  pantallaDelCodigo: { width: '100%', gap: 8, paddingTop: 8 },
+  tituloDelCodigo: { fontFamily: fuentes.negrita, fontSize: 24, letterSpacing: -0.3 },
+  lineaDelCodigo: { fontSize: 16, marginBottom: 4 },
+  avisoDelCodigo: { fontSize: 15, textAlign: 'center' },
+  textoConfirmar: { fontFamily: fuentes.negrita, fontSize: 16, letterSpacing: 0 },
   raiz: {
     flex: 1,
   },

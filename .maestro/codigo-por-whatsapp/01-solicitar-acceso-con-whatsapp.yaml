@@ -27,13 +27,13 @@ env:
 - takeScreenshot: 01-codigo-sin-enlace
 # spec 043 FR-012
 - extendedWaitUntil:
-    visible: "¿No te llegó? Envíamelo por WhatsApp.*"
+    visible: "Envíamelo por WhatsApp. Va a \\+51 9•• ••• •21"
     timeout: 75000
-- assertVisible: "Te lo enviamos a \\+51 9•• ••• •21\\."
+- assertVisible: "Ingresa tu código"
 - takeScreenshot: 02-enlace-a-los-60-segundos
-- tapOn: "¿No te llegó? Envíamelo por WhatsApp.*"
+- tapOn: "Envíamelo por WhatsApp.*"
 # spec 043 FR-015
 - extendedWaitUntil:
-    visible: "Te enviamos el código por WhatsApp a \\+51 9•• ••• •21\\."
+    visible: "Te lo enviamos por WhatsApp a \\+51 9•• ••• •21"
     timeout: 15000
 - takeScreenshot: 03-enviado-por-whatsapp

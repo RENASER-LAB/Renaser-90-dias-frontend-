@@ -1,93 +1,61 @@
 import React from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text } from 'react-native';
 
 import { Aparicion } from '../../../components/Aparicion';
-import { Icon } from '../../../components/Icon';
 import { Presionable } from '../../../components/Presionable';
 import { useTheme } from '../../../theme/ThemeContext';
 import { fuentes } from '../../../theme/fuentes';
-import { lineaAntesDeEnviar, TEXTO_DEL_ENLACE, type FlujoDelCodigo } from '../utils/codigoPorWhatsApp';
+import { ETIQUETA_DEL_ENLACE, lineaAntesDeEnviar, TEXTO_DEL_ENLACE, type FlujoDelCodigo } from '../utils/codigoPorWhatsApp';
 import type { EstadoDelWhatsapp } from '../hooks/useOfertaDeWhatsApp';
 
 type Props = {
   flujo: FlujoDelCodigo;
   estado: EstadoDelWhatsapp;
   enmascarado: string | null;
-  mensaje: string | null;
-  error: string | null;
   onEnviar: () => void;
 };
 
 /**
- * «¿No te llegó? Envíamelo por WhatsApp» (spec 043, FR-012, FR-015): aparece a los 60 segundos en la pantalla del código, un botón de 48 de alto con
- * el ícono del chat. En el alta dice a qué número va (enmascarado); en la recuperación no muestra ninguno. Entra con el fundido de `Aparicion` (se ve
- * una vez por pantalla); tocarlo vibra con `tacto` según el resultado.
+ * «Por WhatsApp» (spec 043, FR-012): aparece a los 60 segundos en la misma línea que «¿No te llegó? Reenviar», con 48 de alto táctil. En el alta el
+ * lector de pantalla oye además a qué número va (enmascarado); en la recuperación, ninguno. Lo que pasó al tocarlo lo dice `LineaDeWhatsApp`.
  */
-export function EnlaceDeWhatsApp({ flujo, estado, enmascarado, mensaje, error, onEnviar }: Props) {
+export function EnlaceDeWhatsApp({ flujo, estado, enmascarado, onEnviar }: Props) {
   const { c, t } = useTheme();
   const linea = lineaAntesDeEnviar(flujo, enmascarado);
-
-  if (estado === 'enviado' && mensaje) {
-    return (
-      <Aparicion desplazamiento={6}>
-        <View style={styles.enviado} accessibilityLiveRegion="polite" accessibilityRole="text">
-          <Icon name="checkCircle" size={20} color={c.goldInk} />
-          <Text style={[t.body, styles.texto, { color: c.goldInk }]}>{mensaje}</Text>
-        </View>
-      </Aparicion>
-    );
-  }
-
+  const enviando = estado === 'enviando';
   return (
-    <Aparicion desplazamiento={6}>
+    <Aparicion desplazamiento={0}>
       <Presionable
         accessibilityRole="button"
-        accessibilityLabel={linea ? `${TEXTO_DEL_ENLACE}. ${linea}` : TEXTO_DEL_ENLACE}
-        accessibilityState={{ busy: estado === 'enviando', disabled: estado === 'enviando' }}
-        disabled={estado === 'enviando'}
+        accessibilityLabel={linea ? `${ETIQUETA_DEL_ENLACE}. ${linea}` : ETIQUETA_DEL_ENLACE}
+        accessibilityState={{ busy: enviando, disabled: enviando }}
+        disabled={enviando}
         onPress={onEnviar}
-        style={[styles.enlace, { borderColor: c.border }]}
+        style={styles.enlace}
       >
-        {estado === 'enviando' ? (
-          <ActivityIndicator size="small" color={c.goldInk} />
-        ) : (
-          <Icon name="messageCircle" size={20} color={c.goldInk} />
-        )}
-        <View style={styles.textos}>
-          <Text style={[t.body, styles.texto, { color: c.goldInk, fontFamily: fuentes.media }]}>{TEXTO_DEL_ENLACE}</Text>
-          {linea ? <Text style={[t.small, { color: c.textSoft, fontSize: 15 }]}>{linea}</Text> : null}
-        </View>
+        {enviando ? <ActivityIndicator size="small" color={c.goldInk} /> : null}
+        <Text style={[t.small, styles.texto, { color: c.goldInk, fontFamily: fuentes.media }]}>{TEXTO_DEL_ENLACE}</Text>
       </Presionable>
-      {error ? (
-        <Text accessibilityLiveRegion="polite" style={[t.small, styles.error, { color: c.danger }]}>
-          {error}
-        </Text>
-      ) : null}
+    </Aparicion>
+  );
+}
+
+/** Debajo de la línea: lo que pasó al tocar «Por WhatsApp» (FR-015), o el motivo si no salió. */
+export function LineaDeWhatsApp({ mensaje, error }: { mensaje: string | null; error: string | null }) {
+  const { c, t } = useTheme();
+  const texto = error ?? mensaje;
+  if (!texto) return null;
+  return (
+    <Aparicion desplazamiento={4}>
+      <Text accessibilityLiveRegion="polite" style={[t.small, styles.linea, { color: error ? c.danger : c.goldInk }]}>
+        {texto}
+      </Text>
     </Aparicion>
   );
 }
 
 const styles = StyleSheet.create({
-  enlace: {
-    minHeight: 48,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderWidth: 1,
-    borderRadius: 12,
-    width: '100%',
-  },
-  textos: { flexShrink: 1, gap: 2 },
-  texto: { fontSize: 16, flexShrink: 1 },
-  enviado: {
-    minHeight: 48,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: 4,
-    width: '100%',
-  },
-  error: { fontSize: 15, marginTop: 6, textAlign: 'center' },
+  enlace: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 4 },
+  texto: { fontSize: 15 },
+  linea: { fontSize: 15, textAlign: 'center', marginTop: 2 },
 });
