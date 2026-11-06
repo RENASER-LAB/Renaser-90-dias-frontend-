@@ -3,7 +3,7 @@ import { describe, expect, it } from '@jest/globals';
 
 import { pasosDelRecorrido, tituloDeBienvenida } from '../data/pasosDelRecorrido';
 import { circuloDelFoco, medirPestana, olvidarBotonesParaPruebas, registrarBotonDePestana } from '../estado/focoDeLasPestanas';
-import { alVolverAtras, cantidadDePasos, pasoParaRetomar, puedeArrancar, sePausa } from '../utils/cuandoSaleElRecorrido';
+import { PAUSA_ENTRE_PASOS_MS, alVolverAtras, cantidadDePasos, esToqueDemasiadoPronto, pasoParaRetomar, puedeArrancar, sePausa } from '../utils/cuandoSaleElRecorrido';
 
 const base = { servidorDiceMostrar: true, repetido: false, pestanaActual: 'Hoy', otraCapaAbierta: false, panelDeSerAbierto: false, verComo: false };
 
@@ -73,5 +73,23 @@ describe('el foco', () => {
     expect(await medirPestana('Hoy')).toBeNull();
     expect(circuloDelFoco({ x: 78, y: 700, ancho: 78, alto: 60 })).toEqual({ cx: 117, cy: 730, radio: 47 });
     expect(circuloDelFoco({ x: 0, y: 0, ancho: 20, alto: 20 }).radio).toBe(32);
+  });
+});
+
+describe('un toque por paso (issue #151)', () => {
+  it('spec 045 FR-002, FR-003: un toque en el foco que llega mientras el foco todavía se mueve no avanza otro paso', () => {
+    expect(PAUSA_ENTRE_PASOS_MS).toBeGreaterThanOrEqual(300);
+    expect(esToqueDemasiadoPronto(null, 1000)).toBe(false);
+    expect(esToqueDemasiadoPronto(1000, 1000)).toBe(true);
+    expect(esToqueDemasiadoPronto(1000, 1000 + PAUSA_ENTRE_PASOS_MS - 1)).toBe(true);
+    expect(esToqueDemasiadoPronto(1000, 1000 + PAUSA_ENTRE_PASOS_MS)).toBe(false);
+    // Un reloj que va para atrás nunca traba el recorrido.
+    expect(esToqueDemasiadoPronto(5000, 1000)).toBe(false);
+  });
+
+  it('spec 045 FR-002: el área tocable del foco pasa por el freno, no directo a «Siguiente»', () => {
+    const fuente = require('fs').readFileSync(require('path').join(__dirname, '../components/RecorridoDeBienvenida.tsx'), 'utf8') as string;
+    expect(fuente).toMatch(/onPress=\{alTocarElFoco\}\s*\n\s*accessibilityElementsHidden/);
+    expect(fuente).toMatch(/esToqueDemasiadoPronto\(ultimoCambioDePaso\.current, Date\.now\(\)\)/);
   });
 });

@@ -57,3 +57,15 @@ export function alVolverAtras(
   if (paso <= 1) return o.obligatorio ? { tipo: 'nada' } : { tipo: 'preguntarSaltar' };
   return { tipo: 'paso', paso: paso - 1 };
 }
+
+/**
+ * Issue #151: después de pasar de paso, los toques que lleguen dentro de esta ventana se ignoran. El foco tarda en moverse a la
+ * pestaña nueva y, mientras tanto, su área tocable sigue un instante en la anterior: una ráfaga de toques sobre la pestaña resaltada
+ * pasaba del paso 3 al 5 y la persona nunca veía «Entrenar». También frena el doble toque en «Siguiente».
+ */
+export const PAUSA_ENTRE_PASOS_MS = 450;
+
+/** ¿Este toque llega demasiado pronto después del último avance? `ultimoAvance` es `null` si todavía no avanzó. */
+export function esToqueDemasiadoPronto(ultimoAvance: number | null, ahora: number, pausa: number = PAUSA_ENTRE_PASOS_MS): boolean {
+  return ultimoAvance !== null && ahora - ultimoAvance >= 0 && ahora - ultimoAvance < pausa;
+}
