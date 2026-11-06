@@ -60,7 +60,7 @@ export function pasosDelRecorrido(nombre?: string | null): PasoDelRecorrido[] {
       titulo: 'Tu primera publicación',
       frase: 'Preséntate al grupo: quién eres y qué vienes a cambiar. Con una foto.',
       botonPrincipal: 'Escribir mi publicación',
-      botonSecundario: 'Ahora no',
+      botonSecundario: 'Cerrar',
     },
   ];
 }
@@ -75,4 +75,5 @@ export const PREGUNTA_SALTAR = {
   cancelar: 'Seguir viendo',
 };
 
-export const PASTILLA_DEL_PRIMER_POST = { texto: 'Tu primera publicación', boton: 'Continuar' };
+/** D9 (06/11): el primer post es obligatorio para una cuenta nueva; lo demás se abre al publicar. */
+export const AVISO_DEL_BLOQUEO = 'Lo demás se abre cuando publiques.';

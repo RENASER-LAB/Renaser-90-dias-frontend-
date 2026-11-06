@@ -2695,6 +2695,20 @@ Entrenar) y lleve hasta el primer post en el Muro; al publicar, confeti; y «el 
   `.maestro/recorrido-de-bienvenida/01` y `02`; `comun/despejar-capas.yaml` salta el recorrido si aparece.
 * **Hace falta el backend con V180 antes y un APK nuevo** (solo JavaScript).
 
+> **Corregido el mismo día (el dueño, tras probarlo: «el primer post es obligatorio», D9–D11 de la spec).** Lo de «Saltar», «el atrás en el primero pregunta»,
+> «Solo arranca en Hoy» y «la pastilla «Tu primera publicación · Continuar»» **ya no vale para una cuenta nueva**:
+> * **El primer post es obligatorio** (D9): no hay «Saltar» ni «Ahora no»; el atrás retrocede un paso y en el primero y en el del Muro no hace nada. En el paso del Muro
+>   un candado chico tapa Hoy, Plan, Entrenar y Yo, y la tarjeta dice «Lo demás se abre cuando publiques.». El paso tapa toda la app (también las otras secciones de
+>   Comunidad): solo se puede ir al compositor. Cerrar el compositor sin publicar vuelve al paso del Muro (tras 0,6 s, para no parpadear sobre la felicitación); se quitó
+>   la pastilla. Arranca sobre cualquiera de las cinco pestañas (un aviso pudo abrir otra al entrar). Mientras dura es la capa obligatoria `recorridoDeBienvenida`: los
+>   avisos del teléfono esperan; el Código Renaser y el panel de SER lo pausan y vuelve al cerrarse (`hayOtraCapaObligatoriaAbierta` para no pausarse a sí mismo).
+>   Repetido desde Yo → Ajustes sí se puede cerrar («Saltar», «Cerrar»).
+> * **Modo oscuro** (D10): el velo es el token nuevo `velo` (72 % en claro, 78 % en oscuro), la tarjeta `cardBgAlt` y el confeti `coloresDelConfeti(tema)`: nada fijo.
+> * **«Se reinicia cada rato»** (D11): se reiniciaba al parpadear la sesión (ahora solo al cambiar de cuenta) y al reabrir con un paso que no llegó al servidor (ahora
+>   también se guarda en el teléfono, `renaser.recorrido.paso.<cuenta>`, y se retoma desde el más adelantado).
+> * Pruebas: `recorridoDeBienvenida` (bloqueo, atrás, otras pestañas, reabrir, sin red, sesión que parpadea, lecturas al revés), `reglasDelRecorrido`, `confetiDelPrimerPost`;
+>   Maestro `recorrido-de-bienvenida/02-el-primer-post-es-obligatorio.yaml` (reemplaza a `02-saltar…`).
+
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
 Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel especializado en React Native, Expo y TypeScript. Al crear, refactorizar o modificar cualquier pantalla o componente, debes cumplir OBLIGATORIAMENTE con los siguientes estándares:

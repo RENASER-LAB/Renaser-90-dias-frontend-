@@ -17,6 +17,9 @@ const mockRuta = { nombre: 'Hoy' };
 const mockOyentesDeRuta = new Set<() => void>();
 const mockFuncionalidad = { muro: true };
 const mockBarra = { mostrar: jest.fn() };
+const mockTelefono = { paso: 1, guardados: [] as number[] };
+const mockLecturas: Array<{ resolver: (v: unknown) => void; rechazar: (e: unknown) => void }> = [];
+const mockLecturaManual = { activa: false };
 
 jest.mock('../../auth/context/AuthContext', () => ({ useAuth: () => mockSesion }));
 jest.mock('../../../theme/ThemeContext', () => {
@@ -28,7 +31,17 @@ jest.mock('expo-linear-gradient', () => ({ LinearGradient: ({ children }: { chil
 jest.mock('react-native-svg', () => {
   const R = jest.requireActual<typeof import('react')>('react');
   const Caja = ({ children }: { children?: React.ReactNode }) => R.createElement(R.Fragment, null, children);
-  return { __esModule: true, default: Caja, Path: () => null, Circle: () => null };
+  const Nada = () => null;
+  return { __esModule: true, default: Caja, Path: Nada, Circle: Nada, Rect: Nada, Ellipse: Nada, Polygon: Nada, G: Caja, Line: Nada };
+});
+jest.mock('../../../hooks/useSystemBackHandler', () => {
+  let ultimo: (() => boolean) | null = null;
+  return {
+    useSystemBackHandler: (fn: () => boolean, activo: boolean) => {
+      if (activo) ultimo = fn;
+    },
+    ultimo: () => ultimo,
+  };
 });
 jest.mock('../../fenix/components/FenixDeSerQuieto', () => ({ FenixDeSerQuieto: () => null }));
 jest.mock('../../soporte-ti/verComo/sesionVerComo', () => ({ verComoActual: () => null }));
@@ -38,8 +51,18 @@ jest.mock('../../plataforma/estado/useFuncionalidad', () => ({
 }));
 jest.mock('../../../components/Alerta', () => ({ Alert: { alert: (...a: unknown[]) => (mockAlerta as unknown as (...x: unknown[]) => void)(...a) } }));
 jest.mock('../../community/api/wallApi', () => ({ contarMisPublicaciones: () => Promise.resolve(mockPublicados.n) }));
+jest.mock('../estado/pasoEnElTelefono', () => ({
+  leerPasoDelTelefono: () => Promise.resolve(mockTelefono.paso),
+  guardarPasoEnElTelefono: (_: string, paso: number) => {
+    mockTelefono.guardados.push(paso);
+    return Promise.resolve();
+  },
+}));
 jest.mock('../api/recorridoApi', () => ({
-  obtenerRecorrido: () => Promise.resolve(mockServidor),
+  obtenerRecorrido: () =>
+    mockLecturaManual.activa
+      ? new Promise((resolver, rechazar) => mockLecturas.push({ resolver, rechazar }))
+      : Promise.resolve({ ...mockServidor }),
   guardarPasoDelRecorrido: (paso: number) => mockGuardarPaso(paso),
   terminarRecorrido: (como: string) => mockTerminar(como),
 }));
@@ -55,10 +78,11 @@ jest.mock('../../../navigation/navegacionRef', () => ({
   },
 }));
 
-import { marcarCapaObligatoria, olvidarCapasObligatorias } from '../../../navigation/capasObligatorias';
+import { hayCapaObligatoriaAbierta, marcarCapaObligatoria, olvidarCapasObligatorias } from '../../../navigation/capasObligatorias';
+import { AVISO_DEL_BLOQUEO } from '../data/pasosDelRecorrido';
 import { cerrarMomentoGrande, momentoGrandeActual, reiniciarMomentoGrandeParaPruebas } from '../../fenix/estado/momentoGrande';
 import { avisarPostPublicado } from '../../sparkie/events/avisoPrimerPost';
-import { RecorridoDeBienvenida } from '../components/RecorridoDeBienvenida';
+import { PAUSA_TRAS_EL_COMPOSITOR_MS, RecorridoDeBienvenida } from '../components/RecorridoDeBienvenida';
 import { alTerminarElRecorrido, estadoDelRecorrido, marcarComposerDelMuroAbierto, pedirVerElRecorrido, reiniciarRecorridoParaPruebas } from '../estado/recorridoEnCurso';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -85,6 +109,11 @@ beforeEach(() => {
   mockPublicados.n = 0;
   mockRuta.nombre = 'Hoy';
   mockFuncionalidad.muro = true;
+  mockTelefono.paso = 1;
+  mockTelefono.guardados = [];
+  mockLecturas.length = 0;
+  mockLecturaManual.activa = false;
+  mockSesion.user = { id: 'u-1', name: 'Ana Pérez' };
   mockIrAPestana.mockClear();
   mockGuardarPaso.mockClear();
   mockTerminar.mockClear();
@@ -111,7 +140,7 @@ describe('cuándo sale', () => {
     expect(visible()).toBe(false);
   });
 
-  it('spec 045 FR-008: no arranca con otra capa obligatoria abierta, ni fuera de Hoy', async () => {
+  it('spec 045 FR-008: no arranca con otra capa obligatoria abierta (Código Renaser), y sale al cerrarse', async () => {
     act(() => marcarCapaObligatoria('codigoRenaser', true));
     await dibujar();
     expect(visible()).toBe(false);
@@ -150,15 +179,25 @@ describe('los pasos', () => {
     expect(mockGuardarPaso.mock.calls.map(c => c[0])).toEqual([2, 3, 4, 5]);
   });
 
-  it('spec 045 FR-004: «Saltar» pregunta, y al confirmar termina con SALTO y no vuelve', async () => {
+  it('spec 045 FR-004, D9: una cuenta nueva no puede saltar el recorrido: no hay «Saltar» ni «Ahora no», y el atrás no lo cierra', async () => {
     await dibujar();
+    expect(textos()).not.toContain('Saltar');
+    expect(textos()).not.toContain('Ahora no');
+    tocar('Empezar');
+    expect(textos()).not.toContain('Saltar');
+    expect(mockAlerta).not.toHaveBeenCalled();
+    expect(mockTerminar).not.toHaveBeenCalled();
+  });
+
+  it('spec 045 FR-004: repetido desde Yo sí se puede cerrar con «Saltar»', async () => {
+    mockServidor.mostrar = false;
+    await dibujar();
+    act(() => pedirVerElRecorrido());
     tocar('Saltar');
-    expect(mockAlerta).toHaveBeenCalledTimes(1);
     const [titulo, , botones] = mockAlerta.mock.calls[0];
     expect(titulo).toBe('¿Saltar el recorrido?');
-    expect(botones.map(b => b.text)).toEqual(['Seguir viendo', 'Saltar']);
     await act(async () => botones[1].onPress!());
-    expect(mockTerminar).toHaveBeenCalledWith('SALTO');
+    expect(mockTerminar).not.toHaveBeenCalled();
     expect(visible()).toBe(false);
   });
 
@@ -196,18 +235,64 @@ describe('el primer post', () => {
     expect(mockTerminar).not.toHaveBeenCalled();
   });
 
-  it('spec 045 FR-006: si cierra el compositor sin publicar, queda la pastilla para retomarlo', async () => {
+  it('spec 045 FR-006, FR-014, D9: si cierra el compositor sin publicar, vuelve el paso del Muro (bloqueado, con candados y sin «Ahora no»)', async () => {
+    jest.useFakeTimers();
+    try {
+      mockServidor.paso = 5;
+      await dibujar();
+      act(() => marcarComposerDelMuroAbierto(true));
+      tocar('Escribir mi publicación');
+      expect(visible()).toBe(false);
+      act(() => {
+        mockRuta.nombre = 'Comunidad';
+        mockOyentesDeRuta.forEach(o => o());
+        marcarComposerDelMuroAbierto(false);
+      });
+      act(() => jest.advanceTimersByTime(PAUSA_TRAS_EL_COMPOSITOR_MS + 10));
+      expect(visible()).toBe(true);
+      expect(textos()).toContain('Tu primera publicación');
+      expect(textos()).toContain(AVISO_DEL_BLOQUEO);
+      expect(textos()).not.toContain('Ahora no');
+      expect(textos()).not.toContain('Cerrar');
+      expect(mockTerminar).not.toHaveBeenCalled();
+      // Sigue siendo una capa obligatoria: los avisos del teléfono esperan.
+      expect(hayCapaObligatoriaAbierta()).toBe(true);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('spec 045 FR-014, D9: en el paso del Muro el atrás del sistema no lo cierra ni lo salta', async () => {
     mockServidor.paso = 5;
     await dibujar();
-    tocar('Escribir mi publicación');
+    const atras = jest.requireMock<{ ultimo: () => (() => boolean) | null }>('../../../hooks/useSystemBackHandler').ultimo();
+    expect(atras).not.toBeNull();
     act(() => {
-      mockRuta.nombre = 'Comunidad';
-      mockOyentesDeRuta.forEach(o => o());
-      marcarComposerDelMuroAbierto(false);
+      expect(atras!()).toBe(true);
     });
-    expect(raiz!.root.findAll(n => n.props.testID === 'pastilla-del-primer-post').length).toBeGreaterThan(0);
-    act(() => marcarComposerDelMuroAbierto(true));
-    expect(raiz!.root.findAll(n => n.props.testID === 'pastilla-del-primer-post')).toHaveLength(0);
+    expect(visible()).toBe(true);
+    expect(textos()).toContain('Tu primera publicación');
+    expect(mockAlerta).not.toHaveBeenCalled();
+    expect(mockTerminar).not.toHaveBeenCalled();
+  });
+
+  it('spec 045 FR-014, D9: el bloqueo vale en cualquier pestaña: si un aviso abrió Plan al entrar, igual sale', async () => {
+    mockServidor.paso = 5;
+    mockRuta.nombre = 'Plan';
+    await dibujar();
+    expect(visible()).toBe(true);
+    expect(textos()).toContain('Tu primera publicación');
+  });
+
+  it('spec 045 FR-014, D9: al cambiar de pestaña sigue abierto en el mismo paso', async () => {
+    mockServidor.paso = 3;
+    await dibujar();
+    act(() => {
+      mockRuta.nombre = 'Yo';
+      mockOyentesDeRuta.forEach(o => o());
+    });
+    expect(visible()).toBe(true);
+    expect(textos()).toContain('3 de 5');
   });
 
   it('spec 045 FR-007: al publicar sale la felicitación del primer post, termina con PUBLICO y avisa recién al cerrarla', async () => {
@@ -243,5 +328,63 @@ describe('volver a verlo', () => {
     expect(visible()).toBe(true);
     tocar('Empezar');
     expect(mockGuardarPaso).not.toHaveBeenCalled();
+  });
+});
+
+describe('no se reinicia (D9)', () => {
+  it('spec 045 FR-015, D11: cerrar y reabrir la app retoma el paso alcanzado aunque el servidor no lo haya guardado (sin red)', async () => {
+    mockGuardarPaso.mockImplementation(() => Promise.reject(new Error('sin red')));
+    await dibujar();
+    tocar('Empezar');
+    tocar('Siguiente');
+    expect(textos()).toContain('3 de 5');
+    expect(mockTelefono.guardados).toEqual([2, 3]);
+    act(() => raiz!.unmount());
+    // La app se reabre: el servidor quedó en 1, el teléfono en 3.
+    reiniciarRecorridoParaPruebas();
+    mockTelefono.paso = 3;
+    await dibujar();
+    expect(textos()).toContain('3 de 5');
+    mockGuardarPaso.mockImplementation(() => Promise.resolve(mockServidor));
+  });
+
+  it('spec 045 FR-015, D11: si la sesión parpadea (se relee el ingreso), no vuelve al principio', async () => {
+    await dibujar();
+    tocar('Empezar');
+    tocar('Siguiente');
+    await act(async () => {
+      mockSesion.isOnboardingCompleted = false;
+      raiz!.update(React.createElement(RecorridoDeBienvenida));
+    });
+    await act(async () => {
+      mockSesion.isOnboardingCompleted = true;
+      raiz!.update(React.createElement(RecorridoDeBienvenida));
+    });
+    expect(textos()).toContain('3 de 5');
+  });
+
+  it('spec 045 FR-015, D11: dos lecturas que llegan al revés: gana la de la cuenta vigente', async () => {
+    mockLecturaManual.activa = true;
+    await dibujar();
+    await act(async () => {
+      mockSesion.user = { id: 'u-2', name: 'Bea Ruiz' };
+      raiz!.update(React.createElement(RecorridoDeBienvenida));
+    });
+    expect(mockLecturas).toHaveLength(2);
+    // La lectura nueva (u-2) llega primero, la vieja (u-1) después: la vieja no pisa nada.
+    await act(async () => mockLecturas[1].resolver({ mostrar: true, paso: 2, terminado: false }));
+    await act(async () => mockLecturas[0].resolver({ mostrar: true, paso: 4, terminado: false }));
+    expect(textos()).toContain('Hoy');
+    expect(textos()).toContain('2 de 5');
+  });
+
+  it('spec 045 FR-015, D11: si se pierde la red al guardar un paso, el recorrido sigue en el paso nuevo', async () => {
+    mockGuardarPaso.mockImplementation(() => Promise.reject(new Error('sin red')));
+    await dibujar();
+    tocar('Empezar');
+    await act(async () => undefined);
+    expect(textos()).toContain('2 de 5');
+    expect(visible()).toBe(true);
+    mockGuardarPaso.mockImplementation(() => Promise.resolve(mockServidor));
   });
 });

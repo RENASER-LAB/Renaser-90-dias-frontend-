@@ -12,7 +12,10 @@ describe('cuándo arranca', () => {
     expect(puedeArrancar(base)).toBe(true);
     expect(puedeArrancar({ ...base, servidorDiceMostrar: null })).toBe(false);
     expect(puedeArrancar({ ...base, servidorDiceMostrar: false })).toBe(false);
-    expect(puedeArrancar({ ...base, pestanaActual: 'Plan' })).toBe(false);
+    // D9: sobre cualquiera de las cinco pestañas (un aviso pudo abrir otra al entrar), nunca fuera de ellas.
+    expect(puedeArrancar({ ...base, pestanaActual: 'Plan' })).toBe(true);
+    expect(puedeArrancar({ ...base, pestanaActual: 'TerminosActualizados' })).toBe(false);
+    expect(puedeArrancar({ ...base, pestanaActual: null })).toBe(false);
     expect(puedeArrancar({ ...base, verComo: true })).toBe(false);
     expect(puedeArrancar({ ...base, servidorDiceMostrar: false, repetido: true })).toBe(true);
   });
@@ -36,6 +39,12 @@ describe('cuándo arranca', () => {
   it('spec 045 FR-005: el atrás vuelve un paso; en el primero pregunta antes de saltar', () => {
     expect(alVolverAtras(3)).toEqual({ tipo: 'paso', paso: 2 });
     expect(alVolverAtras(1)).toEqual({ tipo: 'preguntarSaltar' });
+  });
+
+  it('spec 045 FR-005, D9: para una cuenta nueva el atrás nunca salta: en el primer paso y en el del Muro no hace nada', () => {
+    expect(alVolverAtras(1, { obligatorio: true, esElDelMuro: false })).toEqual({ tipo: 'nada' });
+    expect(alVolverAtras(5, { obligatorio: true, esElDelMuro: true })).toEqual({ tipo: 'nada' });
+    expect(alVolverAtras(3, { obligatorio: true, esElDelMuro: false })).toEqual({ tipo: 'paso', paso: 2 });
   });
 });
 

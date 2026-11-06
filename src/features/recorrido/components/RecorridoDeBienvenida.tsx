@@ -14,9 +14,10 @@ import Svg, { Circle, Path } from 'react-native-svg';
 
 import { Alert } from '../../../components/Alerta';
 import { GoldButton } from '../../../components/GoldButton';
+import { Icon, TAMANO_ICONO } from '../../../components/Icon';
 import { useSystemBackHandler } from '../../../hooks/useSystemBackHandler';
 import { useBarraInferior } from '../../../navigation/barraAlDesplazar/BarraInferior';
-import { alCambiarLasCapasObligatorias, hayCapaObligatoriaAbierta } from '../../../navigation/capasObligatorias';
+import { alCambiarLasCapasObligatorias, hayOtraCapaObligatoriaAbierta, useCapaObligatoria } from '../../../navigation/capasObligatorias';
 import { irAPestana, navegacionRef } from '../../../navigation/navegacionRef';
 import { fuentes } from '../../../theme/fuentes';
 import { CURVA_SALIDA } from '../../../theme/movimiento';
@@ -31,11 +32,14 @@ import { CLAVES } from '../../plataforma/utils/clavesDeLaApp';
 import { useHayPanelDeSerAbierto } from '../../renasia/state/panelDeSerAbierto';
 import { verComoActual } from '../../soporte-ti/verComo/sesionVerComo';
 import { escucharPostPublicado } from '../../sparkie/events/avisoPrimerPost';
+import { guardarPasoEnElTelefono, leerPasoDelTelefono } from '../estado/pasoEnElTelefono';
 import { guardarPasoDelRecorrido, obtenerRecorrido, terminarRecorrido, type ComoTermino } from '../api/recorridoApi';
-import { PASTILLA_DEL_PRIMER_POST, PREGUNTA_SALTAR, pasosDelRecorrido } from '../data/pasosDelRecorrido';
+import { AVISO_DEL_BLOQUEO, PREGUNTA_SALTAR, pasosDelRecorrido } from '../data/pasosDelRecorrido';
 import { alMoverseLaBarra, circuloDelFoco, medirPestana } from '../estado/focoDeLasPestanas';
 import {
+  anotarPasoAlcanzado,
   avisarRecorridoTerminado,
+  pasoAlcanzado,
   estadoDelRecorrido,
   marcarEsperandoPrimerPost,
   useEstadoDelRecorrido,
@@ -45,9 +49,14 @@ import { alVolverAtras, cantidadDePasos, pasoParaRetomar, puedeArrancar, sePausa
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
-/** Spec 045: el velo del recorrido, el texto principal al 72 % (en oscuro, negro al 78 %). */
-const VELO_CLARO = 'rgba(30,27,24,0.72)';
-const VELO_OSCURO = 'rgba(0,0,0,0.78)';
+/** Spec 045, D9: el nombre con que el recorrido se anota como capa obligatoria (para no pausarse por sí mismo). */
+const CAPA = 'recorridoDeBienvenida';
+/** Las cinco pestañas: el recorrido solo se dibuja sobre ellas (nunca sobre el ingreso ni sobre «Términos actualizados»). */
+const PESTANAS = ['Hoy', 'Plan', 'Training', 'Comunidad', 'Yo'];
+/** Tras cerrar el compositor sin publicar, lo que tarda en volver el paso del Muro. */
+export const PAUSA_TRAS_EL_COMPOSITOR_MS = 600;
+/** Lo más que se espera a que el compositor aparezca antes de volver a mostrar el paso del Muro. */
+const ESPERA_AL_COMPOSITOR_MS = 2500;
 /** Lo que tarda el foco en deslizarse de una pestaña a otra. */
 export const FOCO_MS = 240;
 
@@ -62,7 +71,7 @@ type LecturaDelServidor = { mostrar: boolean; paso: number; yaPublico: boolean }
  * del compositor, y Yo → Ajustes suma «Ver el recorrido».
  */
 export function RecorridoDeBienvenida() {
-  const { c, t, mode } = useTheme();
+  const { c, t } = useTheme();
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const reducido = useReducedMotion();
@@ -74,22 +83,29 @@ export function RecorridoDeBienvenida() {
   const publicar = useFuncionalidad(CLAVES.muroPublicar);
   const muroDisponible = muro.prendida && muro.disponible && publicar.prendida && publicar.disponible;
   const pestanaActual = usePestanaActual();
-  const otraCapaAbierta = useSyncExternalStore(alCambiarLasCapasObligatorias, hayCapaObligatoriaAbierta, hayCapaObligatoriaAbierta);
+  const otraCapa = useCallback(() => hayOtraCapaObligatoriaAbierta(CAPA), []);
+  const otraCapaAbierta = useSyncExternalStore(alCambiarLasCapasObligatorias, otraCapa, otraCapa);
   const panelDeSerAbierto = useHayPanelDeSerAbierto();
   const { esperandoPrimerPost, composerAbierto, pedidoDeRepetir } = useEstadoDelRecorrido();
   const momentoGrande = useMomentoGrande();
   const barra = useBarraInferior();
 
   const [abierto, setAbierto] = useState(false);
+  /** Entre «Escribir mi publicación» y que el compositor aparezca: el paso no se queda encima del compositor que se abre. */
+  const [abriendoElCompositor, setAbriendoElCompositor] = useState(false);
   const [repetido, setRepetido] = useState(false);
   const [paso, setPaso] = useState(1);
   const arrancoRef = useRef(false);
+  const usuarioId = user?.id ?? null;
   const avisarAlCerrarLaCelebracion = useRef(false);
 
   const yaPublico = servidor?.yaPublico ?? false;
   const cantidad = cantidadDePasos({ yaPublico, muroDisponible });
   const pasos = pasosDelRecorrido(user?.name).slice(0, cantidad);
   const actual = pasos[Math.min(paso, cantidad) - 1];
+  /** Decisión del dueño (06/11, D9): para una cuenta nueva el primer post es obligatorio; no hay forma de saltarlo. */
+  const obligatorio = !repetido && cantidad === 5;
+  const enLasPestanas = pestanaActual !== null && PESTANAS.includes(pestanaActual);
 
   // Sale solo, una vez por sesión, cuando el servidor dice que toca y la persona está en Hoy sin otra capa encima.
   useEffect(() => {
@@ -105,9 +121,11 @@ export function RecorridoDeBienvenida() {
     if (!puedeArrancar(entrada) || !servidor) return;
     arrancoRef.current = true;
     setRepetido(false);
-    setPaso(pasoParaRetomar(servidor.paso, cantidadDePasos({ yaPublico: servidor.yaPublico, muroDisponible })));
+    // Nunca vuelve atrás: lo guardado en el servidor o lo alcanzado en esta sesión, lo que vaya más adelante (D9, «se reiniciaba»).
+    const alcanzado = usuarioId ? pasoAlcanzado(usuarioId) : 1;
+    setPaso(pasoParaRetomar(Math.max(servidor.paso, alcanzado), cantidadDePasos({ yaPublico: servidor.yaPublico, muroDisponible })));
     setAbierto(true);
-  }, [abierto, esperandoPrimerPost, servidor, pestanaActual, otraCapaAbierta, panelDeSerAbierto, muroDisponible]);
+  }, [abierto, esperandoPrimerPost, servidor, pestanaActual, otraCapaAbierta, panelDeSerAbierto, muroDisponible, usuarioId]);
 
   // Yo → Ajustes → «Ver el recorrido»: lleva a Hoy y lo abre desde el principio.
   const ultimoPedido = useRef(pedidoDeRepetir);
@@ -142,9 +160,14 @@ export function RecorridoDeBienvenida() {
     (siguiente: number) => {
       tacto.seleccion();
       setPaso(siguiente);
-      if (!repetido) void guardarPasoDelRecorrido(siguiente).catch(() => undefined);
+      if (repetido) return;
+      if (usuarioId) {
+        anotarPasoAlcanzado(usuarioId, siguiente);
+        void guardarPasoEnElTelefono(usuarioId, siguiente);
+      }
+      void guardarPasoDelRecorrido(siguiente).catch(() => undefined);
     },
-    [repetido],
+    [repetido, usuarioId],
   );
 
   const preguntarSaltar = useCallback(() => {
@@ -156,9 +179,16 @@ export function RecorridoDeBienvenida() {
 
   const alPrincipal = useCallback(() => {
     if (actual?.pestana === 'Comunidad') {
-      // El paso del Muro: el compositor real. Nada se publica solo.
-      setAbierto(false);
+      if (!obligatorio) {
+        // Repetido desde Yo (o una cuenta que ya publicó): solo lleva al Muro.
+        setAbierto(false);
+        irAPestana('Comunidad');
+        return;
+      }
+      // El paso del Muro: el compositor real. Nada se publica solo. El recorrido queda abierto (y todo lo demás bloqueado, D9):
+      // solo se oculta mientras el compositor está a la vista y vuelve en cuanto se cierra sin publicar.
       marcarEsperandoPrimerPost(true);
+      setAbriendoElCompositor(true);
       irAPestana('Comunidad', { abrirComposerMuro: true, desdeElRecorrido: true });
       return;
     }
@@ -167,7 +197,7 @@ export function RecorridoDeBienvenida() {
       return;
     }
     irAlPaso(paso + 1);
-  }, [actual, paso, cantidad, terminar, irAlPaso]);
+  }, [actual, paso, cantidad, terminar, irAlPaso, obligatorio]);
 
   const alSecundario = useCallback(() => {
     if (actual?.pestana === 'Comunidad') terminar('SALTO');
@@ -179,6 +209,7 @@ export function RecorridoDeBienvenida() {
     return escucharPostPublicado(() => {
       if (!estadoDelRecorrido().esperandoPrimerPost) return;
       marcarEsperandoPrimerPost(false);
+      setAbierto(false);
       celebrarPrimerPost();
       if (repetido) return;
       void terminarRecorrido('PUBLICO')
@@ -197,21 +228,43 @@ export function RecorridoDeBienvenida() {
     }
   }, [momentoGrande]);
 
-  // Cerrar sesión o cambiar de cuenta: nada queda abierto ni esperando.
+  // Cambiar de cuenta (o cerrar sesión): nada queda abierto ni esperando. Solo cuando cambia la CUENTA: si la sesión parpadea
+  // (se relee el ingreso al volver al frente), el recorrido sigue donde estaba y no vuelve a empezar (D9, «se reiniciaba»).
+  const cuentaAnterior = useRef(usuarioId);
   useEffect(() => {
-    if (habilitado) return;
+    if (cuentaAnterior.current === usuarioId) return;
+    cuentaAnterior.current = usuarioId;
     arrancoRef.current = false;
     setAbierto(false);
+    setPaso(1);
     marcarEsperandoPrimerPost(false);
-  }, [habilitado]);
+  }, [usuarioId]);
 
+  // Después de cerrar el compositor sin publicar, el recorrido vuelve con una pausa corta: al publicar, el compositor se cierra un
+  // instante antes del aviso de «publicado», y sin la pausa el paso del Muro parpadearía sobre la felicitación.
+  const composerVisible = useComposerConPausa(composerAbierto);
+  useEffect(() => {
+    if (!abriendoElCompositor) return;
+    if (composerAbierto) {
+      setAbriendoElCompositor(false);
+      return;
+    }
+    // Si el compositor no llegó a abrirse (el Muro no cargó), el paso vuelve en vez de dejar la app sin bloqueo a la vista.
+    const espera = setTimeout(() => setAbriendoElCompositor(false), ESPERA_AL_COMPOSITOR_MS);
+    return () => clearTimeout(espera);
+  }, [abriendoElCompositor, composerAbierto]);
   const pausado = sePausa({ otraCapaAbierta, panelDeSerAbierto });
-  const visible = abierto && !pausado && !!actual;
+  const visible = habilitado && abierto && !pausado && !!actual && enLasPestanas && !(esperandoPrimerPost && (composerVisible || abriendoElCompositor)) && momentoGrande === null;
+
+  // Mientras el recorrido de una cuenta nueva está abierto (también con el compositor a la vista), es una capa obligatoria: los
+  // avisos del teléfono esperan a que termine en vez de abrir otra pantalla debajo.
+  useCapaObligatoria(CAPA, habilitado && abierto && obligatorio);
 
   useSystemBackHandler(() => {
-    const atras = alVolverAtras(paso);
+    // Obligatorio: en el primer paso y en el del Muro el atrás no hace nada (D9); nunca saca de la app ni salta el post.
+    const atras = alVolverAtras(paso, { obligatorio, esElDelMuro: actual?.pestana === 'Comunidad' });
     if (atras.tipo === 'paso') irAlPaso(atras.paso);
-    else preguntarSaltar();
+    else if (atras.tipo === 'preguntarSaltar') preguntarSaltar();
     return true;
   }, visible);
 
@@ -280,11 +333,30 @@ export function RecorridoDeBienvenida() {
     transform: [{ translateY: reducido ? 0 : (1 - entrada.value) * 8 }],
   }));
 
-  const pastillaVisible = esperandoPrimerPost && !composerAbierto && pestanaActual === 'Comunidad' && momentoGrande === null;
+  // Los candados sobre las otras pestañas en el paso del Muro de una cuenta nueva (D9: se ve claro que están bloqueadas).
+  const [candados, setCandados] = useState<Array<{ x: number; y: number }>>([]);
+  const conCandados = visible && obligatorio && actual?.pestana === 'Comunidad';
+  useEffect(() => {
+    if (!conCandados) {
+      setCandados([]);
+      return;
+    }
+    let vigente = true;
+    const medir = () =>
+      void Promise.all(['Hoy', 'Plan', 'Training', 'Yo'].map(medirPestana)).then(rects => {
+        if (vigente) setCandados(rects.flatMap(r => (r ? [{ x: r.x + r.ancho / 2, y: r.y + r.alto / 2 }] : [])));
+      });
+    medir();
+    const quitar = alMoverseLaBarra(medir);
+    return () => {
+      vigente = false;
+      quitar();
+    };
+  }, [conCandados]);
 
   if (!habilitado) return null;
 
-  const fondoTarjeta = mode === 'dark' ? '#1B1915' : c.bg;
+  const fondoTarjeta = c.cardBgAlt;
   const conFoco = !!actual?.pestana && focoY !== null;
   // Encima del foco, con 14 dp de aire (la tarjeta se mide: con letra grande crece hacia arriba y nunca tapa el foco).
   const posicionTarjeta = conFoco
@@ -293,25 +365,23 @@ export function RecorridoDeBienvenida() {
 
   return (
     <>
-      {pastillaVisible ? (
-        <View style={[estilos.pastilla, { bottom: insets.bottom + 92, backgroundColor: c.textStrong }]} testID="pastilla-del-primer-post">
-          <Text style={[t.body, { color: c.bg, flexShrink: 1, fontFamily: fuentes.media, fontSize: 15 }]} numberOfLines={1}>
-            {PASTILLA_DEL_PRIMER_POST.texto}
-          </Text>
-          <GoldButton
-            label={PASTILLA_DEL_PRIMER_POST.boton}
-            compacto
-            onPress={() => irAPestana('Comunidad', { abrirComposerMuro: true, desdeElRecorrido: true })}
-          />
-        </View>
-      ) : null}
 
       <Modal visible={visible} transparent animationType="fade" statusBarTranslucent navigationBarTranslucent onRequestClose={() => undefined}>
         <View style={StyleSheet.absoluteFill} accessibilityViewIsModal testID="recorrido-de-bienvenida">
           <Svg width={ancho} height={alto} style={StyleSheet.absoluteFill} pointerEvents="none">
-            <AnimatedPath animatedProps={propsDelVelo} fill={mode === 'dark' ? VELO_OSCURO : VELO_CLARO} fillRule="evenodd" />
+            <AnimatedPath animatedProps={propsDelVelo} fill={c.velo} fillRule="evenodd" />
             <AnimatedCircle animatedProps={propsDelAro} stroke={c.gold} strokeWidth={2} fill="none" />
           </Svg>
+          {candados.map((p, i) => (
+            <View
+              key={i}
+              pointerEvents="none"
+              testID="candado-de-pestana"
+              style={[estilos.candado, { left: p.x - 18, top: p.y - 18, backgroundColor: c.cardBgAlt, borderColor: c.border }]}
+            >
+              <Icon name="lock" size={TAMANO_ICONO.chico} color={c.textSoft} />
+            </View>
+          ))}
           {/* Tocar dentro del foco avanza igual que «Siguiente»; tocar fuera no hace nada. */}
           {conFoco && actual?.pestana !== 'Comunidad' ? (
             <Pressable
@@ -352,11 +422,25 @@ export function RecorridoDeBienvenida() {
               <Text style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 23, marginTop: 6, textAlign: actual.pestana === null ? 'center' : 'left' }]}>
                 {actual.frase}
               </Text>
+              {conCandados ? (
+                <View style={estilos.bloqueo}>
+                  <Icon name="lock" size={TAMANO_ICONO.chico} color={c.textSoft} />
+                  <Text style={[t.body, { color: c.textSoft, fontSize: 15, flexShrink: 1 }]}>{AVISO_DEL_BLOQUEO}</Text>
+                </View>
+              ) : null}
               <View style={estilos.botones}>
-                <Pressable onPress={alSecundario} style={estilos.secundario} accessibilityRole="button" hitSlop={4}>
-                  <Text style={[t.body, { color: c.textSoft, fontFamily: fuentes.seminegrita, fontSize: 16 }]}>{actual.botonSecundario}</Text>
-                </Pressable>
-                <GoldButton label={actual.botonPrincipal} onPress={alPrincipal} style={{ flex: 1 }} />
+                {obligatorio ? null : (
+                  <Pressable onPress={alSecundario} style={estilos.secundario} accessibilityRole="button" hitSlop={4}>
+                    <Text style={[t.body, { color: c.textSoft, fontFamily: fuentes.seminegrita, fontSize: 16 }]}>
+                      {actual.pestana === 'Comunidad' ? 'Cerrar' : actual.botonSecundario}
+                    </Text>
+                  </Pressable>
+                )}
+                <GoldButton
+                  label={actual.pestana === 'Comunidad' && !obligatorio ? 'Ir al Muro' : actual.botonPrincipal}
+                  onPress={alPrincipal}
+                  style={{ flex: 1 }}
+                />
               </View>
               {conFoco ? (
                 <View
@@ -372,7 +456,10 @@ export function RecorridoDeBienvenida() {
   );
 }
 
-/** `GET /api/v1/me/recorrido` y si ya publicó, una vez por cuenta y cada vez que vuelve a aparecer la sesión. */
+/**
+ * `GET /api/v1/me/recorrido`, el paso del teléfono y si ya publicó, una vez por cuenta. Una lectura vieja (otra cuenta, o la
+ * sesión que parpadeó) nunca pisa a la nueva: cada efecto descarta la suya al terminar.
+ */
 function useLecturaDelRecorrido(habilitado: boolean, usuarioId: string | null): LecturaDelServidor {
   const [lectura, setLectura] = useState<LecturaDelServidor>(null);
   useEffect(() => {
@@ -381,13 +468,14 @@ function useLecturaDelRecorrido(habilitado: boolean, usuarioId: string | null): 
     let vigente = true;
     void (async () => {
       try {
-        const recorrido = await obtenerRecorrido();
+        const [recorrido, pasoDelTelefono] = await Promise.all([obtenerRecorrido(), leerPasoDelTelefono(usuarioId)]);
         if (!recorrido.mostrar) {
           if (vigente) setLectura({ mostrar: false, paso: recorrido.paso, yaPublico: true });
           return;
         }
         const publicados = await contarMisPublicaciones().catch(() => 0);
-        if (vigente) setLectura({ mostrar: true, paso: recorrido.paso, yaPublico: publicados > 0 });
+        // Nunca un paso anterior al que la persona ya alcanzó en este teléfono (sin red al avanzar, el servidor quedó atrás).
+        if (vigente) setLectura({ mostrar: true, paso: Math.max(recorrido.paso, pasoDelTelefono), yaPublico: publicados > 0 });
       } catch {
         // Un backend anterior (404), sin red o cualquier fallo: no se muestra. Nunca sobre una duda.
         if (vigente) setLectura({ mostrar: false, paso: 1, yaPublico: true });
@@ -398,6 +486,20 @@ function useLecturaDelRecorrido(habilitado: boolean, usuarioId: string | null): 
     };
   }, [habilitado, usuarioId]);
   return lectura;
+}
+
+/** `true` mientras el compositor está abierto y hasta {@link PAUSA_TRAS_EL_COMPOSITOR_MS} después de cerrarse. */
+function useComposerConPausa(abierto: boolean): boolean {
+  const [visible, setVisible] = useState(abierto);
+  useEffect(() => {
+    if (abierto) {
+      setVisible(true);
+      return;
+    }
+    const espera = setTimeout(() => setVisible(false), PAUSA_TRAS_EL_COMPOSITOR_MS);
+    return () => clearTimeout(espera);
+  }, [abierto]);
+  return visible;
 }
 
 /** La pestaña que se ve, leída del navegador. */
@@ -431,18 +533,14 @@ const estilos = StyleSheet.create({
   botones: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 16 },
   secundario: { minHeight: 48, paddingHorizontal: 14, justifyContent: 'center' },
   flecha: { position: 'absolute', bottom: -8, width: 16, height: 16, borderRadius: 3, transform: [{ rotate: '45deg' }] },
-  pastilla: {
+  candado: {
     position: 'absolute',
-    left: 16,
-    right: 16,
-    minHeight: 56,
-    borderRadius: 28,
-    paddingLeft: 20,
-    paddingRight: 6,
-    flexDirection: 'row',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1,
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-    elevation: 8,
+    justifyContent: 'center',
   },
+  bloqueo: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10 },
 });

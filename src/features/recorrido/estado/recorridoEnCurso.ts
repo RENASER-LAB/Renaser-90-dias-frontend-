@@ -59,7 +59,22 @@ export function alTerminarElRecorrido(oyente: () => void): () => void {
   };
 }
 
+/**
+ * Spec 045, D9 («se reiniciaba»): el paso más adelantado que alcanzó cada cuenta en esta sesión. Al reabrirse el recorrido (la
+ * sesión parpadea, el paso no llegó al servidor por la red) se sigue desde el más adelantado, nunca desde el principio.
+ */
+const alcanzados = new Map<string, number>();
+
+export function pasoAlcanzado(usuarioId: string): number {
+  return alcanzados.get(usuarioId) ?? 1;
+}
+
+export function anotarPasoAlcanzado(usuarioId: string, paso: number): void {
+  alcanzados.set(usuarioId, Math.max(paso, alcanzados.get(usuarioId) ?? 1));
+}
+
 export function reiniciarRecorridoParaPruebas(): void {
+  alcanzados.clear();
   oyentesDelFin.clear();
   estado = { esperandoPrimerPost: false, composerAbierto: false, pedidoDeRepetir: 0 };
   oyentes.clear();

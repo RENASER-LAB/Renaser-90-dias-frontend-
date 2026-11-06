@@ -14,11 +14,16 @@ export type EntradaDelRecorrido = {
   verComo: boolean;
 };
 
-/** Solo arranca en Hoy, sin otra capa ni el panel de SER encima, y nunca en «ver como». */
+const PESTANAS = ['Hoy', 'Plan', 'Training', 'Comunidad', 'Yo'];
+
+/**
+ * Arranca sobre cualquiera de las cinco pestañas (D9: si un aviso abrió otra pestaña al entrar, igual queda bloqueado), nunca sobre el
+ * ingreso ni «Términos actualizados», sin otra capa ni el panel de SER encima, y nunca en «ver como».
+ */
 export function puedeArrancar(e: EntradaDelRecorrido): boolean {
   if (e.verComo) return false;
   if (!e.repetido && e.servidorDiceMostrar !== true) return false;
-  return e.pestanaActual === 'Hoy' && !e.otraCapaAbierta && !e.panelDeSerAbierto;
+  return e.pestanaActual !== null && PESTANAS.includes(e.pestanaActual) && !e.otraCapaAbierta && !e.panelDeSerAbierto;
 }
 
 /** Mientras está abierto, se pausa (no se dibuja) si aparece otra capa o el panel de SER; sigue en el mismo paso al cerrarse. */
@@ -40,7 +45,15 @@ export function pasoParaRetomar(pasoGuardado: number, cantidad: number): number 
   return Math.min(Math.max(1, Math.trunc(pasoGuardado)), cantidad);
 }
 
-/** El atrás del sistema: un paso atrás; en el primero pide saltar. */
-export function alVolverAtras(paso: number): { tipo: 'paso'; paso: number } | { tipo: 'preguntarSaltar' } {
-  return paso <= 1 ? { tipo: 'preguntarSaltar' } : { tipo: 'paso', paso: paso - 1 };
+/**
+ * El atrás del sistema: un paso atrás; en el primero pide saltar. Para una cuenta nueva (el primer post es obligatorio, D9) no se
+ * salta: en el primer paso y en el del Muro el atrás no hace nada.
+ */
+export function alVolverAtras(
+  paso: number,
+  o: { obligatorio: boolean; esElDelMuro: boolean } = { obligatorio: false, esElDelMuro: false },
+): { tipo: 'paso'; paso: number } | { tipo: 'preguntarSaltar' } | { tipo: 'nada' } {
+  if (o.obligatorio && o.esElDelMuro) return { tipo: 'nada' };
+  if (paso <= 1) return o.obligatorio ? { tipo: 'nada' } : { tipo: 'preguntarSaltar' };
+  return { tipo: 'paso', paso: paso - 1 };
 }
