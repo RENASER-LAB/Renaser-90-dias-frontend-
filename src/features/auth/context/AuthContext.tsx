@@ -522,7 +522,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // E-413: las alarmas locales son de esta cuenta; al salir se cancelan todas. Quien entre después
     // espera a que termine (`alarmasListas`).
     soltando = soltarAlarmasDeLaCuenta().catch(() => undefined);
-    // Spec 042: el GPS de una carrera en curso no sigue sin sesión (la carrera queda guardada por cuenta en el teléfono).
+    // Spec 042: el GPS de una carrera en curso no sigue sin sesión (la carrera queda guardada por cuenta en el teléfono), y se borra
+    // el último centro del mapa guardado (privacidad, 2026-11-06).
     void apagarLaCarreraAlSalir().catch(() => undefined);
     // Lo que se escribía en el Código Renaser a medias es de quien se va: no queda en un teléfono sin sesión (2026-11-03).
     void borrarBorradoresDelRadar();

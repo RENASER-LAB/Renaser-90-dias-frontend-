@@ -2670,6 +2670,8 @@ llame al servidor a cada rato y que nada se duplique**, y **«el avatar debe ref
   (`renaser.carrera.ultimoCentroDelMapa`, solo para mirar). La cuenta ya no espera al servicio del GPS (~0,7 s), un velo del color de la tarjeta tapa el gris de
   carga, y `mapPadding` va recién con el mapa listo (antes se caía con «setPadding on a null object»). En el emulador, en frío: de 1,5 s en blanco tras el «1» a 0 s.
   Cancelar en la cuenta mientras el GPS arranca lo detiene igual (`detenerGps(true)`). Jest `mapaAunMasRapido`. Solo JavaScript: hace falta un APK nuevo.
+  **Privacidad (decisión del coordinador, 2026-11-06):** cerrar sesión borra ese centro guardado y lo adelantado (`borrarCentroGuardadoDelMapa`, desde
+  `apagarLaCarreraAlSalir`), para que en un teléfono compartido la cuenta que entra no vea dónde corrió la anterior. Jest `alarmasDeLaCuentaAlSalir`.
 
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 

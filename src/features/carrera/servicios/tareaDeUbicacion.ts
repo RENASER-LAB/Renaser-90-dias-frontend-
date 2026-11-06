@@ -2,7 +2,7 @@ import { Platform } from 'react-native';
 
 import type { PuntoGps } from '../types/carrera.types';
 import { cargarCarrera, carreraActual, recibirPuntos, resumenParaLaNotificacion } from './carreraEnVivo';
-import { ponerCentroDelMapa } from './centroDelMapa';
+import { borrarCentroGuardadoDelMapa, ponerCentroDelMapa } from './centroDelMapa';
 import { leerCarreraEnCurso } from './almacenCarrera';
 import { mostrarNotificacionDeCarrera, quitarNotificacionDeCarrera } from './notificacionDeCarrera';
 import { laCarreraYaEmpezo } from '../utils/notificacionUnica';
@@ -181,6 +181,8 @@ export async function escucharRumbo(alCambiar: (grados: number) => void): Promis
  * nuevo (falta el aviso «tienes una carrera sin enviar» antes de cerrar sesión: queda anotado en el informe).
  */
 export async function apagarLaCarreraAlSalir(): Promise<void> {
+  // Privacidad (2026-11-06): dónde se vio el mapa por última vez es de quien se va.
+  await borrarCentroGuardadoDelMapa();
   await detenerGps();
   await quitarNotificacionDeCarrera();
 }

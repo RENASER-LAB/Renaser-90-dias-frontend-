@@ -68,7 +68,7 @@ import {
   prepararCentroDelMapa,
 } from '../../servicios/centroDelMapa';
 import { leerDatosDeLaPersona, olvidarDatosDeLaPersonaParaPruebas } from '../../servicios/datosDeLaPersona';
-import { detenerGps } from '../../servicios/tareaDeUbicacion';
+import { apagarLaCarreraAlSalir, detenerGps } from '../../servicios/tareaDeUbicacion';
 import { CalentadorDelMapa, TOPE_DEL_CALENTADOR_MS } from '../CalentadorDelMapa';
 import { DURACION_DEL_VELO_MS, MapaDeCarrera, TOPE_DEL_VELO_MS } from '../MapaDeCarrera';
 
@@ -219,6 +219,20 @@ describe('el centro del mapa está al instante (solo para mirar)', () => {
     mockUbicacion.getForegroundPermissionsAsync.mockImplementationOnce(async () => ({ granted: false }));
     await adelantarCentroDelMapa();
     expect(mockUbicacion.getLastKnownPositionAsync).not.toHaveBeenCalled();
+  });
+});
+
+describe('privacidad: el último centro del mapa se borra al cerrar sesión', () => {
+  // spec 042 FR-037 (decisión de privacidad del 2026-11-06)
+  it('cerrar sesión borra el centro guardado y lo adelantado: la cuenta que entra no ve dónde corrió la anterior', async () => {
+    await AsyncStorage.setItem(CLAVE_DEL_CENTRO_GUARDADO, JSON.stringify(LIMA));
+    await adelantarCentroDelMapa();
+    await apagarLaCarreraAlSalir();
+    expect(await AsyncStorage.getItem(CLAVE_DEL_CENTRO_GUARDADO)).toBeNull();
+    // La carrera siguiente, sin ubicación todavía, no muestra nada de la cuenta anterior.
+    mockUbicacion.getLastKnownPositionAsync.mockImplementationOnce(async () => null);
+    await prepararCentroDelMapa();
+    expect(centroDelMapa()).toBeNull();
   });
 });
 

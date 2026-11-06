@@ -180,6 +180,21 @@ export async function adelantarCentroDelMapa(): Promise<void> {
   }
 }
 
+/**
+ * Al cerrar sesión (decisión de privacidad del 2026-11-06): se borra el último centro mostrado y lo adelantado, para que en un
+ * teléfono compartido la cuenta que entra después no vea la zona donde corrió la anterior. Nunca lanza.
+ */
+export async function borrarCentroGuardadoDelMapa(): Promise<void> {
+  guardado = null;
+  adelantada = null;
+  olvidarCentroDelMapa();
+  try {
+    await almacen().removeItem(CLAVE_DEL_CENTRO_GUARDADO);
+  } catch {
+    // Sin almacenamiento no había nada guardado.
+  }
+}
+
 export function olvidarLoAdelantadoParaPruebas(): void {
   guardado = null;
   adelantada = null;
