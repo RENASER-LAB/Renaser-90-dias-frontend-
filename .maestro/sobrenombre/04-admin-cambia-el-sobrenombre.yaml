@@ -1,0 +1,22 @@
+# 04 — Administración ve la lista de sobrenombres y las palabras prohibidas.
+# Precondición: 01 corrido.
+# cuenta: admin
+# spec 046 FR-005, FR-006
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "YO"
+- scrollUntilVisible:
+    element: "Administración"
+- tapOn: "Administración"
+- scrollUntilVisible:
+    element: "Más opciones"
+- tapOn: "Más opciones"
+- scrollUntilVisible:
+    element: "Sobrenombres"
+- tapOn: "Sobrenombres"
+- extendedWaitUntil:
+    visible: ${SOBRENOMBRE}
+    timeout: 20000
+- assertVisible: "Palabras que no se pueden usar"
+- takeScreenshot: S04-admin-sobrenombres

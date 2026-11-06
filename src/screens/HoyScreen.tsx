@@ -24,6 +24,9 @@ import { tacto } from '../utils/tacto';
 import { Aparicion } from '../components/Aparicion';
 import { FilaDelProgramaPropio } from '../features/programa/components/FilaDelProgramaPropio';
 import { useFilaDelProgramaPropio } from '../features/programa/hooks/useFilaDelProgramaPropio';
+import { FilaDelSobrenombre } from '../features/sobrenombre/components/FilaDelSobrenombre';
+import { useMiSobrenombre } from '../features/sobrenombre/hooks/useMiSobrenombre';
+import { muestraLaFilaEnHoy } from '../features/sobrenombre/utils/reglasDelSobrenombre';
 import { usePublicarSemaforoDeHoy } from '../features/semaforo/estado/useSemaforoVigente';
 import { useCelebracionDelDia } from '../features/fenix/hooks/useCelebracionDelDia';
 import { useResumenHome } from '../features/home/hooks/useResumenHome';
@@ -104,6 +107,9 @@ export default function HoyScreen() {
     formacion: resumen?.formacion,
   });
   const { recargarCapacidades } = programaPropio;
+  /* Spec 046 (D1, D2): desde el día 7, la invitación a elegir el sobrenombre del Muro, hasta que elija uno o diga «Ahora no». */
+  const sobrenombre = useMiSobrenombre();
+  const filaDelSobrenombre = muestraLaFilaEnHoy(resumen?.diaPrograma, sobrenombre.mio);
   // El orbe del centro (2026-09-23): conversación por voz con el acompañante, y su chat para
   // confirmar propuestas o leer la respuesta completa.
   const voz = useVozDelOrbe();
@@ -353,11 +359,12 @@ export default function HoyScreen() {
 
         {/* Corregido 2026-11-01 (pedido del dueño): este bloque solo existe si tiene algo que dibujar. Vacío dejaba sus dos separaciones de 28
             y a la cuenta sin programa le quedaba un hueco grande entre la frase y el fénix. */}
-        {programaPropio.visible || hayTarjetaDeAccion || errorResumen ? (
+        {programaPropio.visible || filaDelSobrenombre || hayTarjetaDeAccion || errorResumen ? (
         <Aparicion retardo={70} style={{ gap: space.gap }}>
         {/* El programa propio, justo debajo de la frase (2026-11-01): una fila compacta, del alto que tenía Coherencia / Racha. Va antes que la
             acción de hoy: sin programa (o sin Día 1) no hay acciones que mostrar todavía. */}
         <FilaDelProgramaPropio programa={programaPropio} />
+        {filaDelSobrenombre ? <FilaDelSobrenombre sobrenombre={sobrenombre} /> : null}
 
         {/* Pedido del dueño, 2026-10-31: se quitaron la frase del día y Coherencia / Racha (ya están en Yo) y, en su lugar y antes
             de «Tu acompañante», va la tarjeta de «Acciones y objetivos» con el diseño nuevo: la que sigue hoy, su meta y un

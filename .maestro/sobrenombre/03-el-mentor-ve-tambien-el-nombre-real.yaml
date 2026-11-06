@@ -1,0 +1,14 @@
+# 03 — El mentor ve el sobrenombre y, debajo y en gris, el nombre real.
+# Precondición: 01 corrido. NOMBRE_REAL: el nombre real de la autora.
+# cuenta: mentor
+# spec 046 FR-003
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "COMUNIDAD"
+- tapOn: "Muro"
+- extendedWaitUntil:
+    visible: ${SOBRENOMBRE}
+    timeout: 20000
+- assertVisible: ${NOMBRE_REAL}
+- takeScreenshot: S03-mentor-ve-el-nombre-real

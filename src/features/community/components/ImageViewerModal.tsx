@@ -35,6 +35,8 @@ export interface ImageViewerItem {
 export interface ImageViewerCommentItem {
   id: string;
   author: string;
+  /** Spec 046: solo para el equipo y si tiene sobrenombre. */
+  nombreReal?: string | null;
   avatar?: string;
   role?: string;
   text: string;
@@ -580,6 +582,7 @@ export function ImageViewerModal({
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                           <Text style={styles.commentAuthorName}>
                             {cItem.author} {cItem.role ? `(${cItem.role})` : ''}
+                            {cItem.nombreReal ? ` · ${cItem.nombreReal}` : ''}
                           </Text>
                           <Text style={styles.commentTimeText}>{cItem.timeAgo}</Text>
                         </View>

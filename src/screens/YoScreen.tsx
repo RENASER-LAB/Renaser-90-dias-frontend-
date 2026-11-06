@@ -1,4 +1,7 @@
 import { fuentes } from '../theme/fuentes';
+import { HojaDelSobrenombre } from '../features/sobrenombre/components/HojaDelSobrenombre';
+import { useMiSobrenombre } from '../features/sobrenombre/hooks/useMiSobrenombre';
+import { TEXTOS_DEL_SOBRENOMBRE } from '../features/sobrenombre/utils/reglasDelSobrenombre';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Image,
@@ -313,6 +316,9 @@ export default function YoScreen() {
   const { rs, isTablet, horizontalPadding, contentMaxWidth } = useResponsive();
   const { user, logout, actualizarPerfil, refrescarPerfil } = useAuth();
   const { resumen, recargar: recargarResumen } = useResumenHome();
+  /* Spec 046: el sobrenombre del Muro (Ajustes → Perfil). */
+  const sobrenombre = useMiSobrenombre();
+  const [hojaDelSobrenombre, setHojaDelSobrenombre] = useState(false);
   /* La misma cuenta que «Fase actual» y «Arquitectura de tiempo» de Plan (`faseEnCurso`): número, nombre,
      rango y día dentro de la fase salen de un solo lugar, así Yo no puede decir otra cosa que Plan. */
   const faseActual = faseEnCurso(resumen?.fase, resumen?.diaPrograma, resumen?.duracionDias);
@@ -1179,8 +1185,23 @@ export default function YoScreen() {
                 detalle="Nombre, foto, WhatsApp y departamento"
                 onPress={() => setActiveView('editar_perfil')}
               />
+              {/* Spec 046: el sobrenombre que reemplaza su nombre en el Muro (solo si el servidor lo ofrece). */}
+              {sobrenombre.mio ? (
+                <FilaDeAjuste
+                  icono="pencil"
+                  titulo={TEXTOS_DEL_SOBRENOMBRE.filaDeYo}
+                  detalle={sobrenombre.mio.sobrenombre ?? TEXTOS_DEL_SOBRENOMBRE.sinSobrenombre}
+                  onPress={() => setHojaDelSobrenombre(true)}
+                />
+              ) : null}
             </GrupoDeAjustes>
             ) : null}
+            <HojaDelSobrenombre
+              visible={hojaDelSobrenombre}
+              mio={sobrenombre.mio}
+              alCerrar={() => setHojaDelSobrenombre(false)}
+              alGuardar={sobrenombre.actualizar}
+            />
 
             <GrupoDeAjustes titulo="Tu proceso">
               <FilaDeAjuste

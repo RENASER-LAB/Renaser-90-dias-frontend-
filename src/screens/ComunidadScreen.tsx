@@ -259,6 +259,8 @@ export interface CourseItem {
 export interface CommentItem {
   id: string;
   author: string;
+  /** Spec 046: el nombre real de quien tiene sobrenombre, solo si quien mira es del equipo (lo decide el servidor). */
+  nombreReal?: string | null;
   avatar: string;
   role?: string;
   text: string;
@@ -271,7 +273,10 @@ export interface CommentItem {
 
 export interface PostItem {
   id: string;
+  /** Spec 046: como se le nombra en el Muro (su sobrenombre si tiene uno). */
   author: string;
+  /** Spec 046: su nombre real, solo para el equipo y si tiene sobrenombre (lo decide el servidor). */
+  nombreReal?: string | null;
   avatar: string;
   /** La foto del autor (`WallPostResponse.authorAvatarUrl`); sin ella, sus iniciales (`AvatarPersona`). */
   avatarUrl?: string | null;
@@ -320,6 +325,8 @@ export interface PostItem {
 export interface ReactionUser {
   id: string;
   name: string;
+  /** Spec 046: el nombre real de quien tiene sobrenombre, solo para el equipo. */
+  nombreReal?: string | null;
   role: string;
   avatar: string;
   /** La foto de la persona (URL pública de S3) o `null`: la hoja de reacciones dibuja sus iniciales. */
