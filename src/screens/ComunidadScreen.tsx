@@ -44,6 +44,7 @@ import { AvisoDeAbajo } from '../components/AvisoDeAbajo';
 import { ConfirmacionEnLinea } from '../components/ConfirmacionEnLinea';
 import { tacto } from '../utils/tacto';
 import { separacionDeLaFila } from '../features/community/utils/filaDeMedallones';
+import { useMiSobrenombre } from '../features/sobrenombre/hooks/useMiSobrenombre';
 import { useAuth } from '../features/auth/context/AuthContext';
 import { useWallFeed } from '../features/community/hooks/useWallFeed';
 import { useWallReactions } from '../features/community/hooks/useWallReactions';
@@ -261,6 +262,8 @@ export interface CourseItem {
 export interface CommentItem {
   id: string;
   author: string;
+  /** Spec 046: el nombre real de quien tiene sobrenombre, solo si quien mira es del equipo (lo decide el servidor). */
+  nombreReal?: string | null;
   avatar: string;
   role?: string;
   text: string;
@@ -273,7 +276,10 @@ export interface CommentItem {
 
 export interface PostItem {
   id: string;
+  /** Spec 046: como se le nombra en el Muro (su sobrenombre si tiene uno). */
   author: string;
+  /** Spec 046: su nombre real, solo para el equipo y si tiene sobrenombre (lo decide el servidor). */
+  nombreReal?: string | null;
   avatar: string;
   /** La foto del autor (`WallPostResponse.authorAvatarUrl`); sin ella, sus iniciales (`AvatarPersona`). */
   avatarUrl?: string | null;
@@ -322,6 +328,8 @@ export interface PostItem {
 export interface ReactionUser {
   id: string;
   name: string;
+  /** Spec 046: el nombre real de quien tiene sobrenombre, solo para el equipo. */
+  nombreReal?: string | null;
   role: string;
   avatar: string;
   /** La foto de la persona (URL pública de S3) o `null`: la hoja de reacciones dibuja sus iniciales. */
@@ -701,6 +709,9 @@ function ComunidadPorFormacion({
   // Nombre real de quien está usando la app, para las publicaciones y comentarios propios del
   // Muro — reemplaza el "Kelin Arango" fijo del mock por el dato de la sesión.
   const nombreUsuario = user?.name?.trim() || 'Tú';
+  // Spec 046 (D3): el compositor muestra cómo te verán en el Muro: con tu sobrenombre, si lo elegiste.
+  const { mio: miSobrenombre } = useMiSobrenombre();
+  const nombreEnElCompositor = miSobrenombre?.sobrenombre?.trim() || nombreUsuario;
   const primerNombreUsuario = nombreUsuario.split(' ')[0];
 
   /*
@@ -4979,7 +4990,7 @@ function ComunidadPorFormacion({
         alCancelar={() => setCreatePostModalVisible(false)}
         alPublicar={handlePublishPost}
         publicando={subiendoPublicacion}
-        autor={{ nombre: nombreUsuario, firma: firmaDePublicacion, avatarUrl: user?.avatarUrl }}
+        autor={{ nombre: nombreEnElCompositor, firma: firmaDePublicacion, avatarUrl: user?.avatarUrl }}
         texto={newPostText}
         alCambiarTexto={setNewPostText}
         categorias={{

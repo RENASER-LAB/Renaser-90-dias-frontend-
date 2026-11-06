@@ -39,6 +39,8 @@ export const wallPostSchema = z
     programDay: z.number().nullable().optional(),
     // Spec 024: la formación de la publicación. Opcional y tolerante: un servidor anterior no la manda y un valor raro no tumba el feed.
     formation: formacionTolerante,
+    // Spec 046: el nombre real de quien tiene sobrenombre, solo para el equipo. Tolerante: un servidor anterior no lo manda.
+    authorRealName: z.string().nullish().catch(null),
   })
   .passthrough();
 
@@ -55,6 +57,7 @@ export const wallCommentSchema = z
     authorAvatarUrl: z.string().nullable(),
     text: z.string(),
     createdAt: z.string(),
+    authorRealName: z.string().nullish().catch(null),
   })
   .passthrough();
 
@@ -90,6 +93,7 @@ export const wallReactionItemSchema = z
     avatarUrl: z.string().nullable(),
     role: z.string().nullable(),
     type: z.string(),
+    realName: z.string().nullish().catch(null),
   })
   .passthrough();
 

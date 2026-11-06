@@ -33,6 +33,7 @@ export function MasOpcionesScreen({
   onAbrirHabitosDelPrograma,
   onAbrirFichas,
   onAbrirPublicacionesOcultas,
+  onAbrirSobrenombres,
   onAbrirCodigoRenaserEnFichas,
   onAbrirCuentaDeGoogle,
   onAbrirTerminos,
@@ -45,6 +46,8 @@ export function MasOpcionesScreen({
   onAbrirHabitosDelPrograma: () => void;
   onAbrirFichas: () => void;
   onAbrirPublicacionesOcultas: () => void;
+  /** Spec 046: los sobrenombres del Muro y las palabras que no se pueden usar. */
+  onAbrirSobrenombres?: () => void;
   onAbrirCodigoRenaserEnFichas: () => void;
   onAbrirCuentaDeGoogle: () => void;
   onAbrirTerminos: () => void;
@@ -100,6 +103,17 @@ export function MasOpcionesScreen({
       onPress: onAbrirPublicacionesOcultas,
       clave: CLAVES.muro,
     },
+    /* Spec 046: cómo se ve cada persona en el Muro (su sobrenombre) y las palabras que no se pueden usar. Sigue al Muro. */
+    ...(onAbrirSobrenombres
+      ? [
+          {
+            titulo: 'Sobrenombres',
+            detalle: 'Cómo se ve cada persona en el Muro y las palabras que no se pueden usar',
+            onPress: onAbrirSobrenombres,
+            clave: CLAVES.muro,
+          },
+        ]
+      : []),
     /* Quién ve el Código Renaser en las fichas: un solo interruptor para el mentor, la guía y el líder (pedido del dueño del
        31/10, backend D-299, spec 034). Apagado de fábrica. */
     {

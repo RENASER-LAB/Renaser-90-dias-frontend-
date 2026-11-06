@@ -133,6 +133,12 @@ function TarjetaPublicacionMuroBase({
             <View style={styles.autorTextos}>
               {/* Hasta dos líneas: el nombre completo se lee (a quien modera le sirve verlo entero) y, si aun así no cabe, «…». */}
               <Text numberOfLines={2} style={[t.cardTitle, { color: c.textStrong }]}>{post.author}</Text>
+              {/* Spec 046: el equipo ve también el nombre real de quien usa sobrenombre (el servidor solo se lo manda a él). */}
+              {post.nombreReal ? (
+                <Text numberOfLines={1} style={[t.small, { color: c.textSoft }]} testID="nombre-real-del-autor">
+                  {post.nombreReal}
+                </Text>
+              ) : null}
               <Text numberOfLines={1} style={[t.small, { color: c.micro }]}>{lineaDelAutor(post.cell, post.timeAgo)}</Text>
             </View>
           </View>
@@ -372,6 +378,7 @@ function TarjetaPublicacionMuroBase({
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Text style={[t.cardTitle, { color: c.goldInk, fontSize: 14 }]}>
                       {cItem.author} {cItem.role ? `(${cItem.role})` : ''}
+                      {cItem.nombreReal ? <Text style={[t.small, { color: c.textSoft }]}>{` · ${cItem.nombreReal}`}</Text> : null}
                     </Text>
                     <Text style={[t.micro, { color: c.textSoft }]}>{cItem.timeAgo}</Text>
                   </View>

@@ -75,6 +75,12 @@ function FilaCompactaDelMuroBase({ post, destacada, puedeModerar = false, accion
             <Text numberOfLines={2} style={[t.cardTitle, { color: c.textStrong }]}>
               {post.author}
             </Text>
+            {/* Spec 046: el equipo ve también el nombre real de quien usa sobrenombre. */}
+            {post.nombreReal ? (
+              <Text numberOfLines={1} style={[t.small, { color: c.textSoft }]} testID="nombre-real-del-autor">
+                {post.nombreReal}
+              </Text>
+            ) : null}
             <Text numberOfLines={1} style={[t.small, { color: c.textSoft }]}>
               {lineaDelAutor(post.cell, post.timeAgo)}
             </Text>

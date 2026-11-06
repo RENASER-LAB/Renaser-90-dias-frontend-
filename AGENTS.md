@@ -2673,6 +2673,25 @@ llame al servidor a cada rato y que nada se duplique**, y **«el avatar debe ref
   **Privacidad (decisión del coordinador, 2026-11-06):** cerrar sesión borra ese centro guardado y lo adelantado (`borrarCentroGuardadoDelMapa`, desde
   `apagarLaCarreraAlSalir`), para que en un teléfono compartido la cuenta que entra no vea dónde corrió la anterior. Jest `alarmasDeLaCuentaAlSalir`.
 
+## Cambio por pedido del dueño — 2026-11-06 — el sobrenombre en el Muro (spec 046)
+
+Pedido del dueño (06/11): desde el día 7 la persona elige un sobrenombre que reemplaza su nombre en el Muro, y Administración lo puede configurar o editar.
+Spec, decisiones (D1–D9) y vista previa en el backend (`specs/046-sobrenombre-en-el-muro/`, D-331). **El dueño autorizó** tocar Hoy (la fila), Comunidad → Muro
+(el nombre real para el equipo) y Yo → Ajustes → Perfil. Lo que cambia y nada más:
+* **Hoy, desde el día 7** (`features/sobrenombre/`, `FilaDelSobrenombre`): bajo la frase, la fila compacta «Elige cómo te verán en el Muro · Tu sobrenombre ›» con «Ahora no» (✕);
+  **«Ahora no» no la vuelve a mostrar** (D2, lo guarda el servidor) y después se elige solo desde Yo. Sale hasta que elija uno o diga «Ahora no» (no solo el día 7). Sin lectura
+  del servidor no hay fila. Entra en el bloque de debajo de la frase sin dejar hueco.
+* **La hoja** (`HojaDelSobrenombre`, `HojaDesdeAbajo`): el campo con su contador «n / 20», «Así te verán en el Muro. Tu mentor y el equipo siguen viendo tu nombre.», la vista previa de
+  una publicación con el sobrenombre, «Guardar» y, si ya tiene uno, «Volver a mi nombre». Lo que rechaza el servidor (repetido en la formación, palabra prohibida, antes de los 30 días)
+  se dice bajo el campo, sin diálogos; `tacto.logro()` al guardar. Sin animación nueva.
+* **Yo → Ajustes → Perfil → «Sobrenombre en el Muro»**: abre la misma hoja; dice el sobrenombre o «Con tu nombre».
+* **El Muro** muestra lo que manda el servidor: `authorName` ya es el sobrenombre (un APK anterior también lo ve). Al equipo (mentor, guía, líder, Administración, Alquimista, Soporte TI) le
+  llega además el nombre real (`authorRealName` / `realName`) y se dibuja debajo en gris en la tarjeta, la fila compacta, los comentarios, el visor y «quién reaccionó». La foto se ve (D4).
+* **Administración**: en la ficha de la persona, «Sobrenombre en el Muro» con «Cambiar» / «Ponerle uno» y «Quitar», con motivo (se le avisa a la persona sin el motivo, D7); y Más
+  opciones → «Sobrenombres»: la lista con buscador y las palabras que no se pueden usar (agregar y quitar).
+* **Pruebas:** Jest `reglasDelSobrenombre`, `sobrenombreEnElMuro` y `hojaYFilaDelSobrenombre`. Maestro: `.maestro/sobrenombre/01–04`.
+* **Hace falta el backend con V181 antes y un APK nuevo** (solo JavaScript).
+
 ## Cambio por pedido del dueño — 2026-11-06 — el código de verificación también por WhatsApp (spec 043)
 
 Textual: «si no llega o está lleno el correo… otras empresas usan SMS o WhatsApp». Decisiones del dueño del 06/11: **solo WhatsApp** (nada de SMS, Amazon SES ni

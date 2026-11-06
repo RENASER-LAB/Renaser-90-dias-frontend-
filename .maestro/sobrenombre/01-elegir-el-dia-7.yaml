@@ -1,0 +1,34 @@
+# 01 — Día 7: Hoy invita a elegir el sobrenombre; se elige y se ve en el Muro.
+# Precondición: backend con V181; aprendiz en su día 7, sin sobrenombre y sin haber dicho «Ahora no», con una publicación en el Muro.
+# Variable SOBRENOMBRE: un sobrenombre libre en su formación.
+# cuenta: aprendiz
+# spec 046 FR-001, FR-002, FR-004
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- extendedWaitUntil:
+    visible: "Elige cómo te verán en el Muro"
+    timeout: 30000
+- takeScreenshot: S01a-fila-en-hoy
+- tapOn: "Elige cómo te verán en el Muro"
+- extendedWaitUntil:
+    visible: "Tu sobrenombre en el Muro"
+    timeout: 10000
+- tapOn: "Tu sobrenombre"
+- inputText: ${SOBRENOMBRE}
+- hideKeyboard
+- assertVisible: "Así se verá"
+- takeScreenshot: S01b-hoja
+- tapOn: "Guardar"
+- extendedWaitUntil:
+    visible: "Listo: en el Muro te verán como.*"
+    timeout: 15000
+- takeScreenshot: S01c-guardado
+- tapOn: "Cerrar"
+- assertNotVisible: "Elige cómo te verán en el Muro"
+- tapOn: "COMUNIDAD"
+- tapOn: "Muro"
+- extendedWaitUntil:
+    visible: ${SOBRENOMBRE}
+    timeout: 20000
+- takeScreenshot: S01d-muro-con-sobrenombre
