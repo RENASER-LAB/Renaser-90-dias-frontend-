@@ -164,4 +164,17 @@ describe('los recordatorios de eventos por WhatsApp (spec 041)', () => {
     expect(texto).toContain('solo el estado de cada envío');
     expect(texto).toContain('durante 12 meses');
   });
+
+  // spec 047 FR-018
+  it('dice que las sesiones por Meet se graban y se transcriben, para qué, quién accede, que va cifrada y que se borra a los 6 meses', () => {
+    expect(texto).toContain('Las sesiones en vivo por Google Meet');
+    expect(texto).toContain('se graban y se transcriben');
+    expect(texto).toContain('Esta sesión se graba y se transcribe.');
+    expect(texto).toContain('No se muestra en la app');
+    expect(texto).toContain('cifrada');
+    expect(texto).toContain('Solo el equipo de administración (Administración y Alquimista) puede sacarla');
+    expect(texto).toContain('Se borra sola a los 6 meses');
+    expect(texto).toContain('La transcripción de las sesiones por Meet se borra a los 6 meses');
+    expect(texto).not.toMatch(/Workspace/);
+  });
 });

@@ -34,6 +34,9 @@ import { ParaQuienEsDelEvento } from './audiencia/ParaQuienEsDelEvento';
  * mentores (`verAsistencia`), la tarjeta «Asistencia» con quién respondió y «Pasar lista». Si el
  * servidor no la entrega (backend viejo, 404; sin permiso, 403), no aparece.
  */
+/** Spec 047 (decisión P4-B del dueño): la única línea nueva en Comunidad → Eventos. Solo sale si Google confirmó que la sala graba o transcribe. */
+export const AVISO_DE_GRABACION = 'Esta sesión se graba y se transcribe.';
+
 export function DetalleDelEvento({
   oc,
   puedeGestionar,
@@ -76,7 +79,8 @@ export function DetalleDelEvento({
   const conAudienciaElegida = evento.audiencia === 'SELECTION';
   const { evento: fresco, lectura, reintentando, fallo: falloAlReintentar, reintentar } = useMeetDelEvento(
     evento.id,
-    (puedeGestionar && evento.tipoUbicacion === 'MEET') || conAudienciaElegida,
+    /* Spec 047 (P4-B): un evento por Meet se lee fresco para TODOS, para saber si la sesión se graba y se transcribe. */
+    evento.tipoUbicacion === 'MEET' || conAudienciaElegida,
   );
   /* Quien creó el evento (o lo gestiona: el líder de sus mentores, Administración) recibe la audiencia; nadie más (FR-018). */
   const gestionaEste = puedeGestionar || !!fresco?.audienciaElegida;
@@ -133,6 +137,7 @@ export function DetalleDelEvento({
             {marca ? <LogoDeMarca marca={marca} size={20} decorativo /> : null}
             <Parrafo>Es por {nombreDelLink(link)}.</Parrafo>
           </View>
+          {fresco?.seGrabaYTranscribe ? <Parrafo>{AVISO_DE_GRABACION}</Parrafo> : null}
           {vas ? (
             <BotonPrincipal etiqueta="Unirme" icono="play" onPress={unirme} accessibilityLabel={`Unirme por ${nombreDelLink(link)}`} />
           ) : (
