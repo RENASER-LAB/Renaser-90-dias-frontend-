@@ -1,0 +1,31 @@
+# Perfil de esta app para el arnés de agentes (núcleo genérico, aparte de este repositorio: grafo, bucles, validador).
+# Dice cómo se hace aquí cada nodo del grafo. Lo valida `npm run verificar` con `arnes validar --perfil arnes.perfil.yaml`
+# (busca el núcleo en ARNES_DIR o en ~/Documentos/arnes). Mapa de las 14 fases a este repo: docs/arnes/fases.md.
+version: 1
+nombre: app-expo
+stack: expo
+rutas:
+  instrucciones: AGENTS.md
+  progreso: PROGRESO.md
+  decisiones: docs/decisiones/README.md
+  familias_de_errores: docs/arnes/familias-de-errores.md
+  specs: ../Renaser-90-dias-backend/specs/
+  e2e: .maestro/
+comandos:
+  especificar: "skill: speckit-specify (las specs viven en el backend, specs/NNN-…)"
+  aclarar: "skill: speckit-clarify (hasta 5 preguntas al dueño, con opciones y la recomendada primero)"
+  planear: "skill: speckit-plan (dice qué tab toca y si está autorizado en docs/decisiones/)"
+  dividir: "skill: speckit-tasks y speckit-analyze"
+  reproducir: "agente: gh issue create --label bug + prueba de Jest que falla por la causa"
+  implementar: "agente: en su worktree (scripts/worktree-nuevo.sh <rama>), con la marca spec NNN FR-NNN en las pruebas"
+  verificar: "npm run verificar"
+  verificar_rapido: "npm run verificar -- --rapido"
+  e2e: "npm run verificar -- --e2e"
+  logs: "manual: adb logcat filtrado por la app y el registro del backend local durante el E2E, sin errores nuevos"
+  pr: "gh pr create (plantilla de PR con la verificación, el E2E y lo que no se pudo verificar)"
+  cerrar: "manual: scripts/worktree-cerrar.sh <rama> (borra worktree, rama y grafo) y PROGRESO.md al día"
+reglas:
+  - "Los cinco tabs no cambian sin autorización del dueño (docs/decisiones/)."
+  - "Nunca contra producción: backend local con base clonada, build debug y emulador."
+  - "Lo pesado con ~/.config/renaser-e2e/herramientas/pesado.sh y Jest con --maxWorkers=2."
+  - "Solo el dueño fusiona."

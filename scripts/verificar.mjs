@@ -1,6 +1,6 @@
 // Verificación estándar de la app: el mismo camino para cualquier persona, agente o el CI (arnés propio, 2026-11-06).
 //
-//   npm run verificar                     parches de postinstall + tipos + Jest completo + trazabilidad + Maestro (conteo)
+//   npm run verificar                     parches de postinstall + tipos + Jest completo + trazabilidad + grafo de agentes + Maestro (conteo)
 //   npm run verificar -- --rapido         parches + tipos + solo las pruebas de lo cambiado respecto de origin/master
 //   npm run verificar -- --e2e [flujo…]   lo anterior + la suite de Maestro en el emulador (.maestro/correr.sh)
 //   npm run verificar -- --ci             lo que corre el CI: sin detección de máquina ocupada; lo que no aplica en el
@@ -125,6 +125,19 @@ if (backend) {
   anotar('Trazabilidad de specs', CI ? 'na' : null, CI
     ? 'no aplica en el CI de la app: la corre el CI del backend (trazabilidad.yml) contra esta rama'
     : 'sin correr: no encontré el backend (pon RENASER_BACKEND=<ruta>)');
+}
+
+// 4b. El grafo del flujo de agentes y el perfil de este repo (arnes.perfil.yaml). El núcleo del arnés es genérico y vive
+// fuera de este repositorio: ARNES_DIR, o ~/Documentos/arnes. Valida que el grafo no tenga bucles sin tope ni camino a la
+// fusión sin el dueño, y que el perfil traiga un comando para cada nodo que lo pide.
+const nucleoDelArnes = [process.env.ARNES_DIR, path.join(process.env.HOME ?? '', 'Documentos', 'arnes')]
+  .find((c) => c && fs.existsSync(path.join(c, 'bin', 'arnes.mjs')));
+if (nucleoDelArnes) {
+  correr('Grafo de agentes y perfil del arnés (arnes validar)', 'node', [path.join(nucleoDelArnes, 'bin', 'arnes.mjs'), 'validar', '--perfil', 'arnes.perfil.yaml']);
+} else {
+  anotar('Grafo de agentes y perfil del arnés', CI ? 'na' : null, CI
+    ? 'no aplica en el CI: el núcleo del arnés no está en este repositorio'
+    : 'sin correr: no encontré el núcleo del arnés (pon ARNES_DIR=<ruta>)');
 }
 
 // 5. Maestro: cuántos flujos hay sin correr (tablero, no puerta).
