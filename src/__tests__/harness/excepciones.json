@@ -1,0 +1,19 @@
+{
+  "$comentario": "Violaciones que ya existían el día que nació cada chequeo de familiasDeErrores.test.ts. Solo se achica: al arreglar una, se borra. Ver docs/arnes/familias-de-errores.md.",
+  "alertDeReactNative": {
+    "fecha": "2026-11-06",
+    "motivo": "Alerta.tsx y admin/utils/dialogo.ts envuelven el Alert nativo a propósito (con el camino de la web). Los otros dos son violaciones reales.",
+    "issue": "https://github.com/RENASER-LAB/Renaser-90-dias-frontend-/issues/144",
+    "archivos": [
+      "src/components/Alerta.tsx",
+      "src/features/admin/utils/dialogo.ts",
+      "src/features/mentor/screens/AlumnoScreen.tsx",
+      "src/features/pasos/hooks/usePasosDelDia.ts"
+    ]
+  },
+  "crlf": {
+    "fecha": "2026-11-06",
+    "motivo": "Sin excepciones: ningún archivo de texto de la app tiene CRLF.",
+    "archivos": []
+  }
+}
