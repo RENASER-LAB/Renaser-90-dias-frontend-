@@ -1,7 +1,7 @@
 import { describe, expect, it } from '@jest/globals';
 import type { PuntoGps } from '../../types/carrera.types';
 import { puntoDestino } from '../geo';
-import { alPunto, crearCarrera, seguir } from '../motorDeCarrera';
+import { alPunto, crearCarrera, pausar, seguir } from '../motorDeCarrera';
 
 const ORIGEN = { lat: -12.0464, lng: -77.0428 };
 const T0 = Date.UTC(2026, 10, 7, 11, 0, 0);
@@ -49,9 +49,9 @@ describe('un salto del GPS no bloquea los puntos siguientes', () => {
   // spec 042 FR-030
   it('un salto durante la pausa automática reancla y la carrera sigue al moverse, sin sumar el salto', () => {
     let e = aplicar(nueva(), ruta(15, 3));
-    // Quieta 15 s hasta que entra la pausa automática.
+    // Quieta 40 s hasta que entra la pausa automática.
     const fin = e.ultimoCrudo!;
-    const quieta = Array.from({ length: 15 }, (_, i): PuntoGps => ({ lat: fin.lat, lng: fin.lng, t: fin.t + (i + 1) * 1000, precision: 5, velocidad: 0 }));
+    const quieta = Array.from({ length: 40 }, (_, i): PuntoGps => ({ lat: fin.lat, lng: fin.lng, t: fin.t + (i + 1) * 1000, precision: 5, velocidad: 0 }));
     e = aplicar(e, quieta);
     expect(e.pausaAutomatica).toBe(true);
     const distancia = e.distanciaM;
@@ -68,10 +68,13 @@ describe('un salto del GPS no bloquea los puntos siguientes', () => {
   // spec 042 FR-030
   it('un estado guardado sin los campos nuevos sigue funcionando', () => {
     const guardado = JSON.parse(JSON.stringify(nueva()));
+    delete guardado.saltoCandidato;
+    delete guardado.saltosSeguidos;
+    delete guardado.saltoDesdeMs;
     expect(guardado.saltoCandidato).toBeUndefined();
     const e = aplicar(guardado, ruta(10, 3));
     expect(e.distanciaM).toBeGreaterThan(20);
-    const s = seguir(e, e.ultimoLatidoMs + 1000);
+    const s = seguir(pausar(e, e.ultimoLatidoMs + 500), e.ultimoLatidoMs + 1000);
     expect(s.ultimoCrudo).toBeNull();
   });
 });
