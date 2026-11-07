@@ -32,6 +32,13 @@ const path = require('path');
 
 const MARCA = '// [renaser] una sola notificación de la carrera, dorada y con cronómetro (scripts/arreglar-notificacion-de-carrera.js, v2)';
 
+/**
+ * La marca de la versión anterior (v1, 2026-11-05: una sola notificación, sin color ni cronómetro). Vercel y otros armados
+ * reusan node_modules ya parchados con v1: sin reconocerla, el script no encontraba los originales y cortaba la instalación
+ * (2026-11-07). Un archivo con v1 se devuelve a su original y se le aplica la versión actual.
+ */
+const MARCA_V1 = '// [renaser] una sola notificación de la carrera (scripts/arreglar-notificacion-de-carrera.js)';
+
 const ID_DEL_SERVICIO = 481756;
 const IDENTIFICADOR_DE_LA_CARRERA = 'carrera-en-vivo';
 
@@ -67,6 +74,7 @@ const NOTIFICATIONS = {
     },
     {
       nombre: 'la publicación de la notificación',
+      nuevoV1: "      if (notification.notificationRequest.identifier == RENASER_IDENTIFICADOR_CARRERA) {\n        androidNotification.flags = androidNotification.flags or\n          android.app.Notification.FLAG_ONLY_ALERT_ONCE or\n          android.app.Notification.FLAG_ONGOING_EVENT or\n          android.app.Notification.FLAG_NO_CLEAR\n        NotificationManagerCompat.from(context).notify(RENASER_ID_DEL_SERVICIO_GPS, androidNotification)\n      } else {\n        NotificationManagerCompat.from(context).notify(\n          notification.notificationRequest.identifier,\n          getNotifyId(notification.notificationRequest),\n          androidNotification\n        )\n      }",
       original: `      NotificationManagerCompat.from(context).notify(
         notification.notificationRequest.identifier,
         getNotifyId(notification.notificationRequest),
@@ -129,6 +137,14 @@ function aplicarA(raiz, parche) {
   }
   let kotlin = fs.readFileSync(archivo, 'utf8');
   if (kotlin.includes(MARCA)) return 'ya-aplicado';
+  if (kotlin.startsWith(`${MARCA_V1}\n`)) {
+    // Parchado con v1: se deshace (cada edición vuelve a su original) y sigue como un archivo limpio.
+    kotlin = kotlin.slice(MARCA_V1.length + 1);
+    for (const { original, nuevo, nuevoV1 } of parche.ediciones) {
+      const deV1 = nuevoV1 ?? nuevo;
+      if (veces(kotlin, deV1) === 1) kotlin = kotlin.replace(deV1, () => original);
+    }
+  }
   for (const { nombre, original, nuevo } of parche.ediciones) {
     if (veces(kotlin, original) !== 1) {
       throw new Error(
@@ -150,7 +166,7 @@ function aplicar(nodeModules) {
   };
 }
 
-module.exports = { aplicar, aplicarA, MARCA, ID_DEL_SERVICIO, IDENTIFICADOR_DE_LA_CARRERA, LOCATION, NOTIFICATIONS };
+module.exports = { aplicar, aplicarA, MARCA, MARCA_V1, ID_DEL_SERVICIO, IDENTIFICADOR_DE_LA_CARRERA, LOCATION, NOTIFICATIONS };
 
 if (require.main === module) {
   const r = aplicar(path.join(__dirname, '..', 'node_modules'));

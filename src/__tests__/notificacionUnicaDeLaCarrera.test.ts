@@ -17,10 +17,11 @@ import { ID_ANDROID_DEL_SERVICIO_GPS, ID_NOTIFICACION_CARRERA } from '../feature
 const script = require('../../scripts/arreglar-notificacion-de-carrera.js') as {
   aplicar: (nodeModules: string) => { location: string; notifications: string };
   MARCA: string;
+  MARCA_V1: string;
   ID_DEL_SERVICIO: number;
   IDENTIFICADOR_DE_LA_CARRERA: string;
   LOCATION: { archivo: string };
-  NOTIFICATIONS: { archivo: string };
+  NOTIFICATIONS: { archivo: string; ediciones: { original: string; nuevo: string; nuevoV1?: string }[] };
 };
 
 /** Lo de `LocationTaskService.kt` de la 57.0.22 que toca el script, tal cual. */
@@ -96,6 +97,20 @@ const leer = (raiz: string, paquete: string, archivo: string) => fs.readFileSync
 const veces = (donde: string, texto: string): number => donde.split(texto).length - 1;
 
 describe('una sola notificación durante la carrera (parche nativo)', () => {
+  // spec 042 FR-011
+  it('un node_modules ya parchado con la versión anterior (v1) se actualiza a la dorada sin cortar la instalación', () => {
+    // Así quedaba el archivo con v1: cada edición aplicada con su texto de entonces y la marca vieja arriba.
+    let conV1 = PRESENTACION_ORIGINAL;
+    for (const e of script.NOTIFICATIONS.ediciones) conV1 = conV1.replace(e.original, () => e.nuevoV1 ?? e.nuevo);
+    const nm = nodeModulesFalso({ presentacion: `${script.MARCA_V1}\n${conV1}` });
+    expect(() => script.aplicar(nm)).not.toThrow();
+    const presentacion = leer(nm, 'expo-notifications', script.NOTIFICATIONS.archivo);
+    expect(presentacion.startsWith(script.MARCA)).toBe(true);
+    expect(presentacion).not.toContain(script.MARCA_V1 + '\n');
+    expect(presentacion).toContain('.setColorized(true)');
+    expect(veces(presentacion, 'RENASER_ID_DEL_SERVICIO_GPS = ')).toBe(1);
+  });
+
   // spec 042 FR-011
   it('fija el id del servicio del GPS y publica la de la carrera con ese id y sin tag', () => {
     const nm = nodeModulesFalso();
