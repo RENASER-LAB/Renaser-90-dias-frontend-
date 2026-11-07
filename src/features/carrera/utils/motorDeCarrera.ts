@@ -33,6 +33,9 @@ export const ZANCADA_CAMINANDO_M = 0.75;
 export const ZANCADA_CORRIENDO_M = 1.0;
 const TAMANO_VENTANA = 4;
 const MUESTRAS_MS = 60_000;
+/** Cuántos puntos descartados como salto, coherentes entre sí, bastan para reanclar (o este tiempo, lo que llegue primero). */
+export const SALTOS_PARA_REANCLAR = 3;
+export const SALTO_REANCLA_MS = 5_000;
 
 export function crearCarrera(datos: {
   carreraId: string;
@@ -59,6 +62,9 @@ export function crearCarrera(datos: {
     ultimoCrudo: null,
     recientes: [],
     ultimoGpsBuenoMs: null,
+    saltoCandidato: null,
+    saltosSeguidos: 0,
+    saltoDesdeMs: null,
     pasos: 0,
     conPasos: datos.conPasos,
     pasosEnHueco: 0,
@@ -215,6 +221,9 @@ export function seguir(e: EstadoDeLaCarrera, ahora: number): EstadoDeLaCarrera {
     ultimoCrudo: null,
     recientes: [],
     ultimoGpsBuenoMs: null,
+    saltoCandidato: null,
+    saltosSeguidos: 0,
+    saltoDesdeMs: null,
     pasosEnHueco: 0,
     ultimoCalculoCaloriasMs: activoMs(e, ahora),
   };
@@ -260,19 +269,55 @@ export function alPasos(e: EstadoDeLaCarrera, delta: number, ahora: number): Est
   return s;
 }
 
+/**
+ * Un punto descartado como salto. Se recuerda; si los descartados siguientes son coherentes entre sí (≤ 25 km/h de uno a otro) y ya son
+ * 3 o pasaron 5 s, el ancla estaba mal (fix viejo, wifi, la persona se movió en pausa): se reancla en este punto y se parte de ahí sin
+ * sumar el salto. Un atípico aislado solo queda de candidato y el siguiente punto normal lo borra.
+ */
+function registrarSalto(e: EstadoDeLaCarrera, p: PuntoGps): { estado: EstadoDeLaCarrera; reancla: boolean } {
+  const cand = e.saltoCandidato;
+  const coherente = cand != null && p.t > cand.t && distanciaM(cand, p) / ((p.t - cand.t) / 1000) <= VELOCIDAD_MAXIMA_MS;
+  const seguidos = coherente ? (e.saltosSeguidos ?? 1) + 1 : 1;
+  const desde = coherente ? (e.saltoDesdeMs ?? cand.t) : p.t;
+  if (seguidos >= SALTOS_PARA_REANCLAR || (coherente && p.t - desde >= SALTO_REANCLA_MS)) {
+    return {
+      reancla: true,
+      estado: {
+        ...e,
+        ultimoCrudo: p,
+        ventana: [],
+        recientes: [],
+        ultimoGpsBuenoMs: null,
+        pasosEnHueco: 0,
+        saltoCandidato: null,
+        saltosSeguidos: 0,
+        saltoDesdeMs: null,
+      },
+    };
+  }
+  return { reancla: false, estado: { ...e, saltoCandidato: p, saltosSeguidos: seguidos, saltoDesdeMs: desde } };
+}
+
 export type MotivoDeDescarte = 'precision' | 'salto' | 'pausa';
 
 /**
  * Un punto del GPS. Devuelve el estado nuevo y, si se descartó, por qué (para las pruebas y el registro de depuración).
  */
-export function alPunto(e: EstadoDeLaCarrera, p: PuntoGps): { estado: EstadoDeLaCarrera; descartado: MotivoDeDescarte | null } {
+export function alPunto(entrada: EstadoDeLaCarrera, p: PuntoGps): { estado: EstadoDeLaCarrera; descartado: MotivoDeDescarte | null } {
+  let e = entrada;
   const ahora = p.t;
   if (e.fase === 'pausa' && !e.pausaAutomatica) return { estado: { ...e, ultimoLatidoMs: Math.max(e.ultimoLatidoMs, ahora) }, descartado: 'pausa' };
   if (p.precision == null || !(p.precision <= PRECISION_MAXIMA_M)) return { estado: e, descartado: 'precision' };
   if (e.ultimoCrudo) {
     const dt = (p.t - e.ultimoCrudo.t) / 1000;
-    if (dt <= 0) return { estado: e, descartado: 'salto' };
-    if (distanciaM(e.ultimoCrudo, p) / dt > VELOCIDAD_MAXIMA_MS) return { estado: e, descartado: 'salto' };
+    if (dt <= 0 || distanciaM(e.ultimoCrudo, p) / dt > VELOCIDAD_MAXIMA_MS) {
+      const r = registrarSalto(e, p);
+      if (!r.reancla) return { estado: r.estado, descartado: 'salto' };
+      // Varios puntos seguidos coinciden entre sí: el ancla era la rara. Se parte de aquí, como tras una pausa manual (sin sumar el salto).
+      e = r.estado;
+    } else if (e.saltoCandidato || e.saltosSeguidos) {
+      e = { ...e, saltoCandidato: null, saltosSeguidos: 0, saltoDesdeMs: null };
+    }
   }
 
   const hueco = e.ultimoGpsBuenoMs != null ? p.t - e.ultimoGpsBuenoMs : 0;

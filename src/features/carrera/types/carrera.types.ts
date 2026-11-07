@@ -59,6 +59,13 @@ export interface EstadoDeLaCarrera {
   /** Posiciones suavizadas recientes (≈ 10 s), para la velocidad de ventana que decide si la persona está quieta. */
   recientes: PuntoDeRuta[];
   ultimoGpsBuenoMs: number | null;
+  /**
+   * Último punto descartado como salto, mientras los descartados sean coherentes entre sí (spec 042 FR-030). Si se repiten, el ancla se
+   * mueve ahí. Opcionales: faltan en un estado guardado antes.
+   */
+  saltoCandidato?: PuntoGps | null;
+  saltosSeguidos?: number;
+  saltoDesdeMs?: number | null;
 
   pasos: number;
   /** El teléfono da pasos (hay sensor y permiso). Sin pasos, todo se decide con el GPS (FR-036). */
