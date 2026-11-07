@@ -40,6 +40,9 @@ import { accionDelToque, laCarreraYaEmpezo, marcaDelToque, type ToqueEnLaNotific
 import { TEXTOS_DE_LA_CARRERA } from '../utils/textosDeLaCarrera';
 import { CalentadorDelMapa } from './CalentadorDelMapa';
 import { CuentaRegresiva } from './CuentaRegresiva';
+import { HojaGuiaDeBateria } from './HojaGuiaDeBateria';
+import { abrirGuiaDeLaMarca } from '../../alarmas/abrirGuiaDeLaMarca';
+import { esperarElRegreso, guiaDeBateriaPendiente } from '../servicios/guiaDeBateriaDeLaCarrera';
 import { PantallaCorriendo, PantallaTerminaste, type PanelDeLaPausa } from './PantallaDeCarrera';
 
 /**
@@ -87,6 +90,15 @@ function Anfitrion() {
   const [figura, setFigura] = useState<FiguraDelAvatar>('neutral');
   const [conHabito, setConHabito] = useState(true);
   const empezando = useRef(false);
+  // La guía de batería de antes de correr (2026-11-07): la línea de la marca mientras se muestra, y quién espera la decisión.
+  const [guiaDeBateria, setGuiaDeBateria] = useState<string | null>(null);
+  const decisionDeLaGuia = useRef<((revisar: boolean) => void) | null>(null);
+  const decidirLaGuia = useCallback((revisar: boolean) => {
+    const f = decisionDeLaGuia.current;
+    decisionDeLaGuia.current = null;
+    setGuiaDeBateria(null);
+    f?.(revisar);
+  }, []);
 
   useEffect(() => {
     ponerEfectos({ alCambiar: efectoDeVoz });
@@ -212,6 +224,17 @@ function Anfitrion() {
       // Si la fila no llegó a calentar Google Maps, empieza ahora, mientras se pide el permiso.
       pedirCalentarElMapa();
       try {
+        const linea = await guiaDeBateriaPendiente(cuentaId);
+        if (linea) {
+          const revisar = await new Promise<boolean>(resolve => {
+            decisionDeLaGuia.current = resolve;
+            setGuiaDeBateria(linea);
+          });
+          if (revisar) {
+            await abrirGuiaDeLaMarca();
+            await esperarElRegreso();
+          }
+        }
         const permiso = await pedirPermisoDeUbicacion();
         if (permiso !== 'concedido') {
           Alert.alert(
@@ -342,7 +365,22 @@ function Anfitrion() {
   useSystemBackHandler(atras, vista.tipo !== 'cerrada');
 
   // Sin carrera a la vista, el calentador de Google Maps (1 × 1, una vez por proceso: ver `calentarLaCarrera`).
-  if (vista.tipo === 'cerrada') return <CalentadorDelMapa />;
+  const hojaDeLaGuia = (
+    <HojaGuiaDeBateria
+      visible={guiaDeBateria != null}
+      linea={guiaDeBateria ?? ''}
+      alRevisar={() => decidirLaGuia(true)}
+      alAhoraNo={() => decidirLaGuia(false)}
+    />
+  );
+  if (vista.tipo === 'cerrada') {
+    return (
+      <>
+        <CalentadorDelMapa />
+        {hojaDeLaGuia}
+      </>
+    );
+  }
   const persona = { figura, iniciales: iniciales(user?.name), fotoUrl: user?.avatarUrl?.startsWith('http') ? user.avatarUrl : null };
 
   return (
