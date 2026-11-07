@@ -54,7 +54,8 @@ export function cargarMapas(): ModuloMapas | null {
 /** La cámara de cada modo. `avatarAlto`: a qué fracción del alto, desde arriba, cae el centro de la cámara (y el avatar). */
 export const CAMARA = {
   navegacion: { inclinacion: 67.5, acercamiento: 18.5, avatarAlto: 0.68 },
-  /** 2D (botón del mapa, 2026-11-05): desde arriba, con el rumbo hacia arriba y el avatar al centro. */
+  /** 2D (botón del mapa, 2026-11-05): desde arriba, con el rumbo hacia arriba y el avatar al centro. Sin edificios en relieve
+   * (2026-11-07: con ellos el mapa seguía viéndose en 3D aunque la cámara mirara desde arriba). */
   plano: { inclinacion: 0, acercamiento: 17.5, avatarAlto: 0.5 },
   resumen: { inclinacion: 60, acercamiento: 18, avatarAlto: 0.5 },
 } as const;
@@ -227,7 +228,7 @@ export function MapaDeCarrera({
           onMapLoaded={() => setCalles(true)}
           loadingEnabled={false}
           loadingBackgroundColor={c.cardBgAlt}
-          showsBuildings
+          showsBuildings={claveDeCamara !== 'plano'}
           showsUserLocation={false}
           showsMyLocationButton={false}
           showsCompass={false}
