@@ -185,6 +185,8 @@ describe('el botón 2D / 3D del mapa', () => {
     const [camara, opciones] = mockAnimar.mock.calls[mockAnimar.mock.calls.length - 1] as [{ pitch: number }, { duration: number }];
     expect(camara.pitch).toBe(0);
     expect(opciones.duration).toBe(DURACION_CAMBIO_DE_VISTA_MS);
+    // En 2D, plano de verdad: sin los edificios en relieve (con ellos seguía viéndose en 3D, 2026-11-07).
+    expect(mapaDe(raiz).props.showsBuildings).toBe(false);
     expect(boton(raiz).props.accessibilityLabel).toBe('Ver el mapa en 3D');
     expect(await AsyncStorage.getItem(PREFIJO_VISTA_DEL_MAPA + 'ana')).toBe('2d');
 
