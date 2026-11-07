@@ -22,6 +22,12 @@ export interface PuntoDeRuta {
   lat: number;
   lng: number;
   t: number;
+  /**
+   * Marca el PRIMER punto de un segmento nuevo de la ruta (el mapa no une con una recta lo de antes con lo de después):
+   * 'pausa' = tras seguir una pausa, un hueco largo o un reanclaje por salto de GPS; 'hueco' = tras un hueco corto cuya distancia se estimó
+   * por pasos. Ausente en un estado guardado antes: se lee como un solo segmento.
+   */
+  corte?: 'pausa' | 'hueco';
 }
 
 /** Una muestra para el ritmo actual (últimos 30 s): tiempo activo y distancia en ese momento. */
