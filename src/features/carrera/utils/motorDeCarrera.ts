@@ -349,17 +349,17 @@ export function alPunto(entrada: EstadoDeLaCarrera, p: PuntoGps): { estado: Esta
     s = { ...s, ruta: [punto], pasosEnHueco: 0 };
   } else if (e.ultimoGpsBuenoMs == null) {
     // Primer punto después de seguir una pausa manual: empieza un segmento nuevo sin sumar el trayecto en pausa.
-    s = { ...s, ruta: [...s.ruta, punto], pasosEnHueco: 0 };
+    s = { ...s, ruta: [...s.ruta, { ...punto, corte: 'pausa' }], pasosEnHueco: 0 };
   } else if (esHueco) {
     if (hueco >= HUECO_LARGO_MS) {
-      s = { ...s, ruta: [...s.ruta, punto], pasosEnHueco: 0 };
+      s = { ...s, ruta: [...s.ruta, { ...punto, corte: 'pausa' }], pasosEnHueco: 0 };
     } else {
       const lineal = distanciaM(anterior, punto);
       const porPasos = s.conPasos ? pasosDelTramo * zancadaEstimada(s, ahora) : 0;
       const suma = Math.max(lineal, porPasos);
       s = {
         ...s,
-        ruta: [...s.ruta, punto],
+        ruta: [...s.ruta, { ...punto, corte: 'hueco' }],
         distanciaM: s.distanciaM + suma,
         metrosSinGps: s.metrosSinGps + Math.max(0, porPasos - lineal),
         pasosEnHueco: 0,

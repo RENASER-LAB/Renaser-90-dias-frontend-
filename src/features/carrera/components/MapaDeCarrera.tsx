@@ -12,6 +12,7 @@ import { marcarMapaCalentado } from '../servicios/calentarLaCarrera';
 import { useVistaDelMapa, type VistaDelMapa } from '../servicios/vistaDelMapa';
 import { distanciaM, type Coordenada } from '../utils/geo';
 import type { FiguraDelAvatar } from '../utils/fusionDelAvatar';
+import { segmentosDeLaRuta, type PuntoConCorte } from '../utils/segmentosDeLaRuta';
 import { TEXTOS_DE_LA_CARRERA } from '../utils/textosDeLaCarrera';
 import { AvatarCaminante } from './AvatarCaminante';
 
@@ -110,7 +111,7 @@ export function MapaDeCarrera({
 }: {
   /** Para recordar 2D o 3D por cuenta en este teléfono. */
   cuentaId?: string | null;
-  ruta: readonly Coordenada[];
+  ruta: readonly PuntoConCorte[];
   posicion: Coordenada | null;
   /** Dónde mirar mientras el motor no tiene `posicion`. Solo para mirar: no entra a la ruta. */
   centroDeVista?: Coordenada | null;
@@ -172,7 +173,7 @@ export function MapaDeCarrera({
   }, [calles, reducir, velo]);
   const estiloDelVelo = useAnimatedStyle(() => ({ opacity: velo.get() }));
   const centro = posicion ?? centroDeVista;
-  const dibujada = useMemo(() => ruta.slice(-PUNTOS_DIBUJADOS).map(p => ({ latitude: p.lat, longitude: p.lng })), [ruta]);
+  const dibujada = useMemo(() => segmentosDeLaRuta(ruta.slice(-PUNTOS_DIBUJADOS)), [ruta]);
   /** El último centro al que se llevó la cámara, y si era el de vista (todavía sin punto del motor). */
   const anterior = useRef<{ pos: Coordenada; deVista: boolean } | null>(null);
 
@@ -240,7 +241,19 @@ export function MapaDeCarrera({
           accessibilityElementsHidden
           importantForAccessibility="no-hide-descendants"
         >
-          {dibujada.length >= 2 ? <Mapas.Polyline coordinates={dibujada} strokeColor="#B2924F" strokeWidth={6} /> : null}
+          {dibujada.segmentos.map((coordenadas, i) => (
+            <Mapas.Polyline key={`seg-${i}`} testID="ruta-dorada" coordinates={coordenadas} strokeColor="#B2924F" strokeWidth={6} />
+          ))}
+          {dibujada.conectores.map((coordenadas, i) => (
+            <Mapas.Polyline
+              key={`hueco-${i}`}
+              testID="ruta-hueco"
+              coordinates={coordenadas}
+              strokeColor="rgba(178,146,79,0.5)"
+              strokeWidth={3}
+              lineDashPattern={[6, 8]}
+            />
+          ))}
         </Mapas.default>
       ) : (
         <View style={[StyleSheet.absoluteFill, estilos.neutro]}>

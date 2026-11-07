@@ -285,3 +285,10 @@ llame al servidor a cada rato y que nada se duplique**, y **«el avatar debe ref
   ausentes); si 3 puntos seguidos, o 5 s, son coherentes entre sí (≤ 25 km/h de uno a otro), reancla en el último: segmento nuevo, sin sumar el salto a la distancia,
   a `metrosSinGps`, a los tramos ni a la ruta, y la pausa automática sigue al moverse. Un atípico aislado se sigue descartando y el siguiente punto normal lo olvida.
   Prueba: `utils/__tests__/saltoDeGps.test.ts`. Hace falta un APK nuevo (solo JavaScript).
+* **Corregido 2026-11-07 (la ruta cruzaba las casas tras un corte; issue #161).** El mapa dibujaba toda la ruta como UNA Polyline, así que cualquier corte
+  (seguir tras una pausa, un hueco largo, un hueco corto con distancia estimada por pasos, o el reanclaje tras un salto de GPS) quedaba unido por una recta que atravesaba
+  las manzanas. `PuntoDeRuta` suma `corte?: 'pausa' | 'hueco'` en el primer punto de cada segmento nuevo (`'pausa'`: seguir, hueco largo, reanclaje; `'hueco'`: hueco corto
+  estimado); un estado guardado antes no lo tiene y se lee como un solo segmento. `utils/segmentosDeLaRuta` parte la ruta y `MapaDeCarrera` (también el mapa de «Terminaste»)
+  dibuja una Polyline dorada por segmento (#B2924F, 6); entre segmentos no hay nada tras un corte `'pausa'`, y tras `'hueco'` un conector punteado y tenue (3, `[6, 8]`, dorado al 50 %)
+  para que se vea que es una estimación. No cambian la distancia, las notificaciones, el envío al servidor (ignora `corte`) ni la cámara 2D/3D. Pruebas: `cortesDeLaRuta`,
+  `segmentosDeLaRuta`, `rutaPorSegmentos`. Hace falta un APK nuevo (solo JavaScript). Sin comprobar en el teléfono.
