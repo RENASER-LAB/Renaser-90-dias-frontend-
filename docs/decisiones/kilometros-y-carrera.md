@@ -277,3 +277,10 @@ llame al servidor a cada rato y que nada se duplique**, y **«el avatar debe ref
   la notificación sigue y al reabrir retoma corriendo con lo recorrido mientras estuvo cerrada; **forzar detención** → al reabrir vuelve «En pausa» sin
   contar el tiempo muerto (FR-006). Las marcas que matan la app al deslizarla (Xiaomi, Huawei, Honor) caen en este último caso. No se pausa sola al
   cerrar: mucha gente cierra las apps por costumbre mientras corre y perdería esos km.
+* **Corregido 2026-11-07 (un salto de GPS ya no bloquea los puntos siguientes, issue #156).** `alPunto` descartaba como «salto» todo punto a más de 25 km/h del
+  último aceptado y dejaba el ancla (`ultimoCrudo`) donde estaba: si el ancla era la rara (último fix conocido viejo al empezar, un fix por wifi a 300 m, o la persona
+  se movió durante la pausa), todos los puntos siguientes se descartaban para siempre (distancia 0,00 y la pausa automática no seguía; solo «Seguir» a mano la
+  destrababa). Ahora el motor recuerda los descartados (`saltoCandidato`, `saltosSeguidos`, `saltoDesdeMs`, opcionales: un estado guardado antes los lee como
+  ausentes); si 3 puntos seguidos, o 5 s, son coherentes entre sí (≤ 25 km/h de uno a otro), reancla en el último: segmento nuevo, sin sumar el salto a la distancia,
+  a `metrosSinGps`, a los tramos ni a la ruta, y la pausa automática sigue al moverse. Un atípico aislado se sigue descartando y el siguiente punto normal lo olvida.
+  Prueba: `utils/__tests__/saltoDeGps.test.ts`. Hace falta un APK nuevo (solo JavaScript).
