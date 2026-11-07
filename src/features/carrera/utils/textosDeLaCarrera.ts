@@ -48,6 +48,9 @@ export const TEXTOS_DE_LA_CARRERA = {
 
 export const TEXTOS_DE_LA_NOTIFICACION = {
   titulo: 'Carrera en curso',
+  /** Notificación dorada (2026-11-07): «Corriendo · 2,45 km» / «En pausa · 2,45 km». */
+  corriendo: 'Corriendo',
+  pausa: 'En pausa',
   cuerpoDelServicio: 'Renaser registra tu recorrido',
   enPausa: 'Carrera en pausa',
   pausar: 'Pausar',
@@ -58,6 +61,20 @@ export const TEXTOS_DE_LA_NOTIFICACION = {
 /** «3,25 km · 00:21:04 · 6:29 min/km» (la notificación fija, FR-011). */
 export function lineaDeLaNotificacion(metros: number, duracion: string, ritmoSeg: number | null): string {
   return `${formatoKm(metros)} km · ${duracion} · ${formatoRitmo(ritmoSeg)} min/km`;
+}
+
+/** Título de la notificación dorada: «Corriendo · 2,45 km» o «En pausa · 2,45 km». */
+export function tituloDeLaNotificacion(metros: number, enPausa: boolean): string {
+  return `${enPausa ? TEXTOS_DE_LA_NOTIFICACION.pausa : TEXTOS_DE_LA_NOTIFICACION.corriendo} · ${formatoKm(metros)} km`;
+}
+
+/**
+ * Texto de la notificación dorada. Corriendo, el tiempo lo lleva el cronómetro del sistema (sube solo, segundo a segundo) y el
+ * texto es solo el ritmo; en pausa el cronómetro se apaga y el tiempo va fijo en el texto.
+ */
+export function cuerpoDeLaNotificacion(duracion: string, ritmoSeg: number | null, enPausa: boolean): string {
+  const ritmo = `Ritmo ${formatoRitmo(ritmoSeg)} min/km`;
+  return enPausa ? `${duracion} · ${ritmo}` : ritmo;
 }
 
 /** La chapita del mapa: «Km 3 · 0,47 en 2:44». */

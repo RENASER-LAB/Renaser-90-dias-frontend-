@@ -30,7 +30,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const MARCA = '// [renaser] una sola notificación de la carrera (scripts/arreglar-notificacion-de-carrera.js)';
+const MARCA = '// [renaser] una sola notificación de la carrera, dorada y con cronómetro (scripts/arreglar-notificacion-de-carrera.js, v2)';
 
 const ID_DEL_SERVICIO = 481756;
 const IDENTIFICADOR_DE_LA_CARRERA = 'carrera-en-vivo';
@@ -73,6 +73,19 @@ const NOTIFICATIONS = {
         androidNotification
       )`,
       nuevo: `      if (notification.notificationRequest.identifier == RENASER_IDENTIFICADOR_CARRERA) {
+        // [renaser] Dorada y con cronómetro (2026-11-07): la de un servicio en primer plano puede ir coloreada. Corriendo, el
+        // cronómetro del sistema lleva el tiempo activo (sube solo); en pausa se apaga y el tiempo va en el texto.
+        val renaserDatos = notification.notificationRequest.content.body
+        val renaserBuilder = android.app.Notification.Builder.recoverBuilder(context, androidNotification)
+          .setColor(0xFFB2924F.toInt())
+          .setColorized(true)
+        val renaserInicio = renaserDatos?.optLong("inicioCronometroMs", 0L) ?: 0L
+        if (renaserDatos?.optBoolean("enPausa", true) == false && renaserInicio > 0L) {
+          renaserBuilder.setWhen(renaserInicio).setShowWhen(true).setUsesChronometer(true)
+        } else {
+          renaserBuilder.setShowWhen(false).setUsesChronometer(false)
+        }
+        val androidNotification = renaserBuilder.build()
         androidNotification.flags = androidNotification.flags or
           android.app.Notification.FLAG_ONLY_ALERT_ONCE or
           android.app.Notification.FLAG_ONGOING_EVENT or

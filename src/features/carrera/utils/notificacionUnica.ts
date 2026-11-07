@@ -1,6 +1,6 @@
 import type { EstadoDeLaCarrera } from '../types/carrera.types';
 import { ACCION_PAUSAR, ACCION_SEGUIR, CATEGORIA_CARRERA, CATEGORIA_CARRERA_EN_PAUSA, ID_NOTIFICACION_CARRERA } from './avisoDeCarrera';
-import { lineaDeLaNotificacion, TEXTOS_DE_LA_NOTIFICACION } from './textosDeLaCarrera';
+import { cuerpoDeLaNotificacion, tituloDeLaNotificacion } from './textosDeLaCarrera';
 
 /**
  * La notificación ÚNICA de la carrera (spec 042, FR-011): reemplaza la del servicio en primer plano del GPS (ver
@@ -29,10 +29,18 @@ export function contenidoDeLaNotificacion(
   duracion: string,
 ): { title: string; body: string; categoryIdentifier: string } {
   return {
-    title: datos.enPausa ? TEXTOS_DE_LA_NOTIFICACION.enPausa : TEXTOS_DE_LA_NOTIFICACION.titulo,
-    body: lineaDeLaNotificacion(datos.metros, duracion, datos.ritmo),
+    title: tituloDeLaNotificacion(datos.metros, datos.enPausa),
+    body: cuerpoDeLaNotificacion(duracion, datos.ritmo, datos.enPausa),
     categoryIdentifier: datos.enPausa ? CATEGORIA_CARRERA_EN_PAUSA : CATEGORIA_CARRERA,
   };
+}
+
+/**
+ * Los datos que lee el parche nativo (`scripts/arreglar-notificacion-de-carrera.js`) para pintarla dorada y llevar el cronómetro:
+ * `inicioCronometroMs` es «ahora − tiempo activo», así el cronómetro del sistema marca el tiempo activo y sigue solo.
+ */
+export function datosDeLaNotificacion(datos: DatosDeLaNotificacion, ahora: number): { carrera: true; enPausa: boolean; inicioCronometroMs: number } {
+  return { carrera: true, enPausa: datos.enPausa, inicioCronometroMs: Math.round(ahora - datos.activoMs) };
 }
 
 /** Lo que importa de una respuesta de `expo-notifications` (un toque en la notificación o en uno de sus botones). */
