@@ -114,6 +114,13 @@ describe('una sola notificación durante la carrera (parche nativo)', () => {
     // Sin tag: `notify(id, n)` y `cancel(id)` de NotificationManagerCompat usan tag null, como el servicio.
     expect(presentacion).toContain('NotificationManagerCompat.from(context).notify(RENASER_ID_DEL_SERVICIO_GPS, androidNotification)');
     expect(presentacion).toContain('NotificationManagerCompat.from(context).cancel(RENASER_ID_DEL_SERVICIO_GPS)');
+    // Dorada y con cronómetro (2026-11-07): coloreada (solo se permite en la de un servicio en primer plano) y el tiempo lo
+    // lleva el cronómetro del sistema mientras corre.
+    expect(presentacion).toContain('Notification.Builder.recoverBuilder(context, androidNotification)');
+    expect(presentacion).toContain('.setColorized(true)');
+    expect(presentacion).toContain('.setColor(0xFFB2924F.toInt())');
+    expect(presentacion).toContain('setUsesChronometer(true)');
+    expect(presentacion).toContain('optLong("inicioCronometroMs", 0L)');
     // No suena ni vibra en cada actualización, y queda fija.
     expect(presentacion).toContain('FLAG_ONLY_ALERT_ONCE');
     expect(presentacion).toContain('FLAG_ONGOING_EVENT');

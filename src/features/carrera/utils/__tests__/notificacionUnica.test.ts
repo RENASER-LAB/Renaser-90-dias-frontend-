@@ -1,23 +1,35 @@
 import { describe, expect, it } from '@jest/globals';
 
 import { ACCION_ABRIR, ACCION_PAUSAR, ACCION_SEGUIR, CATEGORIA_CARRERA, CATEGORIA_CARRERA_EN_PAUSA, ID_NOTIFICACION_CARRERA } from '../avisoDeCarrera';
-import { accionDelToque, contenidoDeLaNotificacion, laCarreraYaEmpezo, marcaDelToque } from '../notificacionUnica';
+import { accionDelToque, contenidoDeLaNotificacion, datosDeLaNotificacion, laCarreraYaEmpezo, marcaDelToque } from '../notificacionUnica';
 
 describe('la notificación única de la carrera', () => {
   // spec 042 FR-011
-  it('corriendo: «Carrera en curso», los km, el tiempo y el ritmo, con «Pausar» y «Abrir»', () => {
+  it('corriendo: «Corriendo · 3,25 km», el ritmo en el texto (el tiempo lo lleva el cronómetro), con «Pausar» y «Abrir»', () => {
     const c = contenidoDeLaNotificacion({ metros: 3250, activoMs: 1_264_000, ritmo: 389, enPausa: false }, '00:21:04');
-    expect(c.title).toBe('Carrera en curso');
-    expect(c.body).toBe('3,25 km · 00:21:04 · 6:29 min/km');
+    expect(c.title).toBe('Corriendo · 3,25 km');
+    expect(c.body).toBe('Ritmo 6:29 min/km');
     expect(c.categoryIdentifier).toBe(CATEGORIA_CARRERA);
   });
 
   // spec 042 FR-011
   it('en pausa: lo dice en el título y lleva «Seguir» en lugar de «Pausar»', () => {
     const c = contenidoDeLaNotificacion({ metros: 1000, activoMs: 300_000, ritmo: null, enPausa: true }, '00:05:00');
-    expect(c.title).toBe('Carrera en pausa');
+    expect(c.title).toBe('En pausa · 1,00 km');
+    // Sin cronómetro en pausa: el tiempo va fijo en el texto.
+    expect(c.body).toBe('00:05:00 · Ritmo –:–– min/km');
     expect(c.categoryIdentifier).toBe(CATEGORIA_CARRERA_EN_PAUSA);
     expect(c.categoryIdentifier).not.toBe(CATEGORIA_CARRERA);
+  });
+
+  // spec 042 FR-011
+  it('los datos para el parche nativo: el cronómetro empieza en «ahora − tiempo activo» y dice si está en pausa', () => {
+    expect(datosDeLaNotificacion({ metros: 3250, activoMs: 1_264_000, ritmo: 389, enPausa: false }, 2_000_000)).toEqual({
+      carrera: true,
+      enPausa: false,
+      inicioCronometroMs: 736_000,
+    });
+    expect(datosDeLaNotificacion({ metros: 0, activoMs: 0, ritmo: null, enPausa: true }, 5_000).enPausa).toBe(true);
   });
 
   // spec 042 FR-011

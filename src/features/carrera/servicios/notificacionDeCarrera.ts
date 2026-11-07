@@ -12,7 +12,7 @@ import {
   CATEGORIA_CARRERA_EN_PAUSA,
   ID_NOTIFICACION_CARRERA,
 } from '../utils/avisoDeCarrera';
-import { contenidoDeLaNotificacion, type DatosDeLaNotificacion } from '../utils/notificacionUnica';
+import { contenidoDeLaNotificacion, datosDeLaNotificacion, type DatosDeLaNotificacion } from '../utils/notificacionUnica';
 
 export { ACCION_ABRIR, ACCION_PAUSAR, ACCION_SEGUIR, esAvisoDeCarrera, ID_NOTIFICACION_CARRERA } from '../utils/avisoDeCarrera';
 
@@ -78,7 +78,7 @@ export async function mostrarNotificacionDeCarrera(
         sticky: true,
         autoDismiss: false,
         sound: false,
-        data: { carrera: true },
+        data: datosDeLaNotificacion(datos, ahora),
       },
       trigger: { channelId: CANAL_CARRERA } as never,
     });
