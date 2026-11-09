@@ -1,4 +1,5 @@
 import { fuentes } from '../theme/fuentes';
+import { SoloConConexion } from '../features/sinRed/components/SoloConConexion';
 import React, { useState, useMemo, useEffect, useCallback, useRef, useReducer } from 'react';
 import {
   View,
@@ -4603,6 +4604,8 @@ function ComunidadPorFormacion({
               <AvisoDeMantenimiento aviso={chatDeLaSala.aviso} />
             </View>
           ) : null}
+          {/* Spec 048 (FR-005): sin señal, la conversación dice que necesita conexión y vuelve sola. */}
+          <SoloConConexion>
           {chatDeLaSala.prendida && (
           <View style={styles.chatMensajes}>
             <FlatList
@@ -4645,6 +4648,7 @@ function ComunidadPorFormacion({
             ) : null}
           </View>
           )}
+          </SoloConConexion>
 
           {/*
             Barra de escribir, con la gramática de WhatsApp: mientras se graba, la barra entera

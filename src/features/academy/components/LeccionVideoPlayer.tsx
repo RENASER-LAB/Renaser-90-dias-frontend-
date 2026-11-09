@@ -1,4 +1,5 @@
 import { fuentes } from '../../../theme/fuentes';
+import { SoloConConexion } from '../../sinRed/components/SoloConConexion';
 import React, { useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
@@ -35,7 +36,7 @@ interface LeccionVideoPlayerProps {
  * NO "simplificar" esto montando el WebView siempre / de entrada: es exactamente la lentitud que
  * este componente existe para evitar.
  */
-export function LeccionVideoPlayer({
+function LeccionVideoPlayerConRed({
   videoTipo,
   videoUrl,
   videoMiniaturaUrl,
@@ -244,3 +245,12 @@ const styles = StyleSheet.create({
     fontFamily: fuentes.negrita,
   },
 });
+
+/** Spec 048 (FR-005): sin señal dice que necesita conexión (sin hueco en blanco) y vuelve solo con la señal. */
+export function LeccionVideoPlayer(props: React.ComponentProps<typeof LeccionVideoPlayerConRed>) {
+  return (
+    <SoloConConexion>
+      <LeccionVideoPlayerConRed {...props} />
+    </SoloConConexion>
+  );
+}

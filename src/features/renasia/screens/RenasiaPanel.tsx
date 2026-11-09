@@ -1,4 +1,5 @@
 import { fuentes } from '../../../theme/fuentes';
+import { SoloConConexion } from '../../sinRed/components/SoloConConexion';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
@@ -220,6 +221,8 @@ export function RenasiaPanel({ agent, visible, onClose, contexto }: RenasiaPanel
           </Pressable>
         </View>
 
+        {/* Spec 048 (FR-005): sin señal, SER dice que necesita conexión y vuelve solo. */}
+        <SoloConConexion>
         {/*
           `behavior` va en las DOS plataformas desde 2026-09-17. Decia `undefined` en Android
           contando con que el sistema encogiera la ventana al abrir el teclado; con el modo
@@ -399,6 +402,7 @@ export function RenasiaPanel({ agent, visible, onClose, contexto }: RenasiaPanel
             <AvisoDeMantenimiento aviso={chatDeSer.aviso} />
           </ScrollView>
         )}
+        </SoloConConexion>
       </SafeAreaView>
 
       <RegistroConFotoModal {...registroConFoto.modal} />

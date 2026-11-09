@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { salirAvisandoPendientes } from '../../sinRed/salirAvisandoPendientes';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -47,7 +48,7 @@ export function SinFormacionScreen() {
         <Text style={[t.body, estilos.cuerpo, { color: c.textSoft }]}>{MENSAJE_SIN_FORMACION}</Text>
         <View style={estilos.botones}>
           <BotonPrincipal etiqueta="Volver a revisar" onPress={() => void revisar()} cargando={revisando} />
-          <BotonSecundario etiqueta="Cerrar sesión" onPress={() => void logout()} />
+          <BotonSecundario etiqueta="Cerrar sesión" onPress={() => void salirAvisandoPendientes(logout)} />
         </View>
       </ScrollView>
     </SafeAreaView>

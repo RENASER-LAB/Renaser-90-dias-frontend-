@@ -9,6 +9,7 @@ import * as onboardingApi from '../../onboarding/api/onboardingApi';
 import { aUsuario } from '../api/usuarioMapper';
 import { guardarPerfil, leerPerfilGuardado, olvidarPerfilGuardado } from '../../sinRed/perfilGuardado';
 import { borrarLecturasGuardadas } from '../../sinRed/lecturasGuardadas';
+import { borrarCola, cuentaDeLaSesion, ponerCuentaActual } from '../../sinRed/colaSinRed';
 import { prepararAlarmasPara, soltarAlarmasDeLaCuenta } from '../../alarmas/alarmasDeLaCuenta';
 import { apagarLaCarreraAlSalir } from '../../carrera/servicios/tareaDeUbicacion';
 import { borrarTodosLosBorradores as borrarBorradoresDelRadar } from '../../radar/storage/borradorRadar';
@@ -590,6 +591,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     void authApi.cerrarSesion().catch(() => undefined);
     // Spec 048 (FR-009): lo guardado para entrar sin señal es de quien se va.
     void olvidarPerfilGuardado();
+    // Spec 048 (D11): lo que esperaba enviarse es de quien se va (ya se le avisó, `salirAvisandoPendientes`).
+    const cuentaQueSale = cuentaDeLaSesion();
+    if (cuentaQueSale) void borrarCola(cuentaQueSale);
+    ponerCuentaActual(null);
     void borrarLecturasGuardadas();
     setRevalidarSinRed(false);
     setUser(null);
