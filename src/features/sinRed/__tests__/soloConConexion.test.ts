@@ -7,14 +7,17 @@ import { Text } from 'react-native';
 import TestRenderer, { act } from 'react-test-renderer';
 
 import { ThemeProvider } from '../../../theme/ThemeContext';
-import { SoloConConexion, TEXTO_NECESITAS_CONEXION } from '../components/SoloConConexion';
+import { MARGEN_AL_VOLVER_MS, SoloConConexion, TEXTO_NECESITAS_CONEXION } from '../components/SoloConConexion';
 import { _reiniciarConexion, marcarConConexion, marcarSinConexion } from '../estadoDeConexion';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 const textos = (r: ReturnType<typeof TestRenderer.create>): string[] => JSON.stringify(r.toJSON()).match(/"[^"]*"/g)?.map(x => x.slice(1, -1)) ?? [];
 
-beforeEach(() => _reiniciarConexion());
+beforeEach(() => {
+  _reiniciarConexion();
+  jest.useFakeTimers();
+});
 
 describe('SoloConConexion (spec 048)', () => {
   it('sin señal dice que necesita conexión, y con la señal vuelve a mostrar (y montar de nuevo) lo de adentro', async () => { // spec 048 FR-005
@@ -40,5 +43,13 @@ describe('SoloConConexion (spec 048)', () => {
     expect(textos(r)).toContain('Mensajes del chat');
     expect(textos(r)).not.toContain(TEXTO_NECESITAS_CONEXION);
     expect(montajes).toBe(2);
+
+    // Pasado el margen se vuelve a montar, para que lo de adentro vuelva a pedir sus datos (E2E 09/11).
+    await act(async () => {
+      jest.advanceTimersByTime(MARGEN_AL_VOLVER_MS);
+    });
+    expect(montajes).toBe(3);
+    await act(async () => r.unmount());
+    jest.useRealTimers();
   });
 });

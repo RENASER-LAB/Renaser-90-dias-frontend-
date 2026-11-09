@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { alCumplirUnHabito } from '../features/habits/eventos/habitoCumplido';
 import { claveDelAudio, prepararAudio } from '../features/sinRed/audiosDelDia';
 import { sinConexionDesdeMs } from '../features/sinRed/estadoDeConexion';
 import { View, Text, StyleSheet, ScrollView, Platform, type StyleProp, type ViewStyle } from 'react-native';
@@ -241,6 +242,10 @@ export default function TrainingScreen() {
   /* Spec 014: los eventos de la semana solo se piden si Eventos está prendido (Soporte TI). */
   const eventosPrendidos = useFuncionalidad(CLAVES.eventos);
   useAlVolverAPrenderse(CLAVES.habitos, () => void recargarEntrenamiento());
+  // Spec 048: un hábito marcado sin señal que la cola acaba de enviar trae sus puntos; la pantalla se relee para mostrarlos (E2E 09/11).
+  useEffect(() => alCumplirUnHabito(c => {
+    if (c.desdeLaCola) void recargarEntrenamiento();
+  }), [recargarEntrenamiento]);
   // Solo en desarrollo: pedidos al montar y tiempo hasta tener datos (V-1, 26/09/2026).
   useMedicionDePantalla('Training', !cargandoBackend);
   /**

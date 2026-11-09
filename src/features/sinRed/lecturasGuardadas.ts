@@ -56,3 +56,26 @@ export async function borrarLecturasGuardadas(): Promise<void> {
     /* nada que hacer */
   }
 }
+
+/**
+ * Spec 048 (FR-011): ajustes sobre lo que se lee, para que lo hecho sin señal se siga viendo hecho aunque la lectura (guardada, o
+ * del servidor antes de que la cola lo envíe) diga lo contrario. Los registra cada funcionalidad (hoy, los hábitos).
+ */
+type Ajuste = (ruta: string, datos: unknown) => Promise<unknown>;
+const ajustes: Ajuste[] = [];
+
+export function registrarAjusteDeLectura(ajuste: Ajuste): void {
+  ajustes.push(ajuste);
+}
+
+export async function aplicarAjustesDeLectura(ruta: string, datos: unknown): Promise<unknown> {
+  let actual = datos;
+  for (const ajuste of ajustes) {
+    try {
+      actual = await ajuste(ruta, actual);
+    } catch {
+      /* un ajuste roto no rompe la lectura */
+    }
+  }
+  return actual;
+}

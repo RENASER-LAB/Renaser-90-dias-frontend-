@@ -93,7 +93,8 @@ export function AnfitrionSinRed() {
 }
 
 const estilos = StyleSheet.create({
-  capa: { position: 'absolute', right: 12, alignItems: 'flex-end', zIndex: 50 },
+  // Al centro de arriba (E2E 09/11): a la derecha tapaba el botón de planificar de Entrenar y otros de las esquinas.
+  capa: { position: 'absolute', left: 0, right: 0, alignItems: 'center', zIndex: 50 },
   icono: { width: 32, height: 32, borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, alignItems: 'center', justifyContent: 'center', opacity: 0.9 },
   globo: { marginTop: 6, maxWidth: 260, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, borderWidth: StyleSheet.hairlineWidth },
   texto: { fontFamily: fuentes.media, fontSize: 13, lineHeight: 18 },

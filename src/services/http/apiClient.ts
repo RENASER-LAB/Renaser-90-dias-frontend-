@@ -1,5 +1,5 @@
 import { marcarConConexion, marcarSinConexion } from '../../features/sinRed/estadoDeConexion';
-import { esLecturaGuardable, guardarLectura, leerLectura } from '../../features/sinRed/lecturasGuardadas';
+import { aplicarAjustesDeLectura, esLecturaGuardable, guardarLectura, leerLectura } from '../../features/sinRed/lecturasGuardadas';
 import { API_CONFIG } from '../../config/apiConfig';
 import { almacenamientoSeguro } from '../storage/almacenamientoSeguro';
 import { registrarHoraDelServidor } from './relojServidor';
@@ -368,11 +368,11 @@ export async function apiFetch<T>(ruta: string, opciones: OpcionesPeticion = {})
   try {
     const datos = (await pedir<T>(ruta, opciones, false)).datos as T;
     void guardarLectura(getTokenSesion(), ruta, datos);
-    return datos;
+    return (await aplicarAjustesDeLectura(ruta, datos)) as T;
   } catch (error) {
     if (error instanceof ApiError && error.esDeRed) {
       const guardado = await leerLectura(getTokenSesion(), ruta);
-      if (guardado !== undefined) return guardado as T;
+      if (guardado !== undefined) return (await aplicarAjustesDeLectura(ruta, guardado)) as T;
     }
     throw error;
   }

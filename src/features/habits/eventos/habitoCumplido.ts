@@ -20,7 +20,14 @@
  * participante). Un hábito se cumple a veces pasada la medianoche —Dormir a las 00:40 es del día anterior—: lo que se
  * silencia en el teléfono es lo que le quedaba a ESE día, no a «hoy» según el reloj. Opcional por lo mismo que `habitoId`.
  */
-export type HabitoCumplido = { registroId: string; puntosOtorgados: number; habitoId?: string; fecha?: string };
+export type HabitoCumplido = {
+  registroId: string;
+  puntosOtorgados: number;
+  habitoId?: string;
+  fecha?: string;
+  /** Spec 048: lo confirmó el servidor al enviarse desde la cola (la pantalla no lo pidió: tiene que releer). */
+  desdeLaCola?: boolean;
+};
 
 type Oyente = (cumplido: HabitoCumplido) => void;
 

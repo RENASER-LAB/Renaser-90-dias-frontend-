@@ -33,7 +33,7 @@ jest.mock('../../habits/api/registroVigente', () => {
 jest.mock('../horaReal', () => ({ horaReal: jest.fn(() => ({ instante: new Date(2026, 10, 9, 21, 10), origen: 'RELOJ_DEL_SISTEMA' })) }));
 
 import { alCumplirUnHabito, alMarcarSinRed } from '../../habits/eventos/habitoCumplido';
-import { completarRegistro } from '../../habits/api/evidenciaHabitoApi';
+import { completarRegistro, conMarcadosSinRed } from '../../habits/api/evidenciaHabitoApi';
 import { DiaDeHabitosCambiadoError } from '../../habits/api/registroVigente';
 import { leerCola, ponerCuentaActual, procesarCola } from '../colaSinRed';
 
@@ -72,7 +72,11 @@ describe('marcar un hábito sin señal (spec 048)', () => {
   it('al volver la señal se envía con la hora real y su id, y recién ahí celebra con los puntos', async () => { // spec 048 FR-014
     await completarRegistro('r1');
     const celebrados: number[] = [];
-    const q = alCumplirUnHabito(c => void celebrados.push(c.puntosOtorgados));
+    const desdeLaCola: unknown[] = [];
+    const q = alCumplirUnHabito(c => {
+      celebrados.push(c.puntosOtorgados);
+      desdeLaCola.push(c.desdeLaCola);
+    });
     mockRed.hay = true;
 
     expect(await procesarCola('ana')).toBe(0);
@@ -80,6 +84,17 @@ describe('marcar un hábito sin señal (spec 048)', () => {
     expect(mockPedidos[0].ruta).toBe('/api/v1/habit-tracks/r1/complete');
     expect(mockPedidos[0].body).toMatchObject({ origenDeLaHora: 'RELOJ_DEL_SISTEMA', idCliente: expect.any(String), hechoEn: expect.any(String) });
     expect(celebrados).toEqual([10]);
+    expect(desdeLaCola).toEqual([true]); // Entrenar se relee para mostrar los puntos (E2E 09/11)
     q();
+  });
+});
+
+describe('lo marcado sin señal se sigue viendo hecho (E2E 09/11)', () => {
+  it('una relectura que todavía dice PENDIENTE muestra COMPLETADO lo que espera en la cola', () => { // spec 048 FR-011
+    const hoy = [{ id: 'r1', estado: 'PENDIENTE', titulo: 'Despertar' }, { id: 'r2', estado: 'PENDIENTE' }];
+    expect(conMarcadosSinRed(hoy, new Set(['r1']))).toEqual([
+      { id: 'r1', estado: 'COMPLETADO', titulo: 'Despertar' },
+      { id: 'r2', estado: 'PENDIENTE' },
+    ]);
   });
 });

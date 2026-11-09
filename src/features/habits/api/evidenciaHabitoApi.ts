@@ -1,7 +1,8 @@
 import { z } from 'zod';
 import { avisarHabitoCumplido, avisarHabitoMarcadoSinRed } from '../eventos/habitoCumplido';
 import { ApiError, apiFetch } from '../../../services/http/apiClient';
-import { agregarEnvio, cuentaDeLaSesion, registrarManejador } from '../../sinRed/colaSinRed';
+import { agregarEnvio, cuentaDeLaSesion, leerCola, registrarManejador } from '../../sinRed/colaSinRed';
+import { registrarAjusteDeLectura } from '../../sinRed/lecturasGuardadas';
 import { horaReal } from '../../sinRed/horaReal';
 import { fechaLocal } from '../notificaciones/utils/alarmasPorDia';
 import { validarRespuesta } from './habitsSchemas';
@@ -358,6 +359,7 @@ registrarManejador('completarHabito', async envio => {
     puntosOtorgados: completado.puntosOtorgados,
     ...(d.habitoId ? { habitoId: d.habitoId } : {}),
     fecha: d.fecha,
+    desdeLaCola: true,
   });
 });
 
@@ -435,3 +437,27 @@ registrarManejador('confirmarTexto', async envio => {
     body: { tipo: 'TEXTO', bucket: null, rutaStorage: null, contenidoTexto: d.texto, timestampExif: null, gpsLat: null, gpsLng: null, hechoSinRed: true },
   });
 });
+
+/**
+ * Spec 048 (FR-011): un hábito marcado sin señal se sigue viendo hecho mientras espera en la cola, aunque la relectura de Entrenar
+ * (guardada, o del servidor antes del envío) diga PENDIENTE. Sin esto, el refresco que sigue a marcar destildaba el check.
+ */
+registrarAjusteDeLectura(async (ruta, datos) => {
+  if (!ruta.startsWith('/api/v1/habit-tracks/')) return datos;
+  const cuenta = cuentaDeLaSesion();
+  if (!cuenta) return datos;
+  const marcados = new Set(
+    (await leerCola(cuenta)).filter(e => e.tipo === 'completarHabito').map(e => String((e.datos as { registroId?: unknown }).registroId)),
+  );
+  return marcados.size ? conMarcadosSinRed(datos, marcados) : datos;
+});
+
+export function conMarcadosSinRed(datos: unknown, marcados: ReadonlySet<string>): unknown {
+  if (Array.isArray(datos)) return datos.map(d => conMarcadosSinRed(d, marcados));
+  if (!datos || typeof datos !== 'object') return datos;
+  const o = datos as Record<string, unknown>;
+  const copia: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(o)) copia[k] = conMarcadosSinRed(v, marcados);
+  if (typeof o.id === 'string' && marcados.has(o.id) && 'estado' in o) copia.estado = 'COMPLETADO';
+  return copia;
+}

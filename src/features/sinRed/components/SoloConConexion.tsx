@@ -7,6 +7,7 @@ import { alVolverLaConexion, sinConexionDesdeMs, suscribirConexion } from '../es
 
 export const TEXTO_NECESITAS_CONEXION = 'Necesitas conexión para usar esto';
 export const AYUDA_NECESITAS_CONEXION = 'Se cargará solo cuando vuelva la señal.';
+export const MARGEN_AL_VOLVER_MS = 1500;
 
 /**
  * Spec 048 (FR-005, D3): lo que solo funciona con internet (SER, chat, Pagos, Eventos, Código Renaser, videos). Sin señal muestra
@@ -20,14 +21,20 @@ export function SoloConConexion({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const quitar = suscribirConexion(() => setSinRed(sinConexionDesdeMs() !== null));
-    const alVolver = alVolverLaConexion(() => setVuelta(v => v + 1));
+    // Un margen antes de volver a montar (E2E 09/11): montado en el mismo instante, el primer pedido a veces todavía fallaba.
+    let espera: ReturnType<typeof setTimeout> | undefined;
+    const alVolver = alVolverLaConexion(() => {
+      espera = setTimeout(() => setVuelta(v => v + 1), MARGEN_AL_VOLVER_MS);
+    });
     return () => {
       quitar();
       alVolver();
+      if (espera) clearTimeout(espera);
     };
   }, []);
 
   if (!sinRed) return <React.Fragment key={vuelta}>{children}</React.Fragment>;
+
   return (
     <View style={estilos.caja} accessibilityRole="summary">
       <Icon name="cloudOff" size={24} color={c.textSoft} />
