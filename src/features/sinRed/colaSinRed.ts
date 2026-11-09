@@ -13,7 +13,7 @@ import type { OrigenDeLaHora } from './horaReal';
  *   D14); si pasa, queda marcado con su motivo y la cola sigue.
  * - Va guardada por cuenta: lo de una cuenta nunca sale con la sesión de otra.
  */
-export type TipoDeEnvio = 'completarHabito';
+export type TipoDeEnvio = 'completarHabito' | 'subirEvidencia' | 'confirmarTexto';
 
 export interface EnvioSinRed {
   idCliente: string;

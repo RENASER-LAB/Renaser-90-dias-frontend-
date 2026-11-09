@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { sinConexionDesdeMs } from '../features/sinRed/estadoDeConexion';
 import { View, Text, StyleSheet, ScrollView, Platform, type StyleProp, type ViewStyle } from 'react-native';
 import { Alert } from '../components/Alerta';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -378,7 +379,8 @@ export default function TrainingScreen() {
   const [confirmacion, setConfirmacion] = useState<{ clave: number; texto: string; habitoId: string | null } | null>(null);
   const confirmar = (texto: string, habitoId: string | null) => {
     tacto.logro();
-    setConfirmacion({ clave: Date.now(), texto, habitoId });
+    // Spec 048 (FR-011): sin señal quedó en la cola; los puntos llegan al enviarse.
+    setConfirmacion({ clave: Date.now(), texto: sinConexionDesdeMs() !== null ? `${texto} · se enviará al volver la señal` : texto, habitoId });
   };
 
   // El habito de post diario lo cierra el compositor del Muro, en OTRA pestana (E-117). Sin esto,

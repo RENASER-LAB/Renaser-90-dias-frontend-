@@ -189,7 +189,24 @@ export async function confirmarEvidencia(
     contenidoTexto?: string | null;
   },
 ): Promise<EvidenciaRegistrada> {
-  const r = await ejecutarEnRegistroVigente(registroId, () =>
+  let r: unknown;
+  try {
+    r = await confirmarEvidenciaConRed(registroId, evidencia);
+  } catch (error) {
+    // Spec 048 (FR-007): sin señal, la respuesta escrita espera en la cola y sale antes que el cierre del hábito.
+    if (!(error instanceof ApiError && error.esDeRed) || evidencia.tipo !== 'TEXTO') throw error;
+    const { cuenta, hora } = await sinRedPara(registroId, error);
+    await agregarEnvio(cuenta, 'confirmarTexto', { registroId, texto: evidencia.contenidoTexto ?? '' }, hora);
+    return { id: 'pendiente-de-envio', estadoValidacion: 'PENDIENTE' } as EvidenciaRegistrada;
+  }
+  return validarRespuesta(evidenciaRegistradaSchema, r, 'POST /api/v1/habit-tracks/{id}/evidence');
+}
+
+async function confirmarEvidenciaConRed(
+  registroId: string,
+  evidencia: { tipo: TipoEvidencia; bucket?: string | null; rutaStorage?: string | null; contenidoTexto?: string | null },
+): Promise<unknown> {
+  return ejecutarEnRegistroVigente(registroId, () =>
     apiFetch<unknown>(`/api/v1/habit-tracks/${registroId}/evidence`, {
       method: 'POST',
       body: {
@@ -203,7 +220,6 @@ export async function confirmarEvidencia(
       },
     }),
   );
-  return validarRespuesta(evidenciaRegistradaSchema, r, 'POST /api/v1/habit-tracks/{id}/evidence');
 }
 
 /**
@@ -230,6 +246,22 @@ export type ArchivoParaSubir = { uri: string; mimeType: string; tipo: TipoEviden
  * crearía una evidencia duplicada, y quien llama lo sabe.
  */
 export async function subirEvidenciaDeArchivo(
+  registroId: string,
+  archivo: ArchivoParaSubir,
+): Promise<EvidenciaRegistrada> {
+  try {
+    return await subirEvidenciaDeArchivoConRed(registroId, archivo);
+  } catch (error) {
+    // Spec 048 (FR-012): sin señal, la foto se copia a una carpeta que el sistema no limpia y espera en la cola.
+    if (!(error instanceof ApiError && error.esDeRed)) throw error;
+    const { cuenta, hora } = await sinRedPara(registroId, error);
+    const uri = await guardarArchivoSinRed(archivo.uri, archivo.mimeType);
+    await agregarEnvio(cuenta, 'subirEvidencia', { registroId, uri, mimeType: archivo.mimeType, tipo: archivo.tipo }, hora);
+    return { id: 'pendiente-de-envio', estadoValidacion: 'PENDIENTE' } as EvidenciaRegistrada;
+  }
+}
+
+async function subirEvidenciaDeArchivoConRed(
   registroId: string,
   archivo: ArchivoParaSubir,
 ): Promise<EvidenciaRegistrada> {
@@ -326,5 +358,80 @@ registrarManejador('completarHabito', async envio => {
     puntosOtorgados: completado.puntosOtorgados,
     ...(d.habitoId ? { habitoId: d.habitoId } : {}),
     fecha: d.fecha,
+  });
+});
+
+/**
+ * Spec 048: lo que hace falta para guardar algo sin señal — la cuenta de la sesión y la hora real — después de comprobar con el
+ * registro guardado de hoy que su día no terminó (las mismas reglas que con red, FR-010). Sin cuenta o sin el registro guardado
+ * no hay cómo: se deja subir el error original de red.
+ */
+async function sinRedPara(registroId: string, errorDeRed: unknown): Promise<{ cuenta: string; hora: ReturnType<typeof horaReal> }> {
+  const cuenta = cuentaDeLaSesion();
+  if (!cuenta) throw errorDeRed;
+  let fecha: string | undefined;
+  await ejecutarEnRegistroVigente(registroId, async track => {
+    fecha = track?.fechaEjecucion;
+  }).catch(() => undefined);
+  if (!fecha) throw errorDeRed;
+  const hora = horaReal();
+  if (fechaLocal(hora.instante) > fecha) throw new DiaDeHabitosCambiadoError();
+  return { cuenta, hora };
+}
+
+const CARPETA_SIN_RED = 'renaser-sin-red';
+
+/** Copia el archivo a `Documentos/renaser-sin-red` (la caché de la cámara la puede limpiar el sistema). Devuelve la nueva URI. */
+async function guardarArchivoSinRed(uri: string, mimeType: string): Promise<string> {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { Directory, File, Paths } = require('expo-file-system') as typeof import('expo-file-system');
+  const carpeta = new Directory(Paths.document, CARPETA_SIN_RED);
+  if (!carpeta.exists) carpeta.create({ intermediates: true, idempotent: true });
+  const extension = mimeType.split('/')[1]?.split(';')[0] || 'bin';
+  const destino = new File(carpeta, `${Date.now()}-${Math.round(Math.random() * 1e6)}.${extension}`);
+  new File(uri).copy(destino);
+  return destino.uri;
+}
+
+function borrarArchivoSinRed(uri: string): void {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { File } = require('expo-file-system') as typeof import('expo-file-system');
+    const f = new File(uri);
+    if (f.exists) f.delete();
+  } catch {
+    /* si no se puede borrar, se borra con la cuenta */
+  }
+}
+
+/** Un error que la cola no reintenta (queda marcado con su motivo): la foto guardada ya no está. */
+function sinArchivo(): Error {
+  return Object.assign(new Error('La foto guardada sin señal ya no está en el teléfono.'), { status: 410 });
+}
+
+registrarManejador('subirEvidencia', async envio => {
+  const d = envio.datos as { registroId: string; uri: string; mimeType: string; tipo: TipoEvidencia };
+  const url = validarRespuesta(urlSubidaEvidenciaSchema, await apiFetch<unknown>(`/api/v1/habit-tracks/${d.registroId}/evidence/upload-url`, {
+    method: 'POST',
+    body: { tipoContenido: d.mimeType, hechoSinRed: true },
+  }), 'POST /api/v1/habit-tracks/{id}/evidence/upload-url (sin red)');
+  try {
+    await subirArchivoAS3(url.uploadUrl, d.uri, d.mimeType);
+  } catch (error) {
+    if (error instanceof Error && /leer el archivo/i.test(error.message)) throw sinArchivo();
+    throw error;
+  }
+  await apiFetch<unknown>(`/api/v1/habit-tracks/${d.registroId}/evidence`, {
+    method: 'POST',
+    body: { tipo: d.tipo, bucket: url.bucket, rutaStorage: url.ruta, contenidoTexto: null, timestampExif: null, gpsLat: null, gpsLng: null, hechoSinRed: true },
+  });
+  borrarArchivoSinRed(d.uri);
+});
+
+registrarManejador('confirmarTexto', async envio => {
+  const d = envio.datos as { registroId: string; texto: string };
+  await apiFetch<unknown>(`/api/v1/habit-tracks/${d.registroId}/evidence`, {
+    method: 'POST',
+    body: { tipo: 'TEXTO', bucket: null, rutaStorage: null, contenidoTexto: d.texto, timestampExif: null, gpsLat: null, gpsLng: null, hechoSinRed: true },
   });
 });
