@@ -41,7 +41,7 @@ también en el texto (`grep -n "Plan" docs/decisiones/*.md`). Si dos entradas ch
 | [ser-y-fenix.md](ser-y-fenix.md) | SER (el acompañante), el orbe, el fénix y las celebraciones | 9 |
 | [soporte-ti.md](soporte-ti.md) | Soporte TI: interruptores, despliegue, roles personalizados y «ver como» (spec 002) | 2 |
 | [training.md](training.md) | Training: lista por hora, hábitos, evidencias y el editor Planificar | 18 |
-| [transversal.md](transversal.md) | Lo que tocó varios tabs a la vez: diseño, fuentes, barra de pestañas, velocidad, CI y arreglos de E2E | 16 |
+| [transversal.md](transversal.md) | Lo que tocó varios tabs a la vez: diseño, fuentes, barra de pestañas, velocidad, CI y arreglos de E2E | 17 |
 | [yo.md](yo.md) | Yo: Ajustes, fase, evidencias, Caja, emergencia, perfil, cuenta y privacidad | 12 |
 | [reglas-historial.md](reglas-historial.md) | Las reglas de `AGENTS.md` tal como estaban, con sus notas «Corregido» | — |
 
@@ -49,6 +49,7 @@ también en el texto (`grep -n "Plan" docs/decisiones/*.md`). Si dos entradas ch
 
 | Fecha | Tabs | Tipo | Entrada | Archivo | Corregida |
 |---|---|---|---|---|---|
+| 2026-11-09 | Hoy, Plan, Training, Comunidad, Yo | Cambio | la app funciona sin internet, fase 1 (spec 048) | [transversal.md](transversal.md) |  |
 | 2026-11-06 | Comunidad | Cambio | la transcripción de las sesiones por Meet se guarda, cifrada y sin mostrarse (spec 047) | [comunidad.md](comunidad.md) |  |
 | 2026-11-06 | Comunidad | Cambio | Comunidad → Eventos: eventos para quien tú elijas, y el líder en el chat de soporte (spec 044, D-326) | [comunidad.md](comunidad.md) |  |
 | 2026-11-06 | Hoy, Plan, Training, Comunidad, Yo | Cambio | recorrido de bienvenida hasta el primer post, con confeti, y la pestaña «Entrenar» (spec 045) | [transversal.md](transversal.md) | sí |
