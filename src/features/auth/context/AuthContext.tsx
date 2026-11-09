@@ -210,6 +210,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const api = await authApi.perfilActual();
         if (!vigente) return;
+        ponerCuentaActual(api.id);
         await alarmasListas(api.id);
         setUser(aUsuario(api));
         setOnboardingResuelto(false);
@@ -222,9 +223,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } catch (e) {
           // Spec 048 (FR-001): sin señal a mitad del arranque no se pierde la sesión; se usa lo último que se supo.
           const guardado = esFaltaDeRed(e) ? await leerPerfilGuardado(token) : null;
-          if (guardado) {
+          if (guardado || esFaltaDeRed(e)) {
+            // Spec 048: sin señal a mitad del arranque, la sesión sigue; se usa lo último que se supo (o se deja pasar).
             if (!vigente) return;
-            setIsOnboardingCompleted(guardado.ingresoResuelto);
+            setIsOnboardingCompleted(guardado ? guardado.ingresoResuelto : true);
             setOnboardingResuelto(true);
           } else {
             // 403 = cuenta suspendida (ver resolverOnboardingCompletado). Mismo tratamiento que un
@@ -240,12 +242,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
            perfil de esta misma sesión y se revalida apenas haya señal (`revalidarSinRed`). */
         const guardado = esFaltaDeRed(e) ? await leerPerfilGuardado(token) : null;
         if (guardado && vigente) {
+          ponerCuentaActual(guardado.perfil.id);
           await alarmasListas(guardado.perfil.id);
           setUser(aUsuario(guardado.perfil));
           setIsOnboardingCompleted(guardado.ingresoResuelto);
           setOnboardingResuelto(true);
           setRevalidarSinRed(true);
-        } else if (!guardado) {
+        } else if (esFaltaDeRed(e)) {
+          // Spec 048 (FR-001): sin señal y sin perfil guardado no hay con qué entrar, pero la sesión NO se borra: se muestra el
+          // login y, apenas el servidor responda, se entra solo (`revalidarSinRed`). Antes se borraba el token (E2E 09/11).
+          if (vigente) setRevalidarSinRed(true);
+        } else {
           // Token vencido o revocado: se limpia y la app arranca en el login, como corresponde.
           setTokenSesion(null);
         }
@@ -270,10 +277,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const api = await authApi.perfilActual();
         if (!vigente) return;
+        await alarmasListas(api.id);
+        const completado = await resolverGateDeIngreso();
+        if (!vigente) return;
         setUser(aUsuario(api));
+        setIsOnboardingCompleted(completado);
+        setOnboardingResuelto(true);
         setRevalidarSinRed(false);
         const token = getTokenSesion();
-        if (token) void guardarPerfil(token, api, true);
+        if (token) void guardarPerfil(token, api, completado);
       } catch (e) {
         if (!esFaltaDeRed(e)) setRevalidarSinRed(false);
       }
@@ -309,6 +321,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setOnboardingResuelto(false);
     setFichaData(null);
     olvidarRutaPendiente();
+    // Spec 048: la sesión venció de verdad (lo dijo el servidor): lo guardado para entrar sin señal ya no sirve.
+    void olvidarPerfilGuardado();
+    void borrarLecturasGuardadas();
   }), []);
 
   /**

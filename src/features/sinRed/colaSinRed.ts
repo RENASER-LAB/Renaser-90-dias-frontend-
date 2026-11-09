@@ -126,11 +126,14 @@ function desenlaceDe(error: unknown): Desenlace {
 }
 
 /** Manda lo que toca, en orden. Un solo proceso por cuenta a la vez. Devuelve cuántos quedan. */
-export async function procesarCola(cuentaId: string, ahora: number = Date.now()): Promise<number> {
+export async function procesarCola(cuentaId: string, ahora: number = Date.now(), opciones: { adelantar?: boolean } = {}): Promise<number> {
   if (procesando.has(cuentaId) || cuentaActual !== cuentaId) return (await leerCola(cuentaId)).length;
   procesando.add(cuentaId);
   try {
     let cola = await leerCola(cuentaId);
+    // Volvió la señal o la app volvió al frente: lo que esperaba se intenta ya. Va DENTRO del candado (E2E 09/11): hecho
+    // aparte, leía la cola, la cola mandaba y borraba un envío, y al guardar su copia vieja lo devolvía: salía dos veces.
+    if (opciones.adelantar) cola = cola.map(e => ({ ...e, proximoIntentoMs: Math.min(e.proximoIntentoMs, ahora) }));
     for (const envio of [...cola]) {
       if (envio.bloqueado) continue;
       if (ahora < envio.proximoIntentoMs) break;
@@ -167,12 +170,6 @@ export async function procesarCola(cuentaId: string, ahora: number = Date.now())
   }
 }
 
-/** Para reintentar ya (volvió la señal, la app volvió al frente): el primero que esperaba se puede intentar ahora. */
-export async function adelantarReintentos(cuentaId: string): Promise<void> {
-  const cola = await leerCola(cuentaId);
-  if (!cola.some(e => e.proximoIntentoMs > Date.now())) return;
-  await guardarCola(cuentaId, cola.map(e => ({ ...e, proximoIntentoMs: Math.min(e.proximoIntentoMs, Date.now()) })));
-}
 
 export async function borrarCola(cuentaId: string): Promise<void> {
   await guardarCola(cuentaId, []);

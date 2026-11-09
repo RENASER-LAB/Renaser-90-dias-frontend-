@@ -36,6 +36,7 @@ import { alCumplirUnHabito, alMarcarSinRed } from '../../habits/eventos/habitoCu
 import { completarRegistro, conMarcadosSinRed } from '../../habits/api/evidenciaHabitoApi';
 import { DiaDeHabitosCambiadoError } from '../../habits/api/registroVigente';
 import { leerCola, ponerCuentaActual, procesarCola } from '../colaSinRed';
+import { guardarLectura, leerLectura } from '../lecturasGuardadas';
 
 beforeEach(async () => {
   await AsyncStorage.clear();
@@ -96,5 +97,15 @@ describe('lo marcado sin señal se sigue viendo hecho (E2E 09/11)', () => {
       { id: 'r1', estado: 'COMPLETADO', titulo: 'Despertar' },
       { id: 'r2', estado: 'PENDIENTE' },
     ]);
+  });
+  it('al confirmarse, lo guardado de Entrenar dice hecho: sin señal no vuelve a verse pendiente', async () => { // spec 048 FR-011
+    await guardarLectura('tok', '/api/v1/habit-tracks/day?fecha=2026-11-09', [{ ...mockTrack }]);
+    await completarRegistro('r1', 'Lo hice en el campo');
+    mockRed.hay = true;
+    await procesarCola('ana', Date.now() + 60_000, { adelantar: true });
+
+    expect(await leerCola('ana')).toEqual([]);
+    const guardado = (await leerLectura('tok', '/api/v1/habit-tracks/day?fecha=2026-11-09')) as Array<{ estado: string }>;
+    expect(guardado[0].estado).toBe('COMPLETADO');
   });
 });

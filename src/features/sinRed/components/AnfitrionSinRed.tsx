@@ -9,7 +9,7 @@ import { fuentes } from '../../../theme/fuentes';
 import { useAuth } from '../../auth/context/AuthContext';
 // El manejador del envío de un hábito marcado sin señal se registra al importar este módulo.
 import '../../habits/api/evidenciaHabitoApi';
-import { adelantarReintentos, leerCola, ponerCuentaActual, procesarCola, suscribirCola } from '../colaSinRed';
+import { leerCola, ponerCuentaActual, procesarCola, suscribirCola } from '../colaSinRed';
 import { alVolverLaConexion, sinConexionDesdeMs, suscribirConexion } from '../estadoDeConexion';
 import { cargarAnclaGuardada } from '../horaReal';
 import { cargarAudiosGuardados } from '../audiosDelDia';
@@ -42,8 +42,7 @@ export function AnfitrionSinRed() {
     let vigente = true;
     const contar = () => void leerCola(cuentaId).then(cola => vigente && setPendientes(cola.length));
     const enviar = async (adelantar: boolean) => {
-      if (adelantar) await adelantarReintentos(cuentaId);
-      await procesarCola(cuentaId);
+      await procesarCola(cuentaId, Date.now(), { adelantar });
       contar();
     };
     void enviar(false);

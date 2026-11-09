@@ -1,4 +1,6 @@
 import { fuentes } from '../../../theme/fuentes';
+import { SoloConConexion } from '../../sinRed/components/SoloConConexion';
+import { alVolverLaConexion } from '../../sinRed/estadoDeConexion';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, View, type LayoutChangeEvent, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
 import Animated, { FadeIn, ReduceMotion } from 'react-native-reanimated';
@@ -17,7 +19,7 @@ import { OpcionDeHoja } from '../../../components/hojaDesdeAbajo/HojaDeOpciones'
 import { useTheme } from '../../../theme/ThemeContext';
 import { CURVA_SALIDA } from '../../../theme/movimiento';
 import { tacto } from '../../../utils/tacto';
-import { mensajeDeError } from '../../../services/http/apiClient';
+import { ApiError, mensajeDeError } from '../../../services/http/apiClient';
 import { useAuth } from '../../auth/context/AuthContext';
 import * as habitsApi from '../../habits/api/habitsApi';
 import { FilaDeDiasDelPlan } from '../../habits/components/FilaDeDiasDelPlan';
@@ -482,6 +484,14 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
   /** Hoy y los días pasados solo existen en la primera semana; las que vienen después son todas futuras. */
   const planificableEn = (lunes: string) => (dia: DiaDelPlan): boolean => (lunes === lunesInicial ? esPlanificable(dia) : true);
 
+  // Spec 048 (FR-005): los horarios se leen aquí, por fuera de `SoloConConexion`. Si la hoja quedó en error sin señal, al volver la
+  // señal se pide de nuevo (solo en error: nunca pisa una edición en curso).
+  const [vueltaDeLaSenal, setVueltaDeLaSenal] = useState(0);
+  useEffect(() => {
+    if (!visible || estado !== 'error') return;
+    return alVolverLaConexion(() => setVueltaDeLaSenal(v => v + 1));
+  }, [visible, estado]);
+
   useEffect(() => {
     if (!visible) return;
     setEstado('cargando');
@@ -515,11 +525,14 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
         setEstado('listo');
       } catch (e) {
         setEstado('error');
-        Alert.alert('No pudimos cargar los horarios', mensajeDeError(e, 'Intenta de nuevo en unos segundos.'));
+        // Spec 048: sin señal la hoja ya dice «Necesitas conexión»; el diálogo encima repetía lo mismo (E2E 09/11).
+        if (!(e instanceof ApiError && e.esDeRed)) {
+          Alert.alert('No pudimos cargar los horarios', mensajeDeError(e, 'Intenta de nuevo en unos segundos.'));
+        }
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible, dimension]);
+  }, [visible, dimension, vueltaDeLaSenal]);
 
   /**
    * La hora de la LISTA para un hábito: la recién guardada en esta hoja, la del backend, o la de la
@@ -1841,6 +1854,8 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
         tamano="completa"
         pie={pie}
       >
+        {/* Spec 048 (FR-005): planificar sin señal llega en la fase 3; hasta entonces lo dice claro (E2E 09/11). */}
+        <SoloConConexion>
         {estado === 'cargando' && (
           <Text style={[t.body, styles.estadoCentrado, { color: c.textSoft }]}>Cargando horarios…</Text>
         )}
@@ -2400,6 +2415,7 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
             </Text>
           </View>
         )}
+        </SoloConConexion>
       </HojaDesdeAbajo>
 
       {/* «Cambiar nombre» (D-127): la hoja de siempre, encima del editor. Guarda en el servidor y recién después en el

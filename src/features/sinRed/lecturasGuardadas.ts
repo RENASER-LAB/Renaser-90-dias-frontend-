@@ -1,5 +1,6 @@
 import { almacen } from './almacen';
 
+import { cuentaDeLaSesion } from './colaSinRed';
 import { huellaDelToken } from './perfilGuardado';
 
 /**
@@ -16,6 +17,12 @@ const RUTAS_EXACTAS = new Set([
   '/api/v1/habits',
   '/api/v1/habit-preferences',
   '/api/v1/me/semaforo',
+  // Si el programa ya empezó y qué puede usar la cuenta: sin ellas, Hoy, Plan y Yo mostraban «No pudimos comprobar tu programa» (E2E 09/11).
+  '/api/v1/onboarding/activate-program',
+  '/api/v1/mentor/context',
+  // Qué audio toca hoy (Pastilla y Audioterapia): sin esto la hoja del audio quedaba en blanco sin señal (E2E 09/11, FR-017).
+  '/api/v1/spirit-audio/status',
+  '/api/v1/audio-therapy/status',
 ]);
 const PREFIJOS = ['/api/v1/rocks/', '/api/v1/habit-tracks/day'];
 
@@ -24,14 +31,18 @@ export function esLecturaGuardable(ruta: string): boolean {
   return RUTAS_EXACTAS.has(sinConsulta) || PREFIJOS.some(p => sinConsulta.startsWith(p));
 }
 
+/** Por cuenta (E2E 09/11: por huella del token se perdía todo si el servidor lo renovaba); antes de saber la cuenta, por huella. */
 function clave(token: string, ruta: string): string {
-  return `${PREFIJO}${huellaDelToken(token)}.${ruta}`;
+  return `${PREFIJO}${cuentaDeLaSesion() ?? huellaDelToken(token)}.${ruta}`;
 }
 
 export async function guardarLectura(token: string | null, ruta: string, datos: unknown): Promise<void> {
   if (!token || datos === undefined) return;
   try {
-    await almacen().setItem(clave(token, ruta), JSON.stringify(datos));
+    const crudo = JSON.stringify(datos);
+    await almacen().setItem(clave(token, ruta), crudo);
+    // También por huella: al abrir sin señal, las primeras lecturas pueden salir antes de que se sepa la cuenta (E2E 09/11).
+    await almacen().setItem(`${PREFIJO}${huellaDelToken(token)}.${ruta}`, crudo);
   } catch {
     /* sin lugar o sin almacenamiento: sin señal se verá «necesitas conexión», nada se rompe */
   }
@@ -41,10 +52,30 @@ export async function guardarLectura(token: string | null, ruta: string, datos: 
 export async function leerLectura(token: string | null, ruta: string): Promise<unknown> {
   if (!token) return undefined;
   try {
-    const crudo = await almacen().getItem(clave(token, ruta));
+    const crudo = (await almacen().getItem(clave(token, ruta))) ?? (await almacen().getItem(`${PREFIJO}${huellaDelToken(token)}.${ruta}`));
     return crudo === null ? undefined : JSON.parse(crudo);
   } catch {
     return undefined;
+  }
+}
+
+/**
+ * Corrige lo guardado de las rutas que cumplen `aplica` (spec 048, FR-011). Al confirmarse un envío de la cola, la lectura guardada
+ * de una pantalla que no se volvió a leer con señal seguía diciendo lo de antes: Entrenar mostraba sin hacer, sin señal, un hábito
+ * que el servidor ya tenía hecho (E2E 09/11).
+ */
+export async function retocarLecturasGuardadas(aplica: (ruta: string) => boolean, retocar: (datos: unknown) => unknown): Promise<void> {
+  try {
+    const claves = (await almacen().getAllKeys()).filter(k => k.startsWith(PREFIJO));
+    for (const k of claves) {
+      const inicio = k.indexOf('./api/');
+      if (inicio < 0 || !aplica(k.slice(inicio + 1))) continue;
+      const crudo = await almacen().getItem(k);
+      if (crudo === null) continue;
+      await almacen().setItem(k, JSON.stringify(retocar(JSON.parse(crudo))));
+    }
+  } catch {
+    /* sin almacenamiento: la próxima lectura con señal lo deja al día */
   }
 }
 

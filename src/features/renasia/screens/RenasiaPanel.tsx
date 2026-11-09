@@ -1,4 +1,5 @@
 import { fuentes } from '../../../theme/fuentes';
+import { alVolverLaConexion } from '../../sinRed/estadoDeConexion';
 import { SoloConConexion } from '../../sinRed/components/SoloConConexion';
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -176,6 +177,14 @@ export function RenasiaPanel({ agent, visible, onClose, contexto }: RenasiaPanel
     }
     // Solo al abrir (o cuando SER vuelve de mantenimiento con el panel abierto): no queremos recargar el historial
     // completo en cada re-render del panel.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible, chatDeSer.prendida]);
+
+  // Spec 048 (FR-005): el historial se lee en este hook, por fuera de `SoloConConexion`; al volver la señal hay que pedirlo de
+  // nuevo aquí (E2E 09/11: el cuerpo se volvía a montar pero se quedaba con el error de cuando no había red).
+  useEffect(() => {
+    if (!visible || !chatDeSer.prendida) return;
+    return alVolverLaConexion(() => void cargarHistorialInicial());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, chatDeSer.prendida]);
 

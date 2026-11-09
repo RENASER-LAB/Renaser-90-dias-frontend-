@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { avisarHabitoCumplido, avisarHabitoMarcadoSinRed } from '../eventos/habitoCumplido';
 import { ApiError, apiFetch } from '../../../services/http/apiClient';
 import { agregarEnvio, cuentaDeLaSesion, leerCola, registrarManejador } from '../../sinRed/colaSinRed';
-import { registrarAjusteDeLectura } from '../../sinRed/lecturasGuardadas';
+import { registrarAjusteDeLectura, retocarLecturasGuardadas } from '../../sinRed/lecturasGuardadas';
 import { horaReal } from '../../sinRed/horaReal';
 import { fechaLocal } from '../notificaciones/utils/alarmasPorDia';
 import { validarRespuesta } from './habitsSchemas';
@@ -354,6 +354,11 @@ registrarManejador('completarHabito', async envio => {
     },
   });
   const completado = validarRespuesta(registroCompletadoSchema, r, 'POST /api/v1/habit-tracks/{id}/complete (sin red)');
+  // Ya no está en la cola: lo guardado de los hábitos tiene que decir hecho, o sin señal volvería a verse pendiente (E2E 09/11).
+  await retocarLecturasGuardadas(
+    ruta => ruta.startsWith('/api/v1/habit-tracks/'),
+    datos => conMarcadosSinRed(datos, new Set([d.registroId])),
+  );
   avisarHabitoCumplido({
     registroId: d.registroId,
     puntosOtorgados: completado.puntosOtorgados,

@@ -12,6 +12,8 @@ import { tuPlazo } from '../../formaciones/utils/plazoEnFrases';
 import { RESUMEN_MAX_LENGTH, RESUMEN_MIN_LENGTH } from '../api/claseDiariaApi';
 import type { ClaseDiariaApi } from '../types/academy.types';
 import { Icon, TAMANO_ICONO } from '../../../components/Icon';
+import { SoloConConexion } from '../../sinRed/components/SoloConConexion';
+import { alVolverLaConexion } from '../../sinRed/estadoDeConexion';
 
 /**
  * Cierre de la Clase Diaria: la persona escribe qué entendió de la clase de hoy y recién con eso
@@ -66,6 +68,8 @@ interface ClaseDiariaModalProps {
   /** Llevar a la lección del día dentro de Cursos. */
   onIrALaLeccion: (clase: ClaseDiariaApi) => void;
   onCerrar: () => void;
+  /** Spec 048 (FR-005): si la clase no se pudo pedir sin señal, se vuelve a pedir al volver la señal. */
+  alVolverLaSenal?: () => void;
 }
 
 export function ClaseDiariaModal({
@@ -79,6 +83,7 @@ export function ClaseDiariaModal({
   onEnviar,
   onIrALaLeccion,
   onCerrar,
+  alVolverLaSenal,
 }: ClaseDiariaModalProps) {
   const { c, t } = useTheme();
   /* Issue #104: el plazo es el del programa de la persona («tus 90 días», «tus 3 meses», «tu año»). */
@@ -99,6 +104,13 @@ export function ClaseDiariaModal({
     setResumen(resumenGuardado ?? (leccionId ? borradores.get(leccionId) : undefined) ?? '');
     setIntentoDeEnvio(false);
   }, [visible, resumenGuardado, leccionId]);
+
+  // Spec 048 (FR-005): la clase se pide por fuera de `SoloConConexion` (en Entrenar); sin señal queda en error y al volver la
+  // señal se pide de nuevo (E2E 09/11: mostraba el error crudo y no se recuperaba sola).
+  useEffect(() => {
+    if (!visible || !error || !alVolverLaSenal) return;
+    return alVolverLaConexion(alVolverLaSenal);
+  }, [visible, error, alVolverLaSenal]);
 
   const cerrar = () => {
     if (leccionId && !resumenGuardado) {
@@ -146,6 +158,8 @@ export function ClaseDiariaModal({
         ) : undefined
       }
     >
+      {/* Spec 048 (FR-005): la clase y su video vienen del servidor; sin señal, «Necesitas conexión» y no el error crudo. */}
+      <SoloConConexion>
       {/* UN solo contenedor de scroll, con tope de alto: el teclado no tapa el botón. */}
       <ScrollView
         keyboardShouldPersistTaps="handled"
@@ -284,6 +298,7 @@ export function ClaseDiariaModal({
           </>
         )}
       </ScrollView>
+      </SoloConConexion>
     </HojaDesdeAbajo>
   );
 }

@@ -123,13 +123,23 @@ describe('sesión sin señal (spec 048)', () => {
     expect(mockRed.token).toBe('token-de-la-sesion-de-ana-0001');
   });
 
-  it('sin señal y sin perfil guardado de ESA sesión, no se inventa nada: va al login como antes', async () => {
-    await guardarPerfil('token-de-OTRA-sesion-9999', ANA as never, true);
+  it('sin señal y sin perfil guardado va al login, pero la sesión NO se borra y entra sola al volver la señal', async () => { // spec 048 FR-001
+    jest.useFakeTimers();
     mockRed.hay = false;
 
     const sesion = await abrirLaApp();
-
     expect(sesion().user).toBeNull();
+    expect(mockRed.token).toBe('token-de-la-sesion-de-ana-0001'); // antes se borraba (E2E 09/11)
+
+    mockRed.hay = true;
+    await act(async () => {
+      jest.advanceTimersByTime(20_000);
+    });
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(sesion().user?.id).toBe('u-ana');
+    jest.useRealTimers();
   });
 
   it('con señal, el arranque guarda el perfil para la próxima vez sin señal', async () => { // spec 048 FR-002

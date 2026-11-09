@@ -80,4 +80,28 @@ describe('cola sin red (spec 048)', () => {
     expect(enviados).toEqual([]);
     expect(await leerCola('ana')).toHaveLength(1);
   });
+
+  it('al volver la señal, dos disparos juntos no mandan el mismo envío dos veces (E2E 09/11)', async () => { // spec 048 FR-008
+    let enviados = 0;
+    let soltar!: () => void;
+    registrarManejador('completarHabito', () => {
+      enviados++;
+      return new Promise<void>(r => {
+        soltar = r;
+      });
+    });
+    ponerCuentaActual('ana');
+    await agregarEnvio('ana', 'completarHabito', { registroId: 'r1' }, HORA);
+
+    const primero = procesarCola('ana', Date.now(), { adelantar: true });
+    await new Promise(r => setTimeout(r, 0));
+    const segundo = procesarCola('ana', Date.now(), { adelantar: true });
+    soltar();
+    await Promise.all([primero, segundo]);
+    await procesarCola('ana', Date.now(), { adelantar: true });
+
+    expect(enviados).toBe(1);
+    expect(await leerCola('ana')).toHaveLength(0);
+  });
 });
+

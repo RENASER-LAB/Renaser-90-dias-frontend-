@@ -1264,6 +1264,7 @@ export default function TrainingScreen() {
             }}
             onIrALaLeccion={irALaLeccionDelDia}
             onCerrar={cerrarClaseDiaria}
+            alVolverLaSenal={() => void claseDiaria.abrir()}
           />
         </>
       ) : null}

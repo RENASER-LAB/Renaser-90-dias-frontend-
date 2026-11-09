@@ -5,8 +5,9 @@ import type { UsuarioApi } from '../auth/types/auth.types';
 /**
  * Spec 048 (FR-001, FR-002): el último perfil que dio el servidor, para entrar a la app sin señal.
  *
- * Va atado a la sesión que lo pidió (una huella del token, nunca el token): si la sesión guardada en el teléfono es otra,
- * no se usa. Se borra al cerrar sesión (FR-009). Apenas el servidor responde, el perfil se vuelve a pedir y gana el de él:
+ * Es el de la última cuenta que entró en este teléfono: se escribe al entrar y al abrir con señal, y se borra al cerrar sesión
+ * y cuando el servidor dice que la sesión venció (FR-009). Ya no va atado a una huella del token (E2E 09/11): si el servidor
+ * renovaba el token, la huella dejaba de coincidir, no había perfil y la app caía al login sin señal. Apenas el servidor responde, el perfil se vuelve a pedir y gana el de él:
  * así una cuenta suspendida mientras no había señal se entera con la primera respuesta.
  */
 const CLAVE = 'renaser.sinRed.perfil';
@@ -39,7 +40,8 @@ export async function leerPerfilGuardado(token: string): Promise<PerfilGuardado 
     const crudo = await almacen().getItem(CLAVE);
     if (!crudo) return null;
     const g = JSON.parse(crudo) as Partial<Guardado>;
-    if (!g || g.huella !== huellaDelToken(token) || !g.perfil || typeof g.perfil.id !== 'string') return null;
+    void token;
+    if (!g || !g.perfil || typeof g.perfil.id !== 'string') return null;
     return { perfil: g.perfil, ingresoResuelto: g.ingresoResuelto === true, guardadoEn: String(g.guardadoEn ?? '') };
   } catch {
     return null;

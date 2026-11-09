@@ -1,5 +1,6 @@
 import { fuentes } from '../theme/fuentes';
 import { SoloConConexion } from '../features/sinRed/components/SoloConConexion';
+import { alVolverLaConexion } from '../features/sinRed/estadoDeConexion';
 import React, { useState, useMemo, useEffect, useCallback, useRef, useReducer } from 'react';
 import {
   View,
@@ -1668,6 +1669,18 @@ function ComunidadPorFormacion({
   useAlVolverAPrenderse(CLAVES.cursos, () => recursosPedidos.cursos && void recargarCursos());
   useAlVolverAPrenderse(CLAVES.chat, () => recursosPedidos.conversaciones && void recargarConversaciones());
   useAlVolverAPrenderse(CLAVES.ranking, () => recursosPedidos.ranking && void recargarRanking());
+  // Spec 048 (FR-005): el Muro, los cursos, el chat y el ranking se leen aquí, por fuera de `SoloConConexion`; al volver la señal
+  // se piden de nuevo (E2E 09/11: el Muro volvía a montarse pero se quedaba con el error de cuando no había red).
+  useEffect(
+    () =>
+      alVolverLaConexion(() => {
+        void recargarMuro();
+        if (recursosPedidos.cursos) void recargarCursos();
+        if (recursosPedidos.conversaciones) void recargarConversaciones();
+        if (recursosPedidos.ranking) void recargarRanking();
+      }),
+    [recargarMuro, recargarCursos, recargarConversaciones, recargarRanking, recursosPedidos],
+  );
 
   /**
    * Qué tabla se está mirando. El backend manda las TRES en la misma respuesta
@@ -3123,7 +3136,10 @@ function ComunidadPorFormacion({
           ]}
         />
       )}
+      {/* Spec 048 (FR-005): sin señal, el Muro dice que necesita conexión (sin el error rojo y el hueco de abajo). Publicar sin
+          señal llega en la fase 2. */}
       {seccionActiva === 'muro' && !seccionEnMantenimiento && (
+        <SoloConConexion>
         <FlatList
           {...barraAlDesplazar}
           ref={muroListaRef}
@@ -3250,6 +3266,7 @@ function ComunidadPorFormacion({
           // al volver a subir. La virtualización ya la da `windowSize`.
           removeClippedSubviews={false}
         />
+      </SoloConConexion>
       )}
       {/* La publicación abierta (2026-11-05): la tarjeta COMPLETA de siempre, encima de la lista compacta. */}
       {seccionActiva === 'muro' && !seccionEnMantenimiento && publicacionAbierta ? (
