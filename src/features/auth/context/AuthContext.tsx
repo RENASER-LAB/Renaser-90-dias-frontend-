@@ -7,6 +7,7 @@ import * as authApi from '../api/authApi';
 import { conexionChat } from '../../chat/tiempoReal/conexionStomp';
 import * as onboardingApi from '../../onboarding/api/onboardingApi';
 import { aUsuario } from '../api/usuarioMapper';
+import { guardarPerfil, leerPerfilGuardado, olvidarPerfilGuardado } from '../../sinRed/perfilGuardado';
 import { prepararAlarmasPara, soltarAlarmasDeLaCuenta } from '../../alarmas/alarmasDeLaCuenta';
 import { apagarLaCarreraAlSalir } from '../../carrera/servicios/tareaDeUbicacion';
 import { borrarTodosLosBorradores as borrarBorradoresDelRadar } from '../../radar/storage/borradorRadar';
@@ -78,6 +79,11 @@ async function resolverOnboardingCompletado(): Promise<boolean> {
 async function resolverPuedeEntrarSinOnboarding(): Promise<boolean> {
   const capacidades = await capacidadesDePrograma();
   return capacidades?.programRequired === false;
+}
+
+/** Spec 048: el pedido no tuvo respuesta (sin señal, servidor inalcanzable). Un 4xx/5xx sí es una respuesta. */
+function esFaltaDeRed(e: unknown): boolean {
+  return e instanceof ApiError && (e as ApiError).esDeRed === true;
 }
 
 /** Onboarding completo, o exento de completarlo. */
@@ -166,6 +172,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   /* «Ver como» (spec 002, fase 2): la franja lo lee de acá; la referencia, los efectos que no deben actuar en solo
      lectura (el registro del push, que el servidor rechazaría con 403). */
   const [verComo, setVerComo] = useState<VerComoEnCurso | null>(null);
+  /** Spec 048: se entró sin señal con el perfil guardado y falta confirmarlo con el servidor. */
+  const [revalidarSinRed, setRevalidarSinRed] = useState(false);
   const verComoRef = useRef<VerComoEnCurso | null>(null);
   verComoRef.current = verComo;
 
@@ -208,16 +216,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (!vigente) return;
           setIsOnboardingCompleted(completado);
           setOnboardingResuelto(true);
-        } catch {
-          // 403 = cuenta suspendida (ver resolverOnboardingCompletado). Mismo tratamiento que un
-          // token vencido: se descarta la sesión y la app arranca en el login, no se deja a la
-          // persona entrar a Home con una cuenta que no puede usar ninguna pantalla.
-          setUser(null);
+          void guardarPerfil(token, api, completado);
+        } catch (e) {
+          // Spec 048 (FR-001): sin señal a mitad del arranque no se pierde la sesión; se usa lo último que se supo.
+          const guardado = esFaltaDeRed(e) ? await leerPerfilGuardado(token) : null;
+          if (guardado) {
+            if (!vigente) return;
+            setIsOnboardingCompleted(guardado.ingresoResuelto);
+            setOnboardingResuelto(true);
+          } else {
+            // 403 = cuenta suspendida (ver resolverOnboardingCompletado). Mismo tratamiento que un
+            // token vencido: se descarta la sesión y la app arranca en el login, no se deja a la
+            // persona entrar a Home con una cuenta que no puede usar ninguna pantalla.
+            setUser(null);
+            setTokenSesion(null);
+          }
+        }
+      } catch (e) {
+        /* Spec 048 (FR-001, FR-002): SIN SEÑAL no es lo mismo que token vencido. Antes los dos caían acá y borraban la
+           sesión: abrir la app en el metro mandaba al login. Ahora, sin respuesta del servidor, se entra con el último
+           perfil de esta misma sesión y se revalida apenas haya señal (`revalidarSinRed`). */
+        const guardado = esFaltaDeRed(e) ? await leerPerfilGuardado(token) : null;
+        if (guardado && vigente) {
+          await alarmasListas(guardado.perfil.id);
+          setUser(aUsuario(guardado.perfil));
+          setIsOnboardingCompleted(guardado.ingresoResuelto);
+          setOnboardingResuelto(true);
+          setRevalidarSinRed(true);
+        } else if (!guardado) {
+          // Token vencido o revocado: se limpia y la app arranca en el login, como corresponde.
           setTokenSesion(null);
         }
-      } catch {
-        // Token vencido o revocado: se limpia y la app arranca en el login, como corresponde.
-        setTokenSesion(null);
       } finally {
         if (vigente) setSesionCargando(false);
       }
@@ -226,6 +255,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       vigente = false;
     };
   }, []);
+
+  /**
+   * Spec 048 (FR-002): se entró sin señal con el perfil guardado. Cada 20 s se le vuelve a preguntar al servidor quién es;
+   * con la primera respuesta gana lo del servidor (rol o estado pudieron cambiar). Un 401 lo maneja `apiClient` como siempre
+   * (sesión vencida → login); seguir sin red no hace nada.
+   */
+  useEffect(() => {
+    if (!revalidarSinRed) return;
+    let vigente = true;
+    const intentar = async () => {
+      try {
+        const api = await authApi.perfilActual();
+        if (!vigente) return;
+        setUser(aUsuario(api));
+        setRevalidarSinRed(false);
+        const token = getTokenSesion();
+        if (token) void guardarPerfil(token, api, true);
+      } catch (e) {
+        if (!esFaltaDeRed(e)) setRevalidarSinRed(false);
+      }
+    };
+    const reloj = setInterval(() => void intentar(), 20_000);
+    return () => {
+      vigente = false;
+      clearInterval(reloj);
+    };
+  }, [revalidarSinRed]);
 
   /**
    * La sesión también puede morir con la app ABIERTA: el token vence en Redis, o se cierra desde
@@ -303,6 +359,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const completado = await resolverGateDeIngreso();
       setIsOnboardingCompleted(completado);
       setOnboardingResuelto(true);
+      // Spec 048 (FR-002): desde el primer ingreso, la próxima vez se puede entrar sin señal.
+      const token = getTokenSesion();
+      if (token) void guardarPerfil(token, api, completado);
     } catch (e) {
       // 403 = cuenta suspendida (ver resolverOnboardingCompletado): se deshace el login para que
       // LoginScreen lo trate igual que credenciales rechazadas (mensajeDeError ya sabe mostrar
@@ -528,6 +587,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Lo que se escribía en el Código Renaser a medias es de quien se va: no queda en un teléfono sin sesión (2026-11-03).
     void borrarBorradoresDelRadar();
     void authApi.cerrarSesion().catch(() => undefined);
+    // Spec 048 (FR-009): lo guardado para entrar sin señal es de quien se va.
+    void olvidarPerfilGuardado();
+    setRevalidarSinRed(false);
     setUser(null);
     setIsOnboardingCompleted(false);
     setOnboardingResuelto(false);
