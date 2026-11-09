@@ -1,5 +1,5 @@
 {
-  "$comentario": "Violaciones que ya existían el día que nació cada chequeo de familiasDeErrores.test.ts. Solo se achica: al arreglar una, se borra. Ver docs/arnes/familias-de-errores.md.",
+  "$comentario": "Violaciones que ya existían el día que nació cada chequeo de familiasDeErrores.test.ts. Solo se achica: al arreglar una, se borra.",
   "alertDeReactNative": {
     "fecha": "2026-11-06",
     "motivo": "Alerta.tsx y admin/utils/dialogo.ts envuelven el Alert nativo a propósito (con el camino de la web). No son violaciones: las otras dos se arreglaron en #144.",

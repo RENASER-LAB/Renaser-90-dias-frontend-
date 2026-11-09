@@ -1,6 +1,6 @@
-// Verificación estándar de la app: el mismo camino para cualquier persona, agente o el CI (arnés propio, 2026-11-06).
+// Verificación estándar de la app: el mismo camino para cualquier persona o el CI (2026-11-06).
 //
-//   npm run verificar                     parches de postinstall + tipos + Jest completo + trazabilidad + grafo de agentes + Maestro (conteo)
+//   npm run verificar                     parches de postinstall + tipos + Jest completo + trazabilidad + Maestro (conteo)
 //   npm run verificar -- --rapido         parches + tipos + solo las pruebas de lo cambiado respecto de origin/master
 //   npm run verificar -- --e2e [flujo…]   lo anterior + la suite de Maestro en el emulador (.maestro/correr.sh)
 //   npm run verificar -- --ci             lo que corre el CI: sin detección de máquina ocupada; lo que no aplica en el
@@ -98,12 +98,12 @@ if (ocupada.length && !FORZAR) {
 // 2. Tipos.
 correr('Tipos (tsc --noEmit)', 'node', ['node_modules/typescript/bin/tsc', '--noEmit']);
 
-// 3. Pruebas. Las reglas del arnés (src/__tests__/harness) van dentro del Jest completo.
-// En el CI, como antes (`npm test -- --ci`): un solo proceso. En una máquina compartida, dos (AGENTS.md, regla 5).
+// 3. Pruebas. Las reglas de código (src/__tests__/reglas) van dentro del Jest completo.
+// En el CI, como antes (`npm test -- --ci`): un solo proceso. En una máquina compartida, dos.
 const jest = ['node_modules/jest/bin/jest.js', ...(CI ? ['--ci', '--runInBand'] : ['--maxWorkers=2'])];
 if (RAPIDO) {
   correr('Jest: lo cambiado respecto de origin/master', 'node', [...jest, '--changedSince=origin/master', '--passWithNoTests']);
-  correr('Jest: reglas del arnés', 'node', [...jest, 'src/__tests__/harness']);
+  correr('Jest: reglas de código', 'node', [...jest, 'src/__tests__/reglas']);
   anotar('Jest completo', null, 'sin correr: --rapido no cierra nada');
 } else if (puedeCorrerLoPesado('Jest completo')) {
   correr('Jest completo', 'node', jest);
@@ -127,18 +127,9 @@ if (backend) {
     : 'sin correr: no encontré el backend (pon RENASER_BACKEND=<ruta>)');
 }
 
-// 4b. El grafo del flujo de agentes y el perfil de este repo (arnes.perfil.yaml). El núcleo del arnés es genérico y vive
-// fuera de este repositorio: ARNES_DIR, o ~/Documentos/arnes. Valida que el grafo no tenga bucles sin tope ni camino a la
-// fusión sin el dueño, y que el perfil traiga un comando para cada nodo que lo pide.
-const nucleoDelArnes = [process.env.ARNES_DIR, path.join(process.env.HOME ?? '', 'Documentos', 'arnes')]
-  .find((c) => c && fs.existsSync(path.join(c, 'bin', 'arnes.mjs')));
-if (nucleoDelArnes) {
-  correr('Grafo de agentes y perfil del arnés (arnes validar)', 'node', [path.join(nucleoDelArnes, 'bin', 'arnes.mjs'), 'validar', '--perfil', 'arnes.perfil.yaml']);
-} else {
-  anotar('Grafo de agentes y perfil del arnés', CI ? 'na' : null, CI
-    ? 'no aplica en el CI: el núcleo del arnés no está en este repositorio'
-    : 'sin correr: no encontré el núcleo del arnés (pon ARNES_DIR=<ruta>)');
-}
+// 4b. Chequeos locales de cada desarrollador, si los tiene (.arnes/verificar-local.mjs, fuera de git). En el CI no existen.
+const verificarLocal = path.join(RAIZ, '.arnes', 'verificar-local.mjs');
+if (!CI && fs.existsSync(verificarLocal)) correr('Chequeos locales (.arnes)', 'node', [verificarLocal]);
 
 // 5. Maestro: cuántos flujos hay sin correr (tablero, no puerta).
 const m = resumenDeMaestro();

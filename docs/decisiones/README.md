@@ -3,7 +3,7 @@
 Todo lo que el dueño autorizó, decidió o mandó corregir en la app, con fecha. Antes vivía dentro de `AGENTS.md`
 (más de 6000 líneas que cada sesión cargaba entera); el 2026-11-06 se movió **tal cual** acá, un archivo por tema
 y este índice. No se perdió una línea (comparación línea por línea en el PR del arnés), y
-`src/__tests__/harness/decisiones.test.ts` vigila que el índice siga cubriendo todas las entradas.
+Cada entrada nueva lleva su fila en el índice.
 
 ## La regla que no cambia
 
@@ -18,7 +18,7 @@ también en el texto (`grep -n "Plan" docs/decisiones/*.md`). Si dos entradas ch
    `## <Cambio por pedido del dueño | Decisión del dueño | Corrección> — AAAA-MM-DD — <qué>`, el pedido textual,
    «lo que cambia y nada más», «no cambian», las pruebas y si hace falta APK o backend.
 2. Una fila nueva **arriba** de la tabla de abajo, con el mismo título.
-3. **Nunca en `AGENTS.md`.** `src/__tests__/harness/agentsCorto.test.ts` lo frena.
+3. **Una decisión vive aquí**, no en otros documentos.
 4. Si una entrada vieja queda desmentida, se corrige con una nota `> **Corregido AAAA-MM-DD.** …` debajo de lo que
    corrige (así nadie «arregla» la corrección de vuelta) y se marca «sí» en la columna «Corregida».
 5. Si la decisión cambia una **regla vigente** de `AGENTS.md`, la regla se reescribe ahí (sin notas) y el rastro queda
