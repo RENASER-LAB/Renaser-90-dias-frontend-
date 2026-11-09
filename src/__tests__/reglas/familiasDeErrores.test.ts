@@ -4,11 +4,10 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 /**
- * Familias de errores que se repiten, convertidas en chequeos (arnés propio, 2026-11-06).
+ * Familias de errores que se repiten, convertidas en chequeos (2026-11-06).
  *
  * Cada bloque nace de una familia de la bitácora del backend (`../Renaser-90-dias-backend/docs/BITACORA_ERRORES.md`) o de
- * los issues `bug` de este repo: lo que se repetía como «cómo evitarlo» en prosa, acá se ejecuta. El inventario completo,
- * con cuántas veces apareció cada familia, está en `docs/arnes/familias-de-errores.md`.
+ * los issues `bug` de este repo: lo que se repetía como «cómo evitarlo» en prosa, acá se ejecuta.
  *
  * Las violaciones que ya existían están en `excepciones.json`, con fecha e issue: esa lista solo se achica.
  */
