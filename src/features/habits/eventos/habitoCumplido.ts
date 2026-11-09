@@ -61,3 +61,28 @@ export function tomarPuntosDe(registroId: string): number | null {
   puntosSinMostrar.delete(registroId);
   return puntos ?? null;
 }
+
+/**
+ * Spec 048 (FR-011, D12): un hábito marcado SIN SEÑAL. Se ve hecho y sus alarmas de ese día se callan al instante, pero no hay
+ * celebración ni puntos: esos salen con {@link avisarHabitoCumplido} cuando el servidor confirma el envío de la cola.
+ */
+export type HabitoMarcadoSinRed = { registroId: string; habitoId?: string; fecha?: string };
+
+const oyentesSinRed = new Set<(marcado: HabitoMarcadoSinRed) => void>();
+
+export function alMarcarSinRed(oyente: (marcado: HabitoMarcadoSinRed) => void): () => void {
+  oyentesSinRed.add(oyente);
+  return () => {
+    oyentesSinRed.delete(oyente);
+  };
+}
+
+export function avisarHabitoMarcadoSinRed(marcado: HabitoMarcadoSinRed): void {
+  for (const oyente of [...oyentesSinRed]) {
+    try {
+      oyente(marcado);
+    } catch {
+      /* un oyente roto no deshace la marca */
+    }
+  }
+}

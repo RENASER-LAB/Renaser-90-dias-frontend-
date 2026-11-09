@@ -2,7 +2,7 @@
  * Spec 048 (FR-001, FR-002, FR-009): abrir la app sin señal no saca al login. Antes, el arranque trataba igual «sin red» que
  * «token vencido» y borraba la sesión. Usa el `AuthProvider` de verdad con la red simulada.
  */
-import { beforeEach, describe, expect, it, jest } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React from 'react';
 import TestRenderer, { act } from 'react-test-renderer';
@@ -83,6 +83,8 @@ import { guardarPerfil, leerPerfilGuardado } from '../perfilGuardado';
 
 type Sesion = ReturnType<typeof useAuth>;
 
+let montada: ReturnType<typeof TestRenderer.create> | null = null;
+
 async function abrirLaApp(): Promise<() => Sesion> {
   let actual!: Sesion;
   function Sonda() {
@@ -90,10 +92,18 @@ async function abrirLaApp(): Promise<() => Sesion> {
     return null;
   }
   await act(async () => {
-    TestRenderer.create(React.createElement(AuthProvider, null, React.createElement(Sonda)));
+    montada = TestRenderer.create(React.createElement(AuthProvider, null, React.createElement(Sonda)));
   });
   return () => actual;
 }
+
+// Desmontar apaga el reloj de revalidación sin señal (20 s): si no, se dispara cuando la prueba ya terminó.
+afterEach(async () => {
+  await act(async () => {
+    montada?.unmount();
+  });
+  montada = null;
+});
 
 beforeEach(async () => {
   await AsyncStorage.clear();

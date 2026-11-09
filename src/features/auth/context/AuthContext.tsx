@@ -8,6 +8,7 @@ import { conexionChat } from '../../chat/tiempoReal/conexionStomp';
 import * as onboardingApi from '../../onboarding/api/onboardingApi';
 import { aUsuario } from '../api/usuarioMapper';
 import { guardarPerfil, leerPerfilGuardado, olvidarPerfilGuardado } from '../../sinRed/perfilGuardado';
+import { borrarLecturasGuardadas } from '../../sinRed/lecturasGuardadas';
 import { prepararAlarmasPara, soltarAlarmasDeLaCuenta } from '../../alarmas/alarmasDeLaCuenta';
 import { apagarLaCarreraAlSalir } from '../../carrera/servicios/tareaDeUbicacion';
 import { borrarTodosLosBorradores as borrarBorradoresDelRadar } from '../../radar/storage/borradorRadar';
@@ -589,6 +590,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     void authApi.cerrarSesion().catch(() => undefined);
     // Spec 048 (FR-009): lo guardado para entrar sin señal es de quien se va.
     void olvidarPerfilGuardado();
+    void borrarLecturasGuardadas();
     setRevalidarSinRed(false);
     setUser(null);
     setIsOnboardingCompleted(false);

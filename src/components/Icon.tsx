@@ -18,6 +18,7 @@ export type IconName =
   | 'timer' | 'badgeCheck' | 'hourglass' | 'ban' | 'rotateCcw' | 'audioLines' | 'sunrise' | 'sunMedium' | 'moonStar' | 'glassWater' | 'showerHead' | 'footprints' | 'salad' | 'utensils' | 'utensilsCrossed' | 'bookOpenText' | 'headphones' | 'notebookPen' | 'handHeart' | 'smartphoneOff'
   | 'sparkles'
   | 'wrench' | 'toggleRight'
+  | 'cloudOff'
   | 'bellOff'
   | 'chartNoAxesColumn'
   | 'ellipsis'
@@ -441,6 +442,15 @@ export function Icon({ name, size = 20, color, strokeWidth }: Props) {
     /* Forma de referencia: Lucide (licencia ISC), caja de 24 y trazo `s24`. Reemplazan emojis y
        metáforas equivocadas de Comunidad (inventario del 2026-10-05): el Muro con el mismo globo de
        «Comentar», Cursos con un cilindro de base de datos, Testimonios con la estrella de «favorito». */
+    /* Spec 048: sin conexión. Forma de Lucide `cloud-off` (licencia ISC), caja de 24 y trazo `s24`. */
+    case 'cloudOff':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Path {...s24} d="m2 2 20 20" />
+          <Path {...s24} d="M5.782 5.782A7 7 0 0 0 9 19h8.5a4.5 4.5 0 0 0 1.307-.193" />
+          <Path {...s24} d="M21.532 16.5A4.5 4.5 0 0 0 17.5 10h-1.79A7.008 7.008 0 0 0 10 5.07" />
+        </Svg>
+      );
     case 'newspaper':
       return (
         <Svg width={size} height={size} viewBox="0 0 24 24">

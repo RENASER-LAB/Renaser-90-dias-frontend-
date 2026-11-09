@@ -1,8 +1,11 @@
 import { z } from 'zod';
-import { avisarHabitoCumplido } from '../eventos/habitoCumplido';
-import { apiFetch } from '../../../services/http/apiClient';
+import { avisarHabitoCumplido, avisarHabitoMarcadoSinRed } from '../eventos/habitoCumplido';
+import { ApiError, apiFetch } from '../../../services/http/apiClient';
+import { agregarEnvio, cuentaDeLaSesion, registrarManejador } from '../../sinRed/colaSinRed';
+import { horaReal } from '../../sinRed/horaReal';
+import { fechaLocal } from '../notificaciones/utils/alarmasPorDia';
 import { validarRespuesta } from './habitsSchemas';
-import { ejecutarEnRegistroVigente } from './registroVigente';
+import { DiaDeHabitosCambiadoError, ejecutarEnRegistroVigente } from './registroVigente';
 import { enPasoDelEnvio } from '../utils/enPasoDelEnvio';
 
 /**
@@ -261,18 +264,32 @@ export async function completarRegistro(
 ): Promise<RegistroCompletado> {
   let habitoId: string | undefined;
   let fecha: string | undefined;
-  const r = await ejecutarEnRegistroVigente(registroId, track => {
-    habitoId = track?.habitoId;
-    fecha = track?.fechaEjecucion;
-    return apiFetch<unknown>(`/api/v1/habit-tracks/${registroId}/complete`, {
-      method: 'POST',
-      body: {
-        respuestaTexto: respuestaTexto?.trim() ? respuestaTexto.trim() : null,
-        calificacionProductividad: null,
-        ...(valorMedido != null ? { valorMedido } : {}),
-      },
+  const texto = respuestaTexto?.trim() ? respuestaTexto.trim() : null;
+  let r: unknown;
+  try {
+    r = await ejecutarEnRegistroVigente(registroId, track => {
+      habitoId = track?.habitoId;
+      fecha = track?.fechaEjecucion;
+      return apiFetch<unknown>(`/api/v1/habit-tracks/${registroId}/complete`, {
+        method: 'POST',
+        body: {
+          respuestaTexto: texto,
+          calificacionProductividad: null,
+          ...(valorMedido != null ? { valorMedido } : {}),
+        },
+      });
     });
-  });
+  } catch (error) {
+    // Spec 048 (FR-007, FR-010, FR-011): sin señal se guarda en la cola con la hora real y se ve hecho al instante.
+    const cuenta = cuentaDeLaSesion();
+    if (!(error instanceof ApiError && error.esDeRed) || !cuenta || !fecha) throw error;
+    const hora = horaReal();
+    // Las mismas reglas que con red: un registro de un día que ya terminó no se marca (D-259); se dice igual que con señal.
+    if (fechaLocal(hora.instante) > fecha) throw new DiaDeHabitosCambiadoError();
+    await agregarEnvio(cuenta, 'completarHabito', { registroId, respuestaTexto: texto, valorMedido: valorMedido ?? null, habitoId: habitoId ?? null, fecha }, hora);
+    avisarHabitoMarcadoSinRed({ registroId, ...(habitoId ? { habitoId } : {}), fecha });
+    return { id: registroId, estado: 'COMPLETADO', puntosOtorgados: 0, respuestaTexto: texto, completadoEn: hora.instante.toISOString(), pendienteDeEnvio: true };
+  }
   const completado = validarRespuesta(registroCompletadoSchema, r, 'POST /api/v1/habit-tracks/{id}/complete');
   avisarHabitoCumplido({
     registroId,
@@ -284,3 +301,30 @@ export async function completarRegistro(
   });
   return completado;
 }
+
+
+/**
+ * Spec 048 (FR-007, FR-014): cómo la cola manda un hábito marcado sin señal. Va con su hora real y su `idCliente`; con la
+ * respuesta salen los puntos y la celebración de siempre (D12). Un `motivoSinPuntos` también es éxito: queda registrado.
+ */
+registrarManejador('completarHabito', async envio => {
+  const d = envio.datos as { registroId: string; respuestaTexto: string | null; valorMedido: number | null; habitoId: string | null; fecha: string };
+  const r = await apiFetch<unknown>(`/api/v1/habit-tracks/${d.registroId}/complete`, {
+    method: 'POST',
+    body: {
+      respuestaTexto: d.respuestaTexto,
+      calificacionProductividad: null,
+      ...(d.valorMedido != null ? { valorMedido: d.valorMedido } : {}),
+      hechoEn: envio.hechoEn,
+      idCliente: envio.idCliente,
+      origenDeLaHora: envio.origenDeLaHora,
+    },
+  });
+  const completado = validarRespuesta(registroCompletadoSchema, r, 'POST /api/v1/habit-tracks/{id}/complete (sin red)');
+  avisarHabitoCumplido({
+    registroId: d.registroId,
+    puntosOtorgados: completado.puntosOtorgados,
+    ...(d.habitoId ? { habitoId: d.habitoId } : {}),
+    fecha: d.fecha,
+  });
+});

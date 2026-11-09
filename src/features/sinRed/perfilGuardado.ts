@@ -1,4 +1,4 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { almacen } from './almacen';
 
 import type { UsuarioApi } from '../auth/types/auth.types';
 
@@ -28,7 +28,7 @@ export function huellaDelToken(token: string): string {
 export async function guardarPerfil(token: string, perfil: UsuarioApi, ingresoResuelto: boolean): Promise<void> {
   const guardado: Guardado = { perfil, ingresoResuelto, guardadoEn: new Date().toISOString(), huella: huellaDelToken(token) };
   try {
-    await AsyncStorage.setItem(CLAVE, JSON.stringify(guardado));
+    await almacen().setItem(CLAVE, JSON.stringify(guardado));
   } catch {
     // Sin perfil guardado, sin señal se pide el login: lo de siempre, nada se rompe.
   }
@@ -36,7 +36,7 @@ export async function guardarPerfil(token: string, perfil: UsuarioApi, ingresoRe
 
 export async function leerPerfilGuardado(token: string): Promise<PerfilGuardado | null> {
   try {
-    const crudo = await AsyncStorage.getItem(CLAVE);
+    const crudo = await almacen().getItem(CLAVE);
     if (!crudo) return null;
     const g = JSON.parse(crudo) as Partial<Guardado>;
     if (!g || g.huella !== huellaDelToken(token) || !g.perfil || typeof g.perfil.id !== 'string') return null;
@@ -48,7 +48,7 @@ export async function leerPerfilGuardado(token: string): Promise<PerfilGuardado 
 
 export async function olvidarPerfilGuardado(): Promise<void> {
   try {
-    await AsyncStorage.removeItem(CLAVE);
+    await almacen().removeItem(CLAVE);
   } catch {
     /* nada que hacer */
   }
