@@ -12,6 +12,7 @@ import '../../habits/api/evidenciaHabitoApi';
 import { adelantarReintentos, leerCola, ponerCuentaActual, procesarCola, suscribirCola } from '../colaSinRed';
 import { alVolverLaConexion, sinConexionDesdeMs, suscribirConexion } from '../estadoDeConexion';
 import { cargarAnclaGuardada } from '../horaReal';
+import { cargarAudiosGuardados } from '../audiosDelDia';
 import { textoDelGlobo } from '../utils/textoDelGlobo';
 
 /**
@@ -33,6 +34,7 @@ export function AnfitrionSinRed() {
   useEffect(() => {
     ponerCuentaActual(cuentaId);
     void cargarAnclaGuardada();
+    void cargarAudiosGuardados();
     if (!cuentaId) {
       setPendientes(0);
       return;

@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { claveDelAudio, prepararAudio } from '../features/sinRed/audiosDelDia';
 import { sinConexionDesdeMs } from '../features/sinRed/estadoDeConexion';
 import { View, Text, StyleSheet, ScrollView, Platform, type StyleProp, type ViewStyle } from 'react-native';
 import { Alert } from '../components/Alerta';
@@ -470,6 +471,12 @@ export default function TrainingScreen() {
   const pastillaSolicitada = useRef<string | null>(null);
   /** El dia en curso, o el ya entregado de hoy para poder releer lo que escribio. */
   const diaDePastilla = espiritu.diaEnCurso ?? espiritu.diaEntregadoHoy;
+  // Spec 048 (FR-017): con señal, el audio de la Pastilla de hoy se baja solo para escucharlo sin señal.
+  useEffect(() => {
+    if (!diaDePastilla?.audioUrl) return;
+    const audio = audioDeLaPastilla(diaDePastilla);
+    void prepararAudio(claveDelAudio(audio.rotulo, audio.claveBorrador), audio.audioUrl);
+  }, [diaDePastilla]);
 
   /**
    * "Clase diaria". Tampoco se cierra subiendo evidencia: hay que ver la leccion del dia y escribir
