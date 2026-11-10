@@ -774,5 +774,28 @@ Entrenar) y lleve hasta el primer post en el Muro; al publicar, confeti; y «el 
   * **Cerrar sesión** con cosas sin enviar avisa cuántas se perderían.
   * **Lo que no cambia:** la Clase diaria y la Pastilla siguen entregándose con conexión (tienen su propio camino); la web
     sigue pidiendo internet. Fases 2 (Muro) y 3 (Plan, Cierra tu día, Radar, planificar) vienen después.
+
+    > **Corregido 2026-11-10.** La Pastilla Renacer ya se entrega sin señal (issue #178, entrada del 2026-11-10 al final de
+    > este archivo). La Clase diaria sigue pidiendo conexión.
   * **Necesita APK nuevo** (el módulo nativo del reloj). Sin él, la app usa el reloj del teléfono corregido y lo dice.
 
+## Corrección — 2026-11-10 — tabs `Hoy`, `Training`, `Comunidad`: sin señal, el Código Renaser ya no atrapa, la Pastilla se entrega y el ranking lo dice (spec 048, issue #178)
+
+* **Corrección — 2026-11-10 — tres bloqueos sin señal (spec 048, issue #178).** Los encontró la auditoría del modo sin
+  internet; aplican lo que la spec ya decidía (D2, FR-005, FR-010, FR-011). Lo que cambia y nada más:
+  * **Código Renaser innegociable (días 1 a 7):** sin señal no se abre solo. Si ya estaba abierto cuando se fue la señal,
+    sigue abierto (lo escrito se guarda como siempre) pero se puede cerrar con la X o con el gesto de volver. Si la lectura de
+    la hora falló por falta de señal, al volver la señal se lee de nuevo y el formulario se pide como siempre si la hora sigue
+    sin responderse. Con señal no cambia nada.
+  * **Pastilla Renacer:** sin señal la entrega espera en la cola de lo hecho sin señal, el hábito se ve hecho y el día de la
+    Pastilla, entregado; sale sola al volver la señal. Un día que ya terminó no se entrega, igual que con señal.
+    **Límite:** `POST /api/v1/spirit-audio/submit` del backend solo recibe `day` y `summaryText` (no `hechoEn` ni
+    `idCliente`), así que el servidor la registra con la hora en que llega: si llega pasado el mediodía cuenta como tardía, y
+    si llega otro día la rechaza (queda marcada en la cola con su motivo). Para no mandarla dos veces: una sola entrega por día
+    en la cola, y el 409 «ya se registró (ENVIADO)» de un reintento se da por entregada. Llevar la hora real a ese endpoint es
+    trabajo del backend, aparte.
+  * **Comunidad → Tabla (ranking):** sin señal dice «Necesitas conexión para usar esto» en vez de un hueco, y se carga solo
+    al volver la señal.
+  * **No cambian:** el Código Renaser con señal, la Clase diaria (sigue pidiendo conexión), el resto de Comunidad.
+  * **Pruebas:** `src/features/radar/__tests__/radarSinSenal.test.ts`, `src/features/sinRed/__tests__/pastillaSinRed.test.ts`
+    y `src/features/sinRed/__tests__/rankingSinSenal.test.ts`. Solo JavaScript: no hace falta APK nuevo ni cambio en el backend.

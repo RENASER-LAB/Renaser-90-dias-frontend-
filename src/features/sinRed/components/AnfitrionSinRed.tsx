@@ -11,6 +11,8 @@ import { useAuth } from '../../auth/context/AuthContext';
 import '../../habits/api/evidenciaHabitoApi';
 // Spec 048 fase 2: el de la publicación del Muro escrita sin señal.
 import '../../community/api/publicarSinRed';
+// El de la Pastilla Renacer entregada sin señal.
+import '../../spirit/api/pastillaSinRed';
 import { leerCola, ponerCuentaActual, procesarCola, suscribirCola } from '../colaSinRed';
 import { alVolverLaConexion, sinConexionDesdeMs, suscribirConexion } from '../estadoDeConexion';
 import { cargarAnclaGuardada } from '../horaReal';
