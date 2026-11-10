@@ -148,10 +148,11 @@ describe('quién llena el parámetro: solo quien ve todas y eligió una', () => 
     expect(formacionDeLaLectura()).toBeNull();
   });
 
-  it('Administración la tiene solo después de elegir', () => {
+  it('#169: Administración siempre la tiene: antes de leer lo recordado no, después la por defecto y luego la elegida', () => {
     prepararLaFormacionDeLaComunidad('admin-1', true);
-    fijarLaEleccionRecordada('admin-1', null);
     expect(formacionDeLaLectura()).toBeNull();
+    fijarLaEleccionRecordada('admin-1', null);
+    expect(formacionDeLaLectura()).toBe('ESCUELA');
     elegirFormacionDeLaComunidad('CERTIFICACION');
     expect(formacionDeLaLectura()).toBe('CERTIFICACION');
   });

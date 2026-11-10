@@ -85,11 +85,22 @@ function cambiar(nuevo: EstadoDeLaCarrera | null, ahora: number, guardarYa = fal
  * Lee del teléfono la carrera sin terminar de esta cuenta (FR-006). Si el proceso estuvo muerto, queda en pausa sin contar ese
  * tiempo. La carrera de otra cuenta no se toca ni se muestra.
  */
-export async function cargarCarrera(cuentaId: string, ahora = Date.now()): Promise<EstadoDeLaCarrera | null> {
+export async function cargarCarrera(
+  cuentaId: string,
+  ahora = Date.now(),
+  opciones: { desdeLaTareaDelGps?: boolean } = {},
+): Promise<EstadoDeLaCarrera | null> {
   if (estado && estado.cuentaId === cuentaId) return estado;
   const guardada = await leerCarreraEnCurso();
   cargaHecha = true;
   if (!guardada || guardada.cuentaId !== cuentaId) return null;
+  // #172: si la levanta la tarea del GPS (el sistema mató el proceso pero el GPS siguió), la carrera nunca se detuvo: el rato sin
+  // latidos es un hueco de GPS (lo resuelve el motor con el punto siguiente), no una pausa. Antes quedaba en pausa y se descartaba
+  // todo lo que venía hasta abrir la app y tocar «Seguir».
+  if (opciones.desdeLaTareaDelGps) {
+    cambiar(guardada, ahora, true);
+    return guardada;
+  }
   const { estado: retomada } = retomarTrasReabrir(guardada, ahora);
   cambiar(retomada, ahora, true);
   return retomada;

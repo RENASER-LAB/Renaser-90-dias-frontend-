@@ -56,16 +56,16 @@ afterEach(() => {
 });
 
 describe('las opciones del selector', () => {
-  it('«Todas» y las formaciones que manda el servidor, sin el «Renaser» del final', () => {
-    expect(opcionesDelSelector(LAS_TRES).map(o => o.etiqueta)).toEqual(['Todas', 'Escuela', 'Diplomado', 'Certificación']);
-    expect(opcionesDelSelector(LAS_TRES).map(o => o.valor)).toEqual(['todas', 'ESCUELA', 'DIPLOMADO', 'CERTIFICACION']);
-    expect(opcionesDelSelector(LAS_TRES)[2].nombreCompleto).toBe('Diplomado Renaser');
+  it('#169: solo las formaciones que manda el servidor (sin «Todas»), sin el «Renaser» del final', () => {
+    expect(opcionesDelSelector(LAS_TRES).map(o => o.etiqueta)).toEqual(['Escuela', 'Diplomado', 'Certificación']);
+    expect(opcionesDelSelector(LAS_TRES).map(o => o.valor)).toEqual(['ESCUELA', 'DIPLOMADO', 'CERTIFICACION']);
+    expect(opcionesDelSelector(LAS_TRES)[1].nombreCompleto).toBe('Diplomado Renaser');
   });
 
   it('un nombre que Administración cambió se respeta, y sin lista usa las tres de fábrica', () => {
-    expect(opcionesDelSelector([{ codigo: 'DIPLOMADO', nombre: 'Diplomado Premium' }]).map(o => o.etiqueta)).toEqual(['Todas', 'Diplomado Premium']);
-    expect(opcionesDelSelector([]).map(o => o.etiqueta)).toEqual(['Todas', 'Escuela', 'Diplomado', 'Certificación']);
-    expect(opcionesDelSelector(null)).toHaveLength(4);
+    expect(opcionesDelSelector([{ codigo: 'DIPLOMADO', nombre: 'Diplomado Premium' }]).map(o => o.etiqueta)).toEqual(['Diplomado Premium']);
+    expect(opcionesDelSelector([]).map(o => o.etiqueta)).toEqual(['Escuela', 'Diplomado', 'Certificación']);
+    expect(opcionesDelSelector(null)).toHaveLength(3);
     expect(nombreSinRenaser('Escuela Renaser')).toBe('Escuela');
     expect(nombreSinRenaser('Renaser')).toBe('Renaser');
   });
@@ -83,24 +83,22 @@ describe('las opciones del selector', () => {
 });
 
 describe('el selector de formación de la Comunidad', () => {
-  it('quien ve todas lo ve: cuatro opciones, «Todas» elegida al principio', () => {
+  it('#169: quien ve todas lo ve con tres opciones (sin «Todas»), la primera elegida si no había nada recordado', () => {
     prepararLaFormacionDeLaComunidad('admin-1', true, { disponibles: LAS_TRES });
     fijarLaEleccionRecordada('admin-1', null);
     montar(React.createElement(SelectorDeFormacionDeLaComunidad));
-    expect(textos(raiz!)).toEqual(['Todas', 'Escuela', 'Diplomado', 'Certificación']);
-    expect(botones(raiz!).map(b => b.props.accessibilityState.selected)).toEqual([true, false, false, false]);
-    expect(botones(raiz!).map(b => b.props.accessibilityLabel)).toEqual(['Todas las formaciones', 'Escuela Renaser', 'Diplomado Renaser', 'Certificación Renaser']);
+    expect(textos(raiz!)).toEqual(['Escuela', 'Diplomado', 'Certificación']);
+    expect(botones(raiz!).map(b => b.props.accessibilityState.selected)).toEqual([true, false, false]);
+    expect(botones(raiz!).map(b => b.props.accessibilityLabel)).toEqual(['Escuela Renaser', 'Diplomado Renaser', 'Certificación Renaser']);
   });
 
-  it('tocar una formación la elige en el estado de la Comunidad; «Todas» la suelta', () => {
+  it('tocar una formación la elige en el estado de la Comunidad', () => {
     prepararLaFormacionDeLaComunidad('admin-1', true, { disponibles: LAS_TRES });
     fijarLaEleccionRecordada('admin-1', null);
     montar(React.createElement(SelectorDeFormacionDeLaComunidad));
     act(() => botones(raiz!)[2].props.onPress());
-    expect(estadoDeLaFormacionDeLaComunidad().eleccion).toBe('DIPLOMADO');
-    expect(botones(raiz!).map(b => b.props.accessibilityState.selected)).toEqual([false, false, true, false]);
-    act(() => botones(raiz!)[0].props.onPress());
-    expect(estadoDeLaFormacionDeLaComunidad().eleccion).toBeNull();
+    expect(estadoDeLaFormacionDeLaComunidad().eleccion).toBe('CERTIFICACION');
+    expect(botones(raiz!).map(b => b.props.accessibilityState.selected)).toEqual([false, false, true]);
   });
 
   it('el aprendiz, el mentor y el líder no ven nada: ni un segmento ni la palabra «formación»', () => {
@@ -113,22 +111,15 @@ describe('el selector de formación de la Comunidad', () => {
 });
 
 describe('el rótulo de formación de una fila', () => {
-  it('solo cuando se lee «Todas»: el nombre corto en un chip', () => {
+  it('#169: con una formación siempre elegida (ya no hay «Todas») el rótulo no hace falta: no se dibuja', () => {
     prepararLaFormacionDeLaComunidad('admin-1', true, { disponibles: LAS_TRES });
     fijarLaEleccionRecordada('admin-1', null);
-    montar(React.createElement(RotuloDeFormacion, { formation: 'DIPLOMADO' }));
-    expect(textos(raiz!)).toEqual(['Diplomado']);
-    expect(conProps(raiz!, { accessibilityLabel: 'Formación: Diplomado Renaser' })).toBeTruthy();
-  });
-
-  it('con una formación elegida ya no hace falta: no se dibuja', () => {
-    prepararLaFormacionDeLaComunidad('admin-1', true, { disponibles: LAS_TRES });
-    fijarLaEleccionRecordada('admin-1', null);
-    elegirFormacionDeLaComunidad('DIPLOMADO');
     montar(React.createElement(RotuloDeFormacion, { formation: 'DIPLOMADO' }));
     expect(sinNada(raiz!)).toBe(true);
-    act(() => elegirFormacionDeLaComunidad(null)); // volver a «Todas»: reaparece
-    expect(textos(raiz!)).toEqual(['Diplomado']);
+    act(() => elegirFormacionDeLaComunidad('DIPLOMADO'));
+    expect(sinNada(raiz!)).toBe(true);
+    act(() => elegirFormacionDeLaComunidad(null)); // una elección vacía no vuelve a «Todas»
+    expect(sinNada(raiz!)).toBe(true);
   });
 
   it('para las demás cuentas nunca se dibuja, y una fila sin formación (o con un valor raro) tampoco', () => {

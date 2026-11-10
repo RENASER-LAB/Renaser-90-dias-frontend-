@@ -71,8 +71,8 @@ export function definirTareaDeLaCarrera(): void {
       if (!carreraActual()) {
         const guardada = await leerCarreraEnCurso();
         if (!guardada) return;
-        // Proceso nuevo sin la pantalla: se carga tal cual; al abrir la app, `cargarCarrera` decide si estuvo muerta.
-        await cargarCarrera(guardada.cuentaId);
+        // Proceso nuevo sin la pantalla, levantado por el GPS: la carrera siguió (#172), el rato sin latidos es un hueco y no una pausa.
+        await cargarCarrera(guardada.cuentaId, Date.now(), { desdeLaTareaDelGps: true });
       }
       const puntos = puntosDeLaUbicacion(locations);
       // Solo para dónde mira el mapa (también en la cuenta 3, 2, 1, cuando el motor descarta el punto por estar en pausa).

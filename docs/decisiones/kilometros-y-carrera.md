@@ -292,3 +292,15 @@ llame al servidor a cada rato y que nada se duplique**, y **«el avatar debe ref
   dibuja una Polyline dorada por segmento (#B2924F, 6); entre segmentos no hay nada tras un corte `'pausa'`, y tras `'hueco'` un conector punteado y tenue (3, `[6, 8]`, dorado al 50 %)
   para que se vea que es una estimación. No cambian la distancia, las notificaciones, el envío al servidor (ignora `corte`) ni la cámara 2D/3D. Pruebas: `cortesDeLaRuta`,
   `segmentosDeLaRuta`, `rutaPorSegmentos`. Hace falta un APK nuevo (solo JavaScript). Sin comprobar en el teléfono.
+
+## Corrección — 2026-11-10 — Kilómetros diarios: una caminata normal cuenta (#172)
+
+El dueño reportó que «Kilómetros diarios» no grababa bien o no notaba las caminatas. Causas leídas en el código y corregidas (sin cambiar
+lo que se ve):
+* **Caminar contaba como estar quieta.** La regla era «se mueve si en 10 s avanzó más que 1,5 × la precisión»: con 10 m de precisión había
+  que ir a más de 5,4 km/h. Ahora también se mueve si la **velocidad que mide el GPS** (mediana de los últimos puntos) llega a 0,6 m/s y el
+  avance pasa un margen menor (4 m o media precisión). Parada, con el GPS que tiembla, sigue sin sumar.
+* **El sistema mataba la app a mitad de camino y la carrera quedaba en pausa.** Si la levanta la tarea del GPS, la carrera sigue (el rato
+  sin latidos es un hueco de GPS); solo queda en pausa cuando la abre la persona tras tenerla muerta.
+* **Los pasos recientes** cuentan 10 s en vez de 3 s (el sensor los entrega en tandas).
+Pruebas: `motorDeCarrera.test.ts` (#172) y `carreraLevantadaPorElGps.test.ts`. Falta confirmarlo caminando con un teléfono real.
