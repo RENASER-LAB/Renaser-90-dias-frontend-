@@ -17,7 +17,7 @@ import { formacionTolerante } from '../../formaciones/api/formacionTolerante';
  * `passthrough()` a propósito: que el backend agregue campos nuevos no debe romper la app.
  */
 
-const wallMediaSchema = z.object({ url: z.string(), mimeType: z.string() }).passthrough();
+const wallMediaSchema = z.object({ url: z.string(), mimeType: z.string(), thumbnailUrl: z.string().nullish() }).passthrough();
 
 export const wallPostSchema = z
   .object({

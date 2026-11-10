@@ -9,7 +9,8 @@ export const LINEAS_DE_LA_FILA = 3;
 /** Lo que dibuja una fila compacta del Muro (estilo Skool), sin React: se prueba aparte. */
 export type VistaDeLaFilaCompacta = {
   /** La PRIMERA foto de la publicación (o `null` si no tiene fotos: el texto usa todo el ancho). */
-  miniatura: { url: string; mimeType: string; titulo: string } | null;
+  /** `url` es la miniatura si la hay (spec 049); `respaldo`, la foto completa, por si la miniatura todavía no existe. */
+  miniatura: { url: string; respaldo: string; mimeType: string; titulo: string } | null;
   /** Cuántas fotos más hay además de la miniatura (la chapa «+N»). 0 = sin chapa. */
   fotosDeMas: number;
   /** Cuántos comentarios tiene: el conteo del servidor o los ya leídos, el mayor. */
@@ -30,7 +31,9 @@ export function vistaDeLaFilaCompacta(
 ): VistaDeLaFilaCompacta {
   const primera = post.media[0];
   return {
-    miniatura: primera ? { url: primera.url, mimeType: primera.mimeType, titulo: primera.title } : null,
+    miniatura: primera
+      ? { url: primera.miniaturaUrl ?? primera.url, respaldo: primera.url, mimeType: primera.mimeType, titulo: primera.title }
+      : null,
     fotosDeMas: Math.max(0, post.media.length - 1),
     comentarios: cantidadDeComentarios(post),
   };

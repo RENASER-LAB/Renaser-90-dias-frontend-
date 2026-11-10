@@ -20,6 +20,7 @@ import { aplicarReaccion, mapearComentario, mapearPublicacion } from '../api/wal
 import { escucharMuroModerado } from '../events/muroModerado';
 import type { WallReactionType } from '../types/community.types';
 import { fusionarPrimeraPagina } from '../utils/moderacionDelMuro';
+import { adelantarMiniaturas } from '../utils/adelantarMiniaturas';
 import type { FotoMuroNormalizada } from '../utils/normalizarImagen';
 
 /**
@@ -75,6 +76,7 @@ export function useWallFeed() {
     setError(null);
     try {
       const pagina = await wallApi.obtenerFeedMuro(undefined, undefined, formacionDeLaLectura());
+      adelantarMiniaturas(pagina.posts); // spec 049: las fotos de arriba empiezan a bajar antes de dibujarse
       setPosts(pagina.posts.map(mapearPublicacion));
       setCursor(pagina.nextCursor);
     } catch (e) {
@@ -102,6 +104,7 @@ export function useWallFeed() {
     setCargandoMas(true);
     try {
       const pagina = await wallApi.obtenerFeedMuro(cursor, undefined, formacionDeLaLectura());
+      adelantarMiniaturas(pagina.posts);
       setPosts(prev => {
         const yaEstan = new Set(prev.map(p => p.id));
         const nuevos = pagina.posts.map(mapearPublicacion).filter(p => !yaEstan.has(p.id));

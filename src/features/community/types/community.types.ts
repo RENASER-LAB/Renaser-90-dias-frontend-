@@ -17,6 +17,8 @@ export type WallReactionType = 'LIKE' | 'DISLIKE';
 export interface WallMedia {
   url: string;
   mimeType: string;
+  /** Spec 049: la miniatura firmada (480 px, la arma la Lambda). `null`/ausente: video, foto vieja o servidor anterior. */
+  thumbnailUrl?: string | null;
 }
 
 export interface WallPost {

@@ -897,3 +897,11 @@ son un montón en el Muro». Lo que cambia y nada más:
 * **La causa del bug, cerrada:** al refrescarse el perfil la sesión llega un instante sin formación; eso ya no borra lo elegido
   (`prepararLaFormacionDeLaComunidad`), y lo último elegido queda en memoria para que una relectura de lo recordado nunca traiga algo más viejo
   que la escritura que todavía va por detrás.
+## Cambio por pedido del dueño — 2026-11-10 — Muro: fotos rápidas con miniatura (spec 049)
+
+El dueño pidió que las fotos del Muro carguen «como las redes sociales» y eligió que una Lambda en AWS arme la miniatura. Sin cambios
+visibles de diseño:
+* La fila del Muro dibuja `thumbnailUrl` (WebP de 480 px que arma la Lambda) en vez de la foto completa; si la miniatura todavía no
+  existe o la foto es vieja, cae a la completa (`FotoMuro.urlRespaldo`). La publicación abierta sigue con la completa.
+* Al llegar cada página del Muro se adelantan sus primeras 8 fotos por el mismo camino de caché (`adelantarMiniaturas`, con
+  `Image.loadAsync` y la misma `cacheKey`; `Image.prefetch` no sirve porque guarda con otra clave).
