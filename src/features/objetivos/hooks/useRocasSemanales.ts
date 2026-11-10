@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { ApiError } from '../../../services/http/apiClient';
 import { usePlazoDeLaSesion } from '../../formaciones/hooks/usePlazoDeLaSesion';
+import { alTerminarEnvioDe } from '../../sinRed/escrituraSinRed';
 import { mensajeDeObjetivos } from '../utils/mensajeDeObjetivos';
 import * as objetivosApi from '../api/objetivosApi';
 import type {
@@ -54,6 +55,9 @@ export interface RocaSemanalDeEje {
  */
 export function useRocasSemanales(maestras: RocaMaestraApi[], semana?: number, activo = true) {
   const [rocas, setRocas] = useState<RocaSemanalApi[]>([]);
+  /** Lo que se ve ahora, para que editar o cerrar sin señal muestre lo pedido sobre la roca que ya estaba (spec 048 fase 3). */
+  const rocasRef = useRef(rocas);
+  rocasRef.current = rocas;
   const [cargando, setCargando] = useState(activo);
   const [bloqueada, setBloqueada] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -93,6 +97,9 @@ export function useRocasSemanales(maestras: RocaMaestraApi[], semana?: number, a
     void cargar();
   }, [cargar]);
 
+  /* Spec 048 fase 3: lo escrito sin señal sale de la cola (llegó, o el servidor no lo aplicó): se vuelve a leer. */
+  useEffect(() => alTerminarEnvioDe('plan', () => void cargar()), [cargar]);
+
   /** El eje de cada roca, resuelto contra las maestras. Sin maestras cargadas, lista vacía. */
   const porEje = useMemo<RocaSemanalDeEje[]>(() => {
     const ejePorMaestra = new Map(maestras.map(m => [m.id, m.eje]));
@@ -127,7 +134,7 @@ export function useRocasSemanales(maestras: RocaMaestraApi[], semana?: number, a
   const planificar = useCallback(async (items: ItemPlanSemanal[]) => {
     setGuardando(true);
     try {
-      setRocas(await objetivosApi.crearPlanSemanal(items));
+      setRocas(await objetivosApi.crearPlanSemanal(items, { maestras, semana }));
       setBloqueada(false);
       return { ok: true as const };
     } catch (e) {
@@ -151,7 +158,7 @@ export function useRocasSemanales(maestras: RocaMaestraApi[], semana?: number, a
     } finally {
       setGuardando(false);
     }
-  }, [cargar]);
+  }, [cargar, maestras, semana]);
 
   const reemplazar = useCallback((guardada: RocaSemanalApi) => {
     setRocas(previas => previas.map(r => (r.id === guardada.id ? guardada : r)));
@@ -161,7 +168,7 @@ export function useRocasSemanales(maestras: RocaMaestraApi[], semana?: number, a
   const editar = useCallback(async (id: string, edicion: EdicionRocaSemanal) => {
     setGuardando(true);
     try {
-      reemplazar(await objetivosApi.editarRocaSemanal(id, edicion));
+      reemplazar(await objetivosApi.editarRocaSemanal(id, edicion, rocasRef.current.find(r => r.id === id)));
       return { ok: true as const };
     } catch (e) {
       if (e instanceof ApiError && e.esProhibido) {
@@ -181,7 +188,7 @@ export function useRocasSemanales(maestras: RocaMaestraApi[], semana?: number, a
   const cerrar = useCallback(async (id: string, cierre: CierreRocaSemanal) => {
     setGuardando(true);
     try {
-      reemplazar(await objetivosApi.cerrarSemana(id, cierre));
+      reemplazar(await objetivosApi.cerrarSemana(id, cierre, rocasRef.current.find(r => r.id === id)));
       return { ok: true as const };
     } catch (e) {
       return { ok: false as const, mensaje: mensajeDeObjetivos(e, 'No pudimos guardar tu revisión.') };

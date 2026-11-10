@@ -4,7 +4,9 @@ import {
   subirArchivoAS3,
 } from '../../habits/api/evidenciaHabitoApi';
 import type { ArchivoEvidencia } from '../../habits/utils/capturarEvidencia';
+import { ApiError } from '../../../services/http/apiClient';
 import { registrarEvidenciaRoca, solicitarUrlSubidaEvidenciaRoca } from '../api/objetivosApi';
+import { AVISO_TODAVIA_NO_LLEGO, encolarAccionMarcada, estaEnEspera } from '../api/planSinRed';
 
 /**
  * Cierra una acción del día con su evidencia. Devuelve los puntos que otorgó el servidor.
@@ -28,36 +30,47 @@ export async function sellarRocaDiaria(
   datos: { archivo: Pick<ArchivoEvidencia, 'uri' | 'mimeType' | 'tipo' | 'tomadaEn'> | null; texto: string }
 ): Promise<number> {
   const { archivo, texto } = datos;
+  // Spec 048 fase 3 (P6): una acción agendada sin señal todavía no tiene su `id` del servidor; no se marca hasta que llegue.
+  if (estaEnEspera(rocaId)) throw new Error(AVISO_TODAVIA_NO_LLEGO);
   let bucket: string | null = null;
   let rutaStorage: string | null = null;
 
-  if (archivo) {
-    // Ley VI: una FOTO tiene que traer cuándo fue tomada, y el servidor lo compara con el instante
-    // de subida (±15 min). El backend rechaza el null con un 400 correcto pero ilegible para el
-    // aprendiz ("timestampExif es obligatorio..."), así que se corta acá diciendo qué hacer.
-    if (archivo.tipo === 'FOTO' && !archivo.tomadaEn) {
-      throw new Error(
-        'Esta imagen no guarda la fecha en que fue tomada, y tus acciones del día la necesitan como prueba. Saca la foto con la cámara desde aquí, o deja tu evidencia por escrito.'
-      );
-    }
-    const url = await solicitarUrlSubidaEvidenciaRoca(rocaId, archivo.mimeType);
-    if (almacenamientoSinConfigurar(url.uploadUrl)) {
-      throw new Error(ALMACENAMIENTO_SIN_CONFIGURAR);
-    }
-    await subirArchivoAS3(url.uploadUrl, archivo.uri, archivo.mimeType);
-    bucket = url.bucket;
-    rutaStorage = url.ruta;
+  // Ley VI: una FOTO tiene que traer cuándo fue tomada, y el servidor lo compara con el instante
+  // de subida (±15 min). El backend rechaza el null con un 400 correcto pero ilegible para el
+  // aprendiz ("timestampExif es obligatorio..."), así que se corta acá diciendo qué hacer.
+  if (archivo && archivo.tipo === 'FOTO' && !archivo.tomadaEn) {
+    throw new Error(
+      'Esta imagen no guarda la fecha en que fue tomada, y tus acciones del día la necesitan como prueba. Saca la foto con la cámara desde aquí, o deja tu evidencia por escrito.'
+    );
   }
+  try {
+    if (archivo) {
+      const url = await solicitarUrlSubidaEvidenciaRoca(rocaId, archivo.mimeType);
+      if (almacenamientoSinConfigurar(url.uploadUrl)) {
+        throw new Error(ALMACENAMIENTO_SIN_CONFIGURAR);
+      }
+      await subirArchivoAS3(url.uploadUrl, archivo.uri, archivo.mimeType);
+      bucket = url.bucket;
+      rutaStorage = url.ruta;
+    }
 
-  const roca = await registrarEvidenciaRoca(rocaId, {
-    tipo: archivo ? archivo.tipo : 'TEXTO',
-    bucket,
-    rutaStorage,
-    contenidoTexto: texto || null,
-    timestampExif: archivo?.tomadaEn ?? null,
-  });
-  await dejarDeRepetirLaAccion(rocaId);
-  return roca.puntosOtorgados;
+    const roca = await registrarEvidenciaRoca(rocaId, {
+      tipo: archivo ? archivo.tipo : 'TEXTO',
+      bucket,
+      rutaStorage,
+      contenidoTexto: texto || null,
+      timestampExif: archivo?.tomadaEn ?? null,
+    });
+    await dejarDeRepetirLaAccion(rocaId);
+    return roca.puntosOtorgados;
+  } catch (error) {
+    // Spec 048 fase 3 (FR-019): sin señal se guarda con la hora real (la foto, en la carpeta sin red) y sale hecha al instante: sus
+    // alarmas se apagan ya; los puntos salen con la respuesta del servidor al llegar.
+    if (!(error instanceof ApiError && error.esDeRed)) throw error;
+    const puntos = await encolarAccionMarcada(rocaId, archivo, texto, error);
+    await dejarDeRepetirLaAccion(rocaId);
+    return puntos;
+  }
 }
 
 /**

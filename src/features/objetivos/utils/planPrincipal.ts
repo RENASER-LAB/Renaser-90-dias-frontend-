@@ -1,4 +1,5 @@
 import type { Palette } from '../../../theme/tokens';
+import { TEXTO_SE_GUARDARA } from './accionEnEspera';
 import { minutosDeLaHora } from '../../training/utils/listaDelDia';
 import type { ColorPareto, RocaDiariaApi, RocaMaestraApi } from '../types/objetivos.types';
 import { formatearNumero } from './cifraDelObjetivo';
@@ -49,11 +50,13 @@ const DIAS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 
 /** «Mar 27 oct · 09:00»; sin hora, «Mar 27 oct». `fecha` es `yyyy-MM-dd` (una fecha de calendario: se lee en UTC para que el huso no la corra). */
-export function etiquetaDeLaAccion(roca: Pick<RocaDiariaApi, 'fecha' | 'horaInicio'>): string {
+export function etiquetaDeLaAccion(roca: Pick<RocaDiariaApi, 'fecha' | 'horaInicio'> & { pendienteDeEnvio?: boolean }): string {
   const fecha = new Date(`${roca.fecha}T00:00:00Z`);
   const dia = Number.isNaN(fecha.getTime()) ? roca.fecha : `${DIAS[fecha.getUTCDay()]} ${fecha.getUTCDate()} ${MESES[fecha.getUTCMonth()]}`;
   const hora = minutosDeLaHora(roca.horaInicio) === null ? null : (roca.horaInicio as string).slice(0, 5);
-  return hora ? `${dia} · ${hora}` : dia;
+  const base = hora ? `${dia} · ${hora}` : dia;
+  // Spec 048 fase 3 (P6): agendada sin señal, todavía no llegó al servidor y no se puede marcar hasta que llegue.
+  return roca.pendienteDeEnvio ? `${base} · ${TEXTO_SE_GUARDARA}` : base;
 }
 
 /** Un espacio que no deja partir el renglón: la etiqueta, la cifra y la unidad van juntas. */

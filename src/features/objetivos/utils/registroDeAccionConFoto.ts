@@ -8,6 +8,7 @@ import {
   type ResultadoDelRegistro,
 } from '../../habits/utils/registroConFoto';
 import { obtenerRocasDeHoy } from '../api/objetivosApi';
+import { AVISO_TODAVIA_NO_LLEGO, TEXTO_SE_GUARDARA, estaEnEspera } from './accionEnEspera';
 import type { RocaDiariaApi } from '../types/objetivos.types';
 import { sellarRocaDiaria } from './sellarRocaDiaria';
 
@@ -95,6 +96,8 @@ export async function avisoDeAccionBloqueada(
   rocaId: string,
   deps: Pick<DependenciasDeLaAccion, 'rocasDeHoy'> = DEPENDENCIAS,
 ): Promise<{ titulo: string; mensaje: string } | null> {
+  // Spec 048 fase 3 (P6): una acción agendada sin señal todavía no llegó al servidor: no se marca hasta que llegue.
+  if (estaEnEspera(rocaId)) return { titulo: TEXTO_SE_GUARDARA, mensaje: AVISO_TODAVIA_NO_LLEGO };
   let rocas: RocaDiariaApi[];
   try {
     rocas = await deps.rocasDeHoy();

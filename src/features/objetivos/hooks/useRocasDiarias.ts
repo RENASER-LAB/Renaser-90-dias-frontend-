@@ -1,7 +1,9 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 
 import { ApiError } from '../../../services/http/apiClient';
+import { alTerminarEnvioDe } from '../../sinRed/escrituraSinRed';
+import { alTerminarUnEnvio } from '../../sinRed/colaSinRed';
 import { mensajeDeObjetivos } from '../utils/mensajeDeObjetivos';
 import * as objetivosApi from '../api/objetivosApi';
 import type { EjeObjetivo, ItemPlanDiario, RocaDiariaApi } from '../types/objetivos.types';
@@ -66,6 +68,16 @@ export function useRocasDiarias() {
       void cargar();
     }, [cargar]),
   );
+
+  /* Spec 048 fase 3: lo agendado o marcado sin señal sale de la cola (llegó, o el servidor no lo aplicó): se vuelve a leer. */
+  useEffect(() => {
+    const quitarPlan = alTerminarEnvioDe('plan', () => void cargar());
+    const quitarAcciones = alTerminarUnEnvio(envio => envio.tipo === 'completarAccion' && void cargar());
+    return () => {
+      quitarPlan();
+      quitarAcciones();
+    };
+  }, [cargar]);
 
   /**
    * Qué fecha se propone. **Es una propuesta del dispositivo, no la verdad.**

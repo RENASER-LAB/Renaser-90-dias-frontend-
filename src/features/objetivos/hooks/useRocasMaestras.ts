@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { usePlazoDeLaSesion } from '../../formaciones/hooks/usePlazoDeLaSesion';
+import { alTerminarEnvioDe } from '../../sinRed/escrituraSinRed';
 import { mensajeDeObjetivos } from '../utils/mensajeDeObjetivos';
 import * as objetivosApi from '../api/objetivosApi';
 import { esRocaMaestraFija } from '../utils/objetivoFijo';
@@ -27,6 +28,9 @@ export type ResultadoDeConfirmar =
  */
 export function useRocasMaestras() {
   const [rocas, setRocas] = useState<RocaMaestraApi[]>([]);
+  /** Lo que se ve ahora, para mostrar lo pedido sobre la roca que ya estaba cuando se guarda sin señal (spec 048 fase 3). */
+  const rocasRef = useRef(rocas);
+  rocasRef.current = rocas;
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
@@ -51,6 +55,9 @@ export function useRocasMaestras() {
     void cargar();
   }, [cargar]);
 
+  /* Spec 048 fase 3: lo escrito sin señal sale de la cola (llegó, o el servidor no lo aplicó): se vuelve a leer. */
+  useEffect(() => alTerminarEnvioDe('plan', () => void cargar()), [cargar]);
+
   /**
    * Define el objetivo de un eje la primera vez, o anota su avance si ya estaba. Devuelve `ok`.
    *
@@ -70,7 +77,7 @@ export function useRocasMaestras() {
   const definir = useCallback(async (eje: EjeObjetivo, definicion: DefinicionRocaMaestra) => {
     setGuardando(true);
     try {
-      const guardada = await objetivosApi.definirRocaMaestra(eje, definicion);
+      const guardada = await objetivosApi.definirRocaMaestra(eje, definicion, rocasRef.current.find(r => r.eje === eje));
       setRocas(previas => {
         const sinEseEje = previas.filter(r => r.eje !== eje);
         return [...sinEseEje, guardada];
