@@ -608,3 +608,11 @@ el mismo en 1.5.0, 1.6.0 y 1.7.1. Lo que cambia y nada más (solo JavaScript: `e
   entrega y queda `COMPLETADO`.
 * **Pruebas:** `reducirFoto` (carga achicada, reintentos, error final, `release`, web) y `elegirFotoCuadrada` (ajustada).
 * **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
+
+## Cambio por pedido del dueño — 2026-11-10 — Entrenar pide primero lo esencial
+
+Al abrir Entrenar salían 10 pedidos juntos (12 en los primeros 5 s). El dueño eligió «primero lo esencial»; sin cambios visibles:
+* **Primera tanda** (dibuja la lista): hábitos, preferencias, desbloqueos, el día (`today/snapshot`), las acciones de hoy y el Día N
+  (`home`). Sale `cargarEntrenamiento`, ahora con 5 pedidos.
+* **Segunda tanda**, apenas la lista está: la evidencia de las acciones (`cargarEvidenciasDeRocas`; mientras llega, el sello de antes,
+  así un refresco no parpadea), el estado de la Pastilla (`useEspiritu({ esperar })`) y los eventos de la semana.
