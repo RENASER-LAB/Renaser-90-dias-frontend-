@@ -19,7 +19,7 @@ export type OpcionDelSelectorDeLaComunidad = {
 };
 
 /**
- * «Todas» y las formaciones que manda el servidor (`disponibles`, con los nombres que Administración les puso). Si el servidor no las
+ * Las formaciones que manda el servidor (`disponibles`, con los nombres que Administración les puso). Si el servidor no las
  * mandó (no debería pasar para quien ve todas), se usan las tres de fábrica: el selector nunca queda vacío.
  */
 export function opcionesDelSelector(disponibles: readonly OpcionDeFormacion[] | null | undefined): OpcionDelSelectorDeLaComunidad[] {
@@ -28,10 +28,8 @@ export function opcionesDelSelector(disponibles: readonly OpcionDeFormacion[] | 
     delServidor.length > 0
       ? [...delServidor]
       : CODIGOS_DE_FORMACION.map(codigo => ({ codigo, nombre: nombreLargoDeFormacion(codigo) }));
-  return [
-    { valor: VALOR_TODAS, etiqueta: 'Todas', nombreCompleto: 'Todas las formaciones' },
-    ...formaciones.map(o => ({ valor: o.codigo, etiqueta: nombreSinRenaser(o.nombre), nombreCompleto: o.nombre })),
-  ];
+  // #169 (decisión del dueño, 10/11): sin «Todas». Quien ve todas mira una formación a la vez: el Muro no pide las de todas juntas.
+  return formaciones.map(o => ({ valor: o.codigo, etiqueta: nombreSinRenaser(o.nombre), nombreCompleto: o.nombre }));
 }
 
 /** Del valor del control al estado (`null` = Todas) y de vuelta. */

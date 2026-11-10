@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { SoloConConexion } from '../../sinRed/components/SoloConConexion';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -75,6 +76,7 @@ export function MiIngresoScreen({
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
       <CabeceraAdmin titulo="Mi ingreso" onVolver={onVolver} />
+      <SoloConConexion>
       <ScrollView
         {...barraAlDesplazar}
         style={{ flex: 1 }}
@@ -158,6 +160,7 @@ export function MiIngresoScreen({
           </>
         )}
       </ScrollView>
+      </SoloConConexion>
     </SafeAreaView>
   );
 }

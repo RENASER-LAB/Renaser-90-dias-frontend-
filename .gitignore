@@ -76,4 +76,7 @@ PROGRESO.md
 arnes.perfil.yaml
 funcionalidades.json
 .claude/
-.specify/
+.specify
+
+# Bloqueo de skills de cada desarrollador: no va al repo (2026-11-09).
+skills-lock.json

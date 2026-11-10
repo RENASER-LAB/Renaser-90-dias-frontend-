@@ -155,7 +155,8 @@ describe('las pantallas grandes tapan con el aviso (código)', () => {
     const comunidad = leer('src/screens/ComunidadScreen.tsx');
     expect(comunidad).toMatch(/useFuncionalidad\(claveDeLaSeccionDeComunidad\(seccionActiva\)\)/);
     expect(comunidad).toMatch(/\{seccionActiva === 'muro' && seccionEnMantenimiento && \(\s*<SeccionEnMantenimiento/);
-    expect(comunidad).toMatch(/\{seccionActiva === 'muro' && !seccionEnMantenimiento && \(\s*<FlatList/);
+    // Spec 048 (FR-005): sin señal el Muro va dentro de `SoloConConexion`; sigue sin mostrarse en mantenimiento.
+    expect(comunidad).toMatch(/\{seccionActiva === 'muro' && !seccionEnMantenimiento && \(\s*(?:<SoloConConexion>\s*)?<FlatList/);
     expect(comunidad).toMatch(/\{publicarEnElMuro\.disponible && !publicarEnElMuro\.prendida \? <AvisoDeMantenimiento aviso=\{publicarEnElMuro\.aviso\} \/> : null\}/);
     expect(comunidad).toMatch(/\{seccionActiva === 'eventos' && !seccionEnMantenimiento && \(\s*<SeccionEventos/);
     expect(comunidad).toMatch(/\{seccionActiva === 'ranking' && !seccionEnMantenimiento && \(/);

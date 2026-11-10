@@ -1,4 +1,6 @@
 import { fuentes } from '../../../theme/fuentes';
+import { alVolverLaConexion } from '../../sinRed/estadoDeConexion';
+import { SoloConConexion } from '../../sinRed/components/SoloConConexion';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
@@ -178,6 +180,14 @@ export function RenasiaPanel({ agent, visible, onClose, contexto }: RenasiaPanel
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, chatDeSer.prendida]);
 
+  // Spec 048 (FR-005): el historial se lee en este hook, por fuera de `SoloConConexion`; al volver la señal hay que pedirlo de
+  // nuevo aquí (E2E 09/11: el cuerpo se volvía a montar pero se quedaba con el error de cuando no había red).
+  useEffect(() => {
+    if (!visible || !chatDeSer.prendida) return;
+    return alVolverLaConexion(() => void cargarHistorialInicial());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible, chatDeSer.prendida]);
+
   const handleEnviar = () => {
     const paraEnviar = texto;
     if (!paraEnviar.trim() || enviando) return;
@@ -220,6 +230,8 @@ export function RenasiaPanel({ agent, visible, onClose, contexto }: RenasiaPanel
           </Pressable>
         </View>
 
+        {/* Spec 048 (FR-005): sin señal, SER dice que necesita conexión y vuelve solo. */}
+        <SoloConConexion>
         {/*
           `behavior` va en las DOS plataformas desde 2026-09-17. Decia `undefined` en Android
           contando con que el sistema encogiera la ventana al abrir el teclado; con el modo
@@ -399,6 +411,7 @@ export function RenasiaPanel({ agent, visible, onClose, contexto }: RenasiaPanel
             <AvisoDeMantenimiento aviso={chatDeSer.aviso} />
           </ScrollView>
         )}
+        </SoloConConexion>
       </SafeAreaView>
 
       <RegistroConFotoModal {...registroConFoto.modal} />

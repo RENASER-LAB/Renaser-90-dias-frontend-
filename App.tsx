@@ -25,6 +25,7 @@ import { SincronizadorDeAcciones } from './src/features/objetivos/components/Sin
 import { SincronizadorDePagos } from './src/features/pagos/components/SincronizadorDePagos';
 import { AnfitrionDeCelebraciones } from './src/features/fenix/components/AnfitrionDeCelebraciones';
 import { AnfitrionDeLaCarrera } from './src/features/carrera/components/AnfitrionDeLaCarrera';
+import { AnfitrionSinRed } from './src/features/sinRed/components/AnfitrionSinRed';
 import { FormacionProvider } from './src/features/formaciones/context/FormacionContext';
 import { SincronizadorDeLaFormacionDeLaComunidad } from './src/features/formaciones/components/SincronizadorDeLaFormacionDeLaComunidad';
 import { FuncionalidadesProvider } from './src/features/plataforma/estado/FuncionalidadesProvider';
@@ -96,6 +97,9 @@ function Shell() {
       {/* La carrera con GPS (spec 042): la cuenta regresiva, «Corriendo», la pausa y «Terminaste», y la cola de envíos. Aca arriba
           para que la carrera siga a la vista aunque la persona cambie de pestaña; Training solo la pide. Solo Android. */}
       <AnfitrionDeLaCarrera />
+      {/* Spec 048: la cola de lo hecho sin señal (se envía sola) y el ícono discreto de «sin conexión». Aca arriba para que valga en
+          todas las pantallas. */}
+      <AnfitrionSinRed />
       {/* Dibuja los Alert en el build web, donde el Alert de react-native-web es un metodo vacio
           que nunca ejecuta los onPress de sus botones (E-144). En movil no pinta nada. */}
       <AnfitrionAlerta />

@@ -35,19 +35,20 @@ export type DatosEntrenamiento = {
  * degradan adentro de `cargarPlanHabitos`. Tracks y catálogo sí son imprescindibles: si fallan,
  * la promesa se rechaza y la pantalla muestra su error.
  */
+/**
+ * Lo esencial para dibujar Entrenar (pedido del dueño, 2026-11-10: «primero lo esencial»). La evidencia de las acciones (el sello
+ * de «hecha» con foto) NO va aquí: se pide justo después con {@link cargarEvidenciasDeRocas}, así la lista sale con un pedido menos
+ * en la primera tanda. `rocasConEvidencia` viene vacío; quien llama conserva el de antes hasta que llegue el nuevo.
+ */
 export async function cargarEntrenamiento(): Promise<DatosEntrenamiento> {
   const catalogoPedido = habitsApi.obtenerCatalogo();
-  const [dia, catalogo, planHabits, rocas, evidencias] = await Promise.all([
+  const [dia, catalogo, planHabits, rocas] = await Promise.all([
     obtenerDiaDeHabitos(),
     catalogoPedido,
     cargarPlanHabitos(catalogoPedido),
     trainingApi.obtenerRocasDeHoy().catch(e => {
       console.warn('[Training] no se pudo cargar la roca del día; la dimensión sale vacía:', e);
       return [] as RocaDiariaApi[];
-    }),
-    trainingApi.obtenerEvidenciasDeRocas().catch(e => {
-      console.warn('[Training] no se pudo cargar la evidencia de rocas; se muestran sin sellar:', e);
-      return [] as EvidenciaApi[];
     }),
   ]);
   return {
@@ -56,11 +57,20 @@ export async function cargarEntrenamiento(): Promise<DatosEntrenamiento> {
     catalogo,
     planHabits,
     rocas,
-    // Para las ROCAS hay que cruzar contra el listado de evidencia. Para los HÁBITOS no: desde
-    // el 2026-09-05 (D-113) cada track de `habit-tracks/today` trae `tieneEvidencia` resuelto
-    // por el backend.
-    rocasConEvidencia: new Set(
-      evidencias.map(e => e.rocaDiariaId).filter((id): id is string => Boolean(id)),
-    ),
+    rocasConEvidencia: new Set<string>(),
   };
+}
+
+/**
+ * La segunda tanda: qué acciones del día ya tienen su evidencia. Para las ROCAS hay que cruzar contra el listado de evidencia; para
+ * los HÁBITOS no (desde D-113 cada track trae `tieneEvidencia`). `null` si falló: quien llama conserva lo que tenía.
+ */
+export async function cargarEvidenciasDeRocas(): Promise<Set<string> | null> {
+  try {
+    const evidencias: EvidenciaApi[] = await trainingApi.obtenerEvidenciasDeRocas();
+    return new Set(evidencias.map(e => e.rocaDiariaId).filter((id): id is string => Boolean(id)));
+  } catch (e) {
+    console.warn('[Training] no se pudo cargar la evidencia de rocas; se muestran sin sellar:', e);
+    return null;
+  }
 }

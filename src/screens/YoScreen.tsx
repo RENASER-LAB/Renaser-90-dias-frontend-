@@ -1,4 +1,5 @@
 import { fuentes } from '../theme/fuentes';
+import { salirAvisandoPendientes } from '../features/sinRed/salirAvisandoPendientes';
 import { HojaDelSobrenombre } from '../features/sobrenombre/components/HojaDelSobrenombre';
 import { useMiSobrenombre } from '../features/sobrenombre/hooks/useMiSobrenombre';
 import { TEXTOS_DEL_SOBRENOMBRE } from '../features/sobrenombre/utils/reglasDelSobrenombre';
@@ -315,7 +316,9 @@ export default function YoScreen() {
   const { recargar: recargarEtapasOnboarding } = etapasOnboarding;
   const { guardarCapitulo, avanzarEstado, aceptarHito, guardarFirma } = usePersistenciaOnboarding();
   const { rs, isTablet, horizontalPadding, contentMaxWidth } = useResponsive();
-  const { user, logout, actualizarPerfil, refrescarPerfil } = useAuth();
+  const { user, logout: cerrarSesion, actualizarPerfil, refrescarPerfil } = useAuth();
+  // Spec 048 (FR-009): si queda algo sin enviar, se avisa antes de salir.
+  const logout = () => void salirAvisandoPendientes(cerrarSesion);
   const { resumen, recargar: recargarResumen } = useResumenHome();
   /* Spec 046: el sobrenombre del Muro (Ajustes → Perfil). */
   const sobrenombre = useMiSobrenombre();
@@ -744,7 +747,7 @@ export default function YoScreen() {
   }
 
   if (eliminandoCuenta) {
-    return <EliminarMiCuentaScreen onVolver={() => setEliminandoCuenta(false)} onCerrada={logout} />;
+    return <EliminarMiCuentaScreen onVolver={() => setEliminandoCuenta(false)} onCerrada={cerrarSesion} />;
   }
 
   /* El detalle del semáforo, a pantalla completa como la Caja: su flecha de volver y el atrás del sistema regresan a Yo. */

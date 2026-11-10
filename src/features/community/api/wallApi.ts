@@ -191,11 +191,13 @@ export async function publicarEnMuro(
   media: { url: string; mimeType: string }[],
   category?: string | null,
   /** Spec 024: solo Administración lo manda (el servidor responde 400 sin él); los demás publican en la suya. */
-  formation?: string | null
+  formation?: string | null,
+  /** Spec 048 fase 2: escrita sin señal. El servidor la guarda una sola vez por `idCliente` y el «Post diario» cuenta `hechoEn`. */
+  sinRed?: { hechoEn: string; idCliente: string; origenDeLaHora: string } | null
 ): Promise<WallPost> {
   const r = await apiFetch<unknown>('/api/v1/wall', {
     method: 'POST',
-    body: { text, media, category: category ?? null, ...(formation ? { formation } : {}) },
+    body: { text, media, category: category ?? null, ...(formation ? { formation } : {}), ...(sinRed ?? {}) },
   });
   return validarRespuesta<WallPost>(wallPostSchema, r, 'POST /api/v1/wall');
 }

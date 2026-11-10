@@ -178,6 +178,9 @@ describe('Yo abre la pantalla', () => {
     const path = jest.requireActual<typeof import('path')>('path');
     const yo = fs.readFileSync(path.join(__dirname, '../../../../screens/YoScreen.tsx'), 'utf8');
     expect(yo).toMatch(/titulo="Eliminar mi cuenta"\s+peligro/);
-    expect(yo).toMatch(/<EliminarMiCuentaScreen onVolver=\{\(\) => setEliminandoCuenta\(false\)\} onCerrada=\{logout\} \/>/);
+    /* > **Corregido 2026-11-09 (spec 048).** Decía `onCerrada={logout}`. En Yo, `logout` pasó a avisar antes si quedan cosas sin
+       > enviar; la cuenta borrada sale directo con el logout del AuthContext, que ahí se llama `cerrarSesion`. */
+    expect(yo).toMatch(/const \{ user, logout: cerrarSesion,[^}]*\} = useAuth\(\);/);
+    expect(yo).toMatch(/<EliminarMiCuentaScreen onVolver=\{\(\) => setEliminandoCuenta\(false\)\} onCerrada=\{cerrarSesion\} \/>/);
   });
 });

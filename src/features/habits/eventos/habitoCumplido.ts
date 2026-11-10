@@ -20,7 +20,14 @@
  * participante). Un hábito se cumple a veces pasada la medianoche —Dormir a las 00:40 es del día anterior—: lo que se
  * silencia en el teléfono es lo que le quedaba a ESE día, no a «hoy» según el reloj. Opcional por lo mismo que `habitoId`.
  */
-export type HabitoCumplido = { registroId: string; puntosOtorgados: number; habitoId?: string; fecha?: string };
+export type HabitoCumplido = {
+  registroId: string;
+  puntosOtorgados: number;
+  habitoId?: string;
+  fecha?: string;
+  /** Spec 048: lo confirmó el servidor al enviarse desde la cola (la pantalla no lo pidió: tiene que releer). */
+  desdeLaCola?: boolean;
+};
 
 type Oyente = (cumplido: HabitoCumplido) => void;
 
@@ -60,4 +67,29 @@ export function tomarPuntosDe(registroId: string): number | null {
   const puntos = puntosSinMostrar.get(registroId);
   puntosSinMostrar.delete(registroId);
   return puntos ?? null;
+}
+
+/**
+ * Spec 048 (FR-011, D12): un hábito marcado SIN SEÑAL. Se ve hecho y sus alarmas de ese día se callan al instante, pero no hay
+ * celebración ni puntos: esos salen con {@link avisarHabitoCumplido} cuando el servidor confirma el envío de la cola.
+ */
+export type HabitoMarcadoSinRed = { registroId: string; habitoId?: string; fecha?: string };
+
+const oyentesSinRed = new Set<(marcado: HabitoMarcadoSinRed) => void>();
+
+export function alMarcarSinRed(oyente: (marcado: HabitoMarcadoSinRed) => void): () => void {
+  oyentesSinRed.add(oyente);
+  return () => {
+    oyentesSinRed.delete(oyente);
+  };
+}
+
+export function avisarHabitoMarcadoSinRed(marcado: HabitoMarcadoSinRed): void {
+  for (const oyente of [...oyentesSinRed]) {
+    try {
+      oyente(marcado);
+    } catch {
+      /* un oyente roto no deshace la marca */
+    }
+  }
 }

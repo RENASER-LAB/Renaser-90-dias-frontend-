@@ -883,6 +883,20 @@ P3-B (6 meses), P4-B (una línea en el detalle del evento) y P5-A. **Casi todo e
 * **Pruebas:** Jest `avisoDeGrabacion` y `paginaPoliticaDePrivacidad` (marcas `spec 047 FR-018`).
 * **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire) y el backend con V184. Contra un backend anterior la línea no aparece.
 
+## Cambio por pedido del dueño — 2026-11-10 — Comunidad: sin «Todas» en el selector de formación (#169)
+
+El dueño autorizó explícitamente este cambio en el tab Comunidad al reportar el bug #169 (Administración o Alquimista elegían «Escuela» o
+«Certificación» y el Muro volvía solo a «Todas»). Textual: «pienso que quitas todos para que el servidor no realiza muchas peticiones ya que
+son un montón en el Muro». Lo que cambia y nada más:
+* **El selector de formación** (solo quien ve todas: Administración, Alquimista y Soporte TI) ofrece solo las formaciones
+  (`opcionesDelSelector`): «Escuela · Diplomado · Certificación». Ya no existe «Todas»: siempre se mira una formación a la vez, así ninguna
+  sección de la Comunidad pide lo de todas juntas.
+* **Sin nada recordado en el teléfono** se mira la formación activa de la cuenta, o la primera que ofrece la sesión, o la Escuela
+  (`formacionPorDefecto`). Lo elegido se sigue recordando por cuenta.
+* **El rótulo de formación de cada fila** (que solo salía leyendo «Todas») ya no se dibuja.
+* **La causa del bug, cerrada:** al refrescarse el perfil la sesión llega un instante sin formación; eso ya no borra lo elegido
+  (`prepararLaFormacionDeLaComunidad`), y lo último elegido queda en memoria para que una relectura de lo recordado nunca traiga algo más viejo
+  que la escritura que todavía va por detrás.
 ## Cambio por pedido del dueño — 2026-11-10 — Muro: fotos rápidas con miniatura (spec 049)
 
 El dueño pidió que las fotos del Muro carguen «como las redes sociales» y eligió que una Lambda en AWS arme la miniatura. Sin cambios

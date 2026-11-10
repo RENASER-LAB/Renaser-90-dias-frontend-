@@ -1,0 +1,6 @@
+{
+  "name": "renaser-reloj",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Módulo nativo local de Renaser: el reloj del sistema desde el encendido, que no cambia con la hora del teléfono (spec 048, FR-013)."
+}

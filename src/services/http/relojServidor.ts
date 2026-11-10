@@ -1,3 +1,4 @@
+import { anclarHoraDelServidor } from '../../features/sinRed/horaReal';
 /**
  * Cuánto se aparta el reloj de este teléfono del reloj del servidor.
  *
@@ -60,6 +61,8 @@ export function registrarHoraDelServidor(cabeceraDate: string | null): void {
   if (Number.isNaN(servidor)) return;
   desfaseMs = servidor - Date.now();
   medido = true;
+  // Spec 048 (FR-013): la misma hora ancla la hora real de lo que se haga sin señal.
+  anclarHoraDelServidor(servidor);
 }
 
 /** Milisegundos de diferencia con el servidor. `0` mientras no se haya medido ninguna respuesta. */

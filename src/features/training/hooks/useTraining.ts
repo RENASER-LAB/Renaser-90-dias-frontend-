@@ -6,7 +6,7 @@ import { medicionPedidaDe } from '../../habits/utils/registroConFoto';
 import { iconoDeLineaDeHabito } from '../../habits/utils/iconosDeHabito';
 import { mensajeDeError } from '../../../services/http/apiClient';
 import type { HabitoCatalogoApi, TrackDelDiaApi } from '../../habits/types/habits.types';
-import { cargarEntrenamiento, type DatosEntrenamiento } from '../api/cargarEntrenamiento';
+import { cargarEntrenamiento, cargarEvidenciasDeRocas, type DatosEntrenamiento } from '../api/cargarEntrenamiento';
 import type { RocaDiariaApi } from '../types/training.types';
 import { useCategoriasDeHabito } from '../../habits/categorias/hooks/useCategoriasDeHabito';
 import { dimensionDelHabito } from '../utils/dimensionDelHabito';
@@ -98,10 +98,23 @@ export function useTraining(activa = true) {
         }
       }
       if (esta !== ultimaCarga.current) return;
+      // Mientras llega la segunda tanda, el sello de las acciones es el de antes (en un refresco no parpadea).
+      const conSelloAnterior = { ...nuevos, rocasConEvidencia: datosActuales.current?.rocasConEvidencia ?? nuevos.rocasConEvidencia };
       hayDatos.current = true;
-      datosActuales.current = nuevos;
-      setDatos(nuevos);
+      datosActuales.current = conSelloAnterior;
+      setDatos(conSelloAnterior);
       setError(null);
+      // Segunda tanda (pedido del dueño, 10/11: «primero lo esencial»): la lista ya está dibujada.
+      // Nunca tumba la primera: un fallo aquí deja el sello de antes.
+      void Promise.resolve()
+        .then(() => cargarEvidenciasDeRocas())
+        .then(sello => {
+          if (!sello || esta !== ultimaCarga.current || !datosActuales.current) return;
+          const conSello = { ...datosActuales.current, rocasConEvidencia: sello };
+          datosActuales.current = conSello;
+          setDatos(conSello);
+        })
+        .catch(() => undefined);
     } catch (e) {
       if (esta !== ultimaCarga.current) return;
       if (silencioso) {

@@ -1,4 +1,5 @@
 import { fuentes } from '../../../theme/fuentes';
+import { claveDelAudio, fuenteDelAudio, prepararAudio } from '../../sinRed/audiosDelDia';
 import { useAudioPlayer, useAudioPlayerStatus, setAudioModeAsync } from 'expo-audio';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -103,7 +104,12 @@ export function PastillaRenacerModal({
   const insets = useSafeAreaInsets();
 
   const yaEntregado = audio?.yaEntregado ?? false;
-  const fuente = audio?.audioUrl ?? null;
+  // Spec 048 (FR-017): el audio bajado al teléfono si ya está (se escucha sin señal); si no, por internet, y se baja para la próxima.
+  const claveAudio = audio ? claveDelAudio(audio.rotulo, audio.claveBorrador) : null;
+  const fuente = claveAudio ? fuenteDelAudio(claveAudio, audio?.audioUrl ?? null) : null;
+  useEffect(() => {
+    if (claveAudio && audio?.audioUrl) void prepararAudio(claveAudio, audio.audioUrl);
+  }, [claveAudio, audio?.audioUrl]);
 
   // ─── Reproductor ────────────────────────────────────────────────────────────────────────────
   // Crear el player con la fuente ya puesta es lo que dispara la carga. `null` es una fuente
