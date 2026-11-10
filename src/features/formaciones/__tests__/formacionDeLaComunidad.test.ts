@@ -60,13 +60,18 @@ describe('quién manda la formación (FR-050)', () => {
     expect(formacionDeLaLectura()).toBeNull();
   });
 
-  it('quien ve todas lee «Todas» hasta que elige: sin código en la lectura y sin poder crear', () => {
-    prepararLaFormacionDeLaComunidad('admin-1', true);
+  it('#169: quien ve todas nunca lee «Todas»: sin nada recordado mira su formación activa o la primera que ofrece la sesión', () => {
+    prepararLaFormacionDeLaComunidad('admin-1', true, { disponibles: [{ codigo: 'DIPLOMADO', nombre: 'Diplomado Renaser' }, { codigo: 'ESCUELA', nombre: 'Escuela Renaser' }] });
     expect(estadoDeLaFormacionDeLaComunidad()).toMatchObject({ veTodas: true, eleccion: null, listo: false });
     fijarLaEleccionRecordada('admin-1', null);
-    expect(estadoDeLaFormacionDeLaComunidad().listo).toBe(true);
-    expect(formacionDeLaLectura()).toBeNull();
-    expect(hayQueElegirParaCrear()).toBe(true);
+    expect(estadoDeLaFormacionDeLaComunidad()).toMatchObject({ listo: true, eleccion: 'DIPLOMADO' });
+    expect(formacionDeLaLectura()).toBe('DIPLOMADO');
+    expect(hayQueElegirParaCrear()).toBe(false);
+
+    reiniciarLaFormacionDeLaComunidad();
+    prepararLaFormacionDeLaComunidad('admin-1', true, { activa: { codigo: 'CERTIFICACION', nombre: 'Certificación Renaser' } });
+    fijarLaEleccionRecordada('admin-1', null);
+    expect(formacionDeLaLectura()).toBe('CERTIFICACION');
   });
 
   it('con una formación elegida, las lecturas y lo que se crea llevan ese código', () => {
@@ -80,10 +85,9 @@ describe('quién manda la formación (FR-050)', () => {
   });
 });
 
-describe('crear con «Todas» elegida', () => {
-  it('lanza en vez de mandar nada, con el texto de publicar o de crear', () => {
+describe('crear antes de saber la formación', () => {
+  it('mientras no se leyó lo recordado, lanza en vez de mandar nada, con el texto de publicar o de crear', () => {
     prepararLaFormacionDeLaComunidad('admin-1', true);
-    fijarLaEleccionRecordada('admin-1', null);
     expect(() => formacionDelCuerpo()).toThrow(FormacionPorElegirError);
     expect(() => formacionDelCuerpo(MENSAJE_ELEGIR_PARA_PUBLICAR)).toThrow('Elige una formación arriba para publicar.');
     expect(() => formacionDelCuerpo()).toThrow(MENSAJE_ELEGIR_PARA_CREAR);
@@ -92,7 +96,7 @@ describe('crear con «Todas» elegida', () => {
 });
 
 describe('la elección se recuerda por cuenta', () => {
-  it('elegir la guarda en el teléfono y «Todas» la borra', async () => {
+  it('elegir la guarda en el teléfono; una elección vacía no cambia nada (#169: ya no hay «Todas»)', async () => {
     prepararLaFormacionDeLaComunidad('admin-1', true);
     fijarLaEleccionRecordada('admin-1', null);
     elegirFormacionDeLaComunidad('CERTIFICACION');
@@ -100,8 +104,28 @@ describe('la elección se recuerda por cuenta', () => {
     expect(await leerLaEleccionRecordada('admin-1')).toBe('CERTIFICACION');
     expect(await AsyncStorage.getItem(claveDeLaEleccion('admin-1'))).toBe('CERTIFICACION');
     elegirFormacionDeLaComunidad(null);
-    await Promise.resolve();
-    expect(await leerLaEleccionRecordada('admin-1')).toBeNull();
+    expect(estadoDeLaFormacionDeLaComunidad().eleccion).toBe('CERTIFICACION');
+  });
+
+  it('#169: al refrescarse el perfil la sesión llega un instante sin formación: lo elegido se conserva', () => {
+    const DISPONIBLES = [{ codigo: 'ESCUELA', nombre: 'Escuela Renaser' }, { codigo: 'CERTIFICACION', nombre: 'Certificación Renaser' }];
+    prepararLaFormacionDeLaComunidad('admin-1', true, { disponibles: DISPONIBLES });
+    fijarLaEleccionRecordada('admin-1', null);
+    elegirFormacionDeLaComunidad('CERTIFICACION');
+
+    prepararLaFormacionDeLaComunidad('admin-1', false); // el perfil nuevo todavía no trae la formación
+    prepararLaFormacionDeLaComunidad('admin-1', true, { disponibles: DISPONIBLES });
+
+    expect(estadoDeLaFormacionDeLaComunidad()).toMatchObject({ veTodas: true, eleccion: 'CERTIFICACION', listo: true });
+  });
+
+  it('#169: releer lo recordado trae lo último elegido aunque el teléfono todavía no terminó de guardarlo', async () => {
+    prepararLaFormacionDeLaComunidad('admin-1', true);
+    fijarLaEleccionRecordada('admin-1', null);
+    await AsyncStorage.setItem(claveDeLaEleccion('admin-1'), 'ESCUELA'); // lo viejo, todavía en el teléfono
+    elegirFormacionDeLaComunidad('CERTIFICACION'); // guardar va por detrás
+
+    expect(await leerLaEleccionRecordada('admin-1')).toBe('CERTIFICACION');
   });
 
   it('lo recordado vuelve al entrar, pero solo si es una formación que la cuenta puede elegir', () => {
@@ -124,11 +148,11 @@ describe('la elección se recuerda por cuenta', () => {
     expect(estadoDeLaFormacionDeLaComunidad().eleccion).toBeNull();
   });
 
-  it('si la lectura del teléfono falla, se sigue con «Todas» y no se queda esperando', () => {
+  it('si la lectura del teléfono falla, se sigue con la formación por defecto y no se queda esperando', () => {
     prepararLaFormacionDeLaComunidad('admin-1', true);
     expect(estadoDeLaFormacionDeLaComunidad().listo).toBe(false);
     darPorLeidaLaEleccion('admin-1');
-    expect(estadoDeLaFormacionDeLaComunidad()).toMatchObject({ listo: true, eleccion: null });
+    expect(estadoDeLaFormacionDeLaComunidad()).toMatchObject({ listo: true, eleccion: 'ESCUELA' });
   });
 
   it('volver a preparar la misma cuenta conserva lo elegido (la sesión se releyó)', () => {

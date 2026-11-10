@@ -6,7 +6,7 @@ import { useFormacionDeLaComunidad } from '../hooks/useFormacionDeLaComunidad';
 import { eleccionDelControl, valorDelControl } from '../utils/opcionesDeLaComunidad';
 
 /**
- * El selector de formación de la Comunidad (spec 024): «Todas · Escuela · Diplomado · Certificación», una fila de 48 de alto (el
+ * El selector de formación de la Comunidad (spec 024): «Escuela · Diplomado · Certificación» (sin «Todas» desde #169), una fila de 48 de alto (el
  * `ControlSegmentado` de la app en su forma `compacto`: letra de 14, con el texto que se achica antes de cortarse) arriba de Comunidad.
  *
  * **Solo lo dibuja quien ve las tres formaciones** (Administración, Alquimista y Soporte TI). Para todas las demás cuentas no devuelve
