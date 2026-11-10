@@ -463,7 +463,8 @@ export default function TrainingScreen() {
   // mira todos los dias. Comprobado en pantalla el 2026-09-15.
   const renombre = useRenombreLocal(user?.id ?? null);
   /* «Cambiar nombre» y «Arma tu semana los domingos» viven en «Tus prácticas» (spec 014). */
-  const espiritu = useEspiritu();
+  /* Segunda tanda (pedido del dueño, 10/11: «primero lo esencial»): el estado de la Pastilla se pide cuando la lista ya está. */
+  const espiritu = useEspiritu({ esperar: cargandoBackend });
   /** ID elegido al abrir: una recarga nunca debe convertir una entrega de ayer en la de hoy. */
   const pastillaSolicitada = useRef<string | null>(null);
   /** El dia en curso, o el ya entregado de hoy para poder releer lo que escribio. */
@@ -1121,7 +1122,8 @@ export default function TrainingScreen() {
                 onElegirDia={alElegirDia}
                 diaPrograma={cargandoDiaPrograma ? null : diaPrograma}
                 titulos={renombre.titulos}
-                eventosPrendidos={eventosPrendidos.prendida}
+                // Segunda tanda (10/11): los eventos de la semana se piden cuando la lista ya está dibujada.
+                eventosPrendidos={eventosPrendidos.prendida && !cargandoBackend}
                 confirmacion={confirmacion}
                 onConfirmacionTerminada={() => setConfirmacion(null)}
                 aperturaPedida={aperturaPedida}

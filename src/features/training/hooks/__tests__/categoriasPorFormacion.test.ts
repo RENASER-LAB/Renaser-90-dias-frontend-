@@ -12,7 +12,7 @@ import type { HabitoCatalogoApi } from '../../../habits/types/habits.types';
 import type { DatosEntrenamiento } from '../../api/cargarEntrenamiento';
 
 const mockCargar = jest.fn<() => Promise<DatosEntrenamiento>>();
-jest.mock('../../api/cargarEntrenamiento', () => ({ cargarEntrenamiento: () => mockCargar() }));
+jest.mock('../../api/cargarEntrenamiento', () => ({ cargarEntrenamiento: () => mockCargar(), cargarEvidenciasDeRocas: async () => null }));
 jest.mock('../../../../services/http/apiClient', () => ({ mensajeDeError: (_e: unknown, porDefecto: string) => porDefecto }));
 /* El hook lee el almacén real (que cada prueba llena a mano): así se ve lo que ve la pantalla, sin sesión ni red. */
 jest.mock('../../../habits/categorias/hooks/useCategoriasDeHabito', () => {

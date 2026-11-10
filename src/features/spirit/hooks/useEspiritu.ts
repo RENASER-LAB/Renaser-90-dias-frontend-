@@ -29,7 +29,12 @@ import type { SpiritDayApi, SpiritStatusApi } from '../types/spirit.types';
  * recargue desde el backend, la única fuente de verdad de si el registro quedó `COMPLETADO`. Sin
  * esto, un fallo de red dejaría la tarjeta marcada como hecha y el hábito abierto en el servidor.
  */
-export function useEspiritu() {
+/**
+ * @param opciones.esperar mientras sea `true`, no hace la primera lectura (Entrenar la pide en la segunda tanda, cuando la lista ya
+ * está dibujada: pedido del dueño, 10/11). Sin opciones, lee al montar como siempre.
+ */
+export function useEspiritu(opciones: { esperar?: boolean } = {}) {
+  const esperar = opciones.esperar === true;
   const [estado, setEstado] = useState<SpiritStatusApi | null>(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -52,8 +57,9 @@ export function useEspiritu() {
   }, []);
 
   useEffect(() => {
+    if (esperar) return;
     void recargar();
-  }, [recargar]);
+  }, [recargar, esperar]);
 
   /**
    * El día en curso: el único que se puede escuchar y entregar. `null` cuando la persona todavía

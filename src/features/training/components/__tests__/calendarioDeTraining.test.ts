@@ -65,7 +65,7 @@ jest.mock('../../../../components/hojaDesdeAbajo/HojaDesdeAbajo', () => ({
 
 /** La lectura de Training que usa el `useTraining` de verdad (solo la red se reemplaza). */
 const mockCargar = jest.fn<() => Promise<DatosEntrenamiento>>();
-jest.mock('../../api/cargarEntrenamiento', () => ({ cargarEntrenamiento: () => mockCargar() }));
+jest.mock('../../api/cargarEntrenamiento', () => ({ cargarEntrenamiento: () => mockCargar(), cargarEvidenciasDeRocas: async () => null }));
 
 import { fechaEnZona, zonaDelTelefono } from '../../../eventos/utils/zonaHoraria';
 import { useTraining } from '../../hooks/useTraining';

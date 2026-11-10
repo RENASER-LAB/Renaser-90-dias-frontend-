@@ -10,7 +10,7 @@ jest.mock('../../../habits/categorias/hooks/useCategoriasDeHabito', () => {
   return { useCategoriasDeHabito: () => estado };
 });
 const mockCargar = jest.fn<() => Promise<DatosEntrenamiento>>();
-jest.mock('../../api/cargarEntrenamiento', () => ({ cargarEntrenamiento: () => mockCargar() }));
+jest.mock('../../api/cargarEntrenamiento', () => ({ cargarEntrenamiento: () => mockCargar(), cargarEvidenciasDeRocas: async () => null }));
 jest.mock('../../../../services/http/apiClient', () => ({
   mensajeDeError: (_e: unknown, porDefecto: string) => porDefecto,
 }));
