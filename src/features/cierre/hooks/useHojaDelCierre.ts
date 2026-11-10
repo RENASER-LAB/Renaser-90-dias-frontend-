@@ -143,7 +143,7 @@ export function useHojaDelCierre({
     if (hoyActual.current !== fecha) return { resultado: 'dia-cambio' };
     setFase('guardando');
     try {
-      const guardada = await guardarCierreDelDia(cuerpoDelCierre(fecha, vista, borrador));
+      const guardada = await guardarCierreDelDia(cuerpoDelCierre(fecha, vista, borrador), vista);
       setVista(guardada);
       setFase('guardado');
       tacto.logro();

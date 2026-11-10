@@ -1,6 +1,10 @@
-import { apiFetch } from '../../../services/http/apiClient';
+import { ApiError, apiFetch } from '../../../services/http/apiClient';
+import { escribirOEncolar } from '../../sinRed/escrituraSinRed';
+import { horaReal } from '../../sinRed/horaReal';
+import { fechaLocal } from '../../habits/notificaciones/utils/alarmasPorDia';
 import type { CierreDelDia, CierresDeLaSemana, CuerpoDelCierre } from '../types/cierre.types';
 import { leerCierreDelDia, leerCierresDeLaSemana } from './cierreSchemas';
+import { cierreConLoElegido, etiquetaDelCierre, resumenDelCierre, revisarElDiaDelCierre } from './cierreSinRed';
 
 /**
  * Las lecturas y la escritura de «Cierra tu día» (spec 017, `contracts/api.md`).
@@ -31,10 +35,35 @@ export async function obtenerCierreDelDia(fecha?: string | null): Promise<Cierre
   return leerCierreDelDia(respuesta, 'GET /rocks/day-closure');
 }
 
-/** Cierra (o vuelve a cerrar) el día de hoy. Idempotente: reemplaza todas las respuestas del día. */
-export async function guardarCierreDelDia(cuerpo: CuerpoDelCierre): Promise<CierreDelDia> {
-  const respuesta = await apiFetch<unknown>(RUTA_DEL_CIERRE, { method: 'PUT', body: cuerpo, timeoutMs: TIEMPO_MAXIMO_MS });
-  return leerCierreDelDia(respuesta, 'PUT /rocks/day-closure');
+/**
+ * Cierra (o vuelve a cerrar) el día de hoy. Idempotente: reemplaza todas las respuestas del día.
+ *
+ * Spec 048 fase 3 (FR-019): sin señal se guarda en la cola con la hora real y devuelve el día ya cerrado con lo elegido. Para eso
+ * necesita `vista`, el día que la hoja tiene a la vista; sin él, sin señal falla como siempre.
+ */
+export async function guardarCierreDelDia(cuerpo: CuerpoDelCierre, vista?: CierreDelDia): Promise<CierreDelDia> {
+  return escribirOEncolar<CierreDelDia>(
+    {
+      area: 'cierre',
+      etiqueta: etiquetaDelCierre(cuerpo.fecha, fechaLocal(horaReal().instante)),
+      metodo: 'PUT',
+      ruta: RUTA_DEL_CIERRE,
+      cuerpo,
+      resumen: vista ? resumenDelCierre(cuerpo, vista) : null,
+      timeoutMs: TIEMPO_MAXIMO_MS,
+    },
+    {
+      validar: respuesta => leerCierreDelDia(respuesta, 'PUT /rocks/day-closure'),
+      optimista: envio => {
+        if (!vista) throw new ApiError(0, 'No se pudo conectar con el servidor.');
+        return cierreConLoElegido(vista, cuerpo, envio.hechoEn);
+      },
+      antesDeEncolar: hora => {
+        if (!vista) throw new ApiError(0, 'No se pudo conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.');
+        revisarElDiaDelCierre(cuerpo.fecha, hora);
+      },
+    },
+  );
 }
 
 /** De qué ruta vino la respuesta, para el mensaje de un error: la de la persona sin grupo o la del grupo. */
