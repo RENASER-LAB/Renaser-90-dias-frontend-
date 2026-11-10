@@ -2848,21 +2848,8 @@ function ComunidadPorFormacion({
       enviarComentario: id => accionesVigentes.current!.enviarComentario(id),
       cerrarConfirmacion: id => accionesVigentes.current!.cerrarConfirmacion(id),
       moderar: id => accionesVigentes.current!.moderar(id),
-      // Spec 048 fase 2 (D19): la que espera señal se puede borrar antes de que salga.
-      borrarEnEspera: (idCliente: string) =>
-        Alert.alert('¿Borrar esta publicación?', 'Todavía no salió. Si la borras, no se publicará.', [
-          { text: 'Cancelar', style: 'cancel' },
-          {
-            text: 'Borrar',
-            style: 'destructive',
-            onPress: () =>
-              void borrarEnEspera(idCliente).then(quitada => {
-                if (!quitada) Alert.alert('Ya se está publicando', 'Cuando aparezca en el Muro la puedes borrar como cualquier otra.');
-              }),
-          },
-        ]),
     }),
-    [borrarEnEspera]
+    []
   );
 
   /*
@@ -2883,8 +2870,21 @@ function ComunidadPorFormacion({
       abrir: (id, conComentarios) => abrirPublicacionVigente.current(id, conComentarios),
       alternarLike: id => accionesVigentes.current!.alternarLike(id),
       moderar: id => accionesVigentes.current!.moderar(id),
+      // Spec 048 fase 2 (D19): la que espera señal se puede borrar antes de que salga.
+      borrarEnEspera: (idCliente: string) =>
+        Alert.alert('¿Borrar esta publicación?', 'Todavía no salió. Si la borras, no se publicará.', [
+          { text: 'Cancelar', style: 'cancel' },
+          {
+            text: 'Borrar',
+            style: 'destructive',
+            onPress: () =>
+              void borrarEnEspera(idCliente).then(quitada => {
+                if (!quitada) Alert.alert('Ya se está publicando', 'Cuando aparezca en el Muro la puedes borrar como cualquier otra.');
+              }),
+          },
+        ]),
     }),
-    []
+    [borrarEnEspera]
   );
   /* Si la publicación abierta deja de estar en el Muro (se ocultó o se eliminó), se vuelve a la lista. */
   const publicacionAbierta = publicacionAbiertaId ? posts.find(p => p.id === publicacionAbiertaId) ?? null : null;

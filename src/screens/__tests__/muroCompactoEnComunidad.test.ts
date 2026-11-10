@@ -78,4 +78,10 @@ describe('el Muro compacto en Comunidad', () => {
     act(() => volver.props.onPress());
     expect(onVolver).toHaveBeenCalledTimes(1);
   });
+  it('spec 048 fase 2: las acciones de la FILA traen «Borrar» para la publicación que espera señal', () => { // spec 048 FR-018
+    // E2E 10/11: se agregó al objeto de la tarjeta completa (otro useMemo con las mismas líneas) y en la fila «Borrar» no hacía nada.
+    const inicio = fuente.indexOf('const accionesDeLaFila = useMemo');
+    const bloque = fuente.slice(inicio, fuente.indexOf('  );', inicio));
+    expect(bloque).toContain('borrarEnEspera:');
+  });
 });
