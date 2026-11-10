@@ -13,8 +13,10 @@ import '../../habits/api/evidenciaHabitoApi';
 import '../../community/api/publicarSinRed';
 // El de la Pastilla Renacer entregada sin señal.
 import '../../spirit/api/pastillaSinRed';
-// El de las escrituras genéricas de la fase 3 (una sola, `escritura`): la cola las manda con sus tres cabeceras.
+// Fase 3: el de las escrituras genéricas (`escritura`) y el de marcar una acción del Plan (`completarAccion`); la cola las manda con
+// sus tres cabeceras. Los ajustes de lectura de cada área se registran al importar su API (cierre, radar, plan y hábitos).
 import '../escrituraSinRed';
+import '../../objetivos/api/planSinRed';
 import { leerAvisos, suscribirAvisos, type AvisoDeLoNoAplicado } from '../avisosDeLoNoAplicado';
 import { leerCola, ponerCuentaActual, procesarCola, suscribirCola } from '../colaSinRed';
 import { alVolverLaConexion, sinConexionDesdeMs, suscribirConexion } from '../estadoDeConexion';

@@ -30,17 +30,17 @@ también en el texto (`grep -n "Plan" docs/decisiones/*.md`). Si dos entradas ch
 |---|---|---|
 | [alarmas.md](alarmas.md) | Alarmas y recordatorios: specs 007–010, voces, canales, el puente de #33 | 9 |
 | [codigo-renaser-y-mi-radar.md](codigo-renaser-y-mi-radar.md) | Código Renaser (días 1–7) y Mi Radar (desde el día 8) | 7 |
-| [comunidad.md](comunidad.md) | Comunidad: Muro, chat, Tribu, Eventos, Cursos y Ranking | 22 |
+| [comunidad.md](comunidad.md) | Comunidad: Muro, chat, Tribu, Eventos, Cursos y Ranking | 23 |
 | [formaciones.md](formaciones.md) | Formaciones (Escuela, Diplomado, Certificación): specs 022–025, 035 y el plazo de cada formación | 8 |
 | [hoy.md](hoy.md) | Hoy: tarjetas, frase del día, semáforo y lo que Hoy muestra | 8 |
 | [ingreso-y-onboarding.md](ingreso-y-onboarding.md) | Login, onboarding, ficha, diagnóstico, términos y el Día 1 | 9 |
-| [kilometros-y-carrera.md](kilometros-y-carrera.md) | Kilómetros diarios: captura, pasos (Health Connect) y la carrera con GPS | 5 |
+| [kilometros-y-carrera.md](kilometros-y-carrera.md) | Kilómetros diarios: captura, pasos (Health Connect) y la carrera con GPS | 6 |
 | [liderazgo-y-administracion.md](liderazgo-y-administracion.md) | Mentor, líder de mentores, Administración, Alquimista y sus fichas | 15 |
 | [pagos.md](pagos.md) | Cronograma de pagos y «Mi ingreso» (spec 032) | 2 |
 | [plan.md](plan.md) | Plan: objetivos, semana, mes, 80/20, Cierra tu día y el Mapa (retirado) | 11 |
 | [ser-y-fenix.md](ser-y-fenix.md) | SER (el acompañante), el orbe, el fénix y las celebraciones | 9 |
 | [soporte-ti.md](soporte-ti.md) | Soporte TI: interruptores, despliegue, roles personalizados y «ver como» (spec 002) | 2 |
-| [training.md](training.md) | Training: lista por hora, hábitos, evidencias y el editor Planificar | 18 |
+| [training.md](training.md) | Training: lista por hora, hábitos, evidencias y el editor Planificar | 19 |
 | [transversal.md](transversal.md) | Lo que tocó varios tabs a la vez: diseño, fuentes, barra de pestañas, velocidad, CI y arreglos de E2E | 19 |
 | [yo.md](yo.md) | Yo: Ajustes, fase, evidencias, Caja, emergencia, perfil, cuenta y privacidad | 12 |
 | [reglas-historial.md](reglas-historial.md) | Las reglas de `AGENTS.md` tal como estaban, con sus notas «Corregido» | — |
@@ -50,6 +50,9 @@ también en el texto (`grep -n "Plan" docs/decisiones/*.md`). Si dos entradas ch
 | Fecha | Tabs | Tipo | Entrada | Archivo | Corregida |
 |---|---|---|---|---|---|
 | 2026-11-10 | Hoy, Plan, Training | Cambio | la app funciona sin internet, fase 3: Plan, Cierra tu día, Código Renaser y planificar hábitos (spec 048, #180) | [transversal.md](transversal.md) |  |
+| 2026-11-10 | Comunidad | Cambio | Muro: fotos rápidas con miniatura (spec 049) | [comunidad.md](comunidad.md) |  |
+| 2026-11-10 | Training | Cambio | Entrenar pide primero lo esencial | [training.md](training.md) |  |
+| 2026-11-10 | Training | Corrección | Kilómetros diarios: una caminata normal cuenta (#172) | [kilometros-y-carrera.md](kilometros-y-carrera.md) |  |
 | 2026-11-10 | Hoy, Training, Comunidad | Corrección | sin señal, el Código Renaser ya no atrapa, la Pastilla se entrega y el ranking lo dice (spec 048, issue #178) | [transversal.md](transversal.md) | sí |
 | 2026-11-10 | Comunidad | Cambio | Comunidad: sin «Todas» en el selector de formación (#169) | [comunidad.md](comunidad.md) |  |
 | 2026-11-09 | Hoy, Plan, Training, Comunidad, Yo | Cambio | la app funciona sin internet, fase 1 (spec 048) | [transversal.md](transversal.md) | sí |
