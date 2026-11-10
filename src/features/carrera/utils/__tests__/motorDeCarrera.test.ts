@@ -79,6 +79,34 @@ describe('motor de la carrera: distancia con el GPS filtrado', () => {
   });
 });
 
+describe('#172: una caminata normal con el GPS de la calle cuenta', () => {
+  /** Caminata hacia el este a `ms` m/s, con el GPS que se corre ±`ruido` m de un punto a otro y la velocidad Doppler con su ruido. */
+  function caminataRuidosa(segundos: number, ms: number, precision: number, ruido: number): PuntoGps[] {
+    return Array.from({ length: segundos }, (_, i) => {
+      const real = puntoDestino(ORIGEN, 90, ms * i);
+      const p = puntoDestino(real, (i * 137) % 360, ruido * Math.abs(Math.sin(i * 1.7)));
+      return { ...p, t: T0 + 1000 + i * 1000, precision, velocidad: Math.max(0, ms + 0.3 * Math.sin(i)) };
+    });
+  }
+
+  // spec 042 FR-033 FR-036
+  it('caminar 2 min a 1,2 m/s con precisión de 10 m suma la distancia y no se pausa sola (antes: 0 m, «muy corta»)', () => {
+    const e = aplicar(nueva(false), caminataRuidosa(121, 1.2, 10, 4));
+    expect(e.distanciaM).toBeGreaterThan(110);
+    expect(e.pausaAutomatica).toBe(false);
+  });
+
+  // spec 042 FR-033
+  it('parado con la misma precisión de 10 m y el GPS que tiembla, sigue sin sumar (la velocidad del GPS cerca de 0)', () => {
+    let e = nueva(false);
+    for (let i = 0; i < 60; i++) {
+      const p = puntoDestino(ORIGEN, (i * 137) % 360, 10 * Math.sin(i));
+      e = alPunto(e, { ...p, t: T0 + 1000 + i * 1000, precision: 10, velocidad: 0.2 * Math.abs(Math.sin(i)) }).estado;
+    }
+    expect(e.distanciaM).toBeLessThanOrEqual(5);
+  });
+});
+
 describe('los km oficiales son los del GPS', () => {
   // spec 042 FR-034
   it('los pasos solos (sin GPS que se mueva) no suman distancia: solo mueven al avatar', () => {
