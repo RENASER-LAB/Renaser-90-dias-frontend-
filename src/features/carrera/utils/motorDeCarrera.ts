@@ -20,7 +20,8 @@ import { caloriasDelTramo, ritmoSegPorKm, velocidadKmh } from './ritmoYCalorias'
 
 export const PRECISION_MAXIMA_M = 20;
 export const VELOCIDAD_MAXIMA_MS = 25 / 3.6;
-export const PASOS_RECIENTES_MS = 3_000;
+/** El sensor de pasos entrega en tandas de varios segundos (`servicios/podometro.ts`): 3 s dejaba fuera pasos reales (#172). */
+export const PASOS_RECIENTES_MS = 10_000;
 export const VENTANA_QUIETO_MS = 10_000;
 export const PAUSA_AUTOMATICA_MS = 10_000;
 export const HUECO_LARGO_MS = 60_000;
@@ -28,6 +29,13 @@ export const HUECO_LARGO_MS = 60_000;
 export const HUECO_MINIMO_MS = 8_000;
 export const SEPARACION_MINIMA_M = 3;
 export const RUIDO_MINIMO_M = 10;
+/**
+ * #172: caminar a 3–5 km/h (0,8–1,4 m/s) con precisión de 8 m o peor no superaba el ruido de 1,5 × precisión en 10 s: contaba como
+ * quieta, no sumaba metros y se pausaba sola. Con la velocidad que mide el propio GPS (Doppler, no la diferencia de posiciones),
+ * basta con que la mediana de los últimos puntos llegue a 0,6 m/s y el avance neto pase un margen menor.
+ */
+export const VELOCIDAD_CAMINANDO_MS = 0.6;
+export const RUIDO_CON_VELOCIDAD_M = 4;
 export const APP_MUERTA_MS = 15_000;
 export const ZANCADA_CAMINANDO_M = 0.75;
 export const ZANCADA_CORRIENDO_M = 1.0;
@@ -112,10 +120,22 @@ function quietaSegunElGps(e: EstadoDeLaCarrera, ultimo: PuntoGps | null): boolea
   const ruido = Math.max(RUIDO_MINIMO_M, 1.5 * (ultimo?.precision ?? 0));
   if (reciente && reciente.cubreMs >= 5_000) {
     const kmh = (reciente.metros / (reciente.cubreMs / 1000)) * 3.6;
-    return reciente.metros <= ruido || kmh < 1;
+    if (reciente.metros > ruido && kmh >= 1) return false;
+    // #172: con la velocidad del GPS a ritmo de caminata, alcanza con un avance menor que el ruido de la posición.
+    const medida = medianaDeVelocidad(e.ventana);
+    const margen = Math.max(RUIDO_CON_VELOCIDAD_M, 0.5 * (ultimo?.precision ?? 0));
+    return !(medida != null && medida >= VELOCIDAD_CAMINANDO_MS && reciente.metros > margen && kmh >= 1);
   }
   const v = ultimo?.velocidad;
   return !(v != null && v >= 0 && v * 3.6 >= 1);
+}
+
+/** La mediana de la velocidad que reportó el GPS en los últimos puntos aceptados, o `null` si ninguno la trajo. */
+function medianaDeVelocidad(ventana: readonly PuntoGps[]): number | null {
+  const v = ventana.map(p => p.velocidad).filter((x): x is number => x != null && x >= 0).sort((a, b) => a - b);
+  if (v.length === 0) return null;
+  const m = Math.floor(v.length / 2);
+  return v.length % 2 ? v[m] : (v[m - 1] + v[m]) / 2;
 }
 
 export function estaQuieta(e: EstadoDeLaCarrera, ahora: number, ultimo: PuntoGps | null = e.ultimoCrudo): boolean {
