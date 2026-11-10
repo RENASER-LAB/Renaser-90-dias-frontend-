@@ -1,7 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { CommentItem, PostItem } from '../../../screens/ComunidadScreen';
-import { mensajeDeError } from '../../../services/http/apiClient';
+import { ApiError, mensajeDeError } from '../../../services/http/apiClient';
+import { suscribirCola } from '../../sinRed/colaSinRed';
+import {
+  TEXTO_EN_ESPERA,
+  borrarPublicacionEnEspera,
+  encolarPublicacion,
+  publicacionesEnEspera,
+  type PublicacionEnEspera,
+} from '../api/publicarSinRed';
 import * as wallApi from '../api/wallApi';
 import {
   MENSAJE_ELEGIR_PARA_PUBLICAR,
@@ -23,8 +31,29 @@ import type { FotoMuroNormalizada } from '../utils/normalizarImagen';
  * publicar sin foto real — ver el informe de la integración) y esas siguen resolviéndose de forma
  * local, en la pantalla, con el mismo `setPosts` que usa este hook para lo que sí es real.
  */
+/** Spec 048 fase 2: la publicación que espera señal, con la forma de cualquier otra del Muro (atenuada y sin abrir). */
+export function aPostEnEspera(p: PublicacionEnEspera): PostItem {
+  return {
+    id: `sin-red-${p.idCliente}`,
+    author: p.autor,
+    avatar: '👤',
+    cell: '',
+    diaPrograma: null,
+    timeAgo: TEXTO_EN_ESPERA,
+    text: p.texto,
+    media: p.fotos.map((foto, idx) => ({ type: 'image' as const, title: `📷 Foto ${idx + 1}`, url: foto.uri, mimeType: foto.mimeType })),
+    likes: 0,
+    userReaction: null,
+    comments: [],
+    pendiente: true,
+    enEsperaDeSenal: p.idCliente,
+  };
+}
+
 export function useWallFeed() {
   const [posts, setPosts] = useState<PostItem[]>([]);
+  /* Spec 048 fase 2 (FR-018): las propias que esperan señal, arriba. Salen de la cola: sobreviven a cerrar la app. */
+  const [enEspera, setEnEspera] = useState<PostItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [comentariosCargados, setComentariosCargados] = useState<Record<string, boolean>>({});
@@ -270,11 +299,43 @@ export function useWallFeed() {
         return null;
       } catch (e) {
         setPosts(prev => prev.filter(p => p.id !== idTemporal)); // rollback: nunca dejar una mentira en pantalla
+        // Spec 048 fase 2 (FR-018): sin señal no se pierde: queda en la cola y en el Muro, «Se publicará al volver la señal».
+        if (e instanceof ApiError && e.esDeRed) {
+          await encolarPublicacion(autor, texto, fotos, categoria, formacion.formation ?? null);
+          setEnEspera((await publicacionesEnEspera()).map(aPostEnEspera));
+          return 'en-espera' as const;
+        }
         throw e;
       }
     },
     []
   );
+
+  /* Lee lo que espera al montar y cada vez que cambia la cola; si algo salió, relee el Muro para traer la publicación real. */
+  useEffect(() => {
+    let vigente = true;
+    let antes = -1;
+    const leer = async () => {
+      const lista = await publicacionesEnEspera();
+      if (!vigente) return;
+      if (antes >= 0 && lista.length < antes) void releerEnSilencio();
+      antes = lista.length;
+      setEnEspera(lista.map(aPostEnEspera));
+    };
+    void leer();
+    const quitar = suscribirCola(() => void leer());
+    return () => {
+      vigente = false;
+      quitar();
+    };
+  }, [releerEnSilencio]);
+
+  /** D19: borrar la que todavía espera. `false` si ya estaba saliendo (llega igual y se borra desde el Muro). */
+  const borrarEnEspera = useCallback(async (idCliente: string) => {
+    const quitada = await borrarPublicacionEnEspera(idCliente);
+    if (quitada) setEnEspera(prev => prev.filter(p => p.enEsperaDeSenal !== idCliente));
+    return quitada;
+  }, []);
 
   const agregarComentario = useCallback(
     async (postId: string, texto: string, photoUri?: string) => {
@@ -318,6 +379,8 @@ export function useWallFeed() {
 
   return {
     posts,
+    enEspera,
+    borrarEnEspera,
     setPosts,
     loading,
     error,

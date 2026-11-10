@@ -23,6 +23,8 @@ const RUTAS_EXACTAS = new Set([
   // Qué audio toca hoy (Pastilla y Audioterapia): sin esto la hoja del audio quedaba en blanco sin señal (E2E 09/11, FR-017).
   '/api/v1/spirit-audio/status',
   '/api/v1/audio-therapy/status',
+  // Spec 048 fase 2 (FR-021): las categorías del Muro, para escribir una publicación sin señal.
+  '/api/v1/wall/categories',
 ]);
 const PREFIJOS = ['/api/v1/rocks/', '/api/v1/habit-tracks/day'];
 

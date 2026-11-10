@@ -1,5 +1,4 @@
 import { fuentes } from '../../../theme/fuentes';
-import { SoloConConexion } from '../../sinRed/components/SoloConConexion';
 import React from 'react';
 import { ActivityIndicator, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -140,8 +139,6 @@ export function NuevaPublicacion({
           </Presionable>
         </View>
 
-        {/* Spec 048 (FR-005): publicar sin señal llega en la fase 2; hasta entonces lo dice antes de que la persona escriba. */}
-        <SoloConConexion>
         <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.cuerpo}>
           {errorAlPublicar ? (
             <View
@@ -193,7 +190,6 @@ export function NuevaPublicacion({
 
           <FotosDelPost {...fotos} />
         </ScrollView>
-        </SoloConConexion>
       </SafeAreaView>
     </Modal>
   );

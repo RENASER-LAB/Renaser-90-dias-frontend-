@@ -9,6 +9,8 @@ import { fuentes } from '../../../theme/fuentes';
 import { useAuth } from '../../auth/context/AuthContext';
 // El manejador del envío de un hábito marcado sin señal se registra al importar este módulo.
 import '../../habits/api/evidenciaHabitoApi';
+// Spec 048 fase 2: el de la publicación del Muro escrita sin señal.
+import '../../community/api/publicarSinRed';
 import { leerCola, ponerCuentaActual, procesarCola, suscribirCola } from '../colaSinRed';
 import { alVolverLaConexion, sinConexionDesdeMs, suscribirConexion } from '../estadoDeConexion';
 import { cargarAnclaGuardada } from '../horaReal';
