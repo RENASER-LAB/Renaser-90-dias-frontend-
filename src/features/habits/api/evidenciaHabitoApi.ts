@@ -4,6 +4,7 @@ import { ApiError, apiFetch } from '../../../services/http/apiClient';
 import { agregarEnvio, cuentaDeLaSesion, leerCola, registrarManejador } from '../../sinRed/colaSinRed';
 import { borrarArchivoSinRed, guardarArchivoSinRed, sinArchivo } from '../../sinRed/archivosSinRed';
 import { registrarAjusteDeLectura, retocarLecturasGuardadas } from '../../sinRed/lecturasGuardadas';
+import { avisarSinPuntos } from '../../sinRed/avisosDeLoNoAplicado';
 import { horaReal } from '../../sinRed/horaReal';
 import { fechaLocal } from '../notificaciones/utils/alarmasPorDia';
 import { validarRespuesta } from './habitsSchemas';
@@ -58,6 +59,8 @@ const registroCompletadoSchema = z
     puntosOtorgados: z.number(),
     respuestaTexto: z.string().nullable(),
     completadoEn: z.string().nullable(),
+    // Spec 048 (FR-015): por qué un hábito marcado sin señal quedó sin puntos (`LLEGO_DESPUES_DE_48_H`, `HORA_FUTURA`…).
+    motivoSinPuntos: z.string().nullish(),
   })
   .passthrough();
 
@@ -355,6 +358,15 @@ registrarManejador('completarHabito', async envio => {
     },
   });
   const completado = validarRespuesta(registroCompletadoSchema, r, 'POST /api/v1/habit-tracks/{id}/complete (sin red)');
+  // FR-015: quedó registrado sin puntos; la persona lo ve en la hoja de Hoy con su motivo (antes no se mostraba en ningún lado).
+  if (completado.motivoSinPuntos) {
+    await avisarSinPuntos(envio.cuentaId, {
+      idCliente: envio.idCliente,
+      etiqueta: 'Un hábito que marcaste sin conexión',
+      hechoEn: envio.hechoEn,
+      motivoSinPuntos: completado.motivoSinPuntos,
+    });
+  }
   // Ya no está en la cola: lo guardado de los hábitos tiene que decir hecho, o sin señal volvería a verse pendiente (E2E 09/11).
   await retocarLecturasGuardadas(
     ruta => ruta.startsWith('/api/v1/habit-tracks/'),

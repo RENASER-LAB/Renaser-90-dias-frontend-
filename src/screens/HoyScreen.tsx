@@ -79,6 +79,7 @@ import { diametroDelOrbe } from '../features/home/utils/diametroDelOrbe';
 import { cuandoEsElEvento } from '../features/home/utils/cuandoEsElEvento';
 import { fechaLocalISO } from '../features/objetivos/utils/ventanasDePlanificacion';
 import { useOcultarBarraAlDesplazar } from '../navigation/barraAlDesplazar/BarraInferior';
+import { AvisoDeLoNoAplicado } from '../features/sinRed/components/AvisoDeLoNoAplicado';
 
 export default function HoyScreen() {
   const barraAlDesplazar = useOcultarBarraAlDesplazar();
@@ -635,6 +636,8 @@ export default function HoyScreen() {
         onTomarFoto={pedido => void tomarFotoDelOrbe(pedido)}
       />
       <RegistroConFotoModal {...registroConFoto.modal} />
+      {/* Spec 048 fase 3 (P9): lo que hiciste sin señal y el servidor no aplicó, en una hoja corta al abrir Hoy. */}
+      <AvisoDeLoNoAplicado />
       <RegistroDeRitualConTexto {...ritual.modal} />
     </SafeAreaView>
   );
