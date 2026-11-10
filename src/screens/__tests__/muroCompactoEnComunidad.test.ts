@@ -32,7 +32,8 @@ describe('el Muro compacto en Comunidad', () => {
 
   // pedido del dueño 2026-11-05 muro compacto: deslizar hacia abajo para recargar
   it('la lista del Muro se recarga deslizando hacia abajo, con los colores del tema', () => {
-    const inicio = fuente.indexOf('data={posts}');
+    // La lista del Muro (por su ref: desde la spec 048 fase 2 sus datos suman las publicaciones que esperan señal).
+    const inicio = fuente.indexOf('ref={muroListaRef}');
     const bloque = fuente.slice(inicio, fuente.indexOf('onEndReached={alLlegarAlFinalDelMuro}', inicio));
     expect(bloque).toContain('<RefreshControl');
     expect(bloque).toContain('refreshing={muroRefrescando}');

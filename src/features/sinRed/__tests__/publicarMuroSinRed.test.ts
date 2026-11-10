@@ -70,7 +70,7 @@ import { aplicarAjustesDeLectura } from '../lecturasGuardadas';
 // Registra el ajuste de lectura que deja hecho el «Post diario» mientras la publicación espera.
 import '../../habits/api/evidenciaHabitoApi';
 
-const FOTO = { uri: 'file:///cache/foto.jpg', mimeType: 'image/jpeg', nombre: 'foto.jpg' };
+const FOTO = { uri: 'file:///cache/foto.jpg', mimeType: 'image/jpeg', nombre: 'foto.jpg', width: 1080, height: 1080 };
 
 beforeEach(async () => {
   await AsyncStorage.clear();
