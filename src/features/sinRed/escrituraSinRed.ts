@@ -9,6 +9,7 @@ import {
   registrarManejador,
   type EnvioSinRed,
 } from './colaSinRed';
+import { sinConexionDesdeMs } from './estadoDeConexion';
 import { horaReal, type HoraReal } from './horaReal';
 
 /**
@@ -78,8 +79,9 @@ export async function escribirOEncolar<T>(escritura: EscrituraSinRed, ajuste: Aj
   const hora = horaReal();
   await ajuste.antesDeEncolar?.(hora);
   const envio = await agregarEnvio(cuenta, 'escritura', { ...escritura }, hora);
-  // Con señal pero detrás de otra escritura: sale ya, en orden. Sin señal, la cola lo intenta cuando vuelva.
-  if (detras) void procesarCola(cuenta, Date.now(), { adelantar: true }).catch(() => undefined);
+  // Con señal pero detrás de otra escritura: sale ya, en orden. Sin señal no se intenta (sumaría un intento fallido a lo que ya espera):
+  // la cola lo manda cuando vuelva la señal.
+  if (detras && sinConexionDesdeMs() === null) void procesarCola(cuenta, Date.now(), { adelantar: true }).catch(() => undefined);
   return ajuste.optimista(envio);
 }
 

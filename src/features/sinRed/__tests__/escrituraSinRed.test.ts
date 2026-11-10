@@ -42,6 +42,7 @@ jest.mock('../horaReal', () => ({
 import { ApiError } from '../../../services/http/apiClient';
 import { leerAvisos } from '../avisosDeLoNoAplicado';
 import { leerCola, ponerCuentaActual, procesarCola } from '../colaSinRed';
+import { _reiniciarConexion, marcarSinConexion } from '../estadoDeConexion';
 import { alTerminarEnvioDe, escribirOEncolar, escriturasEsperando, type EscrituraSinRed } from '../escrituraSinRed';
 
 const ESCRITURA: EscrituraSinRed = { area: 'cierre', etiqueta: 'Tu cierre del día', metodo: 'PUT', ruta: '/api/v1/rocks/day-closure', cuerpo: { fecha: '2026-11-09' }, resumen: 'mi nota' };
@@ -154,5 +155,19 @@ describe('escribirOEncolar (spec 048 fase 3)', () => {
     await escribirOEncolar({ ...ESCRITURA, ruta: '/c' }, AJUSTE);
 
     expect((await escriturasEsperando('cierre')).map(e => e.ruta)).toEqual(['/a', '/c']);
+  });
+
+  it('sin señal no se intenta enviar a cada escritura: no suma intentos fallidos a lo que ya espera', async () => { // spec 048 FR-007
+    _reiniciarConexion();
+    mockRed.hay = false;
+    marcarSinConexion();
+    await escribirOEncolar({ ...ESCRITURA, ruta: '/primera' }, AJUSTE);
+    await escribirOEncolar({ ...ESCRITURA, ruta: '/segunda' }, AJUSTE);
+    await new Promise(res => setTimeout(res, 20));
+
+    const cola = await leerCola('ana');
+    expect(cola.map(e => e.intentos)).toEqual([0, 0]);
+    expect(mockPedidos).toEqual([]);
+    _reiniciarConexion();
   });
 });

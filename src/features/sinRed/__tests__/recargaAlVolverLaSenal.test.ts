@@ -10,7 +10,6 @@ import { join } from 'path';
 const PANTALLAS_QUE_LEEN_POR_FUERA = [
   'src/features/renasia/screens/RenasiaPanel.tsx',
   'src/screens/ComunidadScreen.tsx',
-  'src/features/training/components/PlanificarDimensionModal.tsx',
   'src/features/academy/components/ClaseDiariaModal.tsx',
 ];
 

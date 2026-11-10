@@ -1,6 +1,6 @@
 import { fuentes } from '../../../theme/fuentes';
-import { SoloConConexion } from '../../sinRed/components/SoloConConexion';
 import { alVolverLaConexion } from '../../sinRed/estadoDeConexion';
+import { useSinConexion } from '../../sinRed/useSinConexion';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, View, type LayoutChangeEvent, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
 import Animated, { FadeIn, ReduceMotion } from 'react-native-reanimated';
@@ -484,9 +484,10 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
   /** Hoy y los días pasados solo existen en la primera semana; las que vienen después son todas futuras. */
   const planificableEn = (lunes: string) => (dia: DiaDelPlan): boolean => (lunes === lunesInicial ? esPlanificable(dia) : true);
 
-  // Spec 048 (FR-005): los horarios se leen aquí, por fuera de `SoloConConexion`. Si la hoja quedó en error sin señal, al volver la
-  // señal se pide de nuevo (solo en error: nunca pisa una edición en curso).
+  // Spec 048: si la hoja quedó en error sin señal (nunca se guardaron sus horarios en este teléfono), al volver la señal se pide de
+  // nuevo (solo en error: nunca pisa una edición en curso).
   const [vueltaDeLaSenal, setVueltaDeLaSenal] = useState(0);
+  const sinSenal = useSinConexion();
   useEffect(() => {
     if (!visible || estado !== 'error') return;
     return alVolverLaConexion(() => setVueltaDeLaSenal(v => v + 1));
@@ -525,7 +526,7 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
         setEstado('listo');
       } catch (e) {
         setEstado('error');
-        // Spec 048: sin señal la hoja ya dice «Necesitas conexión»; el diálogo encima repetía lo mismo (E2E 09/11).
+        // Spec 048: sin señal la hoja ya lo dice en su cuerpo; el diálogo encima repetía lo mismo (E2E 09/11).
         if (!(e instanceof ApiError && e.esDeRed)) {
           Alert.alert('No pudimos cargar los horarios', mensajeDeError(e, 'Intenta de nuevo en unos segundos.'));
         }
@@ -1854,15 +1855,16 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
         tamano="completa"
         pie={pie}
       >
-        {/* Spec 048 (FR-005): planificar sin señal llega en la fase 3; hasta entonces lo dice claro (E2E 09/11). */}
-        <SoloConConexion>
+        {/* Spec 048 fase 3 (FR-019): planificar hábitos y alarmas también se hace sin señal (se guarda en la cola con la hora real). */}
         {estado === 'cargando' && (
           <Text style={[t.body, styles.estadoCentrado, { color: c.textSoft }]}>Cargando horarios…</Text>
         )}
 
         {estado === 'error' && (
           <Text style={[t.body, styles.estadoCentrado, { color: c.textSoft }]}>
-            No pudimos cargar los horarios de esta dimensión.
+            {sinSenal
+              ? 'Todavía no hay horarios guardados de esta dimensión en este teléfono. Se cargarán solos cuando vuelva la señal.'
+              : 'No pudimos cargar los horarios de esta dimensión.'}
           </Text>
         )}
 
@@ -2415,7 +2417,6 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
             </Text>
           </View>
         )}
-        </SoloConConexion>
       </HojaDesdeAbajo>
 
       {/* «Cambiar nombre» (D-127): la hoja de siempre, encima del editor. Guarda en el servidor y recién después en el
