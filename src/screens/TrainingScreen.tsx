@@ -1,4 +1,7 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { alCumplirUnHabito } from '../features/habits/eventos/habitoCumplido';
+import { claveDelAudio, prepararAudio } from '../features/sinRed/audiosDelDia';
+import { sinConexionDesdeMs } from '../features/sinRed/estadoDeConexion';
 import { View, Text, StyleSheet, ScrollView, Platform, type StyleProp, type ViewStyle } from 'react-native';
 import { Alert } from '../components/Alerta';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -239,6 +242,10 @@ export default function TrainingScreen() {
   /* Spec 014: los eventos de la semana solo se piden si Eventos está prendido (Soporte TI). */
   const eventosPrendidos = useFuncionalidad(CLAVES.eventos);
   useAlVolverAPrenderse(CLAVES.habitos, () => void recargarEntrenamiento());
+  // Spec 048: un hábito marcado sin señal que la cola acaba de enviar trae sus puntos; la pantalla se relee para mostrarlos (E2E 09/11).
+  useEffect(() => alCumplirUnHabito(c => {
+    if (c.desdeLaCola) void recargarEntrenamiento();
+  }), [recargarEntrenamiento]);
   // Solo en desarrollo: pedidos al montar y tiempo hasta tener datos (V-1, 26/09/2026).
   useMedicionDePantalla('Training', !cargandoBackend);
   /**
@@ -378,7 +385,8 @@ export default function TrainingScreen() {
   const [confirmacion, setConfirmacion] = useState<{ clave: number; texto: string; habitoId: string | null } | null>(null);
   const confirmar = (texto: string, habitoId: string | null) => {
     tacto.logro();
-    setConfirmacion({ clave: Date.now(), texto, habitoId });
+    // Spec 048 (FR-011): sin señal quedó en la cola; los puntos llegan al enviarse.
+    setConfirmacion({ clave: Date.now(), texto: sinConexionDesdeMs() !== null ? `${texto} · se enviará al volver la señal` : texto, habitoId });
   };
 
   // El habito de post diario lo cierra el compositor del Muro, en OTRA pestana (E-117). Sin esto,
@@ -469,6 +477,12 @@ export default function TrainingScreen() {
   const pastillaSolicitada = useRef<string | null>(null);
   /** El dia en curso, o el ya entregado de hoy para poder releer lo que escribio. */
   const diaDePastilla = espiritu.diaEnCurso ?? espiritu.diaEntregadoHoy;
+  // Spec 048 (FR-017): con señal, el audio de la Pastilla de hoy se baja solo para escucharlo sin señal.
+  useEffect(() => {
+    if (!diaDePastilla?.audioUrl) return;
+    const audio = audioDeLaPastilla(diaDePastilla);
+    void prepararAudio(claveDelAudio(audio.rotulo, audio.claveBorrador), audio.audioUrl);
+  }, [diaDePastilla]);
 
   /**
    * "Clase diaria". Tampoco se cierra subiendo evidencia: hay que ver la leccion del dia y escribir
@@ -1252,6 +1266,7 @@ export default function TrainingScreen() {
             }}
             onIrALaLeccion={irALaLeccionDelDia}
             onCerrar={cerrarClaseDiaria}
+            alVolverLaSenal={() => void claseDiaria.abrir()}
           />
         </>
       ) : null}

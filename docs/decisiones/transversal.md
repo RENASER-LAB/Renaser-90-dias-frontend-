@@ -754,3 +754,25 @@ Entrenar) y lleve hasta el primer post en el Muro; al publicar, confeti; y «el 
 >   también se guarda en el teléfono, `renaser.recorrido.paso.<cuenta>`, y se retoma desde el más adelantado).
 > * Pruebas: `recorridoDeBienvenida` (bloqueo, atrás, otras pestañas, reabrir, sin red, sesión que parpadea, lecturas al revés), `reglasDelRecorrido`, `confetiDelPrimerPost`;
 >   Maestro `recorrido-de-bienvenida/02-el-primer-post-es-obligatorio.yaml` (reemplaza a `02-saltar…`).
+
+## Cambio autorizado por el dueño — 2026-11-09 — tabs `Hoy`, `Plan`, `Training`, `Comunidad`, `Yo`: la app funciona sin internet, fase 1 (spec 048)
+
+* **Cambio autorizado por el dueño — 2026-11-09 — modo sin internet, fase 1 (spec 048).** El dueño decidió por rondas de
+  preguntas (las 16 decisiones están en `specs/048-modo-offline/spec.md` del backend). Lo que cambia en la app:
+  * **Sesión:** abrir la app sin señal ya no saca al login; se entra con el último perfil de esa sesión y se revalida con el
+    servidor apenas responde.
+  * **Ver sin señal:** Hoy, los hábitos de hoy y el Plan muestran lo último cargado (por sesión, se borra al salir).
+  * **Marcar hábitos sin señal** (con texto o foto): el check sale al instante y sus alarmas de ese día se callan; queda en una
+    cola por cuenta con la hora real (reloj del sistema desde el encendido, módulo `renaser-reloj`, solo Android) y se envía
+    sola al volver la señal. Los puntos y la celebración salen con la respuesta del servidor. Las confirmaciones de Entrenar
+    dicen «se enviará al volver la señal».
+  * **Ícono discreto** arriba a la derecha sin señal o con cosas por enviar; al tocarlo, «Sin conexión desde las 10:42 · 3
+    cosas por enviar».
+  * **«Necesitas conexión para usar esto»** en SER, el chat, Mi ingreso, Eventos, el Código Renaser y los videos; cargan solos
+    al volver la señal.
+  * **Audios:** el de la Pastilla y el de la Audioterapia se bajan solos apenas la app tiene su URL; se borran a los 7 días.
+  * **Cerrar sesión** con cosas sin enviar avisa cuántas se perderían.
+  * **Lo que no cambia:** la Clase diaria y la Pastilla siguen entregándose con conexión (tienen su propio camino); la web
+    sigue pidiendo internet. Fases 2 (Muro) y 3 (Plan, Cierra tu día, Radar, planificar) vienen después.
+  * **Necesita APK nuevo** (el módulo nativo del reloj). Sin él, la app usa el reloj del teléfono corregido y lo dice.
+

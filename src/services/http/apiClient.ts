@@ -1,3 +1,5 @@
+import { marcarConConexion, marcarSinConexion } from '../../features/sinRed/estadoDeConexion';
+import { aplicarAjustesDeLectura, esLecturaGuardable, guardarLectura, leerLectura } from '../../features/sinRed/lecturasGuardadas';
 import { API_CONFIG } from '../../config/apiConfig';
 import { almacenamientoSeguro } from '../storage/almacenamientoSeguro';
 import { registrarHoraDelServidor } from './relojServidor';
@@ -359,7 +361,21 @@ function mensajeSinCuerpoLegible(status: number): string {
 }
 
 export async function apiFetch<T>(ruta: string, opciones: OpcionesPeticion = {}): Promise<T> {
-  return (await pedir<T>(ruta, opciones, false)).datos as T;
+  // Spec 048 (FR-004): las lecturas de Hoy, los hábitos de hoy y el Plan se guardan por sesión y, sin señal, se devuelve lo
+  // último que dio el servidor. Escrituras y demás lecturas siguen igual.
+  const guardable = (opciones.method ?? 'GET') === 'GET' && opciones.sesion === undefined && esLecturaGuardable(ruta);
+  if (!guardable) return (await pedir<T>(ruta, opciones, false)).datos as T;
+  try {
+    const datos = (await pedir<T>(ruta, opciones, false)).datos as T;
+    void guardarLectura(getTokenSesion(), ruta, datos);
+    return (await aplicarAjustesDeLectura(ruta, datos)) as T;
+  } catch (error) {
+    if (error instanceof ApiError && error.esDeRed) {
+      const guardado = await leerLectura(getTokenSesion(), ruta);
+      if (guardado !== undefined) return (await aplicarAjustesDeLectura(ruta, guardado)) as T;
+    }
+    throw error;
+  }
 }
 
 /**
@@ -422,8 +438,11 @@ async function pedir<T>(ruta: string, opciones: OpcionesPeticion, aceptar304: bo
     } catch (error) {
       // fetch solo rechaza cuando no hubo respuesta: backend apagado, IP mal puesta, sin red.
       // Un 4xx/5xx SÍ resuelve, y se maneja más abajo.
+      // Spec 048 (FR-006): sin respuesta, la app queda «sin conexión desde…» hasta la próxima respuesta.
+      marcarSinConexion();
       throw new ApiError(0, 'No se pudo conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.', error);
     }
+    marcarConConexion();
 
     // La hora del servidor viaja en CADA respuesta. De acá sale el desfase con el reloj del
     // teléfono, que el Código Renaser necesita para no abrir y cerrar sus franjas a destiempo.

@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import * as habitsApi from '../api/habitsApi';
-import { alCumplirUnHabito } from '../eventos/habitoCumplido';
+import { alCumplirUnHabito, alMarcarSinRed } from '../eventos/habitoCumplido';
 import type { PreferenciaHabitoApi } from '../types/habits.types';
 import { anotarCumplido } from './cumplidoDeHoy';
 import {
@@ -324,7 +324,15 @@ export async function alCumplirElHabito(
 
 /** Escucha «se cumplió un hábito» y lo da por cumplido hoy. Devuelve cómo dejar de escuchar. */
 export function atenderAlCumplirUnHabito(userId: string): () => void {
-  return alCumplirUnHabito(cumplido => {
+  const alCumplir = alCumplirUnHabito(cumplido => {
     if (cumplido.habitoId) void alCumplirElHabito(userId, cumplido.habitoId, { fecha: cumplido.fecha }).catch(() => undefined);
   });
+  // Spec 048 (FR-011): marcado sin señal, sus alarmas de ese día se callan igual, sin esperar al servidor.
+  const alMarcar = alMarcarSinRed(marcado => {
+    if (marcado.habitoId) void alCumplirElHabito(userId, marcado.habitoId, { fecha: marcado.fecha }).catch(() => undefined);
+  });
+  return () => {
+    alCumplir();
+    alMarcar();
+  };
 }

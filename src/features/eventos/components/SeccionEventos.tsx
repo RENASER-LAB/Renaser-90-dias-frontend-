@@ -1,4 +1,5 @@
 import { fuentes } from '../../../theme/fuentes';
+import { SoloConConexion } from '../../sinRed/components/SoloConConexion';
 import React, { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react';
 import {
   Pressable,
@@ -100,7 +101,7 @@ function ocurrenciaSuelta(evento: Evento): Ocurrencia {
  * formulario, y deslizando hacia abajo en la lista y en «Mi agenda». Por eso el `ScrollView` es de la
  * sección y no de Comunidad: el `RefreshControl` necesita el estado de la lectura.
  */
-export function SeccionEventos({
+function SeccionEventosConRed({
   userId,
   rol,
   eventoPedido,
@@ -591,3 +592,12 @@ const estilos = StyleSheet.create({
   cuadro: { width: 22, height: 22, borderRadius: 6, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
   casillaTexto: { fontFamily: fuentes.media, fontSize: 15 },
 });
+
+/** Spec 048 (FR-005): sin señal dice que necesita conexión (sin hueco en blanco) y vuelve solo con la señal. */
+export function SeccionEventos(props: React.ComponentProps<typeof SeccionEventosConRed>) {
+  return (
+    <SoloConConexion>
+      <SeccionEventosConRed {...props} />
+    </SoloConConexion>
+  );
+}

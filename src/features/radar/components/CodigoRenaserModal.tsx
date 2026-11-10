@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { SoloConConexion } from '../../sinRed/components/SoloConConexion';
 import {
   KeyboardAvoidingView,
   type LayoutChangeEvent,
@@ -299,6 +300,8 @@ export function CodigoRenaserModal({
             ) : null}
           </View>
 
+          {/* Spec 048 (FR-005): el Código Renaser necesita la hora del servidor; sin señal lo dice y vuelve solo. */}
+          <SoloConConexion>
           <ScrollView
             ref={scroll}
             style={{ flex: 1 }}
@@ -359,6 +362,7 @@ export function CodigoRenaserModal({
               <Text style={[t.micro, { color: c.micro, fontSize: 11, textAlign: 'center' }]}>{textoDelPieFinal}</Text>
             ) : null}
           </View>
+          </SoloConConexion>
         </KeyboardAvoidingView>
       </SafeAreaView>
     </Modal>
