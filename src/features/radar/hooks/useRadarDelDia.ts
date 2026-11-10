@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useMinutoActual } from '../../../hooks/useMinutoActual';
 import { ApiError, mensajeDeError } from '../../../services/http/apiClient';
 import { ahoraConfiable } from '../../../services/http/relojServidor';
+import { alVolverLaConexion, sinConexionDesdeMs } from '../../sinRed/estadoDeConexion';
 import { obtenerUltimoCheckIn, registrarCheckIn } from '../api/radarApi';
 import { CONFIG_RADAR } from '../config/configRadar';
 import type { CheckInRadarApi } from '../types/radar.types';
@@ -51,6 +52,12 @@ export interface EstadoRadarDelDia {
  * otra cuenta, o el radar que se apagó un rato (el arranque guiado) y volvió. Si la lectura FALLA (red,
  * 5xx) se abre igual, como siempre —no puede quedarse sin pedirse—, pero ya sin parpadeo; un 403 apaga.
  *
+ * ## Sin señal (spec 048, 2026-11-10)
+ *
+ * Si la lectura falló porque no hay señal, al volver la señal se lee de nuevo (vuelve a `cargando` mientras tanto): en el
+ * rato sin señal la hora pudo responderse desde otro teléfono. Que el formulario innegociable NO se abra solo sin señal lo
+ * decide `RadarContext` (sin señal el cuerpo dice «Necesitas conexión» y la persona quedaba atrapada).
+ *
  * ## Dos apagados silenciosos, a propósito
  *
  * 1. **Fuera de los días 1-7 no se pide nada.** Ni siquiera `/latest`: si el radar no
@@ -81,6 +88,21 @@ export function useRadarDelDia(
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [prohibido, setProhibido] = useState(false);
+  /** Spec 048: la última lectura falló sin señal; al volver la señal se repite. */
+  const leyoSinSenal = useRef(false);
+  const [relecturas, setRelecturas] = useState(0);
+
+  useEffect(
+    () =>
+      alVolverLaConexion(() => {
+        if (!leyoSinSenal.current) return;
+        leyoSinSenal.current = false;
+        // De vuelta a `cargando`: con lo leído sin señal el formulario podría abrirse y cerrarse al llegar la lectura.
+        setLecturaDe(null);
+        setRelecturas(n => n + 1);
+      }),
+    [],
+  );
 
   /* Todo lo que sabe este hook es de UNA persona. Se limpia junto, en un solo lugar, para que
      agregar un estado nuevo más adelante no deje un resto colgado sin que nadie lo note. */
@@ -130,12 +152,14 @@ export function useRadarDelDia(
         // el segundo con un 409, y `enviar` lo resuelve releyendo (ver abajo). Leer falló, pero ya
         // se SABE que no se pudo: se deja de esperar y se abre el formulario, como siempre.
         console.warn('[Radar] no se pudo leer el último check-in:', e);
+        // Spec 048: sin señal, se vuelve a leer cuando vuelva.
+        leyoSinSenal.current = sinConexionDesdeMs() !== null;
         setLecturaDe(claveEnCurso);
       });
     return () => {
       vigente = false;
     };
-  }, [enEtapa, claveEnCurso]);
+  }, [enEtapa, claveEnCurso, relecturas]);
 
   /** Las DOS marcas de «ya está registrado». Siempre juntas, nunca una sola. */
   const marcarRegistrado = useCallback((creadoEnIso: string) => {

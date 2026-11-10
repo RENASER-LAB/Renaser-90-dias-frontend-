@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { mensajeDeError } from '../../../services/http/apiClient';
 import * as spiritApi from '../api/spiritApi';
+import type { ContextoDeLaPastilla } from '../api/pastillaSinRed';
 import type { SpiritDayApi, SpiritStatusApi } from '../types/spirit.types';
 
 /**
@@ -28,6 +29,9 @@ import type { SpiritDayApi, SpiritStatusApi } from '../types/spirit.types';
  * No marca nada como completado por su cuenta. Devuelve el resultado del POST y deja que Training
  * recargue desde el backend, la única fuente de verdad de si el registro quedó `COMPLETADO`. Sin
  * esto, un fallo de red dejaría la tarjeta marcada como hecha y el hábito abierto en el servidor.
+ *
+ * > **Spec 048 (2026-11-10).** Sin señal la entrega ya no falla: espera en la cola de lo hecho sin señal y sale sola al volver
+ * > (`pastillaSinRed.ts`). Mientras espera, la tarjeta se ve hecha por los ajustes de lectura de la cola, no por este hook.
  */
 /**
  * @param opciones.esperar mientras sea `true`, no hace la primera lectura (Entrenar la pide en la segunda tanda, cuando la lista ya
@@ -84,11 +88,12 @@ export function useEspiritu(opciones: { esperar?: boolean } = {}) {
    *
    * Entregar pasado el mediodía NO es un error: el backend guarda igual y responde `onTime:false`.
    */
-  const entregar = useCallback(async (dia: number, texto: string): Promise<boolean> => {
+  const entregar = useCallback(async (dia: number, texto: string, contexto?: ContextoDeLaPastilla): Promise<boolean> => {
     setEnviando(true);
     setErrorEnvio(null);
     try {
-      await spiritApi.entregarResumenEspiritu(dia, texto);
+      // Spec 048: sin señal queda en la cola (con el registro del hábito, para verlo hecho mientras espera) y cuenta como enviado.
+      await spiritApi.entregarResumenEspiritu(dia, texto, contexto);
       return true;
     } catch (e) {
       setErrorEnvio(mensajeDeError(e, 'No pudimos enviar tu respuesta. Intenta de nuevo.'));

@@ -1,5 +1,6 @@
-import { apiFetch } from '../../../services/http/apiClient';
+import { ApiError, apiFetch } from '../../../services/http/apiClient';
 import type { SpiritStatusApi, SubmitSpiritSummaryApi } from '../types/spirit.types';
+import { encolarPastilla, type ContextoDeLaPastilla } from './pastillaSinRed';
 import { spiritSchemas, validarRespuesta } from './spiritSchemas';
 
 /**
@@ -44,15 +45,27 @@ export async function obtenerEstadoEspiritu(): Promise<SpiritStatusApi> {
  *
  * NO es idempotente: un segundo envío del mismo día responde 409 (el registro ya no está
  * pendiente). Por eso la pantalla cierra el modal solo cuando este POST respondió OK.
+ *
+ * Spec 048 (D2, FR-007): sin señal no falla: la entrega espera en la cola y sale sola al volver la señal
+ * (`pastillaSinRed.ts`, con su límite: el servidor la registra con la hora en que llega). Responde
+ * `pendienteDeEnvio: true` y `onTime: true` provisional (lo decide el servidor al llegar).
  */
 export async function entregarResumenEspiritu(
   day: number,
   summaryText: string,
-): Promise<SubmitSpiritSummaryApi> {
-  const r = await apiFetch<unknown>('/api/v1/spirit-audio/submit', {
-    method: 'POST',
-    body: { day, summaryText },
-  });
+  contexto: ContextoDeLaPastilla = {},
+): Promise<SubmitSpiritSummaryApi & { pendienteDeEnvio?: true }> {
+  let r: unknown;
+  try {
+    r = await apiFetch<unknown>('/api/v1/spirit-audio/submit', {
+      method: 'POST',
+      body: { day, summaryText },
+    });
+  } catch (error) {
+    if (!(error instanceof ApiError && error.esDeRed)) throw error;
+    await encolarPastilla(day, summaryText, contexto, error);
+    return { onTime: true, pendienteDeEnvio: true };
+  }
   return validarRespuesta(spiritSchemas.submit, r, 'POST /api/v1/spirit-audio/submit');
 }
 

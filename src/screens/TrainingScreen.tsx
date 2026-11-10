@@ -843,6 +843,7 @@ export default function TrainingScreen() {
    * no hace falta un segundo POST a `/habit-tracks/{id}/complete`.
    *
    * Si el envio falla, el modal SIGUE ABIERTO con lo escrito: nada se marca de forma optimista.
+   * Spec 048: sin señal no es un fallo; la entrega espera en la cola y se ve hecha (`pastillaSinRed.ts`).
    */
   const handleEntregarPastilla = async (dia: number, texto: string) => {
     const registroId = pastillaSolicitada.current;
@@ -854,7 +855,7 @@ export default function TrainingScreen() {
       enviado = await ejecutarEnRegistroVigente(registroId, track => {
         habitoId = track.habitoId;
         fechaDelHabito = track.fechaEjecucion;
-        return espiritu.entregar(dia, texto);
+        return espiritu.entregar(dia, texto, { registroId, fecha: track.fechaEjecucion });
       });
     } catch (error) {
       Alert.alert('No pudimos registrar la Pastilla', mensajeDeError(error, 'Actualiza tus hábitos e inténtalo de nuevo.'));

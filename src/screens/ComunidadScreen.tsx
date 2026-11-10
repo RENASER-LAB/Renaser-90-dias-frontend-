@@ -3455,6 +3455,9 @@ function ComunidadPorFormacion({
           )}
           {seccionActiva === 'ranking' && !seccionEnMantenimiento && (
             <View style={{ gap: space.gap, paddingTop: 10, paddingBottom: 28 }}>
+              {/* Spec 048 (FR-005, 2026-11-10): sin señal el ranking dice «Necesitas conexión» en vez de un hueco en blanco; al
+                  volver la señal se lee de nuevo (el `alVolverLaConexion` de arriba pide `recargarRanking`). */}
+              <SoloConConexion>
               {/*
                 El podio se pinta SIEMPRE, con puntos o sin ellos (decisión del dueño del proyecto,
                 2026-09-07). Antes, un corte sin posiciones dejaba la sección con una tarjeta gris
@@ -3617,6 +3620,7 @@ function ComunidadPorFormacion({
                   ))}
                 </View>
               )}
+              </SoloConConexion>
             </View>
           )}
         </ScrollView>

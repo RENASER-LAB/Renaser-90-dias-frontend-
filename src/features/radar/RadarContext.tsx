@@ -1,9 +1,10 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useAuth } from '../../context/AuthContext';
 import { useMinutoActual } from '../../hooks/useMinutoActual';
 import { obtenerResumenHome } from '../home/api/homeApi';
 import { useArranqueGuiado } from '../sparkie/hooks/useArranqueGuiado';
+import { useSinConexion } from '../sinRed/useSinConexion';
 import { CONFIG_RADAR, rolObligadoAlRadar } from './config/configRadar';
 import { sincronizarRecordatoriosDeRadar } from './notificaciones/recordatoriosDeRadar';
 import {
@@ -50,7 +51,7 @@ interface ValorRadar {
   minutosParaAbrir: number;
   /** El slot que hay que responder, o `null` si no hay ninguno abierto. */
   slot: SlotRadar | null;
-  /** `true` = este rol no puede cerrar el formulario. */
+  /** `true` = este rol no puede cerrar el formulario. Sin señal siempre es `false` (spec 048): se puede cerrar. */
   obligatorio: boolean;
   /** `true` = el formulario está en pantalla. */
   abierto: boolean;
@@ -185,7 +186,11 @@ export function RadarProvider({ children }: { children: React.ReactNode }) {
     // `configMiRadar` se lee por su clave: una lectura nueva con lo mismo no reprograma.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [diaPrograma, miRadar.lectura.estado, huellaDeMiRadar, user?.id]);
-  const obligatorio = rolObligadoAlRadar(user?.role);
+  /* Spec 048 (2026-11-10): sin señal el cuerpo del formulario dice «Necesitas conexión», y el innegociable —sin X y con el
+     retroceso bloqueado— dejaba a la persona atrapada sin poder usar la app. Sin señal no se abre solo y, si ya estaba
+     abierto, se puede cerrar. Al volver la señal se pide como siempre (si la hora sigue sin responderse). */
+  const sinSenal = useSinConexion();
+  const obligatorio = rolObligadoAlRadar(user?.role) && !sinSenal;
 
   /* Sólo `abierto` tiene slot a responder. En `cargando` (todavía no se sabe si esta hora ya se
      respondió, 2026-10-19) NO hay slot: el formulario no se abre ni se marca la capa obligatoria
@@ -206,6 +211,8 @@ export function RadarProvider({ children }: { children: React.ReactNode }) {
 
   const abrir = useCallback(() => setAbiertoAMano(true), []);
 
+  /** Si el formulario estaba en pantalla en el dibujo anterior: sin señal no se abre solo, pero lo abierto sigue abierto. */
+  const estabaAbierto = useRef(false);
   const abierto = useMemo(() => {
     if (slot === null) return false;
     // Tocar la tarjeta lo abre YA: quien lo pide no necesita cortesía.
@@ -213,9 +220,12 @@ export function RadarProvider({ children }: { children: React.ReactNode }) {
     // Los primeros minutos de la franja son de la persona, no del formulario. Pasados, para el
     // aprendiz el formulario se queda hasta que lo llene; para el resto es una sola oferta.
     if (!pasoLaCortesia) return false;
+    // Spec 048: sin señal no se abre solo. Si ya estaba abierto no se cierra de golpe (se puede estar escribiendo).
+    if (sinSenal) return estabaAbierto.current && cerradoEnSlot !== slot.hora;
     if (obligatorio) return true;
     return CONFIG_RADAR.abrirAutomaticamente && cerradoEnSlot !== slot.hora;
-  }, [slot, obligatorio, abiertoAMano, cerradoEnSlot, pasoLaCortesia]);
+  }, [slot, obligatorio, abiertoAMano, cerradoEnSlot, pasoLaCortesia, sinSenal]);
+  estabaAbierto.current = abierto;
 
   const valor = useMemo<ValorRadar>(
     () => ({
