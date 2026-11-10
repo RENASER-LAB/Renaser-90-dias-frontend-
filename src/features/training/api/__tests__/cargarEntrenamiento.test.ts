@@ -6,7 +6,7 @@ jest.mock('../../../../services/http/apiClient', () => ({
   mensajeDeError: (_e: unknown, porDefecto: string) => porDefecto,
 }));
 
-import { cargarEntrenamiento } from '../cargarEntrenamiento';
+import { cargarEntrenamiento, cargarEvidenciasDeRocas } from '../cargarEntrenamiento';
 
 const HABITO = {
   id: 'h-agua',
@@ -45,11 +45,11 @@ describe('cargarEntrenamiento', () => {
     mockApiFetch.mockImplementation(responderSegunRuta);
   });
 
-  it('hace seis pedidos, y el catálogo de hábitos UNA sola vez', async () => {
+  it('primero lo esencial (10/11): cinco pedidos dibujan la lista, la evidencia de las acciones queda para después', async () => {
     await cargarEntrenamiento();
 
     const rutas = mockApiFetch.mock.calls.map(([ruta]) => ruta);
-    expect(rutas).toHaveLength(6);
+    expect(rutas).toHaveLength(5);
     expect(rutas.filter(r => r === '/api/v1/habits')).toHaveLength(1);
     expect(new Set(rutas)).toEqual(
       new Set([
@@ -58,12 +58,28 @@ describe('cargarEntrenamiento', () => {
         '/api/v1/habit-unlocks',
         '/api/v1/habit-tracks/today/snapshot',
         '/api/v1/rocks/today',
-        '/api/v1/evidence?tipoDestino=ROCA_DIARIA',
       ]),
     );
+    expect(rutas.some(r => r.startsWith('/api/v1/evidence'))).toBe(false);
   });
 
-  it('los seis salen en la MISMA ronda: ninguno espera la respuesta de otro', async () => {
+  it('la segunda tanda trae qué acciones tienen evidencia; si falla, null (se conserva el sello de antes)', async () => {
+    mockApiFetch.mockImplementation(ruta =>
+      ruta.startsWith('/api/v1/evidence')
+        ? Promise.resolve({ evidencias: [{ id: 'e1', participanteId: 'p', registroHabitoId: null, rocaDiariaId: 'r1', registroEspirituId: null, tipo: 'FOTO',
+            contenidoTexto: null, timestampExif: null, subidaEn: '2026-11-10T12:00:00Z', gpsLat: null, gpsLng: null, esPrincipal: true,
+            estadoValidacion: 'APROBADA', notasValidacion: null, intentosIa: 0, penalizacionAplicada: false, publicadaEnMuro: false }], nextCursor: null })
+        : responderSegunRuta(ruta),
+    );
+    expect(await cargarEvidenciasDeRocas()).toEqual(new Set(['r1']));
+
+    const aviso = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    mockApiFetch.mockImplementation(() => Promise.reject(new Error('500')));
+    expect(await cargarEvidenciasDeRocas()).toBeNull();
+    aviso.mockRestore();
+  });
+
+  it('los cinco salen en la MISMA ronda: ninguno espera la respuesta de otro', async () => {
     // Nada responde hasta que se liberan todos juntos: si hubiera una segunda ronda, sus pedidos
     // recién saldrían DESPUÉS de liberar, y el conteo previo quedaría corto.
     const pendientes: Array<() => void> = [];
@@ -74,11 +90,11 @@ describe('cargarEntrenamiento', () => {
     const carga = cargarEntrenamiento();
     await Promise.resolve();
     await Promise.resolve();
-    expect(mockApiFetch).toHaveBeenCalledTimes(6);
+    expect(mockApiFetch).toHaveBeenCalledTimes(5);
 
     pendientes.forEach(liberar => liberar());
     await carga;
-    expect(mockApiFetch).toHaveBeenCalledTimes(6);
+    expect(mockApiFetch).toHaveBeenCalledTimes(5);
   });
 
   it('el mismo catálogo alimenta a Training y al inventario de Plan', async () => {

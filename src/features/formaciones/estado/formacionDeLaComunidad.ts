@@ -1,4 +1,4 @@
-import type { OpcionDeFormacion } from '../types/formaciones.types';
+import { CODIGOS_DE_FORMACION, type OpcionDeFormacion } from '../types/formaciones.types';
 
 /**
  * La formación con la que se lee y se crea en la Comunidad (spec 024).
@@ -18,7 +18,10 @@ import type { OpcionDeFormacion } from '../types/formaciones.types';
 export type EstadoDeLaFormacionDeLaComunidad = {
   /** Administración, Alquimista y Soporte TI. Los demás no eligen ni mandan `formation`. */
   veTodas: boolean;
-  /** El código elegido, o `null` = «Todas». Siempre `null` si `veTodas` es falso. */
+  /**
+   * El código elegido. Siempre `null` si `veTodas` es falso. Desde el 10/11 (#169, decisión del dueño) ya no existe «Todas»: quien ve
+   * todas mira siempre una formación; `null` solo mientras todavía no se leyó lo recordado (`listo: false`).
+   */
   eleccion: string | null;
   /** Falta leer lo recordado en el teléfono (solo se espera cuando `veTodas`). Mientras tanto Comunidad no pide nada. */
   listo: boolean;
@@ -106,6 +109,9 @@ export function prepararLaFormacionDeLaComunidad(
 ): void {
   const disponibles = sesion.disponibles ?? [];
   const activa = sesion.activa ?? null;
+  // #169: al refrescarse el perfil la sesión llega un instante SIN formación (ni disponibles ni activa). Eso no es «dejó de ver todas»:
+  // se conserva lo elegido. Antes se borraba, se releía lo recordado y, si la lectura le ganaba a la escritura, volvía a «Todas».
+  if (cuenta && estado.cuenta === cuenta && estado.veTodas && !veTodas && disponibles.length === 0 && !activa) return;
   if (!cuenta || !veTodas) {
     publicar({ ...SIN_ELECCION, cuenta, disponibles, activa });
     return;
@@ -123,14 +129,24 @@ export function prepararLaFormacionDeLaComunidad(
  */
 export function fijarLaEleccionRecordada(cuenta: string, eleccion: string | null): void {
   if (estado.cuenta !== cuenta || !estado.veTodas || estado.listo) return;
-  publicar({ ...estado, eleccion, listo: true });
+  publicar({ ...estado, eleccion: eleccion ?? formacionPorDefecto(estado), listo: true });
 }
 
-/** Si la lectura de lo recordado falla, se sigue con «Todas»: nunca se queda esperando. */
+/** Si la lectura de lo recordado falla, se sigue con la formación por defecto: nunca se queda esperando. */
 export function darPorLeidaLaEleccion(cuenta: string): void {
   if (estado.cuenta !== cuenta || !estado.veTodas || estado.listo) return;
-  publicar({ ...estado, listo: true });
+  publicar({ ...estado, eleccion: estado.eleccion ?? formacionPorDefecto(estado), listo: true });
 }
+
+/**
+ * #169: sin «Todas», sin nada recordado se mira la formación activa de la cuenta, o la primera que ofrece la sesión, o la Escuela.
+ */
+export function formacionPorDefecto(actual: EstadoDeLaFormacionDeLaComunidad): string {
+  return actual.activa?.codigo || actual.disponibles.find(o => o.codigo)?.codigo || CODIGOS_DE_FORMACION[0];
+}
+
+/** Lo último elegido en esta sesión de la app, por cuenta: una relectura de lo recordado nunca trae algo más viejo (#169). */
+const ultimaElegida = new Map<string, string>();
 
 /**
  * Elige la formación de la Comunidad (`null` = Todas) y la recuerda por cuenta. Solo vale para quien ve todas; para los demás no
@@ -138,9 +154,11 @@ export function darPorLeidaLaEleccion(cuenta: string): void {
  */
 export function elegirFormacionDeLaComunidad(codigo: string | null): void {
   if (!estado.veTodas || !estado.cuenta) return;
-  if (codigo === estado.eleccion) return;
+  // #169: ya no hay «Todas»; una elección vacía no hace nada.
+  if (!codigo || codigo === estado.eleccion) return;
   const cuenta = estado.cuenta;
-  publicar({ ...estado, eleccion: codigo });
+  ultimaElegida.set(cuenta, codigo);
+  publicar({ ...estado, eleccion: codigo, listo: true });
   void guardarLaEleccion(cuenta, codigo);
 }
 
@@ -169,6 +187,8 @@ async function guardarLaEleccion(cuenta: string, codigo: string | null): Promise
 
 /** Lee lo recordado de esta cuenta, o `null` si no hay nada o el almacenamiento falla. */
 export async function leerLaEleccionRecordada(cuenta: string): Promise<string | null> {
+  const enMemoria = ultimaElegida.get(cuenta);
+  if (enMemoria) return enMemoria;
   try {
     return await almacenamiento().getItem(claveDeLaEleccion(cuenta));
   } catch {
@@ -221,5 +241,6 @@ export function formacionDelCuerpo(
 
 /** Solo para pruebas: vuelve al estado de una sesión sin formación. */
 export function reiniciarLaFormacionDeLaComunidad(): void {
+  ultimaElegida.clear();
   publicar(SIN_ELECCION);
 }
