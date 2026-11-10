@@ -1,14 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import React from 'react';
 import TestRenderer, { act, type ReactTestRenderer } from 'react-test-renderer';
 
 /**
  * Spec 048 (2026-11-10): el Código Renaser innegociable (días 1 a 7) sin señal.
  *
- * Fallo encontrado en la auditoría: sin señal, la lectura de `/radar/latest` fallaba, se daba la hora por leída y el formulario
- * innegociable se abría solo. Su cuerpo dice «Necesitas conexión» (`SoloConConexion`), no tiene X y el retroceso está bloqueado:
- * la persona quedaba atrapada sin poder usar la app. Ahora sin señal no se abre solo, lo ya abierto se puede cerrar, y al volver
- * la señal se lee de nuevo y se pide como siempre.
+ * #179 (auditoría): sin señal, el formulario innegociable se abría solo con el cuerpo en «Necesitas conexión» (`SoloConConexion`), sin
+ * X y con el retroceso bloqueado: la persona quedaba atrapada. Entonces se decidió que sin señal no se abriera solo.
+ *
+ * **Fase 3, P8 (decisión del dueño, 2026-11-10): se revierte.** Ahora el Código Renaser se responde sin señal (se guarda en la cola con
+ * la hora real, `radarSinRed.ts`) y el cuerpo ya no va en `SoloConConexion`: el innegociable vuelve a abrirse solo y SIN X también
+ * sin señal. Lo que queda de #179: si la lectura falla sin señal, al volver la señal se lee de nuevo la hora.
  */
 
 const mockObtenerUltimo = jest.fn<() => Promise<string | null>>();
@@ -82,7 +86,7 @@ describe('Código Renaser innegociable sin señal (spec 048)', () => {
     jest.useRealTimers();
   });
 
-  it('si la lectura falla sin señal, no se abre solo; al volver la señal lee de nuevo y se pide como siempre', async () => { // spec 048 FR-005
+  it('si la lectura falla sin señal, se abre solo y sin X (P8); al volver la señal lee de nuevo y sigue pidiéndose', async () => { // spec 048 FR-019
     const aviso = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
     mockObtenerUltimo.mockImplementationOnce(async () => {
       // Lo que hace `apiFetch` cuando no hay respuesta: marca «sin conexión» y rechaza con un error de red.
@@ -91,7 +95,9 @@ describe('Código Renaser innegociable sin señal (spec 048)', () => {
     });
     await montar();
 
-    expect(mockDibujos.map(d => d.visible)).not.toContain(true);
+    // Sin señal el innegociable se abre solo y no se puede cerrar: ahora se responde sin señal (antes de la fase 3 atrapaba).
+    expect(ultimo().visible).toBe(true);
+    expect(ultimo().obligatorio).toBe(true);
 
     mockObtenerUltimo.mockResolvedValueOnce(null);
     await act(async () => marcarConConexion());
@@ -103,7 +109,7 @@ describe('Código Renaser innegociable sin señal (spec 048)', () => {
     aviso.mockRestore();
   });
 
-  it('al volver la señal, si la hora ya se respondió desde otro teléfono, no se abre', async () => { // spec 048 FR-005
+  it('al volver la señal, si la hora ya se respondió desde otro teléfono, se cierra', async () => { // spec 048 FR-005
     const aviso = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
     mockObtenerUltimo.mockImplementationOnce(async () => {
       marcarSinConexion();
@@ -115,11 +121,11 @@ describe('Código Renaser innegociable sin señal (spec 048)', () => {
     await act(async () => marcarConConexion());
     await vaciar();
 
-    expect(mockDibujos.map(d => d.visible)).not.toContain(true);
+    expect(ultimo().visible).toBe(false);
     aviso.mockRestore();
   });
 
-  it('abierto con señal, si la señal se va sigue abierto pero se puede cerrar; al volver la señal se pide de nuevo', async () => { // spec 048 FR-005
+  it('abierto con señal, si la señal se va sigue abierto y sin X: se responde sin señal (P8)', async () => { // spec 048 FR-019
     mockObtenerUltimo.mockResolvedValueOnce(null);
     await montar();
     expect(ultimo().visible).toBe(true);
@@ -127,13 +133,15 @@ describe('Código Renaser innegociable sin señal (spec 048)', () => {
 
     await act(async () => marcarSinConexion());
     expect(ultimo().visible).toBe(true);
-    expect(ultimo().obligatorio).toBe(false);
-
-    await act(async () => ultimo().onCerrar());
-    expect(ultimo().visible).toBe(false);
+    expect(ultimo().obligatorio).toBe(true);
 
     await act(async () => marcarConConexion());
     expect(ultimo().visible).toBe(true);
     expect(ultimo().obligatorio).toBe(true);
+  });
+
+  it('el formulario ya no va en SoloConConexion: sin señal también se puede escribir y registrar', () => { // spec 048 FR-019
+    const fuente = readFileSync(join(__dirname, '../components/CodigoRenaserModal.tsx'), 'utf8');
+    expect(fuente).not.toContain('SoloConConexion');
   });
 });

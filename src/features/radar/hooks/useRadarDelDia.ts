@@ -4,6 +4,7 @@ import { useMinutoActual } from '../../../hooks/useMinutoActual';
 import { ApiError, mensajeDeError } from '../../../services/http/apiClient';
 import { ahoraConfiable } from '../../../services/http/relojServidor';
 import { alVolverLaConexion, sinConexionDesdeMs } from '../../sinRed/estadoDeConexion';
+import { alTerminarEnvioDe } from '../../sinRed/escrituraSinRed';
 import { obtenerUltimoCheckIn, registrarCheckIn } from '../api/radarApi';
 import { CONFIG_RADAR } from '../config/configRadar';
 import type { CheckInRadarApi } from '../types/radar.types';
@@ -55,8 +56,9 @@ export interface EstadoRadarDelDia {
  * ## Sin señal (spec 048, 2026-11-10)
  *
  * Si la lectura falló porque no hay señal, al volver la señal se lee de nuevo (vuelve a `cargando` mientras tanto): en el
- * rato sin señal la hora pudo responderse desde otro teléfono. Que el formulario innegociable NO se abra solo sin señal lo
- * decide `RadarContext` (sin señal el cuerpo dice «Necesitas conexión» y la persona quedaba atrapada).
+ * rato sin señal la hora pudo responderse desde otro teléfono. Desde la fase 3 (P8) el Código Renaser se responde también sin
+ * señal (`registrarCheckIn` lo encola y la hora queda respondida al instante), así que el innegociable se abre solo como siempre.
+ * Cuando la cola manda lo respondido (o el servidor no lo aplica) la hora se lee de nuevo.
  *
  * ## Dos apagados silenciosos, a propósito
  *
@@ -103,6 +105,8 @@ export function useRadarDelDia(
       }),
     [],
   );
+
+  useEffect(() => alTerminarEnvioDe('radar', () => setRelecturas(n => n + 1)), []);
 
   /* Todo lo que sabe este hook es de UNA persona. Se limpia junto, en un solo lugar, para que
      agregar un estado nuevo más adelante no deje un resto colgado sin que nadie lo note. */
