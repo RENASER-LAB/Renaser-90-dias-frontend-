@@ -13,7 +13,7 @@ import type { OrigenDeLaHora } from './horaReal';
  *   D14); si pasa, queda marcado con su motivo y la cola sigue.
  * - Va guardada por cuenta: lo de una cuenta nunca sale con la sesión de otra.
  */
-export type TipoDeEnvio = 'completarHabito' | 'subirEvidencia' | 'confirmarTexto';
+export type TipoDeEnvio = 'completarHabito' | 'subirEvidencia' | 'confirmarTexto' | 'publicarMuro';
 
 export interface EnvioSinRed {
   idCliente: string;
@@ -112,6 +112,20 @@ export async function agregarEnvio(
   await guardarCola(cuentaId, [...(await leerCola(cuentaId)), envio]);
   avisar();
   return envio;
+}
+
+/**
+ * Saca un envío de la cola antes de que salga (spec 048 fase 2, D19: la publicación en espera se puede borrar). Si la cola
+ * de esa cuenta se está enviando justo ahora, no se toca y devuelve `false`: puede estar a mitad de camino.
+ */
+export async function quitarEnvio(cuentaId: string, idCliente: string): Promise<boolean> {
+  if (procesando.has(cuentaId)) return false;
+  const cola = await leerCola(cuentaId);
+  const queda = cola.filter(e => e.idCliente !== idCliente);
+  if (queda.length === cola.length) return false;
+  await guardarCola(cuentaId, queda);
+  avisar();
+  return true;
 }
 
 type Desenlace = 'listo' | 'reintentar' | 'sin-sesion' | { bloqueado: string };

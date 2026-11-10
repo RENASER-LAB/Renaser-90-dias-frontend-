@@ -32,7 +32,8 @@ describe('el Muro compacto en Comunidad', () => {
 
   // pedido del dueño 2026-11-05 muro compacto: deslizar hacia abajo para recargar
   it('la lista del Muro se recarga deslizando hacia abajo, con los colores del tema', () => {
-    const inicio = fuente.indexOf('data={posts}');
+    // La lista del Muro (por su ref: desde la spec 048 fase 2 sus datos suman las publicaciones que esperan señal).
+    const inicio = fuente.indexOf('ref={muroListaRef}');
     const bloque = fuente.slice(inicio, fuente.indexOf('onEndReached={alLlegarAlFinalDelMuro}', inicio));
     expect(bloque).toContain('<RefreshControl');
     expect(bloque).toContain('refreshing={muroRefrescando}');
@@ -76,5 +77,11 @@ describe('el Muro compacto en Comunidad', () => {
     expect(JSON.stringify(volver.props.style)).toContain('"width":48');
     act(() => volver.props.onPress());
     expect(onVolver).toHaveBeenCalledTimes(1);
+  });
+  it('spec 048 fase 2: las acciones de la FILA traen «Borrar» para la publicación que espera señal', () => { // spec 048 FR-018
+    // E2E 10/11: se agregó al objeto de la tarjeta completa (otro useMemo con las mismas líneas) y en la fila «Borrar» no hacía nada.
+    const inicio = fuente.indexOf('const accionesDeLaFila = useMemo');
+    const bloque = fuente.slice(inicio, fuente.indexOf('  );', inicio));
+    expect(bloque).toContain('borrarEnEspera:');
   });
 });

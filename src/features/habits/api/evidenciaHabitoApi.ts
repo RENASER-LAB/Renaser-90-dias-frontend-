@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { avisarHabitoCumplido, avisarHabitoMarcadoSinRed } from '../eventos/habitoCumplido';
 import { ApiError, apiFetch } from '../../../services/http/apiClient';
 import { agregarEnvio, cuentaDeLaSesion, leerCola, registrarManejador } from '../../sinRed/colaSinRed';
+import { borrarArchivoSinRed, guardarArchivoSinRed, sinArchivo } from '../../sinRed/archivosSinRed';
 import { registrarAjusteDeLectura, retocarLecturasGuardadas } from '../../sinRed/lecturasGuardadas';
 import { horaReal } from '../../sinRed/horaReal';
 import { fechaLocal } from '../notificaciones/utils/alarmasPorDia';
@@ -386,36 +387,6 @@ async function sinRedPara(registroId: string, errorDeRed: unknown): Promise<{ cu
   return { cuenta, hora };
 }
 
-const CARPETA_SIN_RED = 'renaser-sin-red';
-
-/** Copia el archivo a `Documentos/renaser-sin-red` (la caché de la cámara la puede limpiar el sistema). Devuelve la nueva URI. */
-async function guardarArchivoSinRed(uri: string, mimeType: string): Promise<string> {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { Directory, File, Paths } = require('expo-file-system') as typeof import('expo-file-system');
-  const carpeta = new Directory(Paths.document, CARPETA_SIN_RED);
-  if (!carpeta.exists) carpeta.create({ intermediates: true, idempotent: true });
-  const extension = mimeType.split('/')[1]?.split(';')[0] || 'bin';
-  const destino = new File(carpeta, `${Date.now()}-${Math.round(Math.random() * 1e6)}.${extension}`);
-  new File(uri).copy(destino);
-  return destino.uri;
-}
-
-function borrarArchivoSinRed(uri: string): void {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { File } = require('expo-file-system') as typeof import('expo-file-system');
-    const f = new File(uri);
-    if (f.exists) f.delete();
-  } catch {
-    /* si no se puede borrar, se borra con la cuenta */
-  }
-}
-
-/** Un error que la cola no reintenta (queda marcado con su motivo): la foto guardada ya no está. */
-function sinArchivo(): Error {
-  return Object.assign(new Error('La foto guardada sin señal ya no está en el teléfono.'), { status: 410 });
-}
-
 registrarManejador('subirEvidencia', async envio => {
   const d = envio.datos as { registroId: string; uri: string; mimeType: string; tipo: TipoEvidencia };
   const url = validarRespuesta(urlSubidaEvidenciaSchema, await apiFetch<unknown>(`/api/v1/habit-tracks/${d.registroId}/evidence/upload-url`, {
@@ -451,9 +422,15 @@ registrarAjusteDeLectura(async (ruta, datos) => {
   if (!ruta.startsWith('/api/v1/habit-tracks/')) return datos;
   const cuenta = cuentaDeLaSesion();
   if (!cuenta) return datos;
+  const cola = await leerCola(cuenta);
   const marcados = new Set(
-    (await leerCola(cuenta)).filter(e => e.tipo === 'completarHabito').map(e => String((e.datos as { registroId?: unknown }).registroId)),
+    cola.filter(e => e.tipo === 'completarHabito').map(e => String((e.datos as { registroId?: unknown }).registroId)),
   );
+  // Spec 048 fase 2 (D17): una publicación del Muro esperando señal deja hecho su «Post diario».
+  cola
+    .filter(e => e.tipo === 'publicarMuro')
+    .map(e => (e.datos as { registroPostDiario?: unknown }).registroPostDiario)
+    .forEach(id => typeof id === 'string' && marcados.add(id));
   return marcados.size ? conMarcadosSinRed(datos, marcados) : datos;
 });
 

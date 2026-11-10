@@ -37,6 +37,15 @@ describe('lecturas sin red (spec 048)', () => {
     await expect(apiFetch('/api/v1/habit-tracks/today')).resolves.toEqual([{ id: 'r1', estado: 'PENDIENTE' }]);
   });
 
+  it('fase 2: las categorías del Muro se leen sin señal, para escribir una publicación', async () => { // spec 048 FR-021
+    globalThis.fetch = responde([{ clave: 'LOGROS', nombre: 'Logros' }]);
+    await apiFetch('/api/v1/wall/categories');
+    await new Promise(r => setTimeout(r, 0));
+    globalThis.fetch = sinRed();
+
+    await expect(apiFetch('/api/v1/wall/categories')).resolves.toEqual([{ clave: 'LOGROS', nombre: 'Logros' }]);
+  });
+
   it('una lectura que no está en la lista (por ejemplo SER) no se inventa: falla como sin red', async () => { // spec 048 FR-005
     globalThis.fetch = responde({ ok: true });
     await apiFetch('/api/v1/renasia/historial');

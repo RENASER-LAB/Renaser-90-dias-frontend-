@@ -1,6 +1,7 @@
 import { fuentes } from '../theme/fuentes';
 import { SoloConConexion } from '../features/sinRed/components/SoloConConexion';
 import { alVolverLaConexion } from '../features/sinRed/estadoDeConexion';
+import { useSinConexion } from '../features/sinRed/useSinConexion';
 import React, { useState, useMemo, useEffect, useCallback, useRef, useReducer } from 'react';
 import {
   View,
@@ -277,6 +278,9 @@ export interface CommentItem {
   timeAgo: string;
 }
 
+/** Spec 048 fase 2: la nota del Muro sin señal, en lugar del error de conexión. */
+export const TEXTO_MURO_SIN_SENAL = 'Sin señal. El resto del Muro se verá al volver la señal.';
+
 export interface PostItem {
   id: string;
   /** Spec 046: como se le nombra en el Muro (su sobrenombre si tiene uno). */
@@ -324,6 +328,8 @@ export interface PostItem {
    * campo desaparece; si falla, la tarjeta se quita.
    */
   pendiente?: boolean;
+  /** Spec 048 fase 2: el `idCliente` de la publicación escrita sin señal que espera en la cola («Se publicará al volver la señal»). */
+  enEsperaDeSenal?: string;
   /** Spec 024: el código de la formación de la publicación (el rótulo, solo si se leen «Todas»). Ausente con un servidor anterior. */
   formacion?: string | null;
 }
@@ -1283,6 +1289,8 @@ function ComunidadPorFormacion({
   // soporta (reacciones a comentarios, foto adjunta en un comentario) y que siguen siendo locales.
   const {
     posts,
+    enEspera: publicacionesEnEspera,
+    borrarEnEspera,
     setPosts,
     loading: muroCargando,
     error: muroError,
@@ -1301,6 +1309,8 @@ function ComunidadPorFormacion({
     cargandoMas: muroCargandoMas,
     hayMas: hayMasPublicaciones,
   } = useWallFeed();
+  /* Spec 048 fase 2 (FR-021): sin señal, el Muro dice que el resto se verá al volver la señal (no el error rojo). */
+  const muroSinSenal = useSinConexion();
   // Solo en desarrollo: pedidos al montar y tiempo hasta ver el Muro (V-3, 26/09/2026).
   useMedicionDePantalla('Muro', !muroCargando);
   const [expandedPosts, setExpandedPosts] = useState<Record<string, boolean>>({});
@@ -2698,7 +2708,13 @@ function ComunidadPorFormacion({
 
     setSubiendoPublicacion(true);
     try {
-      await publicarOptimista(texto, fotos, nombreUsuario, categoria);
+      const resultado = await publicarOptimista(texto, fotos, nombreUsuario, categoria);
+      if (resultado === 'en-espera') {
+        // Spec 048 fase 2 (FR-018): sin señal quedó en la cola, arriba en el Muro. Entrenar relee: su «Post diario» sale hecho.
+        setConfirmacionMuro({ clave: Date.now(), texto: 'Se publicará al volver la señal.' });
+        avisarPostDiarioCerrado();
+        return;
+      }
       /* Confirmada por el backend: se dice en línea. Sin háptico acá: ya vibró `NuevaPublicacion`
          con `tacto.logro()` en el toque de «Publicar», y es una sola acción (una vibración). */
       setConfirmacionMuro({ clave: Date.now(), texto: 'Publicado en el Muro.' });
@@ -2854,8 +2870,21 @@ function ComunidadPorFormacion({
       abrir: (id, conComentarios) => abrirPublicacionVigente.current(id, conComentarios),
       alternarLike: id => accionesVigentes.current!.alternarLike(id),
       moderar: id => accionesVigentes.current!.moderar(id),
+      // Spec 048 fase 2 (D19): la que espera señal se puede borrar antes de que salga.
+      borrarEnEspera: (idCliente: string) =>
+        Alert.alert('¿Borrar esta publicación?', 'Todavía no salió. Si la borras, no se publicará.', [
+          { text: 'Cancelar', style: 'cancel' },
+          {
+            text: 'Borrar',
+            style: 'destructive',
+            onPress: () =>
+              void borrarEnEspera(idCliente).then(quitada => {
+                if (!quitada) Alert.alert('Ya se está publicando', 'Cuando aparezca en el Muro la puedes borrar como cualquier otra.');
+              }),
+          },
+        ]),
     }),
-    []
+    [borrarEnEspera]
   );
   /* Si la publicación abierta deja de estar en el Muro (se ocultó o se eliminó), se vuelve a la lista. */
   const publicacionAbierta = publicacionAbiertaId ? posts.find(p => p.id === publicacionAbiertaId) ?? null : null;
@@ -3136,14 +3165,13 @@ function ComunidadPorFormacion({
           ]}
         />
       )}
-      {/* Spec 048 (FR-005): sin señal, el Muro dice que necesita conexión (sin el error rojo y el hueco de abajo). Publicar sin
-          señal llega en la fase 2. */}
+      {/* Spec 048 fase 2 (FR-018, FR-021): sin señal el Muro sigue abierto para escribir; arriba van las propias que esperan
+          señal y, en vez del error rojo, una nota de que el resto se verá al volver la señal. */}
       {seccionActiva === 'muro' && !seccionEnMantenimiento && (
-        <SoloConConexion>
         <FlatList
           {...barraAlDesplazar}
           ref={muroListaRef}
-          data={posts}
+          data={publicacionesEnEspera.length ? [...publicacionesEnEspera, ...posts] : posts}
           keyExtractor={post => post.id}
           renderItem={renderPublicacion}
           ListHeaderComponent={
@@ -3194,15 +3222,21 @@ function ComunidadPorFormacion({
 
               {/* Estados de carga/error del feed real — sin componentes nuevos, solo texto con
                   los mismos tokens que ya usa el resto de la pantalla. */}
-              {muroCargando && posts.length === 0 && (
+              {muroSinSenal ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Icon name="cloudOff" size={TAMANO_ICONO.chico} color={c.textSoft} />
+                  <Text style={[t.small, { color: c.textSoft, flexShrink: 1 }]}>{TEXTO_MURO_SIN_SENAL}</Text>
+                </View>
+              ) : null}
+              {!muroSinSenal && muroCargando && posts.length === 0 && (
                 <Text style={[t.body, { color: c.textSoft }]}>
                   Cargando el muro...
                 </Text>
               )}
-              {muroError && (
+              {!muroSinSenal && muroError && (
                 <Text style={[t.body, { color: c.danger }]}>{muroError}</Text>
               )}
-              {!muroCargando && !muroError && posts.length === 0 && (
+              {!muroSinSenal && !muroCargando && !muroError && posts.length === 0 && publicacionesEnEspera.length === 0 && (
                 <View style={{ alignItems: 'center', gap: 10, paddingVertical: 20 }}>
                   <Icon name="newspaper" size={28} color={c.goldInk} />
                   <Text style={[t.body, { color: c.textSoft, textAlign: 'center' }]}>
@@ -3266,7 +3300,6 @@ function ComunidadPorFormacion({
           // al volver a subir. La virtualización ya la da `windowSize`.
           removeClippedSubviews={false}
         />
-      </SoloConConexion>
       )}
       {/* La publicación abierta (2026-11-05): la tarjeta COMPLETA de siempre, encima de la lista compacta. */}
       {seccionActiva === 'muro' && !seccionEnMantenimiento && publicacionAbierta ? (

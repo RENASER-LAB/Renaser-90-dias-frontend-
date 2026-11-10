@@ -28,6 +28,8 @@ export type AccionesDeLaFila = {
   alternarLike: (postId: string) => void;
   /** El «…» de moderación (solo ADMIN y ALCHEMIST, ver `puedeModerar`). */
   moderar: (postId: string) => void;
+  /** Spec 048 fase 2 (D19): borrar la publicación que espera señal, antes de que salga. */
+  borrarEnEspera?: (idCliente: string) => void;
 };
 
 type Props = {
@@ -65,7 +67,8 @@ function FilaCompactaDelMuroBase({ post, destacada, puedeModerar = false, accion
       style={[
         estilos.fila,
         { backgroundColor: c.cardBg, borderColor: destacada ? c.gold : c.border },
-        post.pendiente && { opacity: 0.55 },
+        // La que espera señal se lee entera (su aviso y «Borrar»); la que está subiendo, atenuada.
+        post.pendiente && { opacity: post.enEsperaDeSenal ? 0.85 : 0.55 },
       ]}
     >
       <View style={estilos.cabecera}>
@@ -126,6 +129,20 @@ function FilaCompactaDelMuroBase({ post, destacada, puedeModerar = false, accion
         ) : null}
       </View>
 
+      {post.enEsperaDeSenal ? (
+        <View style={estilos.pie}>
+          <Presionable
+            onPress={() => acciones.borrarEnEspera?.(post.enEsperaDeSenal!)}
+            accessibilityRole="button"
+            accessibilityLabel="Borrar esta publicación antes de que se publique"
+            hitSlop={8}
+            style={estilos.botonDelPie}
+          >
+            <Icon name="trash" size={TAMANO_ICONO.chico} color={c.textSoft} />
+            <Text style={[t.small, { color: c.textSoft }]}>Borrar</Text>
+          </Presionable>
+        </View>
+      ) : (
       <View style={estilos.pie}>
         {reacciones.disponible ? (
           <Pressable
@@ -164,6 +181,7 @@ function FilaCompactaDelMuroBase({ post, destacada, puedeModerar = false, accion
           </Pressable>
         ) : null}
       </View>
+      )}
     </Presionable>
   );
 }
