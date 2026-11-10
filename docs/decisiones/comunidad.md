@@ -882,3 +882,12 @@ P3-B (6 meses), P4-B (una línea en el detalle del evento) y P5-A. **Casi todo e
 * **No cambian**: el resto del detalle, la lista, el calendario, el formulario, los demás tabs. Sin dependencias ni código nativo.
 * **Pruebas:** Jest `avisoDeGrabacion` y `paginaPoliticaDePrivacidad` (marcas `spec 047 FR-018`).
 * **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire) y el backend con V184. Contra un backend anterior la línea no aparece.
+
+## Cambio por pedido del dueño — 2026-11-10 — Muro: fotos rápidas con miniatura (spec 049)
+
+El dueño pidió que las fotos del Muro carguen «como las redes sociales» y eligió que una Lambda en AWS arme la miniatura. Sin cambios
+visibles de diseño:
+* La fila del Muro dibuja `thumbnailUrl` (WebP de 480 px que arma la Lambda) en vez de la foto completa; si la miniatura todavía no
+  existe o la foto es vieja, cae a la completa (`FotoMuro.urlRespaldo`). La publicación abierta sigue con la completa.
+* Al llegar cada página del Muro se adelantan sus primeras 8 fotos por el mismo camino de caché (`adelantarMiniaturas`, con
+  `Image.loadAsync` y la misma `cacheKey`; `Image.prefetch` no sirve porque guarda con otra clave).

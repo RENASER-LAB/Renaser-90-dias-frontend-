@@ -57,6 +57,8 @@ function mapearMedia(media: WallPost['media']): PostItem['media'] {
       // real encima de este `title`, o lo deja como está (es video, o la URL falló al cargar).
       url: m.url,
       mimeType: m.mimeType,
+      // Spec 049: la lista usa la miniatura (unas 10 veces más liviana); la publicación abierta, la completa.
+      ...(m.thumbnailUrl ? { miniaturaUrl: m.thumbnailUrl } : {}),
     };
   });
 }

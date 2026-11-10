@@ -3,6 +3,7 @@ import { StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 
 import { acotarProporcion } from '../utils/proporcionImagen';
+import { cacheKeyEstable } from '../utils/cacheKeyEstable';
 
 /**
  * Pinta la foto real de una publicación del Muro dentro de la caja de media que ya existe en
@@ -19,6 +20,8 @@ import { acotarProporcion } from '../utils/proporcionImagen';
 interface FotoMuroProps {
   /** `WallMedia.url` tal cual la manda el feed — ver `cacheKeyEstable` sobre por qué cambia en cada request. */
   url: string;
+  /** Spec 049: si `url` (la miniatura) falla —la Lambda todavía no la armó, o es una foto vieja—, se muestra esta (la completa). */
+  urlRespaldo?: string;
   mimeType: string;
   /**
    * Radio de borde de la caja contenedora (`mediaSingleBox`=12, `mediaHalfBox`/`mediaLargeLeft`=10,
@@ -51,6 +54,7 @@ interface FotoMuroProps {
 
 export function FotoMuro({
   url,
+  urlRespaldo,
   mimeType,
   radioBorde,
   colorFondo,
@@ -58,18 +62,20 @@ export function FotoMuro({
   onProporcion,
 }: FotoMuroProps) {
   const [fallo, setFallo] = useState(false);
+  const [conRespaldo, setConRespaldo] = useState(false);
+  const aMostrar = conRespaldo && urlRespaldo ? urlRespaldo : url;
 
   // Reproducción de video queda fuera de alcance de esta tarea (no hay librería de video
   // instalada en el proyecto). Para un video no se monta ningún <Image>: el recuadro se deja tal
   // como está hoy, con su texto "🎥 Video N" de siempre.
   const esVideo = mimeType.startsWith('video/');
-  if (esVideo || fallo || !url) {
+  if (esVideo || fallo || !aMostrar) {
     return null;
   }
 
   return (
     <Image
-      source={{ uri: url, cacheKey: cacheKeyEstable(url) }}
+      source={{ uri: aMostrar, cacheKey: cacheKeyEstable(aMostrar) }}
       style={[styles.overlay, { borderRadius: radioBorde, backgroundColor: colorFondo }]}
       contentFit={ajuste} // nunca 'fill': deformaría la foto. Ver el javadoc de `ajuste`.
       transition={150}
@@ -92,26 +98,11 @@ export function FotoMuro({
       // en cada refresco. Si algún día hace falta un botón de "liberar espacio", existen
       // `Image.clearDiskCache()` / `Image.clearMemoryCache()`.
       cachePolicy="memory-disk"
-      onError={() => setFallo(true)}
+      onError={() => (urlRespaldo && !conRespaldo && urlRespaldo !== url ? setConRespaldo(true) : setFallo(true))}
     />
   );
 }
 
-/**
- * El backend firma la URL de lectura de cada foto EN CADA RESPUESTA del feed
- * (`PublicacionMuroService.firmarLectura`, ver `almacenamientoPort.firmarLectura` — misma familia
- * de problema que la bitácora del backend registra como E-57 para los avatares). Como la firma
- * SigV4 cambia la query string en cada pedido, usar la URL completa como clave de caché nunca
- * acierta: el celular volvería a bajar todas las fotos en cada refresco del Muro.
- *
- * La regla, calcada de la misma solución que ya usó E-57 (`split_part(avatar_url, '?', 1)` en el
- * backend): en SigV4 todo lo que caduca vive DESPUÉS del `?`. La parte de antes del `?` identifica
- * siempre al mismo objeto de S3, así que es la clave de caché estable. No la reinventes con otra
- * heurística — es la misma regla, aplicada del lado del cliente.
- */
-function cacheKeyEstable(url: string): string {
-  return url.split('?')[0];
-}
 
 const styles = StyleSheet.create({
   overlay: {

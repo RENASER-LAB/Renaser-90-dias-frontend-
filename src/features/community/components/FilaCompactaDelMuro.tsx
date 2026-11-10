@@ -116,7 +116,7 @@ function FilaCompactaDelMuroBase({ post, destacada, puedeModerar = false, accion
             <Text style={[t.micro, { color: c.goldInk, fontSize: 10 }]} numberOfLines={1}>
               {vista.miniatura.titulo}
             </Text>
-            <FotoMuro url={vista.miniatura.url} mimeType={vista.miniatura.mimeType} radioBorde={10} colorFondo={c.cardBgAlt} />
+            <FotoMuro url={vista.miniatura.url} urlRespaldo={vista.miniatura.respaldo} mimeType={vista.miniatura.mimeType} radioBorde={10} colorFondo={c.cardBgAlt} />
             {vista.fotosDeMas > 0 ? (
               <View style={estilos.chapaDeMas} accessibilityLabel={`${vista.fotosDeMas} fotos más`}>
                 <Text style={estilos.chapaDeMasTexto}>+{vista.fotosDeMas}</Text>

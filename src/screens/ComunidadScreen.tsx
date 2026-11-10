@@ -299,7 +299,7 @@ export interface PostItem {
   // `url`/`mimeType`: la URL firmada real de S3 (`WallMedia`, backend) y su tipo MIME. Las agrega
   // `wallMappers.ts` al traducir la respuesta del feed — es lo que permite pintar la foto real en
   // vez del `title` como texto plano (ver `FotoMuro`, `features/community/components/`).
-  media: { type: 'image' | 'video'; title: string; subtitle?: string; url: string; mimeType: string }[];
+  media: { type: 'image' | 'video'; title: string; subtitle?: string; url: string; mimeType: string; miniaturaUrl?: string }[];
   likes: number;
   /**
    * Única reacción posible desde que se retiró el dislike del producto. Si esta persona había
