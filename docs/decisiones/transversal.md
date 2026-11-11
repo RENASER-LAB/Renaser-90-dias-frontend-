@@ -916,3 +916,29 @@ Entrenar) y lleve hasta el primer post en el Muro; al publicar, confeti; y «el 
     con `codigo`, `motivoSinPuntos` y el servidor anterior). Solo JavaScript: no hace falta APK nuevo. **Depende del backend**
     «La Pastilla entregada sin señal se registra con su hora real (spec 048, #186)»: se fusiona primero; sin él, el servidor ignora
     las cabeceras y la Pastilla vuelve a llegar con la hora de llegada.
+
+## Decisión del dueño — 2026-11-11 — sin tabs: la app entiende el 429 «Espera un momento» del límite de pedidos (spec 050, tramo C, FR-020)
+
+* **Decisión del dueño — 2026-11-11 — el límite de pedidos por cuenta (spec 050, D3, FR-015, FR-020).** El backend cuenta los
+  pedidos de cada cuenta por grupo (lectura, escritura, Muro, chat, subidas…) y, **cuando el dueño pase un grupo a «aplicar»**,
+  responde **429** con `Retry-After` y `codigo: DEMASIADOS_PEDIDOS`. Hoy todos los grupos están en «solo registrar»: nadie recibe ese
+  429. La app queda lista **antes** de que se aplique cualquier grupo de escritura (dependencia dura del plan de la spec). Lo que cambia
+  y nada más:
+  * **El mensaje se muestra.** Una pantalla que falla con ese 429 dice «Espera un momento y vuelve a intentarlo.» (el `message` del
+    servidor, en tuteo; si lo respondió un intermediario sin cuerpo legible, el mismo texto, nunca «Error 429» ni una página HTML).
+    `ApiError.esDemasiadosPedidos` lo reconoce sin leer el texto. Un 429 de otro límite (el login, las preguntas del día a SER) conserva
+    su propio mensaje.
+  * **`Retry-After` se lee** (`ApiError.reintentarEnMs`, segundos o fecha HTTP, tope de media hora) también en un 503. `apiFetch` no
+    reintenta solo: un pedido, un 429.
+  * **La cola de lo hecho sin señal (spec 048) lo trata como «reintenta después», nunca como final.** El envío se queda en la cola con
+    todo lo que la persona hizo, sin aviso de «no se aplicó», y no sale antes del plazo del servidor (el mayor entre `Retry-After` y su
+    espera creciente) **ni siquiera cuando vuelve la señal o la app vuelve al frente**: volver a pedir antes solo trae otro 429. Lo
+    siguiente en la cola espera con él (el orden no cambia).
+  * **No cambian:** los cinco tabs, ninguna pantalla, la cola de carreras con GPS (ya reintenta un 429 con su espera creciente) y la
+    pantalla de SER (su 429 sigue diciendo que se acabaron las preguntas del día; el del minuto, `DEMASIADOS_PEDIDOS`, se distingue
+    en un cambio aparte).
+  * **Pruebas:** `src/services/http/__tests__/demasiadosPedidos.test.ts` (mensaje, `Retry-After`, la sesión no se cierra, sin cuerpo y
+    con HTML) y `src/features/sinRed/__tests__/colaSinRed429.test.ts` (no es final, se respeta el plazo aunque se «adelante», el orden
+    y nada se pierde). Solo JavaScript: llega con el siguiente APK. **Depende del backend** «Límite de pedidos por cuenta en modo solo
+    registrar (spec 050, tramo C)», que además expone `Retry-After` en CORS para el build web. **E2E pendiente** (lo corre la sesión
+    principal, con un grupo en `APLICAR` y `por-minuto` bajo en el backend local).
