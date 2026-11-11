@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { apiFetch } from '../../../services/http/apiClient';
+import { escribirOEncolar } from '../../sinRed/escrituraSinRed';
 import type { EjeObjetivo } from '../types/objetivos.types';
 import { formatearNumero } from '../utils/cifraDelObjetivo';
 import { validarRespuesta } from './objetivosSchemas';
@@ -98,7 +99,18 @@ export async function guardarObjetivoDelMes(
   numeroMes: number,
   cambio: { titulo: string; meta?: number; avance?: number; unidad?: string }
 ): Promise<void> {
-  await apiFetch<unknown>(`/api/v1/rocks/monthly/${eje}/${numeroMes}`, { method: 'PUT', body: cambio });
+  // Spec 048 fase 3 (FR-019): sin señal se guarda con la hora real y el plan del mes se ve con lo pedido (ajuste de lectura).
+  await escribirOEncolar<void>(
+    {
+      area: 'plan',
+      etiqueta: 'Tu objetivo del mes',
+      metodo: 'PUT',
+      ruta: `/api/v1/rocks/monthly/${eje}/${numeroMes}`,
+      cuerpo: cambio,
+      resumen: cambio.titulo,
+    },
+    { validar: () => undefined, optimista: () => undefined },
+  );
 }
 
 /**

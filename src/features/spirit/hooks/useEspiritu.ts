@@ -4,6 +4,8 @@ import { mensajeDeError } from '../../../services/http/apiClient';
 import * as spiritApi from '../api/spiritApi';
 import type { ContextoDeLaPastilla } from '../api/pastillaSinRed';
 import type { SpiritDayApi, SpiritStatusApi } from '../types/spirit.types';
+import { mensajeDeCarga } from '../../sinRed/utils/sinSenal';
+import { useRecargarAlVolverLaSenal } from '../../sinRed/useRecargarAlVolverLaSenal';
 
 /**
  * Estado del hábito "Pastilla Renacer" (módulo Espíritu del backend).
@@ -54,7 +56,7 @@ export function useEspiritu(opciones: { esperar?: boolean } = {}) {
       setEstado(null);
       // Degradación deliberada: Espíritu es UN hábito de Training. Que su estado falle no puede
       // tumbar la pantalla — se guarda el mensaje y el resto de las dimensiones sigue viva.
-      setError(mensajeDeError(e, 'No pudimos cargar tu Pastilla de hoy'));
+      setError(mensajeDeCarga(e, 'No pudimos cargar tu Pastilla de hoy'));
     } finally {
       setCargando(false);
     }
@@ -64,6 +66,7 @@ export function useEspiritu(opciones: { esperar?: boolean } = {}) {
     if (esperar) return;
     void recargar();
   }, [recargar, esperar]);
+  useRecargarAlVolverLaSenal(recargar, !esperar && error !== null);
 
   /**
    * El día en curso: el único que se puede escuchar y entregar. `null` cuando la persona todavía

@@ -1,4 +1,5 @@
 import type { Palette } from '../../../theme/tokens';
+import { TEXTO_SE_GUARDARA } from './accionEnEspera';
 import { minutosDeLaHora } from '../../training/utils/listaDelDia';
 import type { ColorPareto, RocaDiariaApi, RocaMaestraApi } from '../types/objetivos.types';
 import { formatearNumero } from './cifraDelObjetivo';
@@ -37,6 +38,23 @@ export function unirAcciones(...listas: ReadonlyArray<readonly RocaDiariaApi[]>)
 }
 
 /**
+ * Spec 048 (#185): lo que el SERVIDOR ya tiene agendado en los días que todavía no empezaron, para que «Agendar mis acciones» lo muestre,
+ * lo cuente para el tope de tres por eje y lo mande otra vez. Agendar un día futuro reemplaza el plan entero de ese día (E-208): una hoja
+ * que arranca en 0/3 sobre un día con acciones las borra sin avisar.
+ *
+ * Quedan fuera: lo que espera señal (`pendienteDeEnvio`, la hoja lo trae aparte), y **el día en curso** —el servidor no deja rehacerlo
+ * (409) y su comportamiento no cambia—. El día en curso es el de `/rocks/today` (`deHoy`) y, si se conoce, `hoyIso` y los anteriores.
+ */
+export function agendadasDeDiasQueVienen(
+  todas: readonly RocaDiariaApi[],
+  deHoy: readonly RocaDiariaApi[],
+  hoyIso: string | null,
+): RocaDiariaApi[] {
+  const diasEnCurso = new Set(deHoy.map(a => a.fecha));
+  return todas.filter(a => a.pendienteDeEnvio !== true && !diasEnCurso.has(a.fecha) && (hoyIso === null || a.fecha > hoyIso));
+}
+
+/**
  * Cuántas de las acciones agendadas de hoy en adelante están cumplidas: «2 de 6». **Solo cuenta de hoy a fin de semana** —las
  * lecturas del servidor (`/rocks/today` y `/rocks/upcoming`) no traen los días que ya pasaron—, y por eso la tarjeta lo dice.
  */
@@ -49,11 +67,13 @@ const DIAS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 
 /** «Mar 27 oct · 09:00»; sin hora, «Mar 27 oct». `fecha` es `yyyy-MM-dd` (una fecha de calendario: se lee en UTC para que el huso no la corra). */
-export function etiquetaDeLaAccion(roca: Pick<RocaDiariaApi, 'fecha' | 'horaInicio'>): string {
+export function etiquetaDeLaAccion(roca: Pick<RocaDiariaApi, 'fecha' | 'horaInicio'> & { pendienteDeEnvio?: boolean }): string {
   const fecha = new Date(`${roca.fecha}T00:00:00Z`);
   const dia = Number.isNaN(fecha.getTime()) ? roca.fecha : `${DIAS[fecha.getUTCDay()]} ${fecha.getUTCDate()} ${MESES[fecha.getUTCMonth()]}`;
   const hora = minutosDeLaHora(roca.horaInicio) === null ? null : (roca.horaInicio as string).slice(0, 5);
-  return hora ? `${dia} · ${hora}` : dia;
+  const base = hora ? `${dia} · ${hora}` : dia;
+  // Spec 048 fase 3 (P6): agendada sin señal, todavía no llegó al servidor y no se puede marcar hasta que llegue.
+  return roca.pendienteDeEnvio ? `${base} · ${TEXTO_SE_GUARDARA}` : base;
 }
 
 /** Un espacio que no deja partir el renglón: la etiqueta, la cifra y la unidad van juntas. */

@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 
 import type { LessonResource } from '../../../screens/ComunidadScreen';
-import { mensajeDeError } from '../../../services/http/apiClient';
+import { mensajeDeCargaEnLinea } from '../../sinRed/utils/sinSenal';
 import * as leccionesApi from '../api/leccionesApi';
 import { extraerCamposDetalle } from '../api/academyMappers';
 
@@ -35,7 +35,7 @@ export function useLeccionDetalle() {
         setDetallePorId(prev => ({ ...prev, [leccionId]: extraerCamposDetalle(detalle) }));
       })
       .catch(e => {
-        setErrorPorId(prev => ({ ...prev, [leccionId]: mensajeDeError(e, 'No pudimos cargar esta lección.') }));
+        setErrorPorId(prev => ({ ...prev, [leccionId]: mensajeDeCargaEnLinea(e, 'No pudimos cargar esta lección.') }));
       })
       .finally(() => {
         setCargandoId(prev => (prev === leccionId ? null : prev));

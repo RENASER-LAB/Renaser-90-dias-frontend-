@@ -198,6 +198,7 @@ import { CLAVES, claveDeLaConversacion, claveDeLaSeccionDeComunidad } from '../f
 import { useOcultarBarraAlDesplazar } from '../navigation/barraAlDesplazar/BarraInferior';
 import { useEncabezadoAlDesplazar } from '../navigation/barraAlDesplazar/useEncabezadoAlDesplazar';
 import Reanimated from 'react-native-reanimated';
+import { ErrorDeCarga } from '../features/sinRed/components/ErrorDeCarga';
 
 // =========================================================================
 // TIPOS: RECURSOS EXCLUSIVOS & CURSOS
@@ -3234,7 +3235,7 @@ function ComunidadPorFormacion({
                 </Text>
               )}
               {!muroSinSenal && muroError && (
-                <Text style={[t.body, { color: c.danger }]}>{muroError}</Text>
+                <ErrorDeCarga mensaje={muroError} style={t.body} />
               )}
               {!muroSinSenal && !muroCargando && !muroError && posts.length === 0 && publicacionesEnEspera.length === 0 && (
                 <View style={{ alignItems: 'center', gap: 10, paddingVertical: 20 }}>
@@ -3678,7 +3679,7 @@ function ComunidadPorFormacion({
               </Text>
             )}
             {cursosError && (
-              <Text style={[t.body, { color: c.danger }]}>{cursosError}</Text>
+              <ErrorDeCarga mensaje={cursosError} style={t.body} />
             )}
             {!cursosCargando && !cursosError && courses.length === 0 && (
               <View style={{ alignItems: 'center', gap: 10, paddingVertical: 20 }}>
@@ -4366,7 +4367,7 @@ function ComunidadPorFormacion({
                 <Text style={[t.small, { color: c.textSoft, marginTop: 8 }]}>Cargando tu tribu...</Text>
               )}
               {!tribuCargando && tribuError && companerosDeLaTarjeta.length === 0 && (
-                <Text style={[t.small, { color: c.danger, marginTop: 8 }]}>{tribuError}</Text>
+                <ErrorDeCarga mensaje={tribuError} style={{ marginTop: 8 }} />
               )}
               {!tribuCargando && !tribuError && companerosDeLaTarjeta.length === 0 && (
                 <Text style={[t.small, { color: c.textSoft, marginTop: 8 }]}>
@@ -4423,7 +4424,7 @@ function ComunidadPorFormacion({
                 <Text style={[t.body, { color: c.textSoft }]}>Cargando integrantes…</Text>
               )}
               {!tribuCargando && tribuError && (
-                <Text style={[t.body, { color: c.danger }]}>{tribuError}</Text>
+                <ErrorDeCarga mensaje={tribuError} style={t.body} />
               )}
 
               {integrantesDelGrupo.map(m => (
@@ -4510,9 +4511,7 @@ function ComunidadPorFormacion({
             </Text>
           )}
           {conversacionesError && (
-            <Text style={[t.body, { color: c.danger, marginTop: space.gapLg }]}>
-              {conversacionesError}
-            </Text>
+            <ErrorDeCarga mensaje={conversacionesError} style={[t.body, { marginTop: space.gapLg }]} />
           )}
           {!conversacionesCargando && !conversacionesError && directos.length === 0 && (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: space.gapLg }}>

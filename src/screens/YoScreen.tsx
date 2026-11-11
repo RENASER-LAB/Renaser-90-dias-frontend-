@@ -140,6 +140,7 @@ import { tituloParaMostrar } from '../features/habits/utils/tituloEnTipoOracion'
 import type { HabitoParaFoto } from '../features/habits/utils/habitosParaFotoDeHoy';
 import { medicionPedidaDe } from '../features/habits/utils/registroConFoto';
 import { useOcultarBarraAlDesplazar } from '../navigation/barraAlDesplazar/BarraInferior';
+import { ErrorDeCarga } from '../features/sinRed/components/ErrorDeCarga';
 
 // =========================================================================
 // DATOS ESTÁTICOS
@@ -1781,9 +1782,7 @@ export default function YoScreen() {
             )}
             {!cargandoEvidencias && errorEvidencias && (
               <View style={{ width: '100%', paddingVertical: 20, alignItems: 'flex-start', gap: 12 }}>
-                <Text style={[t.body, { color: c.danger }]}>
-                  {errorEvidencias}
-                </Text>
+                <ErrorDeCarga mensaje={errorEvidencias} style={t.body} />
                 <GoldButton label="Reintentar" variant="outline" onPress={recargarEvidencias} />
               </View>
             )}

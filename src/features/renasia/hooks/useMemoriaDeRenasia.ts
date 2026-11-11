@@ -4,6 +4,8 @@ import { mensajeDeError } from '../../../services/http/apiClient';
 import { obtenerMemoriaRenasia, olvidarRecuerdoRenasia, olvidarTodoRenasia } from '../api/memoriaApi';
 import { NOMBRE_ACOMPANANTE } from '../data/agentes';
 import type { MemoriaRenasiaApi } from '../types/renasia.types';
+import { mensajeDeCargaEnLinea } from '../../sinRed/utils/sinSenal';
+import { useRecargarAlVolverLaSenal } from '../../sinRed/useRecargarAlVolverLaSenal';
 
 const NO_SE_PUDO_CARGAR = `No se pudo cargar lo que ${NOMBRE_ACOMPANANTE} recuerda de ti.`;
 const NO_SE_PUDO_BORRAR = 'No se pudo borrar. Intenta de nuevo.';
@@ -27,7 +29,7 @@ export function useMemoriaDeRenasia(activo: boolean) {
     try {
       setMemoria(await obtenerMemoriaRenasia());
     } catch (e) {
-      setError(mensajeDeError(e, NO_SE_PUDO_CARGAR));
+      setError(mensajeDeCargaEnLinea(e, NO_SE_PUDO_CARGAR));
     } finally {
       setCargando(false);
     }
@@ -36,6 +38,7 @@ export function useMemoriaDeRenasia(activo: boolean) {
   useEffect(() => {
     if (activo) void recargar();
   }, [activo, recargar]);
+  useRecargarAlVolverLaSenal(recargar, activo && error !== null);
 
   const borrarY = useCallback(
     async (borrar: () => Promise<void>) => {

@@ -20,6 +20,8 @@ import { estaPorConfirmar } from '../utils/objetivosPorConfirmar';
 import { iconoDelEje } from '../utils/iconoDelEje';
 import { colorDePareto, etiquetaDeLaAccion, lineaDelObjetivo, NOMBRE_DEL_COLOR, partesDelObjetivo } from '../utils/planPrincipal';
 import { usePlazoDelObjetivo } from '../context/PlazoDelObjetivo';
+import { ErrorDeCarga } from '../../sinRed/components/ErrorDeCarga';
+import { esTextoSinSenal } from '../../sinRed/utils/sinSenal';
 
 /**
  * Las tarjetas de la pantalla principal de Plan (2026-10-31, pedido del dueño: «en Plan replica este formato de acuerdo a lo que
@@ -76,7 +78,7 @@ export function TarjetaDelObjetivo({
       {cargando && !roca ? (
         <Text style={[t.body, estilos.suave, { color: c.textSoft }]}>Cargando tu objetivo…</Text>
       ) : error && !roca ? (
-        <Text style={[t.body, estilos.suave, { color: c.danger }]}>{error}</Text>
+        <ErrorDeCarga mensaje={error} style={[t.body, estilos.suave]} />
       ) : !roca ? (
         // Estado vacío real: nunca un objetivo inventado.
         <Text style={[t.body, estilos.suave, { color: c.textSoft }]}>
@@ -182,6 +184,8 @@ export function TarjetaEstaSemana({
   const plazo = usePlazoDelObjetivo();
   const hayTitulo = (estado === 'planificada' || estado === 'cerrada') && titulo !== null;
   const proporcion = avance.total > 0 ? avance.cumplidas / avance.total : 0;
+  // Si la lectura de la semana falló (#182: sin señal y sin nada guardado) no se sabe si está armada: no se ofrece «Arma tu semana».
+  const sinLectura = error !== null && estado === 'sin_planificar';
   return (
     <View style={[estilos.tarjeta, { borderColor: c.border, backgroundColor: c.cardBg }]}>
       <View style={estilos.fila}>
@@ -205,13 +209,13 @@ export function TarjetaEstaSemana({
         </View>
       ) : null}
 
-      {estado === 'sin_planificar' && !queEmpieza ? (
+      {estado === 'sin_planificar' && !queEmpieza && !sinLectura ? (
         <View style={estilos.bloque}>
           <Text style={[t.body, { color: c.textSoft }]}>Todavía no armaste esta semana. Con tu eje principal alcanza.</Text>
           <GoldButton label="Arma tu semana" onPress={alArmar} variant="outline" icon="chevron" textStyle={TEXTO_DEL_BOTON} />
         </View>
       ) : null}
-      {estado === 'sin_planificar' && queEmpieza ? (
+      {estado === 'sin_planificar' && queEmpieza && !sinLectura ? (
         <Text style={[t.body, estilos.suave, { color: c.textSoft }]}>Esta semana no la armaste. Hoy ya se arma la que empieza el lunes.</Text>
       ) : null}
 
@@ -252,7 +256,7 @@ export function TarjetaEstaSemana({
       ) : null}
 
       {/* La semana que empieza, solo el domingo (D-203): es la que se arma ese día y la que sostiene las acciones del lunes. */}
-      {queEmpieza && estado !== 'cargando' && estado !== 'bloqueada' ? (
+      {queEmpieza && estado !== 'cargando' && estado !== 'bloqueada' && !sinLectura ? (
         <View style={[estilos.subtarjeta, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
           <Text style={[t.small, estilos.rotulo, { color: c.goldInk }]}>La que empieza el lunes · semana {queEmpieza.numeroSemana}</Text>
           {queEmpieza.cargando ? (
@@ -270,7 +274,8 @@ export function TarjetaEstaSemana({
         </View>
       ) : null}
 
-      {error ? <Text style={[t.small, { color: c.danger, marginTop: 8 }]}>{error}</Text> : null}
+      {/* Con la semana bloqueada por falta de objetivos, «sin señal» no suma nada: ya se dijo qué falta. */}
+      {error && !(estado === 'bloqueada' && esTextoSinSenal(error)) ? <ErrorDeCarga mensaje={error} style={{ marginTop: 8 }} /> : null}
     </View>
   );
 }
@@ -305,6 +310,8 @@ export function AccionesQueMuevenLaMeta({
   children?: React.ReactNode;
 }) {
   const { c, t } = useTheme();
+  // #182: si la lectura falló y no hay nada que mostrar, no se sabe si hay semana ni acciones: se dice el error en vez de «Primero arma tu semana».
+  const sinLectura = error !== null && acciones.length === 0;
   return (
     <View style={[estilos.tarjeta, { borderColor: c.border, backgroundColor: c.cardBg }]}>
       <View style={estilos.fila}>
@@ -312,7 +319,9 @@ export function AccionesQueMuevenLaMeta({
         <Text style={[t.small, estilos.rotulo, { color: c.goldInk, flex: 1 }]}>Acciones que mueven la meta</Text>
       </View>
 
-      {!hayPlanSemanal ? (
+      {sinLectura ? (
+        <ErrorDeCarga mensaje={error} style={[t.body, estilos.suave]} />
+      ) : !hayPlanSemanal ? (
         <Text style={[t.body, estilos.suave, { color: c.textSoft }]}>Primero arma tu semana: de ahí salen tus acciones.</Text>
       ) : acciones.length > 0 ? (
         <View style={estilos.lista}>
@@ -368,7 +377,7 @@ export function AccionesQueMuevenLaMeta({
       )}
 
       {children}
-      {error ? <Text style={[t.small, { color: c.danger, marginTop: 8 }]}>{error}</Text> : null}
+      {error && !sinLectura ? <ErrorDeCarga mensaje={error} style={{ marginTop: 8 }} /> : null}
     </View>
   );
 }

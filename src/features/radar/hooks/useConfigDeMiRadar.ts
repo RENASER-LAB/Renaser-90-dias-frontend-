@@ -167,8 +167,11 @@ export function useConfigDeMiRadar(diaPrograma: number | null, usuarioId: string
   }, [corresponde]);
 
   /** Guarda y deja a la vista lo que el servidor respondió. Si falla, el error llega a quien lo pidió. */
+  const ultimaLista = useRef<MiRadarApi | null>(null);
+  ultimaLista.current = lectura.estado === 'lista' ? lectura.config : null;
   const guardar = useCallback(async (pedido: PedidoDeMiRadarApi): Promise<MiRadarApi> => {
-    const guardada = await guardarMiRadar(pedido);
+    // Spec 048 fase 3: con la semana a la vista, sin señal el cambio se guarda y se ve lo pedido.
+    const guardada = await guardarMiRadar(pedido, ultimaLista.current);
     setLectura({ estado: 'lista', config: guardada });
     return guardada;
   }, []);

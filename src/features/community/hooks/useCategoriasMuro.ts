@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { mensajeDeError } from '../../../services/http/apiClient';
+import { mensajeDeCargaEnLinea } from '../../sinRed/utils/sinSenal';
+import { useRecargarAlVolverLaSenal } from '../../sinRed/useRecargarAlVolverLaSenal';
 import * as wallApi from '../api/wallApi';
 import type { WallCategory } from '../types/community.types';
 
@@ -36,7 +37,7 @@ export function useCategoriasMuro(activo = true) {
     try {
       setCategorias(await wallApi.obtenerCategoriasMuro());
     } catch (e) {
-      setError(mensajeDeError(e, 'No pudimos cargar las categorías del Muro.'));
+      setError(mensajeDeCargaEnLinea(e, 'No pudimos cargar las categorías del Muro.'));
     } finally {
       setCargando(false);
     }
@@ -48,6 +49,7 @@ export function useCategoriasMuro(activo = true) {
     yaPidio.current = true;
     void recargar();
   }, [activo, recargar]);
+  useRecargarAlVolverLaSenal(recargar, error !== null);
 
   return { categorias, cargando, error, recargar };
 }

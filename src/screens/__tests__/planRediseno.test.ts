@@ -163,7 +163,7 @@ describe('Plan: respuesta al tacto', () => {
     expect(semana).toMatch(/<Presionable\s+key=\{valor\}\s+onPress=\{\(\) => elegirEnLaEscala\(valor\)\}/);
     expect(revision).toMatch(/if \(valor !== autoevaluacion\) tacto\.seleccion\(\);/);
     expect(revision).toMatch(/<Presionable\s+key=\{valor\}\s+onPress=\{\(\) => elegir\(valor\)\}/);
-    expect(agendar).toMatch(/if \(dia !== diaElegido\) tacto\.seleccion\(\);/);
+    expect(agendar).toMatch(/if \(dia !== diaElegido\) \{?\s*tacto\.seleccion\(\);/);
     expect(agendar).toMatch(/onAlternarDia=\{elegirDia\}/);
   });
 

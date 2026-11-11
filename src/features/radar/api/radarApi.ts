@@ -1,4 +1,6 @@
-import { apiFetch } from '../../../services/http/apiClient';
+import { ApiError, apiFetch } from '../../../services/http/apiClient';
+import { escribirOEncolar } from '../../sinRed/escrituraSinRed';
+import { horaReal } from '../../sinRed/horaReal';
 import type {
   CheckInRadarApi,
   HistorialRadarApi,
@@ -8,6 +10,14 @@ import type {
   UltimoRadarApi,
 } from '../types/radar.types';
 import { radarSchemas, validarRespuesta } from './radarSchemas';
+import {
+  RUTA_DEL_RADAR,
+  RUTA_DE_MI_RADAR,
+  etiquetaDelCodigo,
+  miRadarConLoPedido,
+  registroEnEspera,
+  resumenDelCodigo,
+} from './radarSinRed';
 
 /**
  * El Código Renaser contra la API propia de Spring.
@@ -21,10 +31,27 @@ import { radarSchemas, validarRespuesta } from './radarSchemas';
  * en producción (E-181)—, así que ojo con "arreglarlo" agregando un `JSON.stringify` acá.
  */
 
-/** `POST /api/v1/radar`. El actor sale de la sesión: no hay parámetro de persona, y es a propósito. */
+/**
+ * `POST /api/v1/radar`. El actor sale de la sesión: no hay parámetro de persona, y es a propósito.
+ *
+ * Spec 048 fase 3 (FR-019): sin señal se guarda en la cola con la hora real y devuelve el registro en espera; la hora queda respondida
+ * al instante (`radarSinRed.ts`).
+ */
 export async function registrarCheckIn(checkIn: CheckInRadarApi): Promise<RegistroRadarApi> {
-  const r = await apiFetch<unknown>('/api/v1/radar', { method: 'POST', body: checkIn });
-  return validarRespuesta(radarSchemas.registro, r, 'POST /api/v1/radar');
+  return escribirOEncolar<RegistroRadarApi>(
+    {
+      area: 'radar',
+      etiqueta: etiquetaDelCodigo(horaReal().instante),
+      metodo: 'POST',
+      ruta: RUTA_DEL_RADAR,
+      cuerpo: checkIn,
+      resumen: resumenDelCodigo(checkIn),
+    },
+    {
+      validar: r => validarRespuesta(radarSchemas.registro, r, 'POST /api/v1/radar'),
+      optimista: envio => registroEnEspera(checkIn, envio.idCliente, envio.hechoEn),
+    },
+  );
 }
 
 /**
@@ -63,7 +90,16 @@ export async function obtenerMiRadar(): Promise<MiRadarApi> {
  * modo, veces, sin Radar). Responde la semana ya resuelta, con la forma del GET. Un 400 es un modo o unas veces fuera de las
  * reglas (la app las valida antes, pero el servidor decide) y un 409, un pedido que cambia hoy o un día pasado.
  */
-export async function guardarMiRadar(pedido: PedidoDeMiRadarApi): Promise<MiRadarApi> {
-  const r = await apiFetch<unknown>('/api/v1/radar/mi-radar', { method: 'PUT', body: pedido });
-  return validarRespuesta<MiRadarApi>(radarSchemas.miRadar, r, 'PUT /api/v1/radar/mi-radar');
+export async function guardarMiRadar(pedido: PedidoDeMiRadarApi, actual?: MiRadarApi | null): Promise<MiRadarApi> {
+  // Spec 048 fase 3: sin señal se guarda en la cola y se ve lo pedido; sin la semana a la vista no hay qué mostrar, y falla como siempre.
+  return escribirOEncolar<MiRadarApi>(
+    { area: 'radar', etiqueta: 'Tus cambios de Mi Radar', metodo: 'PUT', ruta: RUTA_DE_MI_RADAR, cuerpo: pedido },
+    {
+      validar: r => validarRespuesta<MiRadarApi>(radarSchemas.miRadar, r, 'PUT /api/v1/radar/mi-radar'),
+      antesDeEncolar: () => {
+        if (!actual) throw new ApiError(0, 'No se pudo conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.');
+      },
+      optimista: () => miRadarConLoPedido(actual as MiRadarApi, pedido),
+    },
+  );
 }

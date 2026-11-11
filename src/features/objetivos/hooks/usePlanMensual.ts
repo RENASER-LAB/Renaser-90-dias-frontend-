@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { alTerminarEnvioDe } from '../../sinRed/escrituraSinRed';
+import { useRecargarAlVolverLaSenal } from '../../sinRed/useRecargarAlVolverLaSenal';
+import { mensajeDeCarga } from '../../sinRed/utils/sinSenal';
 import { mensajeDeObjetivos } from '../utils/mensajeDeObjetivos';
 import * as planMensualApi from '../api/planMensualApi';
 import { cifraEscrita } from '../api/planMensualApi';
@@ -27,7 +30,7 @@ export function usePlanMensual() {
     try {
       setPlanes(await planMensualApi.obtenerPlanMensual());
     } catch (e) {
-      setError(mensajeDeObjetivos(e, 'No pudimos cargar tu objetivo de este mes.'));
+      setError(mensajeDeCarga(e, 'No pudimos cargar tu objetivo de este mes.', mensajeDeObjetivos));
     } finally {
       setCargando(false);
     }
@@ -36,6 +39,10 @@ export function usePlanMensual() {
   useEffect(() => {
     void cargar();
   }, [cargar]);
+
+  /* Spec 048 fase 3: lo escrito sin señal sale de la cola (llegó, o el servidor no lo aplicó): se vuelve a leer. */
+  useEffect(() => alTerminarEnvioDe('plan', () => void cargar()), [cargar]);
+  useRecargarAlVolverLaSenal(cargar, error !== null);
 
   const porEje = useMemo(() => {
     const mapa = new Map<EjeObjetivo, PlanMensualDelEje>();

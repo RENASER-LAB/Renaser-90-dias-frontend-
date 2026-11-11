@@ -797,5 +797,94 @@ Entrenar) y lleve hasta el primer post en el Muro; al publicar, confeti; y «el 
   * **Comunidad → Tabla (ranking):** sin señal dice «Necesitas conexión para usar esto» en vez de un hueco, y se carga solo
     al volver la señal.
   * **No cambian:** el Código Renaser con señal, la Clase diaria (sigue pidiendo conexión), el resto de Comunidad.
+
+    > **Corregido 2026-11-10 (fase 3, P8).** Lo del Código Renaser innegociable **ya no vale**: desde la fase 3 se responde sin
+    > señal y el innegociable vuelve a abrirse solo y sin X también sin señal (entrada del 2026-11-10 de la fase 3, al final).
   * **Pruebas:** `src/features/radar/__tests__/radarSinSenal.test.ts`, `src/features/sinRed/__tests__/pastillaSinRed.test.ts`
     y `src/features/sinRed/__tests__/rankingSinSenal.test.ts`. Solo JavaScript: no hace falta APK nuevo ni cambio en el backend.
+
+## Cambio autorizado por el dueño — 2026-11-10 — tabs `Hoy`, `Plan`, `Training`: la app funciona sin internet, fase 3 (spec 048, FR-019, issue #180)
+
+* **Cambio autorizado por el dueño — 2026-11-10 — modo sin internet, fase 3 (spec 048).** El dueño respondió las nueve
+  preguntas del plan de la fase 3 (`specs/048-modo-offline/plan.md` del backend). Plan (acciones y objetivos), Cierra tu día,
+  Código Renaser y planificar hábitos y alarmas funcionan sin señal por la MISMA cola, con la hora real, y **si en el servidor
+  cambió algo después de la hora en que lo hiciste, gana lo del servidor y se avisa qué no se aplicó** (D13). Lo que cambia y nada más:
+  * **P1 — «Bitácora» es Cierra tu día.** No hay otra pantalla: la nota del día se guarda en el cierre.
+  * **P2 — Agendar un día que ya pasó al llegar:** no se aplica y se avisa (`FUERA_DE_SU_DIA`); la app tampoco deja agendarlo
+    si la hora real ya es de otro día.
+  * **P3 — Sin tope de 48 h para lo que no da puntos.** Las 48 h solo quitan puntos al marcar una acción; lo demás lo decide el
+    día y el choque.
+  * **P4 — Código Renaser de una hora que el servidor ya tiene respondida:** se queda el del servidor y el aviso muestra lo que
+    escribiste (`YA_ESTABA_HECHO`).
+  * **P5 — Código Renaser que ya no corresponde** (Mi Radar apagado o sin esa hora desde el día 8): no se aplica y el aviso trae
+    el texto (`MI_RADAR_NO_APLICA`).
+  * **P6 — Acciones agendadas sin señal:** no se pueden marcar hasta que lleguen al servidor (el `id` lo pone él). Se ven
+    «Se guardará al volver la señal» y, al tocarlas en Entrenar, lo dicen en vez de abrir el registro. Lo mismo vale para
+    corregir o revisar un plan de la semana que todavía espera.
+  * **P7 — Cierra tu día con una acción que ya no existe al llegar:** todo o nada (no se aplica y el aviso guarda lo escrito).
+  * **P8 — Código Renaser innegociable (días 1 a 7): vuelve a abrirse solo y sin X también sin señal.** **Revierte la
+    excepción de #179** (sin señal no se abría): ahora se puede responder sin señal (se guarda con la hora real y la hora queda
+    respondida al instante), así que el formulario ya no va en «Necesitas conexión». Se actualizaron las pruebas de #179.
+  * **P9 — Cómo se avisa lo que no se aplicó:** una hoja corta (`HojaDesdeAbajo`) la próxima vez que se abre Hoy y el globo del
+    ícono de conexión dice «1 cosa no se aplicó» hasta que se ve. **No hay historial:** al verse se quita, y se borra al cerrar
+    sesión. Cada aviso trae lo que no se aplicó, cuándo lo hiciste, el motivo y el texto que escribiste (con «Copiar»).
+  * **Issue #180 (se cierra con este cambio):** un envío rechazado por el servidor (4xx) quedaba «bloqueado» en la cola para
+    siempre y en silencio, y el `motivoSinPuntos` no se mostraba en ninguna pantalla (FR-015, FR-016). Ahora un 4xx es final:
+    sale de la cola y deja su aviso; un hábito o una acción que llegó sin puntos dice por qué (más de 48 h, hora futura, fuera de su día).
+  * **Planificar hábitos y alarmas** deja de ir en «Necesitas conexión»: la hora, el aviso, la alarma y apagar un día, el plan de
+    la semana, pausar, quitar o sumar un hábito al plan se guardan sin señal y las alarmas del teléfono se reprograman al
+    instante; el aviso de «rige desde mañana» (D-91) se calcula con la hora real. **Un hábito propio nuevo sigue pidiendo señal**
+    (el servidor le pone el id con el que se planifica todo lo demás).
+  * **Contrato con el servidor (sin cambiar nombres):** tres cabeceras — `X-Id-Cliente`, `X-Hecho-En` (ISO UTC con `Z`),
+    `X-Origen-De-La-Hora` —; un 409 con `codigo` (`CAMBIO_MAS_NUEVO_EN_EL_SERVIDOR`, `YA_ESTABA_HECHO`, `RECURSO_YA_NO_EXISTE`,
+    `FUERA_DE_SU_DIA`, `MI_RADAR_NO_APLICA`) significa «no se aplicó» y la cola lo da por terminado.
+  * **Límites:** el cambio de hora de un día y la alarma se ven al instante en los siete días; las semanas «solo esta semana» y
+    la oferta de repetir semana se ven con lo último guardado hasta que llegue lo pendiente. Los puntos de una acción marcada sin
+    señal salen al llegar (sin celebración propia: se ven al releer Entrenar).
+  * **No cambian:** las cinco pestañas, ni con señal nada (los pedidos salen sin cabeceras y el servidor responde lo de siempre);
+    el Muro, los hábitos y la Pastilla de las fases 1 y 2.
+  * **Pruebas:** `src/features/sinRed/__tests__/` (`cabecerasSinRed`, `escrituraSinRed`, `avisosDeLoNoAplicado`, `colaSinRed`,
+    `textoDelGlobo`, `pastillaSinRed`), `cierre/api/__tests__/cierreSinRed`, `radar/api/__tests__/radarSinRed`,
+    `radar/__tests__/radarSinSenal` (P8), `objetivos/api/__tests__/planSinRed` y `habits/api/__tests__/planificarSinRed`.
+    **Depende del backend de la rama `048-fase-3`** (las cabeceras las ignora uno anterior: lo hecho sin señal llegaría con la hora de
+    llegada). Solo JavaScript: no hace falta APK nuevo.
+
+## Corrección — 2026-11-10 — tabs `Hoy`, `Plan`, `Training`, `Comunidad`, `Yo`: sin señal se dice «sin señal», no «No se pudo conectar» en rojo (spec 048, issue #182)
+
+* **Corrección — 2026-11-10 — lo que se lee sin señal y no está guardado (spec 048, FR-004, FR-005, issue #182).** Lo encontró el
+  E2E de la fase 3 (cuenta que nunca abrió Plan con señal) y el dueño mandó barrer toda la app. Lo que cambia y nada más:
+  * **Plan:** «Esta semana» y «Acciones que mueven la meta» (y el objetivo de 90 días) sin señal y sin lectura guardada dicen
+    «Todavía no hay nada guardado de esto en este teléfono. Se cargará solo cuando vuelva la señal.», en el color suave y no en
+    rojo, **no ofrecen «Arma tu semana» ni dicen «Primero arma tu semana»** (no se sabe qué hay) y se leen solos al volver la señal.
+  * **El resto de la app, con la misma frase y el mismo color:** Hoy (resumen del día), Entrenar (hábitos, elegir hábito para la
+    foto, la Pastilla), Cierra tu día, la fecha de inicio al activar el programa. Lo que nunca se guarda en el teléfono dice «Necesitas
+    conexión para usar esto. Se cargará solo cuando vuelva la señal.» (las palabras de `SoloConConexion`): cursos, tribu, listas
+    del chat, Muro, ranking, quién reaccionó, tus evidencias en Yo. Todas se piden de nuevo al volver la señal.
+  * **Una sola pieza** (`src/features/sinRed/`): `utils/sinSenal.ts` (`mensajeDeCarga`, `mensajeDeCargaEnLinea`, `esSinSenal`),
+    `components/ErrorDeCarga.tsx` y `useRecargarAlVolverLaSenal.ts`. La regla `src/__tests__/reglas/sinSenalSeDiceSinSenal.test.ts`
+    frena que una pantalla guarde `mensajeDeError(…)` de una lectura sin pasar por ahí.
+  * **No cambian:** un error de verdad (500, 409 con motivo) sigue en rojo con su texto; lo que la persona manda (guardar, agendar,
+    enviar) sigue diciendo «No se pudo conectar con el servidor…» en su diálogo; **las pantallas del personal** (Administración,
+    términos, formaciones, mentoría, líderes, tickets, soporte, Caja) y el inicio de sesión no tienen modo sin internet y siguen
+    como estaban (quedan en `excepciones.json`, `sinSenalAlCargar`, con su motivo: la lista solo se achica).
+  * **Pruebas:** `src/features/objetivos/components/__tests__/planSinSenal.test.ts`,
+    `src/features/objetivos/hooks/__tests__/planSinSenalAlLeer.test.ts`, `src/features/sinRed/__tests__/sinSenalAlCargar.test.ts`
+    y la regla `sinSenalSeDiceSinSenal`. Solo JavaScript: no hace falta APK nuevo ni cambio en el backend.
+
+## Corrección — 2026-11-10 — tab `Plan`: lo agendado sin señal cuenta en «Agendar mis acciones» (spec 048, issue #183)
+
+* **Corrección — 2026-11-10 — la hoja «Agendar mis acciones» y las acciones que esperan señal (spec 048, FR-019, issue #183).** Lo
+  encontró el E2E de la fase 3: una acción agendada sin señal («Se guardará al volver la señal») no contaba en la hoja de su día
+  («Cuerpo · 0/3») y no se veía. Lo que cambia y nada más:
+  * La hoja del día cuenta lo que ya espera señal en el tope de tres por eje («Cuerpo · 1/3»), lo muestra con «Se guardará al volver
+    la señal» (y la hora, si la tiene) y **no lo vuelve a ofrecer** (ni la sugerida del diagnóstico ni una escrita igual): no se pasa
+    de tres ni se agenda dos veces. No se puede quitar hasta que llegue (P6).
+  * **Tocar en Plan una acción de otro día abre la hoja en ese día**, que es donde se ve lo que espera.
+  * Al guardar, el plan del día viaja entero —lo que esperaba más lo nuevo, con las posiciones seguidas—, porque agendar un día
+    futuro reemplaza al anterior (E-208) y sin ello el plan nuevo lo habría borrado. En la cola de lo hecho sin señal, el plan nuevo
+    **sustituye** al anterior de esa fecha: sale un solo pedido por día (y el día en curso, que el servidor no deja rehacer, no
+    choca con su propio plan).
+  * **No cambian:** con señal, la hoja arranca en 0/3 y el servidor reemplaza el día como siempre (E-208); las cinco pestañas.
+  * **Pruebas:** `src/features/objetivos/components/__tests__/agendarAccionesEnEspera.test.ts`,
+    `src/features/objetivos/api/__tests__/planSinRed.test.ts` («agendar de nuevo un día que ya espera señal») y
+    `src/features/objetivos/utils/__tests__/accionesPropias.test.ts`. Solo JavaScript: no hace falta APK nuevo ni cambio en el backend.

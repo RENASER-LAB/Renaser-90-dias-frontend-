@@ -9,6 +9,7 @@ import * as onboardingApi from '../../onboarding/api/onboardingApi';
 import { aUsuario } from '../api/usuarioMapper';
 import { guardarPerfil, leerPerfilGuardado, olvidarPerfilGuardado } from '../../sinRed/perfilGuardado';
 import { borrarLecturasGuardadas } from '../../sinRed/lecturasGuardadas';
+import { borrarAvisos } from '../../sinRed/avisosDeLoNoAplicado';
 import { borrarCola, cuentaDeLaSesion, ponerCuentaActual } from '../../sinRed/colaSinRed';
 import { prepararAlarmasPara, soltarAlarmasDeLaCuenta } from '../../alarmas/alarmasDeLaCuenta';
 import { apagarLaCarreraAlSalir } from '../../carrera/servicios/tareaDeUbicacion';
@@ -608,7 +609,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     void olvidarPerfilGuardado();
     // Spec 048 (D11): lo que esperaba enviarse es de quien se va (ya se le avisó, `salirAvisandoPendientes`).
     const cuentaQueSale = cuentaDeLaSesion();
-    if (cuentaQueSale) void borrarCola(cuentaQueSale);
+    if (cuentaQueSale) {
+      void borrarCola(cuentaQueSale);
+      // Fase 3 (P9): los avisos de lo que no se aplicó también son de quien se va.
+      void borrarAvisos(cuentaQueSale);
+    }
     ponerCuentaActual(null);
     void borrarLecturasGuardadas();
     setRevalidarSinRed(false);

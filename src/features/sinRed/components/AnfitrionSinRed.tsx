@@ -13,10 +13,16 @@ import '../../habits/api/evidenciaHabitoApi';
 import '../../community/api/publicarSinRed';
 // El de la Pastilla Renacer entregada sin señal.
 import '../../spirit/api/pastillaSinRed';
+// Fase 3: el de las escrituras genéricas (`escritura`) y el de marcar una acción del Plan (`completarAccion`); la cola las manda con
+// sus tres cabeceras. Los ajustes de lectura de cada área se registran al importar su API (cierre, radar, plan y hábitos).
+import '../escrituraSinRed';
+import '../../objetivos/api/planSinRed';
+import { leerAvisos, suscribirAvisos, type AvisoDeLoNoAplicado } from '../avisosDeLoNoAplicado';
 import { leerCola, ponerCuentaActual, procesarCola, suscribirCola } from '../colaSinRed';
 import { alVolverLaConexion, sinConexionDesdeMs, suscribirConexion } from '../estadoDeConexion';
 import { cargarAnclaGuardada } from '../horaReal';
 import { cargarAudiosGuardados } from '../audiosDelDia';
+import { textoDeLosAvisosDelGlobo } from '../utils/textoDeLosAvisos';
 import { textoDelGlobo } from '../utils/textoDelGlobo';
 
 /**
@@ -34,6 +40,8 @@ export function AnfitrionSinRed() {
   const [desde, setDesde] = useState<number | null>(sinConexionDesdeMs());
   const [pendientes, setPendientes] = useState(0);
   const [globo, setGlobo] = useState(false);
+  /** Lo que no se aplicó y todavía no se vio (fase 3, P9): se sigue contando en el globo hasta que la hoja de Hoy lo muestre. */
+  const [avisos, setAvisos] = useState<AvisoDeLoNoAplicado[]>([]);
 
   useEffect(() => {
     ponerCuentaActual(cuentaId);
@@ -68,18 +76,34 @@ export function AnfitrionSinRed() {
   useEffect(() => suscribirConexion(() => setDesde(sinConexionDesdeMs())), []);
 
   useEffect(() => {
+    if (!cuentaId) {
+      setAvisos([]);
+      return;
+    }
+    let vigente = true;
+    const leer = () => void leerAvisos(cuentaId).then(lista => vigente && setAvisos(lista));
+    leer();
+    const quitar = suscribirAvisos(leer);
+    return () => {
+      vigente = false;
+      quitar();
+    };
+  }, [cuentaId]);
+
+  useEffect(() => {
     if (!globo) return;
     const t = setTimeout(() => setGlobo(false), GLOBO_MS);
     return () => clearTimeout(t);
   }, [globo]);
 
-  if (!cuentaId || (desde === null && pendientes === 0)) return null;
+  if (!cuentaId || (desde === null && pendientes === 0 && avisos.length === 0)) return null;
+  const texto = textoDelGlobo(desde, pendientes, new Date(), textoDeLosAvisosDelGlobo(avisos));
 
   return (
     <View pointerEvents="box-none" style={[estilos.capa, { top: insets.top + 4 }]}>
       <Presionable
         accessibilityRole="button"
-        accessibilityLabel={textoDelGlobo(desde, pendientes)}
+        accessibilityLabel={texto}
         hitSlop={8}
         onPress={() => setGlobo(v => !v)}
         style={[estilos.icono, { backgroundColor: c.cardBg, borderColor: c.border }]}
@@ -88,7 +112,7 @@ export function AnfitrionSinRed() {
       </Presionable>
       {globo ? (
         <View style={[estilos.globo, { backgroundColor: c.cardBg, borderColor: c.border }]}>
-          <Text style={[estilos.texto, { color: c.textStrong }]}>{textoDelGlobo(desde, pendientes)}</Text>
+          <Text style={[estilos.texto, { color: c.textStrong }]}>{texto}</Text>
         </View>
       ) : null}
     </View>

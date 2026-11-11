@@ -1,4 +1,6 @@
 import { apiFetch } from '../../../services/http/apiClient';
+import { escribirOEncolar } from '../../sinRed/escrituraSinRed';
+import { cambioDeHoraDeMananaEnEspera, escribirDeHabito, resumenDeHora } from './planificarSinRed';
 import type {
   AltaHabitoPersonal,
   CambioDeFechaApi,
@@ -127,17 +129,27 @@ export async function cambiarHorario(
     lista?: number[] | null;
   },
 ): Promise<CambioHorarioResultado> {
-  const r = await apiFetch<unknown>(`/api/v1/habit-preferences/${habitId}`, {
-    method: 'PATCH',
-    body: {
-      triggerTime,
-      limitTime,
-      reminderEnabled: recordatorio.activo,
-      reminderMinutesBefore: recordatorio.minutosAntes,
-      ...(recordatorio.lista === undefined ? {} : { reminderMinutesList: recordatorio.lista }),
+  // Spec 048 fase 3 (FR-019): sin señal se guarda con la hora real; el cambio rige desde mañana (D-91) y la hoja ya reprograma la alarma.
+  return escribirOEncolar<CambioHorarioResultado>(
+    {
+      area: 'habitos',
+      etiqueta: 'Tu cambio de horario',
+      metodo: 'PATCH',
+      ruta: `/api/v1/habit-preferences/${habitId}`,
+      cuerpo: {
+        triggerTime,
+        limitTime,
+        reminderEnabled: recordatorio.activo,
+        reminderMinutesBefore: recordatorio.minutosAntes,
+        ...(recordatorio.lista === undefined ? {} : { reminderMinutesList: recordatorio.lista }),
+      },
+      resumen: resumenDeHora(triggerTime, limitTime),
     },
-  });
-  return validarRespuesta(habitsSchemas.cambioHorario, r, 'PATCH /api/v1/habit-preferences/{id}');
+    {
+      validar: r => validarRespuesta(habitsSchemas.cambioHorario, r, 'PATCH /api/v1/habit-preferences/{id}'),
+      optimista: () => cambioDeHoraDeMananaEnEspera(),
+    },
+  );
 }
 
 /**
@@ -164,10 +176,7 @@ export async function fijarHorarioDelDia(
   triggerTime: string,
   limitTime: string | null,
 ): Promise<void> {
-  await apiFetch<unknown>(`/api/v1/habit-preferences/${habitId}/weekdays/${weekday}`, {
-    method: 'PUT',
-    body: { triggerTime, limitTime },
-  });
+  await escribirDeHabito('Tu hora de un día', 'PUT', `/api/v1/habit-preferences/${habitId}/weekdays/${weekday}`, { triggerTime, limitTime }, resumenDeHora(triggerTime, limitTime));
 }
 
 /**
@@ -190,9 +199,9 @@ export async function fijarAvisoDelDia(
   activo: boolean,
   antelaciones: readonly number[],
 ): Promise<void> {
-  await apiFetch<unknown>(`/api/v1/habit-preferences/${habitId}/weekdays/${weekday}/reminder`, {
-    method: 'PUT',
-    body: { reminderEnabled: activo, reminderMinutesList: activo ? [...antelaciones] : [] },
+  await escribirDeHabito('Tu aviso de un día', 'PUT', `/api/v1/habit-preferences/${habitId}/weekdays/${weekday}/reminder`, {
+    reminderEnabled: activo,
+    reminderMinutesList: activo ? [...antelaciones] : [],
   });
 }
 
@@ -207,10 +216,7 @@ export async function fijarAvisoDelDia(
  * preferencias y no ofrecer este camino si no vino.
  */
 export async function fijarAlarmaGeneral(habitId: string, alarma: CombinacionDeAlarma): Promise<void> {
-  await apiFetch<unknown>(`/api/v1/habit-preferences/${habitId}/alarm`, {
-    method: 'PUT',
-    body: combinacionALaApi(alarma),
-  });
+  await escribirDeHabito('Tu alarma', 'PUT', `/api/v1/habit-preferences/${habitId}/alarm`, combinacionALaApi(alarma));
 }
 
 /**
@@ -221,10 +227,7 @@ export async function fijarAlarmaGeneral(habitId: string, alarma: CombinacionDeA
  * Quitar el día con `quitarHorarioDelDia` borra también su combinación.
  */
 export async function fijarAlarmaDelDia(habitId: string, weekday: string, alarma: CombinacionDeAlarma): Promise<void> {
-  await apiFetch<unknown>(`/api/v1/habit-preferences/${habitId}/weekdays/${weekday}/alarm`, {
-    method: 'PUT',
-    body: combinacionALaApi(alarma),
-  });
+  await escribirDeHabito('Tu alarma de un día', 'PUT', `/api/v1/habit-preferences/${habitId}/weekdays/${weekday}/alarm`, combinacionALaApi(alarma));
 }
 
 /**
@@ -234,14 +237,12 @@ export async function fijarAlarmaDelDia(habitId: string, weekday: string, alarma
  * si el hábito es obligatorio del programa.
  */
 export async function apagarDiaDeLaSemana(habitId: string, weekday: string): Promise<void> {
-  await apiFetch<unknown>(`/api/v1/habit-preferences/${habitId}/weekdays/${weekday}/active`, {
-    method: 'DELETE',
-  });
+  await escribirDeHabito('Un día que apagaste', 'DELETE', `/api/v1/habit-preferences/${habitId}/weekdays/${weekday}/active`);
 }
 
 /** `DELETE .../weekdays/{weekday}` — ese día vuelve al horario general. Idempotente. */
 export async function quitarHorarioDelDia(habitId: string, weekday: string): Promise<void> {
-  await apiFetch<unknown>(`/api/v1/habit-preferences/${habitId}/weekdays/${weekday}`, { method: 'DELETE' });
+  await escribirDeHabito('Tu hora de un día', 'DELETE', `/api/v1/habit-preferences/${habitId}/weekdays/${weekday}`);
 }
 
 /**
@@ -276,20 +277,17 @@ export async function cambiarEstadoHabito(
    */
   pausedUntil?: string
 ): Promise<void> {
-  await apiFetch<unknown>(`/api/v1/habit-unlocks/${habitId}`, {
-    method: 'PATCH',
-    body: pausedUntil ? { active, pausedUntil } : { active },
-  });
+  await escribirDeHabito(active ? 'Un hábito que reactivaste' : 'Un hábito que pausaste', 'PATCH', `/api/v1/habit-unlocks/${habitId}`, pausedUntil ? { active, pausedUntil } : { active });
 }
 
 /** `PUT /api/v1/habit-unlocks/{habitId}` — agrega el hábito al plan del aprendiz. Idempotente. */
 export async function agregarHabitoAlPlan(habitId: string): Promise<void> {
-  await apiFetch<unknown>(`/api/v1/habit-unlocks/${habitId}`, { method: 'PUT' });
+  await escribirDeHabito('Un hábito que sumaste a tu plan', 'PUT', `/api/v1/habit-unlocks/${habitId}`);
 }
 
 /** `DELETE /api/v1/habit-unlocks/{habitId}` — lo saca del plan. Idempotente (D-87). */
 export async function quitarHabitoDelPlan(habitId: string): Promise<void> {
-  await apiFetch<unknown>(`/api/v1/habit-unlocks/${habitId}`, { method: 'DELETE' });
+  await escribirDeHabito('Un hábito que quitaste de tu plan', 'DELETE', `/api/v1/habit-unlocks/${habitId}`);
 }
 
 /* ----------------------------------------------------------------------------------------------------------
@@ -313,14 +311,12 @@ export async function obtenerSemanaDelHabito(habitId: string, weekStart: string)
  * vuelve al plan de siempre. Solo fechas posteriores a hoy; 409 si se apaga un hábito obligatorio.
  */
 export async function guardarSemanaDelHabito(habitId: string, weekStart: string, days: CambioDeFechaApi[]): Promise<void> {
-  await apiFetch<unknown>(`/api/v1/habit-preferences/${habitId}/week`, { method: 'PUT', body: { weekStart, days } });
+  await escribirDeHabito('Tus cambios de la semana', 'PUT', `/api/v1/habit-preferences/${habitId}/week`, { weekStart, days });
 }
 
 /** `DELETE /api/v1/habit-preferences/{habitId}/week?weekStart=` — vuelve al plan de siempre en esa semana (solo fechas posteriores a hoy). */
 export async function volverAlPlanDeSiempreDelHabito(habitId: string, weekStart: string): Promise<void> {
-  await apiFetch<unknown>(`/api/v1/habit-preferences/${habitId}/week?weekStart=${encodeURIComponent(weekStart)}`, {
-    method: 'DELETE',
-  });
+  await escribirDeHabito('Tu vuelta al plan de siempre', 'DELETE', `/api/v1/habit-preferences/${habitId}/week?weekStart=${encodeURIComponent(weekStart)}`);
 }
 
 /** `GET /api/v1/habit-preferences/week-repeat` — la oferta de repetir la semana en curso en la siguiente, o `null` (204: no hay oferta). */
@@ -339,15 +335,28 @@ export async function repetirLaSemana(
   targetWeekStart: string,
   replace: boolean,
 ): Promise<ResultadoDeRepetirApi> {
-  const r = await apiFetch<unknown>('/api/v1/habit-preferences/week-repeat', {
-    method: 'POST',
-    body: { sourceWeekStart, targetWeekStart, replace },
-  });
-  return validarRespuesta(habitsSchemas.resultadoDeRepetir, r, 'POST /api/v1/habit-preferences/week-repeat');
+  return escribirOEncolar<ResultadoDeRepetirApi>(
+    {
+      area: 'habitos',
+      etiqueta: 'Tu semana repetida',
+      metodo: 'POST',
+      ruta: '/api/v1/habit-preferences/week-repeat',
+      cuerpo: { sourceWeekStart, targetWeekStart, replace },
+    },
+    {
+      validar: r => validarRespuesta(habitsSchemas.resultadoDeRepetir, r, 'POST /api/v1/habit-preferences/week-repeat'),
+      optimista: () => ({ targetWeekStart, copiedDays: 0, removedDays: 0, habits: 0, excluded: [] }),
+    },
+  );
 }
 
 /** `DELETE /api/v1/habit-preferences/weeks/{weekStart}` — «Deshacer»: TODA esa semana vuelve al plan de siempre. Idempotente. */
 export async function deshacerLaSemana(weekStart: string): Promise<number> {
-  const r = await apiFetch<unknown>(`/api/v1/habit-preferences/weeks/${encodeURIComponent(weekStart)}`, { method: 'DELETE' });
-  return validarRespuesta(habitsSchemas.semanaDeshecha, r, 'DELETE /api/v1/habit-preferences/weeks/{weekStart}').removedDays;
+  return escribirOEncolar<number>(
+    { area: 'habitos', etiqueta: 'Tu semana deshecha', metodo: 'DELETE', ruta: `/api/v1/habit-preferences/weeks/${encodeURIComponent(weekStart)}` },
+    {
+      validar: r => validarRespuesta(habitsSchemas.semanaDeshecha, r, 'DELETE /api/v1/habit-preferences/weeks/{weekStart}').removedDays,
+      optimista: () => 0,
+    },
+  );
 }

@@ -27,6 +27,7 @@ jest.mock('../../../../services/http/apiClient', () => ({
 import { ApiError } from '../../../../services/http/apiClient';
 import { alCumplirUnHabito } from '../../../habits/eventos/habitoCumplido';
 import { useHojaDelCierre } from '../useHojaDelCierre';
+import { TEXTO_SIN_SENAL_AL_CARGAR } from '../../../sinRed/utils/sinSenal';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -118,7 +119,8 @@ describe('al abrir', () => {
     };
     await montar();
     expect(hook.fase).toBe('error');
-    expect(hook.errorDeLectura).toBe('Sin conexión');
+    // Sin señal la hoja dice «sin señal» (spec 048, #182), no el texto crudo del cliente HTTP.
+    expect(hook.errorDeLectura).toBe(TEXTO_SIN_SENAL_AL_CARGAR);
     mockRespuesta = () => DIA_ABIERTO;
     await hacer(() => void hook.reintentar());
     expect(hook.fase).toBe('formulario');

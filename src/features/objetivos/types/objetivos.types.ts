@@ -186,6 +186,13 @@ export interface RocaDiariaApi {
   bloqueada: boolean;
   /** Con qué se logra este objetivo del día, en orden. Vacío = sin desglose. */
   acciones: string[];
+  /**
+   * Por qué quedó sin puntos al marcarla sin señal (`LLEGO_DESPUES_DE_48_H`, `HORA_FUTURA`, `FUERA_DE_SU_DIA`, `YA_ESTABA_HECHO`;
+   * spec 048 fase 3, FR-015). Ausente o `null` si sumó sus puntos.
+   */
+  motivoSinPuntos?: string | null;
+  /** Spec 048 fase 3 (P6): se agendó sin señal y todavía no llegó al servidor; no se puede marcar hasta que llegue. */
+  pendienteDeEnvio?: boolean;
 }
 
 /**

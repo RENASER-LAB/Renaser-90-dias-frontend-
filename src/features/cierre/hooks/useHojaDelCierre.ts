@@ -15,6 +15,8 @@ import {
   textoDeLoQueFalta,
   type BorradorDelCierre,
 } from '../utils/borradorDelCierre';
+import { mensajeDeCarga } from '../../sinRed/utils/sinSenal';
+import { useRecargarAlVolverLaSenal } from '../../sinRed/useRecargarAlVolverLaSenal';
 
 /**
  * Lo que pasa DENTRO de la hoja «Cierra tu día» (spec 017): leer el día al abrirla, ir armando las respuestas y guardar.
@@ -91,7 +93,7 @@ export function useHojaDelCierre({
       callbacks.current.alLeer?.(leida);
     } catch (error) {
       if (mia !== lectura.current) return;
-      setErrorDeLectura(mensajeDeError(error, 'No pudimos cargar tu día. Revisa tu conexión e inténtalo de nuevo.'));
+      setErrorDeLectura(mensajeDeCarga(error, 'No pudimos cargar tu día. Revisa tu conexión e inténtalo de nuevo.'));
       setFase('error');
     }
   }, [fecha]);
@@ -104,6 +106,8 @@ export function useHojaDelCierre({
     }
     void leer();
   }, [visible, leer]);
+  /* Spec 048 (#182): con la hoja abierta y la lectura en «sin señal», se pide sola al volver la señal. */
+  useRecargarAlVolverLaSenal(leer, visible && fase === 'error');
 
   const elegirMotivo = useCallback(
     (accionId: string, motivo: MotivoDelCierre) => setBorrador(b => conRespuesta(b, accionId, { motivo })),
@@ -143,7 +147,7 @@ export function useHojaDelCierre({
     if (hoyActual.current !== fecha) return { resultado: 'dia-cambio' };
     setFase('guardando');
     try {
-      const guardada = await guardarCierreDelDia(cuerpoDelCierre(fecha, vista, borrador));
+      const guardada = await guardarCierreDelDia(cuerpoDelCierre(fecha, vista, borrador), vista);
       setVista(guardada);
       setFase('guardado');
       tacto.logro();

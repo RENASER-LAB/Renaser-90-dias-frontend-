@@ -25,11 +25,19 @@ const RUTAS_EXACTAS = new Set([
   '/api/v1/audio-therapy/status',
   // Spec 048 fase 2 (FR-021): las categorías del Muro, para escribir una publicación sin señal.
   '/api/v1/wall/categories',
+  // Fase 3 (FR-004, FR-019): Mi Radar, la última hora respondida y qué plan de hábitos tiene la persona, para planificar sin señal.
+  '/api/v1/radar/mi-radar',
+  '/api/v1/radar/latest',
+  '/api/v1/habit-unlocks',
 ]);
-const PREFIJOS = ['/api/v1/rocks/', '/api/v1/habit-tracks/day'];
+/** Solo la primera página: con `cursor` es otra página y no debe pisar a la primera. */
+const RUTAS_SIN_CONSULTA = new Set(['/api/v1/radar/history']);
+// `/api/v1/habit-preferences/` (fase 3): los días de la semana, una semana puntual y la oferta de repetir la semana de cada hábito.
+const PREFIJOS = ['/api/v1/rocks/', '/api/v1/habit-tracks/day', '/api/v1/habit-preferences/'];
 
 export function esLecturaGuardable(ruta: string): boolean {
-  const sinConsulta = ruta.split('?')[0];
+  const [sinConsulta, consulta] = ruta.split('?');
+  if (RUTAS_SIN_CONSULTA.has(sinConsulta)) return consulta === undefined;
   return RUTAS_EXACTAS.has(sinConsulta) || PREFIJOS.some(p => sinConsulta.startsWith(p));
 }
 

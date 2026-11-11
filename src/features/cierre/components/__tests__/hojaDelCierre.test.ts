@@ -57,6 +57,7 @@ import { Icon } from '../../../../components/Icon';
 import { ApiError } from '../../../../services/http/apiClient';
 import { light as colores } from '../../../../theme/tokens';
 import { HojaDelCierre, TEXTO_DE_DIA_CERRADO_TARDE } from '../HojaDelCierre';
+import { TEXTO_SIN_SENAL_AL_CARGAR } from '../../../sinRed/utils/sinSenal';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -466,7 +467,7 @@ describe('los estados de la lectura', () => {
       throw new ApiError(0, 'Sin conexión');
     };
     await montar();
-    expect(hay('Sin conexión')).toBe(true);
+    expect(hay(TEXTO_SIN_SENAL_AL_CARGAR)).toBe(true);
     mockRespuesta = () => dia();
     await act(async () => { tocableCon('Reintentar').props.onPress(); });
     expect(hay('Guardar mi cierre')).toBe(true);

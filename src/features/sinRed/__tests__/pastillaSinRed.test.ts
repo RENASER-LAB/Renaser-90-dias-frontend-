@@ -33,6 +33,7 @@ jest.mock('../horaReal', () => ({ horaReal: jest.fn(() => ({ instante: new Date(
 
 import { DiaDeHabitosCambiadoError } from '../../habits/api/registroVigente';
 import { entregarResumenEspiritu } from '../../spirit/api/spiritApi';
+import { leerAvisos } from '../avisosDeLoNoAplicado';
 import { leerCola, ponerCuentaActual, procesarCola } from '../colaSinRed';
 import { aplicarAjustesDeLectura, guardarLectura, leerLectura } from '../lecturasGuardadas';
 
@@ -96,13 +97,14 @@ describe('la Pastilla Renacer sin señal (spec 048)', () => {
     expect(await procesarCola('ana')).toBe(0);
   });
 
-  it('si llegó cuando el día ya venció, queda marcada con el motivo del servidor (no se da por entregada)', async () => {
+  it('si llegó cuando el día ya venció, no se da por entregada: sale de la cola y avisa con el motivo y lo que escribiste (#180)', async () => { // spec 048 FR-016
     await entregarResumenEspiritu(3, 'Texto', CONTEXTO);
     mockRed.hay = true;
     mockRed.rechazo = { status: 409, mensaje: 'Ya se registró este día (enviado o vencido): PERDIDO' };
 
-    expect(await procesarCola('ana')).toBe(1);
-    const [envio] = await leerCola('ana');
-    expect(envio.bloqueado).toMatch(/PERDIDO/);
+    expect(await procesarCola('ana')).toBe(0);
+    const [aviso] = await leerAvisos('ana');
+    expect(aviso).toMatchObject({ tipo: 'no-se-pudo', etiqueta: 'Tu Pastilla Renacer', texto: 'Texto' });
+    expect(aviso.motivo).toMatch(/PERDIDO/);
   });
 });

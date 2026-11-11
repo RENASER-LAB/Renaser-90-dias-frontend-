@@ -7,6 +7,7 @@ import { Icon } from '../../../components/Icon';
 import { AvatarPersona } from '../../../components/ui';
 import { HojaDesdeAbajo } from '../../../components/hojaDesdeAbajo/HojaDesdeAbajo';
 import { useTheme } from '../../../theme/ThemeContext';
+import { ErrorDeCarga } from '../../sinRed/components/ErrorDeCarga';
 
 /**
  * Quién dio «me gusta» a una publicación del Muro (o desde el visor de fotos), en una hoja desde
@@ -58,7 +59,7 @@ export function HojaDeReacciones({
             <Text style={[t.body, { color: c.textSoft }]}>Cargando reacciones…</Text>
           </View>
         )}
-        {!cargando && error && <Text style={[t.body, styles.mensaje, { color: c.danger }]}>{error}</Text>}
+        {!cargando && error && <ErrorDeCarga mensaje={error} style={[t.body, styles.mensaje]} />}
         {!cargando && !error && reacciones.length === 0 && (
           <Text style={[t.body, styles.mensaje, { color: c.textSoft }]}>Todavía nadie reaccionó a esta publicación.</Text>
         )}

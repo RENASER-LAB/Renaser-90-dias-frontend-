@@ -1,6 +1,6 @@
 import { describe, expect, it } from '@jest/globals';
 
-import { conAccionPropia, opcionesDelEje, sugeridasDelEje, type AccionElegida } from '../accionesPropias';
+import { conAccionPropia, opcionesDelEje, recortadasAlTope, sugeridasDelEje, type AccionElegida } from '../accionesPropias';
 
 const MAXIMO = 3;
 const caminar = { texto: 'Caminar 40 minutos', sugerida: true };
@@ -77,6 +77,15 @@ describe('opcionesDelEje', () => {
   });
 });
 
+describe('conAccionPropia con lo que ya espera señal (spec 048 #183)', () => {
+  it('lo que espera ese día cuenta para el tope de tres y no se repite', () => { // spec 048 FR-019
+    expect(conAccionPropia([], 'CUERPO', 'Otra', MAXIMO, ['Uno', 'Dos', 'Tres'])).toBeNull(); // ya hay tres esperando
+    expect(conAccionPropia([{ eje: 'CUERPO', titulo: 'Nueva', hora: '', pasos: [] }], 'CUERPO', 'Otra', MAXIMO, ['Uno', 'Dos'])).toBeNull();
+    expect(conAccionPropia([], 'CUERPO', '  Uno ', MAXIMO, ['Uno'])).toBeNull(); // la misma que espera: no se agenda dos veces
+    expect(conAccionPropia([], 'CUERPO', 'Otra', MAXIMO, ['Uno'])).toEqual([{ eje: 'CUERPO', titulo: 'Otra', hora: '', pasos: [] }]);
+  });
+});
+
 describe('sugeridasDelEje: la primera acción del diagnóstico', () => {
   const sugerencia = { eje: 'TRABAJO' as const, texto: 'El lunes revisaré mis ventas' };
 
@@ -94,5 +103,23 @@ describe('sugeridasDelEje: la primera acción del diagnóstico', () => {
 
   it('el texto se limpia de espacios de sobra', () => {
     expect(sugeridasDelEje('TRABAJO', { eje: 'TRABAJO', texto: '  Llamar a Ana ' })[0].texto).toBe('Llamar a Ana');
+  });
+});
+
+describe('recortadasAlTope (#185)', () => {
+  const tres = [elegida('CUERPO', 'a'), elegida('CUERPO', 'b'), elegida('TRABAJO', 'c'), elegida('CUERPO', 'd')];
+
+  it('sin nada en el día nuevo deja lo elegido, hasta el tope de cada eje', () => {
+    expect(recortadasAlTope(tres, () => 0, MAXIMO).map(e => e.titulo)).toEqual(['a', 'b', 'c', 'd']);
+    expect(recortadasAlTope(tres, () => 0, 2).map(e => e.titulo)).toEqual(['a', 'b', 'c']);
+  });
+
+  it('con lo que el día nuevo ya tiene en un eje, quita las últimas de ese eje y no toca las de otro', () => {
+    const yaTiene = (eje: string) => (eje === 'CUERPO' ? 2 : 0);
+    expect(recortadasAlTope(tres, yaTiene, MAXIMO).map(e => e.titulo)).toEqual(['a', 'c']);
+  });
+
+  it('con el eje lleno en el día nuevo, no queda ninguna de ese eje', () => {
+    expect(recortadasAlTope(tres, eje => (eje === 'CUERPO' ? 3 : 0), MAXIMO).map(e => e.titulo)).toEqual(['c']);
   });
 });

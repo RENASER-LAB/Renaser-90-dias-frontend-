@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { CommentItem, PostItem } from '../../../screens/ComunidadScreen';
-import { ApiError, mensajeDeError } from '../../../services/http/apiClient';
+import { ApiError } from '../../../services/http/apiClient';
 import { suscribirCola } from '../../sinRed/colaSinRed';
 import {
   TEXTO_EN_ESPERA,
@@ -22,6 +22,7 @@ import type { WallReactionType } from '../types/community.types';
 import { fusionarPrimeraPagina } from '../utils/moderacionDelMuro';
 import { adelantarMiniaturas } from '../utils/adelantarMiniaturas';
 import type { FotoMuroNormalizada } from '../utils/normalizarImagen';
+import { mensajeDeCargaEnLinea } from '../../sinRed/utils/sinSenal';
 
 /**
  * Estado real del Muro contra el backend Java, en un solo lugar — mismo criterio que
@@ -80,7 +81,7 @@ export function useWallFeed() {
       setPosts(pagina.posts.map(mapearPublicacion));
       setCursor(pagina.nextCursor);
     } catch (e) {
-      setError(mensajeDeError(e, 'No pudimos cargar el muro. Revisa tu conexión e inténtalo de nuevo.'));
+      setError(mensajeDeCargaEnLinea(e, 'No pudimos cargar el muro. Revisa tu conexión e inténtalo de nuevo.'));
     } finally {
       setLoading(false);
     }

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 
-import { mensajeDeError } from '../../../services/http/apiClient';
+import { mensajeDeCarga } from '../../sinRed/utils/sinSenal';
+import { useRecargarAlVolverLaSenal } from '../../sinRed/useRecargarAlVolverLaSenal';
 import { obtenerResumenHome } from '../api/homeApi';
 import type { ResumenHomeApi } from '../types/home.types';
 import { escucharDiaUnoElegido } from '../../programa/events/avisoDiaUnoElegido';
@@ -131,7 +132,7 @@ export function useResumenHome(): EstadoResumenHome {
       setResumen(respuesta);
       setError(null);
     } catch (e) {
-      if (consulta === consultaActual.current) setError(mensajeDeError(e, 'No pudimos cargar tu día. Revisa tu conexión.'));
+      if (consulta === consultaActual.current) setError(mensajeDeCarga(e, 'No pudimos cargar tu día. Revisa tu conexión.'));
     } finally {
       if (consulta === consultaActual.current) setCargando(false);
     }
@@ -143,6 +144,8 @@ export function useResumenHome(): EstadoResumenHome {
       void recargar();
     }, [recargar]),
   );
+  /* Spec 048 (#182): sin señal y sin nada guardado dice «sin señal» y se pide solo al volver. */
+  useRecargarAlVolverLaSenal(recargar, error !== null);
 
   return {
     resumen,

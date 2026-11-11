@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type SetStateAction } from 'react';
 
 import type { ChatConversation, ChatMessage } from '../../../screens/ComunidadScreen';
-import { mensajeDeError } from '../../../services/http/apiClient';
+import { mensajeDeCargaEnLinea } from '../../sinRed/utils/sinSenal';
 // Solo se LEE (no se toca `features/eventos/`): la misma relectura compartida que ya usa la lista
 // de Eventos, con sus pruebas. Mismo criterio que `objetivos` con `eventos/utils/zonaHoraria`.
 import { crearLecturaVigente, type LecturaVigente } from '../../eventos/utils/lecturaVigente';
@@ -89,7 +89,7 @@ export function useChatConversaciones(actorId: string | null | undefined, activo
       resultado => {
         if (!resultado.ok) {
           setError(
-            mensajeDeError(resultado.error, 'No pudimos cargar tus conversaciones. Revisa tu conexión e inténtalo de nuevo.')
+            mensajeDeCargaEnLinea(resultado.error, 'No pudimos cargar tus conversaciones. Revisa tu conexión e inténtalo de nuevo.')
           );
           return;
         }

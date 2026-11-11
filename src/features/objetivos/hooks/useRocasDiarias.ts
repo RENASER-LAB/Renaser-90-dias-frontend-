@@ -1,7 +1,11 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 
 import { ApiError } from '../../../services/http/apiClient';
+import { alTerminarEnvioDe } from '../../sinRed/escrituraSinRed';
+import { alTerminarUnEnvio } from '../../sinRed/colaSinRed';
+import { useRecargarAlVolverLaSenal } from '../../sinRed/useRecargarAlVolverLaSenal';
+import { mensajeDeCarga } from '../../sinRed/utils/sinSenal';
 import { mensajeDeObjetivos } from '../utils/mensajeDeObjetivos';
 import * as objetivosApi from '../api/objetivosApi';
 import type { EjeObjetivo, ItemPlanDiario, RocaDiariaApi } from '../types/objetivos.types';
@@ -32,6 +36,11 @@ export function useRocasDiarias() {
    */
   const [agendadas, setAgendadas] = useState<RocaDiariaApi[]>([]);
   const [hoyDelServidor, setHoyDelServidor] = useState<string | null>(null);
+  /**
+   * Spec 048 (#185): `GET /rocks/upcoming` se leyó de verdad. «Agendar mis acciones» reemplaza el día entero en el servidor (E-208), así
+   * que sin saber lo que cada día ya tiene no puede mandar el plan completo: agendar borraría lo que no se vio. Falso hasta la primera lectura.
+   */
+  const [agendadasLeidas, setAgendadasLeidas] = useState(false);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
@@ -51,10 +60,12 @@ export function useRocasDiarias() {
       setHoy(deHoy);
       setManana(deManana);
       setAgendadas(deLaSemana?.rocas ?? []);
+      setAgendadasLeidas(deLaSemana !== null);
       setHoyDelServidor(deLaSemana?.desde ?? deHoy[0]?.fecha ?? null);
       yaLeyo.current = true;
     } catch (e) {
-      setError(mensajeDeObjetivos(e, 'No pudimos cargar tus acciones del día.'));
+      // Sin señal y sin nada guardado: se dice sin señal, no «No se pudo conectar» en rojo (#182).
+      setError(mensajeDeCarga(e, 'No pudimos cargar tus acciones del día.', mensajeDeObjetivos));
     } finally {
       setCargando(false);
     }
@@ -66,6 +77,18 @@ export function useRocasDiarias() {
       void cargar();
     }, [cargar]),
   );
+
+  /* Spec 048 fase 3: lo agendado o marcado sin señal sale de la cola (llegó, o el servidor no lo aplicó): se vuelve a leer. */
+  useEffect(() => {
+    const quitarPlan = alTerminarEnvioDe('plan', () => void cargar());
+    const quitarAcciones = alTerminarUnEnvio(envio => envio.tipo === 'completarAccion' && void cargar());
+    return () => {
+      quitarPlan();
+      quitarAcciones();
+    };
+  }, [cargar]);
+  /* #182: lo que no se pudo leer sin señal se pide solo al volver la señal. */
+  useRecargarAlVolverLaSenal(cargar, error !== null);
 
   /**
    * Qué fecha se propone. **Es una propuesta del dispositivo, no la verdad.**
@@ -139,7 +162,7 @@ export function useRocasDiarias() {
     }
   }, [cargar]);
 
-  return { hoy, manana, agendadas, hoyDelServidor, objetivo, cargando, error, guardando, planificar, recargar: cargar };
+  return { hoy, manana, agendadas, agendadasLeidas, hoyDelServidor, objetivo, cargando, error, guardando, planificar, recargar: cargar };
 }
 
 /**
@@ -150,7 +173,7 @@ export function useRocasDiarias() {
  * su lista; la numeración es consecuencia de ese orden.
  */
 export function posicionarPorEje(
-  acciones: { eje: EjeObjetivo; titulo: string; descripcion?: string; puntajeImpacto?: number; esDelegable?: boolean; horaInicio?: string; horaFin?: string }[]
+  acciones: { eje: EjeObjetivo; titulo: string; descripcion?: string; puntajeImpacto?: number; esDelegable?: boolean; horaInicio?: string; horaFin?: string; acciones?: string[] }[]
 ): ItemPlanDiario[] {
   const contadoPorEje = new Map<EjeObjetivo, number>();
   return acciones.map(accion => {
@@ -167,6 +190,8 @@ export function posicionarPorEje(
       esDelegable: accion.esDelegable ?? false,
       horaInicio: accion.horaInicio,
       horaFin: accion.horaFin,
+      // Los pasos («Desglosarla en pasos») viajan con la acción; antes se perdían acá y nunca llegaban (#184).
+      ...(accion.acciones && accion.acciones.length > 0 ? { acciones: accion.acciones } : {}),
     };
   });
 }

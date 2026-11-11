@@ -78,6 +78,8 @@ const rocaDiariaSchema = z
        las recorre con `.map`, y un `undefined` ahí revienta. Los registros anteriores a la V61 no
        traen el campo y tienen que leerse como "sin desglose", que es lo que eran. */
     acciones: z.array(z.string()).default([]),
+    // Spec 048 fase 3 (FR-015): por qué quedó sin puntos una acción marcada sin señal. Ausente cuando sumó sus puntos.
+    motivoSinPuntos: z.string().nullish(),
   })
   .passthrough();
 

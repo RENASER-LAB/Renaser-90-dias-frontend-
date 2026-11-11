@@ -1,4 +1,7 @@
-import { apiFetch } from '../../../services/http/apiClient';
+import { ApiError, apiFetch } from '../../../services/http/apiClient';
+import { fechaLocal } from '../../habits/notificaciones/utils/alarmasPorDia';
+import { escribirOEncolar } from '../../sinRed/escrituraSinRed';
+import { horaReal } from '../../sinRed/horaReal';
 import type {
   CierreRocaSemanal,
   DefinicionRocaMaestra,
@@ -11,6 +14,18 @@ import type {
   RocaSemanalApi,
 } from '../types/objetivos.types';
 import { objetivosSchemas, validarRespuesta } from './objetivosSchemas';
+import {
+  AVISO_TODAVIA_NO_LLEGO,
+  accionesEnEspera,
+  estaEnEspera,
+  etiquetaDeAgendar,
+  quitarPlanesEnEsperaDe,
+  resumenDeAgendar,
+  revisarElDiaAAgendar,
+  rocaMaestraEnEspera,
+  rocaSemanalEditada,
+  semanaEnEspera,
+} from './planSinRed';
 
 /**
  * Endpoints de las rocas: el objetivo de 90 días (maestra), el plan de la semana (semanal) y las
@@ -46,12 +61,28 @@ export async function obtenerRocasMaestras(): Promise<RocaMaestraApi[]> {
 export async function definirRocaMaestra(
   eje: EjeObjetivo,
   definicion: DefinicionRocaMaestra,
+  /** Spec 048 fase 3: la roca del eje que la pantalla ya tiene, para mostrar lo pedido mientras espera sin señal. */
+  actual?: RocaMaestraApi | null,
 ): Promise<RocaMaestraApi> {
   // Spec 026: ya no hay Mapa que mande `origen: 'MAPA'` (el servidor ignora `desdeElMapa`). Un objetivo que nació del
   // diagnóstico y está «por confirmar» se confirma con este mismo pedido, solo con el texto (ver `useRocasMaestras.confirmar`).
-  const r = await apiFetch<unknown>(`/api/v1/rocks/master/${eje}`, { method: 'PUT', body: definicion });
-  return validarRespuesta(objetivosSchemas.rocaMaestra, r, `PUT /api/v1/rocks/master/${eje}`);
+  return escribirOEncolar<RocaMaestraApi>(
+    {
+      area: 'plan',
+      etiqueta: `Tu objetivo de ${ETIQUETA_DEL_EJE[eje]}`,
+      metodo: 'PUT',
+      ruta: `/api/v1/rocks/master/${eje}`,
+      cuerpo: definicion,
+      resumen: definicion.objetivo,
+    },
+    {
+      validar: r => validarRespuesta(objetivosSchemas.rocaMaestra, r, `PUT /api/v1/rocks/master/${eje}`),
+      optimista: envio => rocaMaestraEnEspera(eje, definicion, actual, envio.idCliente, envio.hechoEn),
+    },
+  );
 }
+
+const ETIQUETA_DEL_EJE: Record<EjeObjetivo, string> = { CUERPO: 'Cuerpo', TRABAJO: 'Negocio', RELACIONES: 'Relaciones' };
 
 
 /* ------------------------------------------------------------------------------------------------
@@ -82,9 +113,26 @@ export async function obtenerRocasSemanales(semana?: number): Promise<RocaSemana
  * Errores que la pantalla tiene que distinguir, porque significan cosas muy distintas:
  * `403 ROCKS_LOCKED` (faltan maestras) y `409 ALREADY_PLANNED` (esta semana ya está abierta).
  */
-export async function crearPlanSemanal(rocas: ItemPlanSemanal[]): Promise<RocaSemanalApi[]> {
-  const r = await apiFetch<unknown>('/api/v1/rocks/weekly', { method: 'POST', body: { rocas } });
-  return validarRespuesta(objetivosSchemas.rocasSemanales, r, 'POST /api/v1/rocks/weekly');
+export async function crearPlanSemanal(
+  rocas: ItemPlanSemanal[],
+  /** Spec 048 fase 3: las maestras (para saber de qué eje es cada una) y la semana que se ve, para mostrar lo pedido sin señal. */
+  contexto: { maestras: RocaMaestraApi[]; semana?: number } = { maestras: [] },
+): Promise<RocaSemanalApi[]> {
+  return escribirOEncolar<RocaSemanalApi[]>(
+    {
+      area: 'plan',
+      etiqueta: 'Tu plan de la semana',
+      metodo: 'POST',
+      ruta: '/api/v1/rocks/weekly',
+      cuerpo: { rocas },
+      resumen: rocas.map(i => `${i.titulo}${i.obstaculo ? ` · ${i.obstaculo}` : ''}`).join('\n'),
+      contexto,
+    },
+    {
+      validar: r => validarRespuesta(objetivosSchemas.rocasSemanales, r, 'POST /api/v1/rocks/weekly'),
+      optimista: envio => semanaEnEspera(rocas, contexto.maestras, envio.idCliente, envio.hechoEn, contexto.semana ?? 0),
+    },
+  );
 }
 
 /**
@@ -94,9 +142,26 @@ export async function crearPlanSemanal(rocas: ItemPlanSemanal[]): Promise<RocaSe
  * domingo 12:00 → lunes 09:00 en la zona del participante. Quien planificó a destiempo (fuera de esa
  * franja) tiene 2 h desde que creó, y nunca más allá del fin de su día local. Fuera de eso: 403.
  */
-export async function editarRocaSemanal(id: string, edicion: EdicionRocaSemanal): Promise<RocaSemanalApi> {
-  const r = await apiFetch<unknown>(`/api/v1/rocks/weekly/${id}`, { method: 'PATCH', body: edicion });
-  return validarRespuesta(objetivosSchemas.rocaSemanal, r, `PATCH /api/v1/rocks/weekly/${id}`);
+export async function editarRocaSemanal(id: string, edicion: EdicionRocaSemanal, actual?: RocaSemanalApi | null): Promise<RocaSemanalApi> {
+  // Un plan que todavía espera señal no tiene su `id` real: no se puede corregir hasta que llegue (P6).
+  if (estaEnEspera(id)) throw new Error(AVISO_TODAVIA_NO_LLEGO);
+  return escribirOEncolar<RocaSemanalApi>(
+    {
+      area: 'plan',
+      etiqueta: `Tu cambio al plan de la semana`,
+      metodo: 'PATCH',
+      ruta: `/api/v1/rocks/weekly/${id}`,
+      cuerpo: edicion,
+      resumen: edicion.titulo ?? null,
+    },
+    {
+      validar: r => validarRespuesta(objetivosSchemas.rocaSemanal, r, `PATCH /api/v1/rocks/weekly/${id}`),
+      antesDeEncolar: () => {
+        if (!actual) throw new ApiError(0, 'No se pudo conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.');
+      },
+      optimista: envio => rocaSemanalEditada(actual as RocaSemanalApi, edicion, envio.hechoEn),
+    },
+  );
 }
 
 /**
@@ -106,9 +171,25 @@ export async function editarRocaSemanal(id: string, edicion: EdicionRocaSemanal)
  * Esto **no** tiene ventana horaria: una semana se puede cerrar cuando la persona pueda sentarse a
  * revisarla.
  */
-export async function cerrarSemana(id: string, cierre: CierreRocaSemanal): Promise<RocaSemanalApi> {
-  const r = await apiFetch<unknown>(`/api/v1/rocks/weekly/${id}/review`, { method: 'PATCH', body: cierre });
-  return validarRespuesta(objetivosSchemas.rocaSemanal, r, `PATCH /api/v1/rocks/weekly/${id}/review`);
+export async function cerrarSemana(id: string, cierre: CierreRocaSemanal, actual?: RocaSemanalApi | null): Promise<RocaSemanalApi> {
+  if (estaEnEspera(id)) throw new Error(AVISO_TODAVIA_NO_LLEGO);
+  return escribirOEncolar<RocaSemanalApi>(
+    {
+      area: 'plan',
+      etiqueta: 'Tu revisión de la semana',
+      metodo: 'PATCH',
+      ruta: `/api/v1/rocks/weekly/${id}/review`,
+      cuerpo: cierre,
+      resumen: `${cierre.bloqueoPrincipal}\n${cierre.correccion}`,
+    },
+    {
+      validar: r => validarRespuesta(objetivosSchemas.rocaSemanal, r, `PATCH /api/v1/rocks/weekly/${id}/review`),
+      antesDeEncolar: () => {
+        if (!actual) throw new ApiError(0, 'No se pudo conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.');
+      },
+      optimista: envio => rocaSemanalEditada(actual as RocaSemanalApi, cierre, envio.hechoEn),
+    },
+  );
 }
 
 /* ------------------------------------------------------------------------------------------------
@@ -158,8 +239,25 @@ export async function obtenerRocasAgendadas(): Promise<{ desde: string; hasta: s
  * arma una vez) y `400 NO_WEEKLY_ROCK` (falta la roca semanal del eje, o sea la parte 2).
  */
 export async function crearPlanDiario(fecha: string, rocas: ItemPlanDiario[]): Promise<RocaDiariaApi[]> {
-  const r = await apiFetch<unknown>('/api/v1/rocks/plan', { method: 'POST', body: { fecha, rocas } });
-  return validarRespuesta(objetivosSchemas.rocasDiarias, r, 'POST /api/v1/rocks/plan');
+  // Spec 048 fase 3 (FR-019, P2, P6): sin señal se guarda con la hora real y las acciones se ven «Se guardará al volver la señal».
+  return escribirOEncolar<RocaDiariaApi[]>(
+    {
+      area: 'plan',
+      etiqueta: etiquetaDeAgendar(fecha, fechaLocal(horaReal().instante)),
+      metodo: 'POST',
+      ruta: '/api/v1/rocks/plan',
+      cuerpo: { fecha, rocas },
+      resumen: resumenDeAgendar(rocas),
+    },
+    {
+      validar: r => validarRespuesta(objetivosSchemas.rocasDiarias, r, 'POST /api/v1/rocks/plan'),
+      antesDeEncolar: async hora => {
+        revisarElDiaAAgendar(fecha, fechaLocal(hora.instante));
+        await quitarPlanesEnEsperaDe(fecha);
+      },
+      optimista: envio => accionesEnEspera(fecha, rocas, envio.idCliente),
+    },
+  );
 }
 
 /* ------------------------------------------------------------------------------------------------
@@ -213,10 +311,13 @@ export async function registrarEvidenciaRoca(
     rutaStorage?: string | null;
     contenidoTexto?: string | null;
     timestampExif?: string | null;
-  }
+  },
+  /** Las tres cabeceras de lo hecho sin señal (`cabecerasSinRed`): solo las manda la cola. */
+  cabeceras?: Record<string, string>
 ): Promise<RocaDiariaApi> {
   const r = await apiFetch<unknown>(`/api/v1/rocks/${rocaId}/evidence`, {
     method: 'POST',
+    ...(cabeceras ? { cabeceras } : {}),
     body: {
       tipo: evidencia.tipo,
       bucket: evidencia.bucket ?? null,

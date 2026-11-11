@@ -9,7 +9,7 @@ import { useRocasDiarias } from '../hooks/useRocasDiarias';
 import { useRocasSemanales } from '../hooks/useRocasSemanales';
 import type { CierreRocaSemanal, EjeObjetivo, ItemPlanDiario, ItemPlanSemanal, RocaDiariaApi, RocaMaestraApi } from '../types/objetivos.types';
 import { EJES, ETIQUETA_EJE } from '../types/objetivos.types';
-import { accionesDelEje, avanceDeLasAcciones, unirAcciones } from '../utils/planPrincipal';
+import { accionesDelEje, agendadasDeDiasQueVienen, avanceDeLasAcciones, unirAcciones } from '../utils/planPrincipal';
 import type { SugerenciaDeAccion } from '../utils/accionesPropias';
 import { semanaAPlanificar } from '../utils/periodoDelPrograma';
 import { AgendarAccionesModal } from './AgendarAccionesModal';
@@ -88,6 +88,14 @@ export function PlanDelEje({
   const [armando, setArmando] = useState(false);
   const [revisando, setRevisando] = useState<EjeObjetivo | null>(null);
   const [agendando, setAgendando] = useState(false);
+  /** Spec 048 (#183): el día en que se abre «Agendar» (el de la acción que se tocó); `null` = el último que estaba. */
+  const [diaAlAgendar, setDiaAlAgendar] = useState<string | null>(null);
+  const abrirAgendar = (fecha: string | null = null) => {
+    setDiaAlAgendar(fecha);
+    setAgendando(true);
+    // #185: si lo agendado de la semana no se pudo leer, se vuelve a pedir al abrir la hoja (agendar sin verlo lo borraría).
+    if (diaria.agendadasLeidas === false) void diaria.recargar();
+  };
   const [ochentaVeinte, setOchentaVeinte] = useState(false);
   const [vistaInicialDeLaHoja, setVistaInicialDeLaHoja] = useState<'SEMANA' | 'MES' | undefined>(undefined);
   useEffect(() => {
@@ -105,6 +113,10 @@ export function PlanDelEje({
   const todas = useMemo(() => unirAcciones(diaria.hoy, diaria.manana, diaria.agendadas), [diaria.hoy, diaria.manana, diaria.agendadas]);
   const delEje = useMemo(() => accionesDelEje(todas, ejeAbierto), [todas, ejeAbierto]);
   const hoyIso = diaria.hoyDelServidor;
+  /* Spec 048 (#183): lo agendado sin señal que todavía no llegó, para que «Agendar» lo cuente y lo muestre. */
+  const enEsperaDeAgendar = useMemo(() => todas.filter(a => a.pendienteDeEnvio === true), [todas]);
+  /* #185: lo que el servidor ya tiene en los días que vienen, para que «Agendar» lo muestre y lo mande otra vez (agendar reemplaza el día). */
+  const delServidorDeAgendar = useMemo(() => agendadasDeDiasQueVienen(todas, diaria.hoy, hoyIso), [todas, diaria.hoy, hoyIso]);
   const deHoyDelEje = delEje.filter(a => hoyIso !== null && a.fecha === hoyIso);
   const avance = avanceDeLasAcciones(delEje, hoyIso);
   // Con error de lectura no se pasa la lista: una vacía por falla quitaría alarmas que siguen valiendo.
@@ -143,7 +155,7 @@ export function PlanDelEje({
       return;
     }
     if (ejeSinObjetivoDeLaSemana || !puedeAgendar) setArmando(true);
-    else setAgendando(true);
+    else abrirAgendar();
   };
 
   /* El pedido de afuera se atiende una vez por cada subida del contador, con el estado de ese momento. */
@@ -161,7 +173,8 @@ export function PlanDelEje({
       (navigation as unknown as { navigate: (n: string, p?: Record<string, unknown>) => void }).navigate('Training', { abrirAccionId: accion.id });
       return;
     }
-    setAgendando(true);
+    // Una acción que viene abre «Agendar» en SU día: ahí se ve (y cuenta) lo que ya espera señal (#183).
+    abrirAgendar(accion.fecha);
   };
 
   return (
@@ -191,9 +204,10 @@ export function PlanDelEje({
           nombreDelEje={ETIQUETA_EJE[ejeAbierto]}
           hayPlanSemanal={hayPlanSemanal}
           puedeAgendar={puedeAgendar}
-          error={diaria.error}
+          /* #182: sin la semana leída (sin señal y sin nada guardado) tampoco se sabe qué acciones hay: se dice lo mismo, no «Primero arma tu semana». */
+          error={diaria.error ?? (hayPlanSemanal || semanal.estado === 'bloqueada' ? null : semanal.error)}
           alTocarUna={tocarUna}
-          alAgendar={() => setAgendando(true)}
+          alAgendar={() => abrirAgendar()}
         >
           {/* Recordatorios de las acciones (2026-09-26): con TODAS las de hoy y mañana, no solo las del eje abierto —las
               alarmas son de todas—. Desde el 2026-10-31 es una fila que abre una hoja con el mismo control que Yo → Alarmas. */}
@@ -218,7 +232,7 @@ export function PlanDelEje({
         eje={ejeAbierto}
         deHoy={deHoyDelEje}
         vistaInicial={vistaInicialDeLaHoja}
-        alAgendar={() => setAgendando(true)}
+        alAgendar={() => abrirAgendar()}
       />
 
       {/* Arma la semana que se arma HOY (`seArma`): el domingo, la que empieza, con su número. */}
@@ -249,6 +263,11 @@ export function PlanDelEje({
         guardando={diaria.guardando}
         onGuardar={guardarAcciones}
         onCerrar={() => setAgendando(false)}
+        enEspera={enEsperaDeAgendar}
+        abrirEnFecha={diaAlAgendar}
+        delServidor={delServidorDeAgendar}
+        sinLeerLaSemana={diaria.agendadasLeidas === false && !diaria.cargando}
+        onVolverALeer={() => void diaria.recargar()}
       />
     </View>
   );

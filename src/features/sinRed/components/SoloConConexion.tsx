@@ -10,7 +10,8 @@ export const AYUDA_NECESITAS_CONEXION = 'Se cargará solo cuando vuelva la seña
 export const MARGEN_AL_VOLVER_MS = 1500;
 
 /**
- * Spec 048 (FR-005, D3): lo que solo funciona con internet (SER, chat, Pagos, Eventos, Código Renaser, videos). Sin señal muestra
+ * Spec 048 (FR-005, D3): lo que solo funciona con internet (SER, chat, Pagos, Eventos, videos). Desde la fase 3 el Código Renaser y Planificar
+ * hábitos ya NO van aquí: se hacen sin señal por la cola (`escrituraSinRed.ts`). Sin señal muestra
  * un mensaje claro en vez de un hueco en blanco o un error raro; al volver la señal vuelve a montar lo de adentro, que carga solo.
  * Envuelve el CUERPO de la pantalla, nunca la cabecera: el botón de volver o cerrar sigue a mano.
  */

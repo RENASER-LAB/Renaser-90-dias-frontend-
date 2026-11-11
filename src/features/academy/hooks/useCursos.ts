@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { CourseItem } from '../../../screens/ComunidadScreen';
-import { mensajeDeError } from '../../../services/http/apiClient';
+import { mensajeDeCargaEnLinea } from '../../sinRed/utils/sinSenal';
 import { formacionDeLaLectura } from '../../formaciones/estado/formacionDeLaComunidad';
 import * as cursosApi from '../api/cursosApi';
 import { mapearCursoBloqueado, mapearCursoConSecciones } from '../api/academyMappers';
@@ -62,7 +62,7 @@ export function useCursos(activo = true) {
       );
       setCourses(catalogoCompleto);
     } catch (e) {
-      setError(mensajeDeError(e, 'No pudimos cargar los cursos. Revisa tu conexión e inténtalo de nuevo.'));
+      setError(mensajeDeCargaEnLinea(e, 'No pudimos cargar los cursos. Revisa tu conexión e inténtalo de nuevo.'));
     } finally {
       setLoading(false);
     }

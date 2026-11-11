@@ -75,11 +75,34 @@ export function conAccionPropia(
   elegidas: AccionElegida[],
   eje: EjeObjetivo,
   texto: string,
-  maximoPorEje: number
+  maximoPorEje: number,
+  /** Spec 048 (#183): los títulos de las acciones de ese eje que ya esperan señal ese día. Cuentan para el tope y no se repiten. */
+  enEspera: readonly string[] = []
 ): AccionElegida[] | null {
   const limpio = texto.trim();
   if (!limpio) return null;
-  if (elegidas.filter(e => e.eje === eje).length >= maximoPorEje) return null;
+  if (elegidas.filter(e => e.eje === eje).length + enEspera.length >= maximoPorEje) return null;
   if (elegidas.some(e => e.eje === eje && e.titulo === limpio)) return null;
+  if (enEspera.some(t => t.trim() === limpio)) return null;
   return [...elegidas, { eje, titulo: limpio, hora: '', pasos: [] }];
+}
+
+/**
+ * Spec 048 (#185): al pasar a otro día, lo que se venía eligiendo se queda, pero sin pasarse del tope de cada eje con lo que ese día
+ * ya tiene (`yaTiene`: esperando señal o en el servidor). Sin esto el plan del día viajaría con cuatro o cinco en un eje y el servidor
+ * lo rechazaría. Quita las últimas elegidas de ese eje, que son las que se agregaron al final.
+ */
+export function recortadasAlTope<T extends { eje: EjeObjetivo }>(
+  elegidas: readonly T[],
+  yaTiene: (eje: EjeObjetivo) => number,
+  maximoPorEje: number
+): T[] {
+  const dejadas = new Map<EjeObjetivo, number>();
+  return elegidas.filter(e => {
+    const cupo = maximoPorEje - yaTiene(e.eje);
+    const hasta = dejadas.get(e.eje) ?? 0;
+    if (hasta >= cupo) return false;
+    dejadas.set(e.eje, hasta + 1);
+    return true;
+  });
 }

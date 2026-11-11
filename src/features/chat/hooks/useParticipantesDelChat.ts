@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { mensajeDeError } from '../../../services/http/apiClient';
+import { mensajeDeCargaEnLinea } from '../../sinRed/utils/sinSenal';
 import { obtenerParticipantes } from '../api/chatApi';
 import type { WireParticipante } from '../types/chat.types';
 
@@ -67,7 +67,7 @@ export function useParticipantesDelChat(conversationId: string | null, busqueda:
           })
           .catch(e => {
             if (version.current !== mia) return;
-            setError(mensajeDeError(e, 'No pudimos cargar los integrantes. Revisa tu conexión e inténtalo de nuevo.'));
+            setError(mensajeDeCargaEnLinea(e, 'No pudimos cargar los integrantes. Revisa tu conexión e inténtalo de nuevo.'));
           })
           .finally(() => {
             if (version.current === mia) setCargando(false);
@@ -91,7 +91,7 @@ export function useParticipantesDelChat(conversationId: string | null, busqueda:
         setTotal(respuesta.total);
       })
       .catch(e => {
-        if (version.current === mia) setError(mensajeDeError(e, 'No pudimos cargar más integrantes.'));
+        if (version.current === mia) setError(mensajeDeCargaEnLinea(e, 'No pudimos cargar más integrantes.'));
       })
       .finally(() => {
         if (version.current === mia) setCargandoMas(false);

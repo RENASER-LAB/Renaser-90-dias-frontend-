@@ -471,3 +471,27 @@ un texto corto («Tiempo», «Imprevisto», «Lo evité»); el elegido, con el f
   nombre completo (el del lector de pantalla) y suma el subtítulo; sin correr.
 * **No comprobado en el emulador** (esta corrida no tuvo): cómo se acomodan los cuatro chips por fila a 360 dp y con la letra del sistema grande, y el aspecto del elegido en claro y oscuro.
 * **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
+
+## Corrección — 2026-11-10 — tab `Plan`: «Agendar mis acciones» muestra y conserva lo que el día ya tiene en el servidor (spec 048, issue #185)
+
+* **Corrección — 2026-11-10 — «Agendar mis acciones» y las acciones que el día ya tiene (issue #185).** Lo encontró el E2E de la fase 3, y
+  pasa también en `master`: la hoja abría en «Cuerpo · 0/3» aunque el día ya tuviera acciones en el servidor, y agendar un día que todavía
+  no llegó **reemplaza el plan entero de ese día** (`POST /rocks/plan`, E-208), así que agendar otra borraba en silencio las que ya estaban.
+  Lo que cambia y nada más:
+  * La hoja trae lo que el servidor ya tiene en el día elegido (sale de lo que Plan ya lee, `GET /rocks/upcoming`): se ve con su hora y
+    «Ya agendada», **cuenta para el tope de tres por eje** y no se vuelve a ofrecer (ni la sugerida del diagnóstico ni una escrita igual).
+  * **La persona puede quitar una, de forma explícita:** «Quitar» la deja a la vista con «Se quitará al guardar» y «Deshacer» la devuelve
+    (no se puede devolver si su lugar ya lo ocupó otra y el eje llegó a tres). Nada se borra del servidor hasta guardar; si solo se quita,
+    el botón dice «Guardar cambios». Un día no puede quedar sin acciones (el servidor lo rechaza): quitar todas solo sirve si se agrega otra.
+  * **Al guardar viaja el plan del día entero:** lo que ya tenía y siguió (con su hora y sus pasos), lo que espera señal (#183) y lo nuevo,
+    con las posiciones seguidas. Solo desaparece lo que la persona quitó. Cambiar de día en la hoja deja lo elegido en el día nuevo sin pasar
+    de tres por eje, y lo que se había quitado vuelve a verse como lo tiene el servidor.
+  * **Si lo agendado de la semana no se pudo leer** (la lectura de `/rocks/upcoming` falla aparte de la de hoy y mañana), la hoja lo dice
+    («No pudimos leer lo que ya tienes agendado esta semana. Si agendas ahora, podrías borrarlo.»), ofrece «Volver a leer» y no deja agendar
+    hasta leerlo; abrir la hoja en ese estado lo vuelve a pedir.
+  * **No cambian:** el día en curso (el servidor no deja rehacerlo, 409: la hoja no trae lo de hoy y el mensaje sigue igual), con señal el
+    servidor reemplaza el día como siempre (E-208), lo que espera señal sigue sin poder quitarse hasta que llegue (#183) y las cinco pestañas.
+  * **Pruebas:** `src/features/objetivos/components/__tests__/agendarAccionesYaAgendadas.test.ts`, `planDelEje.test.ts` («Agendar» recibe
+    lo que el servidor ya tiene), `src/features/objetivos/utils/__tests__/planPrincipal.test.ts` (`agendadasDeDiasQueVienen`),
+    `accionesPropias.test.ts` (`recortadasAlTope`) y `src/features/objetivos/hooks/__tests__/agendadasLeidas.test.ts`. Solo JavaScript: no
+    hace falta APK nuevo ni cambio en el backend.
