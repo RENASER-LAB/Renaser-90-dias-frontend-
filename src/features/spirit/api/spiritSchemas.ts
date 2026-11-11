@@ -36,7 +36,8 @@ const spiritStatusSchema = z
   })
   .passthrough();
 
-const submitSpiritSummarySchema = z.object({ onTime: z.boolean() }).passthrough();
+// `motivoSinPuntos` (spec 048, #186): solo lo trae la entrega sin señal cuyo hábito quedó sin puntos.
+const submitSpiritSummarySchema = z.object({ onTime: z.boolean(), motivoSinPuntos: z.string().nullish() }).passthrough();
 
 export const spiritSchemas = {
   status: spiritStatusSchema,

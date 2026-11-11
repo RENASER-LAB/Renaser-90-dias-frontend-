@@ -47,8 +47,8 @@ export async function obtenerEstadoEspiritu(): Promise<SpiritStatusApi> {
  * pendiente). Por eso la pantalla cierra el modal solo cuando este POST respondió OK.
  *
  * Spec 048 (D2, FR-007): sin señal no falla: la entrega espera en la cola y sale sola al volver la señal
- * (`pastillaSinRed.ts`, con su límite: el servidor la registra con la hora en que llega). Responde
- * `pendienteDeEnvio: true` y `onTime: true` provisional (lo decide el servidor al llegar).
+ * (`pastillaSinRed.ts`: sale con su hora real y un `X-Id-Cliente`, así que ahí sí es idempotente y cuenta a tiempo si se hizo antes
+ * del mediodía, #186). Responde `pendienteDeEnvio: true` y `onTime: true` provisional (lo decide el servidor al llegar).
  */
 export async function entregarResumenEspiritu(
   day: number,
