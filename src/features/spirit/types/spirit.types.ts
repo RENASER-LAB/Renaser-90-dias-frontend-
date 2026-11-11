@@ -56,4 +56,9 @@ export interface SpiritStatusApi {
 export interface SubmitSpiritSummaryApi {
   /** `false` si entregó pasado el mediodía: se guarda igual, pero el día no cuenta como cumplido. */
   onTime: boolean;
+  /**
+   * Solo si la entrega salió de la cola de lo hecho sin señal (spec 048, #186) y el hábito «Pastilla Renacer» quedó sin puntos:
+   * `HORA_FUTURA` o `LLEGO_DESPUES_DE_48_H`. No viene en una entrega con señal.
+   */
+  motivoSinPuntos?: string | null;
 }

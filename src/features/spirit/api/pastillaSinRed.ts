@@ -2,21 +2,30 @@ import { ApiError, apiFetch } from '../../../services/http/apiClient';
 import { conMarcadosSinRed } from '../../habits/api/evidenciaHabitoApi';
 import { DiaDeHabitosCambiadoError } from '../../habits/api/registroVigente';
 import { fechaLocal } from '../../habits/notificaciones/utils/alarmasPorDia';
-import { agregarEnvio, cuentaDeLaSesion, leerCola, registrarManejador } from '../../sinRed/colaSinRed';
+import { avisarSinPuntos } from '../../sinRed/avisosDeLoNoAplicado';
+import { cabecerasDe } from '../../sinRed/cabecerasSinRed';
+import { agregarEnvio, cuentaDeLaSesion, leerCola, registrarManejador, type EnvioSinRed } from '../../sinRed/colaSinRed';
 import { horaReal } from '../../sinRed/horaReal';
 import { registrarAjusteDeLectura, retocarLecturasGuardadas } from '../../sinRed/lecturasGuardadas';
+import type { SubmitSpiritSummaryApi } from '../types/spirit.types';
+import { spiritSchemas, validarRespuesta } from './spiritSchemas';
 
 /**
- * Spec 048 (D2, FR-007, FR-010, FR-011): la Pastilla Renacer entregada sin señal.
+ * Spec 048 (D2, FR-007, FR-010, FR-011, FR-015, FR-016): la Pastilla Renacer entregada sin señal.
  *
  * - Se guarda en la cola de la cuenta con la hora real y se ve hecha al instante: el hábito en Entrenar y el día de la Pastilla
  *   como entregado (los ajustes de lectura de abajo), mientras espera.
- * - Al volver la señal la cola la manda a `POST /api/v1/spirit-audio/submit`.
+ * - Al volver la señal la cola la manda a `POST /api/v1/spirit-audio/submit` **con las tres cabeceras de lo hecho sin señal**
+ *   (`cabecerasSinRed.ts`: `X-Id-Cliente`, `X-Hecho-En`, `X-Origen-De-La-Hora`). El servidor la registra con SU hora real y no con la de
+ *   llegada (issue #186, D29): la de las 11:00 que llega a las 13:00 —o al otro día— cuenta a tiempo, y un reintento con el mismo
+ *   `X-Id-Cliente` devuelve lo mismo sin entregarla dos veces.
+ * - Lo que el servidor no aplica es un 409 con `codigo` (`YA_ESTABA_HECHO`, `FUERA_DE_SU_DIA`…): la cola lo da por terminado y la hoja
+ *   de avisos lo dice con el motivo y lo que escribiste (`desenlaceDe`, igual que en las demás áreas). Si el hábito quedó sin puntos
+ *   (`motivoSinPuntos`) también se avisa: nada se pierde en silencio.
  *
- * **Límite (2026-11-10):** ese endpoint solo recibe `day` y `summaryText`; no acepta `hechoEn` ni `idCliente`. El servidor la
- * registra con la hora en que LLEGA: si llega pasado el mediodía cuenta como tardía, y si llega otro día el día ya venció y el
- * servidor la rechaza (409). Lo que sí se hace aquí para no mandarla dos veces: una sola entrega por día en la cola, y un 409
- * «ya se registró (ENVIADO)» —la respuesta del primer envío que se perdió— se da por entregada.
+ * > **Corregido 2026-11-11 (issue #186).** Aquí decía que el endpoint no recibía `hechoEn` ni `idCliente` y que la entrega se registraba
+ * > con la hora de llegada (tardía pasado el mediodía, 409 «PERDIDO» al otro día), y que un 409 «ENVIADO» se daba por entregada. Ahora
+ * > recibe las cabeceras; y aquel 409 nunca se reconocía, porque el servidor dice «ENTREGADO», no «ENVIADO».
  */
 export const TIPO_PASTILLA = 'entregarPastilla' as const;
 
@@ -51,20 +60,15 @@ export async function encolarPastilla(
   await agregarEnvio(cuenta, TIPO_PASTILLA, datos, hora);
 }
 
-/** El 409 que responde el servidor cuando ese día ya estaba entregado: el primer envío llegó y se perdió la respuesta. */
+const RUTA_ENTREGA = '/api/v1/spirit-audio/submit';
+
+/** El 409 con el que el servidor dice que ese día de la Pastilla ya estaba entregado (otro teléfono, o con señal antes). */
 function yaEstabaEntregada(error: unknown): boolean {
-  return error instanceof ApiError && error.status === 409 && /ENVIADO/.test(error.message);
+  return error instanceof ApiError && error.status === 409 && error.codigo === 'YA_ESTABA_HECHO';
 }
 
-registrarManejador(TIPO_PASTILLA, async envio => {
-  const d = envio.datos as DatosDePastillaSinRed;
-  try {
-    // Sin `hechoEn` ni `idCliente`: el endpoint no los recibe (ver arriba).
-    await apiFetch<unknown>('/api/v1/spirit-audio/submit', { method: 'POST', body: { day: d.day, summaryText: d.summaryText } });
-  } catch (error) {
-    if (!yaEstabaEntregada(error)) throw error;
-  }
-  // Ya no está en la cola: lo guardado tiene que decir entregada, o sin señal volvería a verse pendiente.
+/** Lo guardado para ver sin señal dice entregada: el hábito de ese día y el día de la Pastilla. */
+async function marcarEntregadaEnLoGuardado(d: DatosDePastillaSinRed, hechoEn: string): Promise<void> {
   if (d.registroId) {
     const registro = d.registroId;
     await retocarLecturasGuardadas(
@@ -74,8 +78,37 @@ registrarManejador(TIPO_PASTILLA, async envio => {
   }
   await retocarLecturasGuardadas(
     ruta => ruta === RUTA_ESTADO,
-    datos => conDiasEntregados(datos, new Map([[d.day, { texto: d.summaryText, hechoEn: envio.hechoEn }]])),
+    datos => conDiasEntregados(datos, new Map([[d.day, { texto: d.summaryText, hechoEn }]])),
   );
+}
+
+registrarManejador(TIPO_PASTILLA, async (envio: EnvioSinRed) => {
+  const d = envio.datos as DatosDePastillaSinRed;
+  let respuesta: SubmitSpiritSummaryApi;
+  try {
+    const r = await apiFetch<unknown>(RUTA_ENTREGA, {
+      method: 'POST',
+      body: { day: d.day, summaryText: d.summaryText },
+      cabeceras: cabecerasDe(envio),
+    });
+    respuesta = validarRespuesta<SubmitSpiritSummaryApi>(spiritSchemas.submit, r, `POST ${RUTA_ENTREGA} (sin red)`);
+  } catch (error) {
+    // Ese día ya estaba entregado en el servidor: lo guardado tiene que decirlo (sin esto, sin señal volvería a verse pendiente). El aviso
+    // de «ya estaba hecho» lo anota igual la cola, porque el error sigue de largo.
+    if (yaEstabaEntregada(error)) await marcarEntregadaEnLoGuardado(d, envio.hechoEn);
+    throw error;
+  }
+  // FR-015: el audio quedó registrado, pero el hábito sin puntos (hora futura o más de 48 h): se dice con su motivo.
+  if (respuesta.motivoSinPuntos) {
+    await avisarSinPuntos(envio.cuentaId, {
+      idCliente: envio.idCliente,
+      etiqueta: 'Tu Pastilla Renacer',
+      hechoEn: envio.hechoEn,
+      motivoSinPuntos: respuesta.motivoSinPuntos,
+    });
+  }
+  // Ya no está en la cola: lo guardado tiene que decir entregada, o sin señal volvería a verse pendiente.
+  await marcarEntregadaEnLoGuardado(d, envio.hechoEn);
 });
 
 const RUTA_ESTADO = '/api/v1/spirit-audio/status';

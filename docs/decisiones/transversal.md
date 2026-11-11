@@ -800,6 +800,10 @@ Entrenar) y lleve hasta el primer post en el Muro; al publicar, confeti; y «el 
 
     > **Corregido 2026-11-10 (fase 3, P8).** Lo del Código Renaser innegociable **ya no vale**: desde la fase 3 se responde sin
     > señal y el innegociable vuelve a abrirse solo y sin X también sin señal (entrada del 2026-11-10 de la fase 3, al final).
+    > **Corregido 2026-11-11 (issue #186).** El **Límite** de la Pastilla de arriba **ya no vale**: `POST /api/v1/spirit-audio/submit`
+    > ahora recibe la hora real y el `idCliente` (las tres cabeceras de la fase 3), así que la entrega sin señal se registra con
+    > su hora real y no con la de llegada, y un reintento no la entrega dos veces. Tampoco valía lo del 409 «ENVIADO»: el servidor
+    > decía «ENTREGADO» y esa respuesta nunca se reconocía (entrada del 2026-11-11, al final).
   * **Pruebas:** `src/features/radar/__tests__/radarSinSenal.test.ts`, `src/features/sinRed/__tests__/pastillaSinRed.test.ts`
     y `src/features/sinRed/__tests__/rankingSinSenal.test.ts`. Solo JavaScript: no hace falta APK nuevo ni cambio en el backend.
 
@@ -888,3 +892,27 @@ Entrenar) y lleve hasta el primer post en el Muro; al publicar, confeti; y «el 
   * **Pruebas:** `src/features/objetivos/components/__tests__/agendarAccionesEnEspera.test.ts`,
     `src/features/objetivos/api/__tests__/planSinRed.test.ts` («agendar de nuevo un día que ya espera señal») y
     `src/features/objetivos/utils/__tests__/accionesPropias.test.ts`. Solo JavaScript: no hace falta APK nuevo ni cambio en el backend.
+
+## Corrección — 2026-11-11 — tab `Training`: la Pastilla entregada sin señal se registra con su hora real (spec 048, issue #186)
+
+* **Corrección — 2026-11-11 — la Pastilla Renacer sin señal con su hora real (spec 048, FR-008, FR-010, FR-015, FR-016, D14,
+  D29, issue #186).** Lo dejó anotado la entrada del 2026-11-10 (#178) como «trabajo del backend, aparte»: la Pastilla entregada
+  sin señal se guardaba con la hora en que **llegaba**, no con la hora en que se hizo. Lo que cambia y nada más:
+  * **La cola de lo hecho sin señal manda la Pastilla con las tres cabeceras** (`X-Id-Cliente`, `X-Hecho-En` con la hora real en
+    que la entregaste, `X-Origen-De-La-Hora`), como las demás áreas de la fase 3. El servidor aplica sus reglas con esa hora: la
+    entregada a las 11:00 que llega a las 13:00 —o al día siguiente— cuenta **a tiempo**, y la hora del hábito «Pastilla Renacer»
+    es la misma. Un reintento con el mismo `X-Id-Cliente` devuelve lo mismo y no la entrega dos veces.
+  * **Lo que el servidor no aplica se dice**, con el mismo aviso de las demás áreas (la hoja de Hoy, con el motivo y lo que
+    escribiste): `FUERA_DE_SU_DIA` si la hora real cae en un día que ya cerró para ese audio (D29: el audio de otro día nunca
+    recibe el resumen de ayer), `YA_ESTABA_HECHO` si ese día ya estaba entregado (con red u otro teléfono; el día se ve entregado),
+    `CAMBIO_MAS_NUEVO_EN_EL_SERVIDOR` si se entregó desde otro lado después de lo que hiciste y `RECURSO_YA_NO_EXISTE` si ese audio
+    ya no está. Si llegó pasadas 48 h o con una hora del futuro, la Pastilla cuenta pero el hábito queda **sin puntos** y la hoja
+    lo dice (`motivoSinPuntos`, aditivo).
+  * **Se quita el 409 «ENVIADO»** que se daba por entregada: no existía (el servidor decía «ENTREGADO») y con las cabeceras el
+    reintento ya no lo necesita. Un servidor anterior (409 sin `codigo`) sigue terminando en aviso, como desde #180.
+  * **No cambian:** la entrega con señal (sale sin cabeceras y el servidor responde lo de siempre), que sin señal se ve hecha al
+    instante, que un día que ya terminó no se encola (D-259), la Clase diaria, las cinco pestañas.
+  * **Pruebas:** `src/features/sinRed/__tests__/pastillaSinRed.test.ts` (cabeceras, mismo `idCliente` en el reintento, los 409
+    con `codigo`, `motivoSinPuntos` y el servidor anterior). Solo JavaScript: no hace falta APK nuevo. **Depende del backend**
+    «La Pastilla entregada sin señal se registra con su hora real (spec 048, #186)»: se fusiona primero; sin él, el servidor ignora
+    las cabeceras y la Pastilla vuelve a llegar con la hora de llegada.
