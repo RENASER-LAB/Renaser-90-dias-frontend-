@@ -167,7 +167,7 @@ export function useRocasDiarias() {
  * su lista; la numeración es consecuencia de ese orden.
  */
 export function posicionarPorEje(
-  acciones: { eje: EjeObjetivo; titulo: string; descripcion?: string; puntajeImpacto?: number; esDelegable?: boolean; horaInicio?: string; horaFin?: string }[]
+  acciones: { eje: EjeObjetivo; titulo: string; descripcion?: string; puntajeImpacto?: number; esDelegable?: boolean; horaInicio?: string; horaFin?: string; acciones?: string[] }[]
 ): ItemPlanDiario[] {
   const contadoPorEje = new Map<EjeObjetivo, number>();
   return acciones.map(accion => {
@@ -184,6 +184,8 @@ export function posicionarPorEje(
       esDelegable: accion.esDelegable ?? false,
       horaInicio: accion.horaInicio,
       horaFin: accion.horaFin,
+      // Los pasos («Desglosarla en pasos») viajan con la acción; antes se perdían acá y nunca llegaban (#184).
+      ...(accion.acciones && accion.acciones.length > 0 ? { acciones: accion.acciones } : {}),
     };
   });
 }
