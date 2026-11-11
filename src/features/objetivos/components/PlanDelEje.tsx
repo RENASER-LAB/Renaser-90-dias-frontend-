@@ -9,7 +9,7 @@ import { useRocasDiarias } from '../hooks/useRocasDiarias';
 import { useRocasSemanales } from '../hooks/useRocasSemanales';
 import type { CierreRocaSemanal, EjeObjetivo, ItemPlanDiario, ItemPlanSemanal, RocaDiariaApi, RocaMaestraApi } from '../types/objetivos.types';
 import { EJES, ETIQUETA_EJE } from '../types/objetivos.types';
-import { accionesDelEje, avanceDeLasAcciones, unirAcciones } from '../utils/planPrincipal';
+import { accionesDelEje, agendadasDeDiasQueVienen, avanceDeLasAcciones, unirAcciones } from '../utils/planPrincipal';
 import type { SugerenciaDeAccion } from '../utils/accionesPropias';
 import { semanaAPlanificar } from '../utils/periodoDelPrograma';
 import { AgendarAccionesModal } from './AgendarAccionesModal';
@@ -93,6 +93,8 @@ export function PlanDelEje({
   const abrirAgendar = (fecha: string | null = null) => {
     setDiaAlAgendar(fecha);
     setAgendando(true);
+    // #185: si lo agendado de la semana no se pudo leer, se vuelve a pedir al abrir la hoja (agendar sin verlo lo borraría).
+    if (diaria.agendadasLeidas === false) void diaria.recargar();
   };
   const [ochentaVeinte, setOchentaVeinte] = useState(false);
   const [vistaInicialDeLaHoja, setVistaInicialDeLaHoja] = useState<'SEMANA' | 'MES' | undefined>(undefined);
@@ -113,6 +115,8 @@ export function PlanDelEje({
   const hoyIso = diaria.hoyDelServidor;
   /* Spec 048 (#183): lo agendado sin señal que todavía no llegó, para que «Agendar» lo cuente y lo muestre. */
   const enEsperaDeAgendar = useMemo(() => todas.filter(a => a.pendienteDeEnvio === true), [todas]);
+  /* #185: lo que el servidor ya tiene en los días que vienen, para que «Agendar» lo muestre y lo mande otra vez (agendar reemplaza el día). */
+  const delServidorDeAgendar = useMemo(() => agendadasDeDiasQueVienen(todas, diaria.hoy, hoyIso), [todas, diaria.hoy, hoyIso]);
   const deHoyDelEje = delEje.filter(a => hoyIso !== null && a.fecha === hoyIso);
   const avance = avanceDeLasAcciones(delEje, hoyIso);
   // Con error de lectura no se pasa la lista: una vacía por falla quitaría alarmas que siguen valiendo.
@@ -261,6 +265,9 @@ export function PlanDelEje({
         onCerrar={() => setAgendando(false)}
         enEspera={enEsperaDeAgendar}
         abrirEnFecha={diaAlAgendar}
+        delServidor={delServidorDeAgendar}
+        sinLeerLaSemana={diaria.agendadasLeidas === false && !diaria.cargando}
+        onVolverALeer={() => void diaria.recargar()}
       />
     </View>
   );

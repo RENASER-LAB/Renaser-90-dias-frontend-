@@ -38,6 +38,23 @@ export function unirAcciones(...listas: ReadonlyArray<readonly RocaDiariaApi[]>)
 }
 
 /**
+ * Spec 048 (#185): lo que el SERVIDOR ya tiene agendado en los días que todavía no empezaron, para que «Agendar mis acciones» lo muestre,
+ * lo cuente para el tope de tres por eje y lo mande otra vez. Agendar un día futuro reemplaza el plan entero de ese día (E-208): una hoja
+ * que arranca en 0/3 sobre un día con acciones las borra sin avisar.
+ *
+ * Quedan fuera: lo que espera señal (`pendienteDeEnvio`, la hoja lo trae aparte), y **el día en curso** —el servidor no deja rehacerlo
+ * (409) y su comportamiento no cambia—. El día en curso es el de `/rocks/today` (`deHoy`) y, si se conoce, `hoyIso` y los anteriores.
+ */
+export function agendadasDeDiasQueVienen(
+  todas: readonly RocaDiariaApi[],
+  deHoy: readonly RocaDiariaApi[],
+  hoyIso: string | null,
+): RocaDiariaApi[] {
+  const diasEnCurso = new Set(deHoy.map(a => a.fecha));
+  return todas.filter(a => a.pendienteDeEnvio !== true && !diasEnCurso.has(a.fecha) && (hoyIso === null || a.fecha > hoyIso));
+}
+
+/**
  * Cuántas de las acciones agendadas de hoy en adelante están cumplidas: «2 de 6». **Solo cuenta de hoy a fin de semana** —las
  * lecturas del servidor (`/rocks/today` y `/rocks/upcoming`) no traen los días que ya pasaron—, y por eso la tarjeta lo dice.
  */

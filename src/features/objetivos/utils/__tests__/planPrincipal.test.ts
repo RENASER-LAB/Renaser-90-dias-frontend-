@@ -2,7 +2,7 @@ import { describe, expect, it } from '@jest/globals';
 
 import type { RocaDiariaApi } from '../../types/objetivos.types';
 import { light } from '../../../../theme/tokens';
-import { accionesDelEje, avanceDeLasAcciones, colorDePareto, etiquetaDeLaAccion, lineaDelObjetivo, partesDelObjetivo, unirAcciones } from '../planPrincipal';
+import { accionesDelEje, agendadasDeDiasQueVienen, avanceDeLasAcciones, colorDePareto, etiquetaDeLaAccion, lineaDelObjetivo, partesDelObjetivo, unirAcciones } from '../planPrincipal';
 
 let n = 0;
 function roca(extra: Partial<RocaDiariaApi> = {}): RocaDiariaApi {
@@ -28,6 +28,35 @@ describe('accionesDelEje', () => {
   it('no repite una acción que vino en dos lecturas', () => {
     const a = roca();
     expect(accionesDelEje([a, a, { ...a }], 'CUERPO')).toHaveLength(1);
+  });
+});
+
+describe('agendadasDeDiasQueVienen (#185)', () => {
+  it('deja lo que el servidor ya tiene en los días que todavía no empezaron', () => {
+    const manana = roca({ fecha: '2026-10-28' });
+    const viernes = roca({ fecha: '2026-10-30' });
+    expect(agendadasDeDiasQueVienen([manana, viernes], [], '2026-10-27').map(x => x.id)).toEqual([manana.id, viernes.id]);
+  });
+
+  it('el día en curso queda fuera: el servidor no deja rehacerlo (409), sea por /today o por la fecha de hoy', () => {
+    const deHoy = roca({ fecha: '2026-10-27' });
+    const mismoDiaDeLaSemana = roca({ fecha: '2026-10-27', eje: 'TRABAJO' });
+    const manana = roca({ fecha: '2026-10-28' });
+    expect(agendadasDeDiasQueVienen([deHoy, mismoDiaDeLaSemana, manana], [deHoy], '2026-10-27').map(x => x.id)).toEqual([manana.id]);
+    // Sin /today (hoy todavía no tiene nada) pero con la fecha de hoy conocida: tampoco entra lo de hoy ni de antes.
+    expect(agendadasDeDiasQueVienen([mismoDiaDeLaSemana, manana, roca({ fecha: '2026-10-26' })], [], '2026-10-27').map(x => x.id)).toEqual([manana.id]);
+  });
+
+  it('sin saber qué día es hoy en el servidor, se deja todo menos lo que /today dice que es de hoy', () => {
+    const deHoy = roca({ fecha: '2026-10-27' });
+    const manana = roca({ fecha: '2026-10-28' });
+    expect(agendadasDeDiasQueVienen([deHoy, manana], [deHoy], null).map(x => x.id)).toEqual([manana.id]);
+  });
+
+  it('lo que espera señal no entra: la hoja lo trae aparte', () => {
+    const esperando = roca({ fecha: '2026-10-28', pendienteDeEnvio: true });
+    const confirmada = roca({ fecha: '2026-10-28' });
+    expect(agendadasDeDiasQueVienen([esperando, confirmada], [], '2026-10-27').map(x => x.id)).toEqual([confirmada.id]);
   });
 });
 

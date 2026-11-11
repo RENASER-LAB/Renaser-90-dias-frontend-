@@ -8,7 +8,7 @@ import { useTheme } from '../../../theme/ThemeContext';
 import type { useRocasSemanales } from '../hooks/useRocasSemanales';
 import type { EjeObjetivo, ItemPlanDiario, RocaDiariaApi } from '../types/objetivos.types';
 import { TEXTO_SE_GUARDARA } from '../utils/accionEnEspera';
-import { conAccionPropia, opcionesDelEje, sugeridasDelEje, type AccionOfrecida, type SugerenciaDeAccion } from '../utils/accionesPropias';
+import { conAccionPropia, opcionesDelEje, recortadasAlTope, sugeridasDelEje, type AccionOfrecida, type SugerenciaDeAccion } from '../utils/accionesPropias';
 import { EJES, ETIQUETA_EJE } from '../types/objetivos.types';
 import { FilaDeDiasDelPlan } from '../../habits/components/FilaDeDiasDelPlan';
 import { DIAS_DEL_PLAN, fechasIsoDeLaSemana, type DiaDelPlan } from '../../habits/utils/semanaDelPlan';
@@ -90,6 +90,16 @@ interface AgendarAccionesModalProps {
   enEspera?: readonly RocaDiariaApi[];
   /** Al abrir, el día (`yyyy-MM-dd`) en que se abre la hoja: el de la acción que se tocó en Plan. Sin él, el último que estaba. */
   abrirEnFecha?: string | null;
+  /**
+   * Spec 048 (#185): las acciones que el SERVIDOR ya tiene en los días que todavía no empezaron (`agendadasDeDiasQueVienen`). Agendar un
+   * día reemplaza el plan entero del servidor (E-208), así que las del día elegido se ven en la hoja, cuentan para el tope de tres por
+   * eje, se pueden quitar (explícitamente) y, al guardar, viajan con lo nuevo: sin eso agendar de nuevo las borraba en silencio.
+   * El día en curso no entra: el servidor no deja rehacerlo (409) y se queda como estaba.
+   */
+  delServidor?: readonly RocaDiariaApi[];
+  /** Spec 048 (#185): lo que ya hay agendado no se pudo leer. Agendar así podría borrarlo, así que no se deja hasta volver a leerlo. */
+  sinLeerLaSemana?: boolean;
+  onVolverALeer?: () => void;
 }
 
 export function AgendarAccionesModal({
@@ -102,6 +112,9 @@ export function AgendarAccionesModal({
   onCerrar,
   enEspera,
   abrirEnFecha = null,
+  delServidor,
+  sinLeerLaSemana = false,
+  onVolverALeer,
 }: AgendarAccionesModalProps) {
   const { c, t } = useTheme();
   const [elegidas, setElegidas] = useState<AccionElegida[]>([]);
@@ -125,6 +138,24 @@ export function AgendarAccionesModal({
     [enEspera, fechaAGuardar]
   );
   const enEsperaDe = (eje: EjeObjetivo) => enEsperaDelDia.filter(a => a.eje === eje);
+  /**
+   * Spec 048 (#185): lo que el servidor ya tiene en el día que se está viendo, en su orden (la posición decide el color). La persona
+   * puede quitar una (`quitadas`: sus `id`); no se borra nada del servidor hasta guardar, y «Deshacer» la devuelve.
+   */
+  const delServidorDelDia = useMemo(
+    () =>
+      (delServidor ?? [])
+        .filter(a => a.pendienteDeEnvio !== true && a.fecha === fechaAGuardar)
+        .sort((a, b) => a.posicion - b.posicion),
+    [delServidor, fechaAGuardar]
+  );
+  const [quitadas, setQuitadas] = useState<string[]>([]);
+  const estaQuitada = (a: RocaDiariaApi) => quitadas.includes(a.id);
+  const delServidorDe = (eje: EjeObjetivo) => delServidorDelDia.filter(a => a.eje === eje);
+  /** Las que siguen: lo que el servidor tiene y la persona no quitó. Cuentan para el tope y viajan al guardar. */
+  const dejadasDe = (eje: EjeObjetivo) => delServidorDe(eje).filter(a => !estaQuitada(a));
+  const dejadasDelDia = delServidorDelDia.filter(a => !estaQuitada(a));
+  const quitadasDelDia = delServidorDelDia.length - dejadasDelDia.length;
   // Lo que marca la rueda antes de confirmar. Vive acá y no en la rueda porque `RuedaHoraPicker`
   // avisa por `onCambiar` y no guarda nada: es un selector, no un formulario.
   const [horaEnCurso, setHoraEnCurso] = useState({ hora: 6, minuto: 0 });
@@ -134,7 +165,9 @@ export function AgendarAccionesModal({
    * Cada vez que la hoja se abre arranca limpia.
    */
   useEffect(() => {
-    if (visible) setElegidas([]);
+    if (!visible) return;
+    setElegidas([]);
+    setQuitadas([]);
   }, [visible]);
 
   /**
@@ -172,8 +205,9 @@ export function AgendarAccionesModal({
 
   /** Lo sugerido más lo escrito a mano. Las reglas y sus pruebas viven en `utils/accionesPropias`. */
   const opcionesDe = (eje: EjeObjetivo, sugeridas: AccionOfrecida[]): AccionOfrecida[] => {
-    const esperando = new Set(enEsperaDe(eje).map(a => a.titulo.trim()));
-    return opcionesDelEje(eje, sugeridas, elegidas).filter(o => !esperando.has(o.texto.trim()));
+    // Lo que el día ya tiene (esperando señal o en el servidor, también lo que se quitó y puede deshacerse) no se vuelve a ofrecer.
+    const yaEstan = new Set([...enEsperaDe(eje), ...delServidorDe(eje)].map(a => a.titulo.trim()));
+    return opcionesDelEje(eje, sugeridas, elegidas).filter(o => !yaEstan.has(o.texto.trim()));
   };
 
   /**
@@ -182,7 +216,13 @@ export function AgendarAccionesModal({
    * sin completar.
    */
   const agregarPropia = (eje: EjeObjetivo) => {
-    const conLaNueva = conAccionPropia(elegidas, eje, escribiendo[eje] ?? '', MAXIMO_POR_EJE, enEsperaDe(eje).map(a => a.titulo));
+    const conLaNueva = conAccionPropia(
+      elegidas,
+      eje,
+      escribiendo[eje] ?? '',
+      MAXIMO_POR_EJE,
+      [...enEsperaDe(eje), ...dejadasDe(eje)].map(a => a.titulo)
+    );
     if (conLaNueva === null) return;
     setElegidas(conLaNueva);
     setEscribiendo(previo => ({ ...previo, [eje]: '' }));
@@ -191,8 +231,11 @@ export function AgendarAccionesModal({
   const indiceDe = (eje: EjeObjetivo, titulo: string) =>
     elegidas.findIndex(e => e.eje === eje && e.titulo === titulo);
 
-  /** Las del eje: las que ya esperan señal ese día más las que se están eligiendo (el tope de tres es de las dos juntas, #183). */
-  const cuantasDe = (eje: EjeObjetivo) => enEsperaDe(eje).length + elegidas.filter(e => e.eje === eje).length;
+  /**
+   * Las del eje: las que ya esperan señal ese día (#183), las que el servidor ya tiene y siguen (#185) y las que se están eligiendo.
+   * El tope de tres es de todas juntas.
+   */
+  const cuantasDe = (eje: EjeObjetivo) => enEsperaDe(eje).length + dejadasDe(eje).length + elegidas.filter(e => e.eje === eje).length;
 
   const alternar = (eje: EjeObjetivo, titulo: string) => {
     const indice = indiceDe(eje, titulo);
@@ -252,20 +295,19 @@ export function AgendarAccionesModal({
     setEligiendoHoraDe(null);
   };
 
+  /** Con cuántas acciones queda el día al guardar: las que ya tenía y siguen, las que esperan señal y las nuevas. */
+  const accionesDelDiaAlGuardar = dejadasDelDia.length + enEsperaDelDia.length + elegidas.length;
+  const hayCambios = elegidas.length > 0 || quitadasDelDia > 0;
+  /** El servidor no acepta un día sin acciones (`rocas` no puede ir vacía): quitar todas solo sirve si se agrega otra. */
+  const sinNingunaAccion = hayCambios && accionesDelDiaAlGuardar === 0;
+  const puedeGuardar = hayCambios && !sinNingunaAccion && !guardando && !sinLeerLaSemana;
+
   const guardar = () => {
     onGuardar(
       posicionarPorEje([
-        // Primero lo que ya esperaba (conserva sus posiciones) y después lo nuevo: el plan del día viaja entero (#183).
-        ...enEsperaDelDia.map(a => ({
-          eje: a.eje,
-          titulo: a.titulo,
-          descripcion: a.descripcion ?? undefined,
-          puntajeImpacto: a.puntajeImpacto,
-          esDelegable: a.esDelegable,
-          horaInicio: a.horaInicio ? a.horaInicio.slice(0, 5) : undefined,
-          horaFin: a.horaFin ? a.horaFin.slice(0, 5) : undefined,
-          acciones: a.acciones,
-        })),
+        // Primero lo que el día ya tenía (conserva sus posiciones) y después lo nuevo: el plan del día viaja entero (#183, #185).
+        // Agendar un día lo reemplaza en el servidor (E-208): lo que no viaja se borra, y solo se quita lo que la persona quitó.
+        ...[...dejadasDelDia, ...enEsperaDelDia].map(comoItemDelPlan),
         ...elegidas.map(e => ({
           eje: e.eje,
           titulo: e.titulo,
@@ -282,9 +324,21 @@ export function AgendarAccionesModal({
 
   /** Cambiar de día en la fila: un «tic» cuando de verdad cambia. */
   const elegirDia = (dia: DiaDelPlan) => {
-    if (dia !== diaElegido) tacto.seleccion();
+    if (dia !== diaElegido) {
+      tacto.seleccion();
+      // Lo que se quitó era de otro día y no se guardó: cada día vuelve a verse como lo tiene el servidor (#185).
+      setQuitadas([]);
+      // Lo elegido sigue yendo al día nuevo, pero sin pasarse de tres por eje con lo que ese día ya tiene.
+      const fechaNueva = fechasIso[dia] ?? fecha;
+      setElegidas(previas => recortadasAlTope(previas, eje => yaTieneEseDia(fechaNueva, eje), MAXIMO_POR_EJE));
+    }
     setDiaElegido(dia);
   };
+
+  /** Cuántas del eje tiene ese día ya (esperando señal o en el servidor), sin contar lo que se quitó ni lo que se está eligiendo. */
+  const yaTieneEseDia = (fechaIso: string, eje: EjeObjetivo) =>
+    (enEspera ?? []).filter(a => a.pendienteDeEnvio === true && a.fecha === fechaIso && a.eje === eje).length +
+    (delServidor ?? []).filter(a => a.pendienteDeEnvio !== true && a.fecha === fechaIso && a.eje === eje).length;
 
   /*
    * Hoja desde abajo (2026-10-05) en vez de la ventana centrada, con el mismo contenido. La ✕ (y
@@ -309,9 +363,9 @@ export function AgendarAccionesModal({
         ) : (
           <View>
             <GoldButton
-              label={guardando ? 'Agendando…' : `Agendar ${elegidas.length > 0 ? `(${elegidas.length})` : ''}`.trim()}
+              label={guardando ? 'Agendando…' : elegidas.length === 0 && quitadasDelDia > 0 ? 'Guardar cambios' : `Agendar ${elegidas.length > 0 ? `(${elegidas.length})` : ''}`.trim()}
               onPress={guardar}
-              disabled={elegidas.length === 0 || guardando}
+              disabled={!puedeGuardar}
               textStyle={TEXTO_DE_BOTON}
             />
             {/* Se muestra la fecha exacta que se va a mandar, en vez de decir "hoy": el
@@ -319,6 +373,11 @@ export function AgendarAccionesModal({
             <Text style={[t.small, { color: c.textSoft, fontSize: 13, marginTop: 8, textAlign: 'center' }]}>
               Se agendan para el {fechaAGuardar} y aparecen en Entrenar, en la lista de ese día
             </Text>
+            {sinNingunaAccion && (
+              <Text style={[t.small, { color: c.textSoft, fontSize: 13, marginTop: 4, textAlign: 'center' }]}>
+                Un día tiene que quedar con al menos una acción: agrega otra o deshaz el cambio.
+              </Text>
+            )}
           </View>
         )
       }
@@ -355,12 +414,72 @@ export function AgendarAccionesModal({
             </Text>
           </View>
 
+          {/* Spec 048 (#185): sin saber lo que cada día ya tiene, agendar lo podría borrar (E-208): no se deja hasta volver a leerlo. */}
+          {sinLeerLaSemana && (
+            <View style={{ gap: 6 }}>
+              <Text style={[t.small, { color: c.textSoft, fontSize: 14, lineHeight: 20 }]}>
+                No pudimos leer lo que ya tienes agendado esta semana. Si agendas ahora, podrías borrarlo.
+              </Text>
+              {onVolverALeer && (
+                <Pressable onPress={onVolverALeer} accessibilityRole="button" style={estilos.accionDeFila}>
+                  <Text style={[t.small, { color: c.goldInk, fontSize: 15, fontFamily: fuentes.negrita }]}>Volver a leer</Text>
+                </Pressable>
+              )}
+            </View>
+          )}
+
           {disponibles.map(({ eje, roca, acciones }) => (
             <View key={eje} style={{ gap: 10 }}>
               <Text style={[t.small, estilos.etiqueta, { color: c.goldInk }]}>
                 {ETIQUETA_EJE[eje]}  ·  {cuantasDe(eje)}/{MAXIMO_POR_EJE}
               </Text>
               <Text style={[t.small, { color: c.textSoft, fontSize: 14, lineHeight: 20 }]}>{roca.titulo}</Text>
+              {/* Spec 048 (#185): lo que el servidor ya tiene en este día. Cuenta para las tres, la persona lo puede quitar (y deshacer) y,
+                  si lo deja, viaja al guardar. */}
+              {delServidorDe(eje).map(agendada => {
+                const quitada = estaQuitada(agendada);
+                const hora = agendada.horaInicio ? agendada.horaInicio.slice(0, 5) : null;
+                const estado = quitada ? 'Se quitará al guardar' : hora ? `A las ${hora} · Ya agendada` : 'Ya agendada';
+                return (
+                  <View
+                    key={agendada.id}
+                    style={[
+                      estilos.opcion,
+                      { borderColor: c.border, backgroundColor: c.cardBgAlt, opacity: quitada ? 0.6 : 1, paddingVertical: 6 },
+                    ]}
+                  >
+                    <View style={[estilos.casilla, { borderColor: quitada ? c.border : c.gold, backgroundColor: quitada ? 'transparent' : c.gold }]}>
+                      {!quitada && <Icon name="check" size={TAMANO_ICONO.chico} color={c.onGold} />}
+                    </View>
+                    <View style={{ flex: 1, paddingVertical: 8 }}>
+                      <Text
+                        style={[
+                          t.body,
+                          { color: c.textStrong, fontSize: 15, lineHeight: 21 },
+                          quitada && { textDecorationLine: 'line-through' },
+                        ]}
+                      >
+                        {agendada.titulo}
+                      </Text>
+                      <Text style={[t.small, { color: c.textSoft, fontSize: 13, marginTop: 2 }]}>{estado}</Text>
+                    </View>
+                    <Pressable
+                      onPress={() =>
+                        setQuitadas(previas => (quitada ? previas.filter(id => id !== agendada.id) : [...previas, agendada.id]))
+                      }
+                      // Devolverla no puede pasar de tres por eje: si ya se llenó el lugar que dejó, primero hay que quitar otra.
+                      disabled={quitada && cuantasDe(eje) >= MAXIMO_POR_EJE}
+                      accessibilityRole="button"
+                      accessibilityLabel={quitada ? `Deshacer: mantener ${agendada.titulo}` : `Quitar ${agendada.titulo} de ese día`}
+                      style={[estilos.accionDeFila, { opacity: quitada && cuantasDe(eje) >= MAXIMO_POR_EJE ? 0.45 : 1 }]}
+                    >
+                      <Text style={[t.small, { color: c.goldInk, fontSize: 14, fontFamily: fuentes.negrita }]}>
+                        {quitada ? 'Deshacer' : 'Quitar'}
+                      </Text>
+                    </Pressable>
+                  </View>
+                );
+              })}
               {/* Spec 048 (#183): lo que ya se agendó sin señal para este día. Cuenta para las tres y no se puede quitar hasta que llegue. */}
               {enEsperaDe(eje).map(esperando => {
                 const hora = esperando.horaInicio ? esperando.horaInicio.slice(0, 5) : null;
@@ -504,6 +623,21 @@ export function AgendarAccionesModal({
   );
 }
 
+/** Una acción que el día ya tenía (la leyó el servidor o espera señal), tal como se manda al agendar ese día de nuevo (#185). */
+function comoItemDelPlan(a: RocaDiariaApi) {
+  return {
+    eje: a.eje,
+    titulo: a.titulo,
+    descripcion: a.descripcion ?? undefined,
+    puntajeImpacto: a.puntajeImpacto,
+    esDelegable: a.esDelegable,
+    horaInicio: a.horaInicio ? a.horaInicio.slice(0, 5) : undefined,
+    horaFin: a.horaFin ? a.horaFin.slice(0, 5) : undefined,
+    // Sus pasos viajan con ella: sin ellos, agendar de nuevo se los borraría.
+    acciones: a.acciones,
+  };
+}
+
 /** Botones en tipo oración y a tamaño de lectura (`GoldButton` va en versales espaciadas por defecto). */
 const TEXTO_DE_BOTON = { fontSize: 15, letterSpacing: 0 } as const;
 
@@ -513,6 +647,8 @@ const estilos = StyleSheet.create({
   enlacePie: { minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   opcion: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderRadius: 12, padding: 14, minHeight: 56 },
   casilla: { width: 26, height: 26, borderRadius: 6, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
+  /** «Quitar» / «Deshacer» al borde de una acción que el día ya tiene: toque de 48 de alto. */
+  accionDeFila: { minHeight: 48, minWidth: 64, alignItems: 'center', justifyContent: 'center' },
   botonHora: { minHeight: 48, borderWidth: 1, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginLeft: 38 },
   paso: { minHeight: 48, borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, fontSize: 15 },
 });

@@ -38,7 +38,8 @@ jest.mock('../../../../components/hojaDesdeAbajo/HojaDesdeAbajo', () => {
 });
 const mockModalesAbiertos: string[] = [];
 jest.mock('../PlanSemanalModal', () => ({ PlanSemanalModal: (p: { visible: boolean }) => { if (p.visible) mockModalesAbiertos.push('asistente'); return null; } }));
-jest.mock('../AgendarAccionesModal', () => ({ AgendarAccionesModal: (p: { visible: boolean }) => { if (p.visible) mockModalesAbiertos.push('agendar'); return null; } }));
+let mockPropsDeAgendar: { delServidor?: Array<{ id: string }>; enEspera?: Array<{ id: string }>; sinLeerLaSemana?: boolean; onVolverALeer?: () => void } = {};
+jest.mock('../AgendarAccionesModal', () => ({ AgendarAccionesModal: (p: { visible: boolean }) => { mockPropsDeAgendar = p as typeof mockPropsDeAgendar; if (p.visible) mockModalesAbiertos.push('agendar'); return null; } }));
 jest.mock('../RevisionSemanalModal', () => ({ RevisionSemanalModal: (p: { visible: boolean }) => { if (p.visible) mockModalesAbiertos.push('revision'); return null; } }));
 
 type Semanal = {
@@ -323,5 +324,41 @@ describe('el pedido de «Planificar mi mes» (spec 028): organizar la semana de 
     const antes = mockModalesAbiertos.length;
     subirElPedidoA(2);
     expect(mockModalesAbiertos.length).toBeGreaterThan(antes);
+  });
+});
+
+describe('«Agendar» recibe lo que el servidor ya tiene (#185)', () => {
+  it('le pasa lo agendado de los días que vienen, no el día en curso ni lo que espera señal (eso va aparte)', () => {
+    const hoy = [accion({ id: 'h1', fecha: '2026-10-27' })];
+    const viene = [accion({ id: 'v1', fecha: '2026-10-29' }), accion({ id: 'v2', fecha: '2026-10-29', eje: 'TRABAJO' })];
+    const esperando = accion({ id: 'pendiente:c1:CUERPO:1', fecha: '2026-10-30', pendienteDeEnvio: true });
+    mockDiaria = diaria({ hoy, manana: [], agendadas: [...hoy, ...viene, esperando] });
+    montar();
+    pulsar(botonCon('Organizar mi semana'));
+    expect((mockPropsDeAgendar.delServidor ?? []).map(a => a.id).sort()).toEqual(['v1', 'v2']);
+    expect((mockPropsDeAgendar.enEspera ?? []).map(a => a.id)).toEqual(['pendiente:c1:CUERPO:1']);
+  });
+
+  it('si lo agendado de la semana no se pudo leer, la hoja lo sabe y «Volver a leer» relee; mientras carga por primera vez no avisa', () => {
+    const recargar = jest.fn();
+    mockDiaria = diaria({ agendadasLeidas: false, recargar });
+    montar();
+    expect(mockPropsDeAgendar.sinLeerLaSemana).toBe(true);
+    // Abrir la hoja sin haberla leído la vuelve a pedir.
+    pulsar(botonCon('Organizar mi semana'));
+    expect(recargar).toHaveBeenCalledTimes(1);
+    act(() => mockPropsDeAgendar.onVolverALeer!());
+    expect(recargar).toHaveBeenCalledTimes(2);
+    act(() => raiz?.unmount());
+    raiz = null;
+    mockDiaria = diaria({ agendadasLeidas: false, cargando: true });
+    montar();
+    expect(mockPropsDeAgendar.sinLeerLaSemana).toBe(false);
+  });
+
+  it('leída, la hoja no avisa nada', () => {
+    mockDiaria = diaria({ agendadasLeidas: true });
+    montar();
+    expect(mockPropsDeAgendar.sinLeerLaSemana).toBe(false);
   });
 });

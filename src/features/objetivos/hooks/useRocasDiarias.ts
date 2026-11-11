@@ -36,6 +36,11 @@ export function useRocasDiarias() {
    */
   const [agendadas, setAgendadas] = useState<RocaDiariaApi[]>([]);
   const [hoyDelServidor, setHoyDelServidor] = useState<string | null>(null);
+  /**
+   * Spec 048 (#185): `GET /rocks/upcoming` se leyó de verdad. «Agendar mis acciones» reemplaza el día entero en el servidor (E-208), así
+   * que sin saber lo que cada día ya tiene no puede mandar el plan completo: agendar borraría lo que no se vio. Falso hasta la primera lectura.
+   */
+  const [agendadasLeidas, setAgendadasLeidas] = useState(false);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
@@ -55,6 +60,7 @@ export function useRocasDiarias() {
       setHoy(deHoy);
       setManana(deManana);
       setAgendadas(deLaSemana?.rocas ?? []);
+      setAgendadasLeidas(deLaSemana !== null);
       setHoyDelServidor(deLaSemana?.desde ?? deHoy[0]?.fecha ?? null);
       yaLeyo.current = true;
     } catch (e) {
@@ -156,7 +162,7 @@ export function useRocasDiarias() {
     }
   }, [cargar]);
 
-  return { hoy, manana, agendadas, hoyDelServidor, objetivo, cargando, error, guardando, planificar, recargar: cargar };
+  return { hoy, manana, agendadas, agendadasLeidas, hoyDelServidor, objetivo, cargando, error, guardando, planificar, recargar: cargar };
 }
 
 /**

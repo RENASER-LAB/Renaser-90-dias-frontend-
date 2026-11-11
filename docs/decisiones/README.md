@@ -37,7 +37,7 @@ también en el texto (`grep -n "Plan" docs/decisiones/*.md`). Si dos entradas ch
 | [kilometros-y-carrera.md](kilometros-y-carrera.md) | Kilómetros diarios: captura, pasos (Health Connect) y la carrera con GPS | 6 |
 | [liderazgo-y-administracion.md](liderazgo-y-administracion.md) | Mentor, líder de mentores, Administración, Alquimista y sus fichas | 15 |
 | [pagos.md](pagos.md) | Cronograma de pagos y «Mi ingreso» (spec 032) | 2 |
-| [plan.md](plan.md) | Plan: objetivos, semana, mes, 80/20, Cierra tu día y el Mapa (retirado) | 11 |
+| [plan.md](plan.md) | Plan: objetivos, semana, mes, 80/20, Cierra tu día y el Mapa (retirado) | 12 |
 | [ser-y-fenix.md](ser-y-fenix.md) | SER (el acompañante), el orbe, el fénix y las celebraciones | 9 |
 | [soporte-ti.md](soporte-ti.md) | Soporte TI: interruptores, despliegue, roles personalizados y «ver como» (spec 002) | 2 |
 | [training.md](training.md) | Training: lista por hora, hábitos, evidencias y el editor Planificar | 19 |
@@ -49,6 +49,7 @@ también en el texto (`grep -n "Plan" docs/decisiones/*.md`). Si dos entradas ch
 
 | Fecha | Tabs | Tipo | Entrada | Archivo | Corregida |
 |---|---|---|---|---|---|
+| 2026-11-10 | Plan | Corrección | «Agendar mis acciones» muestra y conserva lo que el día ya tiene en el servidor (spec 048, issue #185) | [plan.md](plan.md) |  |
 | 2026-11-10 | Plan | Corrección | lo agendado sin señal cuenta en «Agendar mis acciones» (spec 048, issue #183) | [transversal.md](transversal.md) |  |
 | 2026-11-10 | Hoy, Plan, Training, Comunidad, Yo | Corrección | sin señal se dice «sin señal», no «No se pudo conectar» en rojo (spec 048, issue #182) | [transversal.md](transversal.md) |  |
 | 2026-11-10 | Hoy, Plan, Training | Cambio | la app funciona sin internet, fase 3: Plan, Cierra tu día, Código Renaser y planificar hábitos (spec 048, #180) | [transversal.md](transversal.md) |  |
