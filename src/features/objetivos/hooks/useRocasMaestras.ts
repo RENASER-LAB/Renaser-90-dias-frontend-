@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { usePlazoDeLaSesion } from '../../formaciones/hooks/usePlazoDeLaSesion';
 import { alTerminarEnvioDe } from '../../sinRed/escrituraSinRed';
+import { useRecargarAlVolverLaSenal } from '../../sinRed/useRecargarAlVolverLaSenal';
+import { mensajeDeCarga } from '../../sinRed/utils/sinSenal';
 import { mensajeDeObjetivos } from '../utils/mensajeDeObjetivos';
 import * as objetivosApi from '../api/objetivosApi';
 import { esRocaMaestraFija } from '../utils/objetivoFijo';
@@ -45,7 +47,7 @@ export function useRocasMaestras() {
     try {
       setRocas(await objetivosApi.obtenerRocasMaestras());
     } catch (e) {
-      setError(mensajeDeObjetivos(e, `No pudimos cargar tu objetivo de ${plazoRef.current}.`));
+      setError(mensajeDeCarga(e, `No pudimos cargar tu objetivo de ${plazoRef.current}.`, mensajeDeObjetivos));
     } finally {
       setCargando(false);
     }
@@ -57,6 +59,7 @@ export function useRocasMaestras() {
 
   /* Spec 048 fase 3: lo escrito sin señal sale de la cola (llegó, o el servidor no lo aplicó): se vuelve a leer. */
   useEffect(() => alTerminarEnvioDe('plan', () => void cargar()), [cargar]);
+  useRecargarAlVolverLaSenal(cargar, error !== null);
 
   /**
    * Define el objetivo de un eje la primera vez, o anota su avance si ya estaba. Devuelve `ok`.

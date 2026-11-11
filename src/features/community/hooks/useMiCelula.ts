@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { mensajeDeError } from '../../../services/http/apiClient';
+import { mensajeDeCargaEnLinea } from '../../sinRed/utils/sinSenal';
+import { useRecargarAlVolverLaSenal } from '../../sinRed/useRecargarAlVolverLaSenal';
 import * as celulaApi from '../api/celulaApi';
 import type { CellMember, MiCelulaInfo } from '../types/community.types';
 
@@ -33,7 +34,7 @@ export function useMiCelula(activo = true) {
       setMiCelula(celula);
       setMiembros(companeros);
     } catch (e) {
-      setError(mensajeDeError(e, 'No pudimos cargar tu grupo. Revisa tu conexión e inténtalo de nuevo.'));
+      setError(mensajeDeCargaEnLinea(e, 'No pudimos cargar tu grupo. Revisa tu conexión e inténtalo de nuevo.'));
     } finally {
       setLoading(false);
     }
@@ -45,6 +46,7 @@ export function useMiCelula(activo = true) {
     yaPidio.current = true;
     void recargar();
   }, [activo, recargar]);
+  useRecargarAlVolverLaSenal(recargar, error !== null);
 
   return { miCelula, miembros, loading, error, recargar };
 }

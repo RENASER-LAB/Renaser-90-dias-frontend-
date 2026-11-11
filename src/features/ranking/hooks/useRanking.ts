@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { formacionDeLaLectura } from '../../formaciones/estado/formacionDeLaComunidad';
 import * as rankingApi from '../api/rankingApi';
 import type { RankingAgregadoDto } from '../api/rankingApi';
-import { mensajeDeError } from '../../../services/http/apiClient';
+import { mensajeDeCargaEnLinea } from '../../sinRed/utils/sinSenal';
 
 /**
  * Hook para consultar el ranking real desde el backend Java (GET /api/v1/ranking).
@@ -22,7 +22,7 @@ export function useRanking(activo = true) {
       const data = await rankingApi.obtenerRankingAgregado(undefined, formacionDeLaLectura());
       setRankingData(data);
     } catch (e) {
-      setError(mensajeDeError(e, 'No pudimos cargar la tabla.'));
+      setError(mensajeDeCargaEnLinea(e, 'No pudimos cargar la tabla.'));
     } finally {
       setLoading(false);
     }

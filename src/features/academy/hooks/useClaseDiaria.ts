@@ -3,6 +3,7 @@ import { useCallback, useState } from 'react';
 import { mensajeDeError } from '../../../services/http/apiClient';
 import * as claseDiariaApi from '../api/claseDiariaApi';
 import type { ClaseDiariaApi } from '../types/academy.types';
+import { mensajeDeCargaEnLinea } from '../../sinRed/utils/sinSenal';
 
 /**
  * Estado del flujo "completar la Clase Diaria".
@@ -42,7 +43,7 @@ export function useClaseDiaria() {
       return recibida;
     } catch (e) {
       setClase(null);
-      setError(mensajeDeError(e, 'No pudimos encontrar tu clase de hoy'));
+      setError(mensajeDeCargaEnLinea(e, 'No pudimos encontrar tu clase de hoy'));
       return null;
     } finally {
       setCargando(false);

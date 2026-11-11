@@ -6,6 +6,8 @@ import * as habitsApi from '../api/habitsApi';
 import { aMomento, mapearPlanHabit } from '../api/habitsMappers';
 import type { HabitoCatalogoApi } from '../types/habits.types';
 import { aFechaIso, fechasIsoDeLaSemana } from '../utils/semanaDelPlan';
+import { mensajeDeCarga } from '../../sinRed/utils/sinSenal';
+import { useRecargarAlVolverLaSenal } from '../../sinRed/useRecargarAlVolverLaSenal';
 
 /**
  * Pide y arma los hábitos del plan, sin estado de React: la usan `usePlanHabitos` (Plan) y
@@ -81,7 +83,7 @@ export function usePlanHabitos() {
     try {
       setHabits(await cargarPlanHabitos());
     } catch (e) {
-      setError(mensajeDeError(e, 'No pudimos cargar tus hábitos'));
+      setError(mensajeDeCarga(e, 'No pudimos cargar tus hábitos'));
     } finally {
       setLoading(false);
     }
@@ -90,6 +92,7 @@ export function usePlanHabitos() {
   useEffect(() => {
     void recargar();
   }, [recargar]);
+  useRecargarAlVolverLaSenal(recargar, error !== null);
 
   /**
    * Cambia la hora de disparo de un hábito y refleja el cambio de inmediato, sin esperar a

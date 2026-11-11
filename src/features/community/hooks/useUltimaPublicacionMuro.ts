@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 
-import { mensajeDeError } from '../../../services/http/apiClient';
+import { mensajeDeCargaEnLinea } from '../../sinRed/utils/sinSenal';
+import { useRecargarAlVolverLaSenal } from '../../sinRed/useRecargarAlVolverLaSenal';
 import { useFormacionDeLaSesion } from '../../formaciones/context/FormacionContext';
 import { llaveDeLasVistas } from '../../formaciones/utils/vistaDeFormacion';
 import { escucharPostPublicado } from '../../sparkie/events/avisoPrimerPost';
@@ -73,7 +74,7 @@ export function useUltimaPublicacionMuro() {
       setPublicacion(ultima);
     } catch (e) {
       setPublicacion(null);
-      setError(mensajeDeError(e, 'No pudimos cargar la última evidencia del Muro.'));
+      setError(mensajeDeCargaEnLinea(e, 'No pudimos cargar la última evidencia del Muro.'));
     } finally {
       setCargando(false);
     }
@@ -94,6 +95,8 @@ export function useUltimaPublicacionMuro() {
       void recargar();
     }, [recargar, formacion])
   );
+
+  useRecargarAlVolverLaSenal(recargar, error !== null);
 
   return { publicacion, cargando, error, recargar };
 }

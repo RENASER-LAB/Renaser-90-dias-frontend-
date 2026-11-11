@@ -848,3 +848,25 @@ Entrenar) y lleve hasta el primer post en el Muro; al publicar, confeti; y «el 
     `radar/__tests__/radarSinSenal` (P8), `objetivos/api/__tests__/planSinRed` y `habits/api/__tests__/planificarSinRed`.
     **Depende del backend de la rama `048-fase-3`** (las cabeceras las ignora uno anterior: lo hecho sin señal llegaría con la hora de
     llegada). Solo JavaScript: no hace falta APK nuevo.
+
+## Corrección — 2026-11-10 — tabs `Hoy`, `Plan`, `Training`, `Comunidad`, `Yo`: sin señal se dice «sin señal», no «No se pudo conectar» en rojo (spec 048, issue #182)
+
+* **Corrección — 2026-11-10 — lo que se lee sin señal y no está guardado (spec 048, FR-004, FR-005, issue #182).** Lo encontró el
+  E2E de la fase 3 (cuenta que nunca abrió Plan con señal) y el dueño mandó barrer toda la app. Lo que cambia y nada más:
+  * **Plan:** «Esta semana» y «Acciones que mueven la meta» (y el objetivo de 90 días) sin señal y sin lectura guardada dicen
+    «Todavía no hay nada guardado de esto en este teléfono. Se cargará solo cuando vuelva la señal.», en el color suave y no en
+    rojo, **no ofrecen «Arma tu semana» ni dicen «Primero arma tu semana»** (no se sabe qué hay) y se leen solos al volver la señal.
+  * **El resto de la app, con la misma frase y el mismo color:** Hoy (resumen del día), Entrenar (hábitos, elegir hábito para la
+    foto, la Pastilla), Cierra tu día, la fecha de inicio al activar el programa. Lo que nunca se guarda en el teléfono dice «Necesitas
+    conexión para usar esto. Se cargará solo cuando vuelva la señal.» (las palabras de `SoloConConexion`): cursos, tribu, listas
+    del chat, Muro, ranking, quién reaccionó, tus evidencias en Yo. Todas se piden de nuevo al volver la señal.
+  * **Una sola pieza** (`src/features/sinRed/`): `utils/sinSenal.ts` (`mensajeDeCarga`, `mensajeDeCargaEnLinea`, `esSinSenal`),
+    `components/ErrorDeCarga.tsx` y `useRecargarAlVolverLaSenal.ts`. La regla `src/__tests__/reglas/sinSenalSeDiceSinSenal.test.ts`
+    frena que una pantalla guarde `mensajeDeError(…)` de una lectura sin pasar por ahí.
+  * **No cambian:** un error de verdad (500, 409 con motivo) sigue en rojo con su texto; lo que la persona manda (guardar, agendar,
+    enviar) sigue diciendo «No se pudo conectar con el servidor…» en su diálogo; **las pantallas del personal** (Administración,
+    términos, formaciones, mentoría, líderes, tickets, soporte, Caja) y el inicio de sesión no tienen modo sin internet y siguen
+    como estaban (quedan en `excepciones.json`, `sinSenalAlCargar`, con su motivo: la lista solo se achica).
+  * **Pruebas:** `src/features/objetivos/components/__tests__/planSinSenal.test.ts`,
+    `src/features/objetivos/hooks/__tests__/planSinSenalAlLeer.test.ts`, `src/features/sinRed/__tests__/sinSenalAlCargar.test.ts`
+    y la regla `sinSenalSeDiceSinSenal`. Solo JavaScript: no hace falta APK nuevo ni cambio en el backend.

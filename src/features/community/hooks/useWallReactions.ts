@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 
 import type { ReactionUser } from '../../../screens/ComunidadScreen';
-import { mensajeDeError } from '../../../services/http/apiClient';
+import { mensajeDeCargaEnLinea } from '../../sinRed/utils/sinSenal';
 import * as wallApi from '../api/wallApi';
 import { mapearReaccion } from '../api/wallMappers';
 
@@ -31,7 +31,7 @@ export function useWallReactions() {
       setReacciones(pagina.reactions.filter(r => r.type === 'LIKE').map(mapearReaccion));
     } catch (e) {
       setReacciones([]);
-      setError(mensajeDeError(e, 'No pudimos cargar quién reaccionó. Intenta de nuevo.'));
+      setError(mensajeDeCargaEnLinea(e, 'No pudimos cargar quién reaccionó. Intenta de nuevo.'));
     } finally {
       setCargando(false);
     }

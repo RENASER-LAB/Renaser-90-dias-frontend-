@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { mensajeDeError } from '../../../services/http/apiClient';
+import { mensajeDeCargaEnLinea } from '../../sinRed/utils/sinSenal';
+import { useRecargarAlVolverLaSenal } from '../../sinRed/useRecargarAlVolverLaSenal';
 import * as celulaApi from '../api/celulaApi';
 import type { CellMember, CelulaDelAprendiz } from '../types/community.types';
 
@@ -30,7 +31,7 @@ export function useGruposDelAprendiz(activo = true) {
     try {
       setGrupos(await celulaApi.obtenerMisCelulas());
     } catch (e) {
-      setErrorGrupos(mensajeDeError(e, 'No pudimos cargar tus grupos. Revisa tu conexión e inténtalo de nuevo.'));
+      setErrorGrupos(mensajeDeCargaEnLinea(e, 'No pudimos cargar tus grupos. Revisa tu conexión e inténtalo de nuevo.'));
     } finally {
       setCargandoGrupos(false);
     }
@@ -42,6 +43,7 @@ export function useGruposDelAprendiz(activo = true) {
     yaPidio.current = true;
     void recargarGrupos();
   }, [activo, recargarGrupos]);
+  useRecargarAlVolverLaSenal(recargarGrupos, errorGrupos !== null);
 
   return { grupos, cargandoGrupos, errorGrupos, recargarGrupos };
 }
@@ -61,6 +63,9 @@ export function useIntegrantesDelGrupo(celulaId: string | null) {
   const [integrantes, setIntegrantes] = useState<CellMember[]>([]);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /* Spec 048 (#182): al volver la señal, un grupo que no cargó se pide otra vez. */
+  const [vueltaDeLaSenal, setVueltaDeLaSenal] = useState(0);
+  useRecargarAlVolverLaSenal(() => setVueltaDeLaSenal(v => v + 1), error !== null);
 
   useEffect(() => {
     if (!celulaId) {
@@ -80,7 +85,7 @@ export function useIntegrantesDelGrupo(celulaId: string | null) {
       .catch(e => {
         if (!cancelado) {
           setIntegrantes([]);
-          setError(mensajeDeError(e, 'No pudimos cargar los integrantes de este grupo.'));
+          setError(mensajeDeCargaEnLinea(e, 'No pudimos cargar los integrantes de este grupo.'));
         }
       })
       .finally(() => {
@@ -89,7 +94,7 @@ export function useIntegrantesDelGrupo(celulaId: string | null) {
     return () => {
       cancelado = true;
     };
-  }, [celulaId]);
+  }, [celulaId, vueltaDeLaSenal]);
 
   return { integrantes, cargando, error };
 }

@@ -12,5 +12,38 @@
     "fecha": "2026-11-06",
     "motivo": "Sin excepciones: ningún archivo de texto de la app tiene CRLF.",
     "archivos": []
+  },
+  "sinSenalAlCargar": {
+    "fecha": "2026-11-10",
+    "motivo": "Pantallas del personal (administración, términos, formaciones, mentoría, líderes, tickets, soporte, caja) y el inicio de sesión: el modo sin internet es del aprendiz (spec 048) y ahí «No se pudo conectar con el servidor» sigue siendo cierto. Si una de estas gana modo sin internet, se pasa a mensajeDeCarga y se borra de esta lista (#182).",
+    "archivos": [
+      "src/features/caja/screens/CajaContenidoScreen.tsx",
+      "src/features/chat/hooks/useSoportesPaginados.ts",
+      "src/features/eventos/hooks/usePasarLista.ts",
+      "src/features/formaciones/components/CambiarDuracionSheet.tsx",
+      "src/features/formaciones/components/TrasladarAprendizSheet.tsx",
+      "src/features/formaciones/hooks/useComunidadDeLaFormacion.ts",
+      "src/features/lider-mentores/hooks/useLecturaDelLider.ts",
+      "src/features/onboarding/terminos/components/VersionDeTerminosSheet.tsx",
+      "src/features/onboarding/terminos/hooks/useTerminosAdmin.ts",
+      "src/features/tickets/hooks/useBandejaDeTickets.ts",
+      "src/features/tickets/hooks/useTicketsMentor.ts",
+      "src/screens/LoginScreen.tsx"
+    ]
+  },
+  "sinSenalSinRecarga": {
+    "fecha": "2026-11-10",
+    "motivo": "Lecturas que vuelven a pedirse al volver la señal desde otro lado: Comunidad (Muro, cursos, chat y ranking), RenasiaPanel y ClaseDiariaModal tienen su propio alVolverLaConexion (prueba recargaAlVolverLaSenal), y lo que se pide al tocar una fila o abrir una hoja (lección, reacciones, integrantes del chat) se pide de nuevo al volver a tocarla.",
+    "archivos": [
+      "src/features/academy/hooks/useClaseDiaria.ts",
+      "src/features/academy/hooks/useCursos.ts",
+      "src/features/academy/hooks/useLeccionDetalle.ts",
+      "src/features/chat/hooks/useChatConversaciones.ts",
+      "src/features/chat/hooks/useParticipantesDelChat.ts",
+      "src/features/community/hooks/useWallFeed.ts",
+      "src/features/community/hooks/useWallReactions.ts",
+      "src/features/ranking/hooks/useRanking.ts",
+      "src/features/renasia/hooks/useRenasiaChat.ts"
+    ]
   }
 }

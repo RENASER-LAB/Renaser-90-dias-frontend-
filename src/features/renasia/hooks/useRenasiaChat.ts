@@ -20,6 +20,7 @@ import {
   quitarTextoDeRespaldo,
   sinRespaldosRepetidos,
 } from '../utils/propuestas';
+import { mensajeDeCargaEnLinea } from '../../sinRed/utils/sinSenal';
 
 let contadorIdLocal = 0;
 /** Ids para mensajes que todavía no existen en el servidor (la pregunta optimista, la respuesta en curso). */
@@ -153,7 +154,7 @@ export function useRenasiaChat(opciones: OpcionesRenasiaChat): EstadoRenasiaChat
       setHayMasAntiguos(pagina.hasMore);
     } catch (e) {
       if (!montadoRef.current) return;
-      setErrorHistorial(mensajeDeError(e, `No pudimos cargar tu conversación con ${nombre}.`));
+      setErrorHistorial(mensajeDeCargaEnLinea(e, `No pudimos cargar tu conversación con ${nombre}.`));
     } finally {
       if (montadoRef.current) setCargandoHistorial(false);
     }

@@ -22,6 +22,9 @@ import {
   fechaDelDiaUno,
   lineaDelPlazo,
 } from '../utils/textoDelDiaUno';
+import { ErrorDeCarga } from '../../sinRed/components/ErrorDeCarga';
+import { useRecargarAlVolverLaSenal } from '../../sinRed/useRecargarAlVolverLaSenal';
+import { mensajeDeCarga } from '../../sinRed/utils/sinSenal';
 
 /**
  * Último paso del onboarding, entre Términos y el Home: «Tu programa empieza mañana» (spec 036, D-309, cambio de gerencia del 2026-11-02).
@@ -108,7 +111,7 @@ export function ActivarProgramaScreen({ onActivated, activarAlMontar = false, al
         if (!manana) setError(AVISO_SIN_RED_AL_LEER);
       } catch (e) {
         if (!vigente) return;
-        setError(mensajeDeError(e, AVISO_SIN_RED_AL_LEER));
+        setError(mensajeDeCarga(e, AVISO_SIN_RED_AL_LEER));
       } finally {
         if (vigente) setCargando(false);
       }
@@ -117,6 +120,8 @@ export function ActivarProgramaScreen({ onActivated, activarAlMontar = false, al
       vigente = false;
     };
   }, [onActivated, consulta, activarAlMontar]);
+  /* Spec 048 (#182): la fecha de inicio que no se pudo leer sin señal se pide sola al volver la señal. */
+  useRecargarAlVolverLaSenal(() => setConsulta(v => v + 1), !activarAlMontar && error !== null && !fecha);
 
   /* «Entendido» en el onboarding solo continúa: el programa ya quedó activado. Un doble toque (o un nuevo render) no entra dos veces. */
   const yaSigue = useRef(false);
@@ -224,9 +229,7 @@ export function ActivarProgramaScreen({ onActivated, activarAlMontar = false, al
       ) : null}
 
       {avisoAMostrar ? (
-        <View style={[styles.alertBox, { backgroundColor: c.dangerWash, borderColor: c.danger }]}>
-          <Text style={[t.small, { color: c.danger, textAlign: 'center' }]}>{avisoAMostrar}</Text>
-        </View>
+        <ErrorDeCarga mensaje={avisoAMostrar} style={{ textAlign: 'center' }} caja={styles.alertBox} />
       ) : null}
       {!activarAlMontar && error && !cargando && !fecha ? (
         <View style={{ marginTop: 16 }}>

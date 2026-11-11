@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { listarMisEvidencias } from '../api/evidenceApi';
 import type { EvidenciaApi } from '../api/evidenceSchemas';
+import { mensajeDeCargaEnLinea } from '../../sinRed/utils/sinSenal';
+import { useRecargarAlVolverLaSenal } from '../../sinRed/useRecargarAlVolverLaSenal';
 
 /**
  * Las evidencias reales del aprendiz para la pestana Yo.
@@ -33,7 +35,8 @@ export function useMisEvidencias() {
     } catch (e) {
       setEvidencias([]);
       setHayMas(false);
-      setError(e instanceof Error ? e.message : 'No se pudieron cargar tus evidencias.');
+      // Lo que no es de red conserva su texto de siempre; sin señal dice «sin señal» (#182).
+      setError(mensajeDeCargaEnLinea(e, 'No se pudieron cargar tus evidencias.', (err, porDefecto) => (err instanceof Error ? err.message : porDefecto)));
     } finally {
       setCargando(false);
     }
@@ -42,6 +45,7 @@ export function useMisEvidencias() {
   useEffect(() => {
     void recargar();
   }, [recargar]);
+  useRecargarAlVolverLaSenal(recargar, error !== null);
 
   /* Cuantas pasaron la validacion. El rotulo de la cabecera sale de aca, no de un numero
      escrito a mano. El valor es `VALIDA`, no `VALIDADA`: es el enum `EstadoValidacion` del

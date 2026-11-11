@@ -14,6 +14,7 @@ import { RESPUESTA_MAX_LENGTH, RESPUESTA_MIN_LENGTH } from '../api/spiritApi';
 import { preguntasDelDia } from '../data/preguntasPastilla';
 import { borradorEspiritu, type BorradorEspiritu } from '../storage/borradorEspiritu';
 import type { AudioGuiado } from '../types/audioGuiado';
+import { ErrorDeCarga } from '../../sinRed/components/ErrorDeCarga';
 
 /**
  * "Pastilla Renacer": escuchá el audio de hoy y contestá. Sale desde abajo, como pidió el dueño
@@ -305,7 +306,7 @@ export function PastillaRenacerModal({
             <ActivityIndicator color={c.goldInk} />
           </View>
         ) : error ? (
-          <Text style={[t.body, { color: c.danger }]}>{error}</Text>
+          <ErrorDeCarga mensaje={error} style={t.body} />
         ) : !audio ? (
           <Text style={[t.body, { color: c.textSoft }]}>
             Todavía no tienes una Pastilla disponible. Aparece a partir del día 8 de tu programa.

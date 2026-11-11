@@ -3,6 +3,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ApiError } from '../../../services/http/apiClient';
 import { usePlazoDeLaSesion } from '../../formaciones/hooks/usePlazoDeLaSesion';
 import { alTerminarEnvioDe } from '../../sinRed/escrituraSinRed';
+import { useRecargarAlVolverLaSenal } from '../../sinRed/useRecargarAlVolverLaSenal';
+import { mensajeDeCarga } from '../../sinRed/utils/sinSenal';
 import { mensajeDeObjetivos } from '../utils/mensajeDeObjetivos';
 import * as objetivosApi from '../api/objetivosApi';
 import type {
@@ -86,7 +88,8 @@ export function useRocasSemanales(maestras: RocaMaestraApi[], semana?: number, a
         setBloqueada(true);
         setRocas([]);
       } else {
-        setError(mensajeDeObjetivos(e, 'No pudimos cargar tu plan de la semana.'));
+        // Sin señal y sin nada guardado: se dice sin señal, no «No se pudo conectar» en rojo (#182).
+        setError(mensajeDeCarga(e, 'No pudimos cargar tu plan de la semana.', mensajeDeObjetivos));
       }
     } finally {
       setCargando(false);
@@ -99,6 +102,8 @@ export function useRocasSemanales(maestras: RocaMaestraApi[], semana?: number, a
 
   /* Spec 048 fase 3: lo escrito sin señal sale de la cola (llegó, o el servidor no lo aplicó): se vuelve a leer. */
   useEffect(() => alTerminarEnvioDe('plan', () => void cargar()), [cargar]);
+  /* #182: lo que no se pudo leer sin señal se pide solo al volver la señal. */
+  useRecargarAlVolverLaSenal(cargar, error !== null);
 
   /** El eje de cada roca, resuelto contra las maestras. Sin maestras cargadas, lista vacía. */
   const porEje = useMemo<RocaSemanalDeEje[]>(() => {

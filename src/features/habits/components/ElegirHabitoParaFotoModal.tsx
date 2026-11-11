@@ -6,10 +6,12 @@ import { Presionable } from '../../../components/Presionable';
 import { HojaDesdeAbajo } from '../../../components/hojaDesdeAbajo/HojaDesdeAbajo';
 import { useTheme } from '../../../theme/ThemeContext';
 import { tacto } from '../../../utils/tacto';
-import { mensajeDeError } from '../../../services/http/apiClient';
+import { mensajeDeCarga } from '../../sinRed/utils/sinSenal';
+import { useRecargarAlVolverLaSenal } from '../../sinRed/useRecargarAlVolverLaSenal';
 import { obtenerCatalogo, obtenerTracksDeHoy } from '../api/habitsApi';
 import { habitosParaFotoDeHoy, type HabitoParaFoto } from '../utils/habitosParaFotoDeHoy';
 import { tituloParaMostrar } from '../utils/tituloEnTipoOracion';
+import { ErrorDeCarga } from '../../sinRed/components/ErrorDeCarga';
 
 /**
  * Elegir DE CUÁL hábito de hoy es la foto que se va a subir. Solo elige: la cámara, la pantalla
@@ -52,7 +54,7 @@ export function ElegirHabitoParaFotoModal({ visible, onCerrar, onElegir, titulos
       setOpciones(habitosParaFotoDeHoy(tracks, catalogo, Platform.OS === 'web'));
     } catch (e) {
       setOpciones([]);
-      setError(mensajeDeError(e, 'No pudimos cargar tus hábitos de hoy'));
+      setError(mensajeDeCarga(e, 'No pudimos cargar tus hábitos de hoy'));
     } finally {
       setCargando(false);
     }
@@ -61,6 +63,7 @@ export function ElegirHabitoParaFotoModal({ visible, onCerrar, onElegir, titulos
   useEffect(() => {
     if (visible) void cargar();
   }, [visible, cargar]);
+  useRecargarAlVolverLaSenal(cargar, visible && error !== null);
 
   const { height: altoVentana } = useWindowDimensions();
 
@@ -75,7 +78,7 @@ export function ElegirHabitoParaFotoModal({ visible, onCerrar, onElegir, titulos
       <View style={styles.cuerpo}>
         {cargando && <ActivityIndicator color={c.goldInk} style={{ marginVertical: 20 }} />}
 
-        {error !== null && <Text style={[t.body, { color: c.danger }]}>{error}</Text>}
+        {error !== null && <ErrorDeCarga mensaje={error} style={t.body} />}
 
         {!cargando && opciones.length === 0 && error === null && (
           <Text style={[t.body, { color: c.textSoft, paddingVertical: 16 }]}>

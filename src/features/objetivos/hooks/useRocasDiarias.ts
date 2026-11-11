@@ -4,6 +4,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import { ApiError } from '../../../services/http/apiClient';
 import { alTerminarEnvioDe } from '../../sinRed/escrituraSinRed';
 import { alTerminarUnEnvio } from '../../sinRed/colaSinRed';
+import { useRecargarAlVolverLaSenal } from '../../sinRed/useRecargarAlVolverLaSenal';
+import { mensajeDeCarga } from '../../sinRed/utils/sinSenal';
 import { mensajeDeObjetivos } from '../utils/mensajeDeObjetivos';
 import * as objetivosApi from '../api/objetivosApi';
 import type { EjeObjetivo, ItemPlanDiario, RocaDiariaApi } from '../types/objetivos.types';
@@ -56,7 +58,8 @@ export function useRocasDiarias() {
       setHoyDelServidor(deLaSemana?.desde ?? deHoy[0]?.fecha ?? null);
       yaLeyo.current = true;
     } catch (e) {
-      setError(mensajeDeObjetivos(e, 'No pudimos cargar tus acciones del día.'));
+      // Sin señal y sin nada guardado: se dice sin señal, no «No se pudo conectar» en rojo (#182).
+      setError(mensajeDeCarga(e, 'No pudimos cargar tus acciones del día.', mensajeDeObjetivos));
     } finally {
       setCargando(false);
     }
@@ -78,6 +81,8 @@ export function useRocasDiarias() {
       quitarAcciones();
     };
   }, [cargar]);
+  /* #182: lo que no se pudo leer sin señal se pide solo al volver la señal. */
+  useRecargarAlVolverLaSenal(cargar, error !== null);
 
   /**
    * Qué fecha se propone. **Es una propuesta del dispositivo, no la verdad.**

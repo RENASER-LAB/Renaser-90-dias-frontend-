@@ -4,7 +4,8 @@ import type { PlanHabit } from '../../../screens/PlanScreen';
 import type { HabitItem } from '../../../screens/TrainingScreen';
 import { medicionPedidaDe } from '../../habits/utils/registroConFoto';
 import { iconoDeLineaDeHabito } from '../../habits/utils/iconosDeHabito';
-import { mensajeDeError } from '../../../services/http/apiClient';
+import { mensajeDeCarga } from '../../sinRed/utils/sinSenal';
+import { useRecargarAlVolverLaSenal } from '../../sinRed/useRecargarAlVolverLaSenal';
 import type { HabitoCatalogoApi, TrackDelDiaApi } from '../../habits/types/habits.types';
 import { cargarEntrenamiento, cargarEvidenciasDeRocas, type DatosEntrenamiento } from '../api/cargarEntrenamiento';
 import type { RocaDiariaApi } from '../types/training.types';
@@ -120,7 +121,7 @@ export function useTraining(activa = true) {
       if (silencioso) {
         console.warn('[Training] no se pudo refrescar; queda lo que ya estaba en pantalla:', e);
       } else {
-        setError(mensajeDeError(e, 'No pudimos actualizar tus hábitos. Revisa tu conexión e inténtalo de nuevo.'));
+        setError(mensajeDeCarga(e, 'No pudimos actualizar tus hábitos. Revisa tu conexión e inténtalo de nuevo.'));
       }
     } finally {
       if (esta === ultimaCarga.current) setLoading(false);
@@ -128,6 +129,8 @@ export function useTraining(activa = true) {
   }, []);
 
   useActualizacionDelDia({ activa, contexto: datos?.contexto, actualizar: recargar });
+  /* Spec 048 (#182): sin señal y sin nada guardado dice «sin señal» y se pide solo al volver. */
+  useRecargarAlVolverLaSenal(recargar, activa && error !== null);
   useEffect(() => escucharDiaDeHabitosCambiado(() => { void recargar(true); }), [recargar]);
   useEffect(() => () => { ultimaCarga.current += 1; }, []);
 

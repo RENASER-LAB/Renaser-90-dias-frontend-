@@ -191,7 +191,8 @@ export function PlanDelEje({
           nombreDelEje={ETIQUETA_EJE[ejeAbierto]}
           hayPlanSemanal={hayPlanSemanal}
           puedeAgendar={puedeAgendar}
-          error={diaria.error}
+          /* #182: sin la semana leída (sin señal y sin nada guardado) tampoco se sabe qué acciones hay: se dice lo mismo, no «Primero arma tu semana». */
+          error={diaria.error ?? (hayPlanSemanal || semanal.estado === 'bloqueada' ? null : semanal.error)}
           alTocarUna={tocarUna}
           alAgendar={() => setAgendando(true)}
         >
