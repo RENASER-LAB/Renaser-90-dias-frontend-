@@ -2,7 +2,7 @@
  * Spec 048, fase 3 (FR-019, FR-011, FR-015, D13, D14, P2, P3, P6): el Plan sin señal — las acciones del día y los objetivos. Con la red, la
  * hora y la carpeta de archivos reemplazadas por dobles que anotan cada pedido.
  */
-import { beforeEach, describe, expect, it, jest } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 jest.mock('@react-native-async-storage/async-storage', () => require('@react-native-async-storage/async-storage/jest/async-storage-mock'));
@@ -86,6 +86,7 @@ jest.mock('../../notificaciones/repeticionesDeAcciones', () => ({ atenderLaAccio
 jest.mock('../../notificaciones/recordatoriosDeAcciones', () => ({ cancelarElAvisoDeLaAccion: jest.fn(async (id: string) => void mockAvisosCancelados.push(id)) }));
 
 import { leerAvisos } from '../../../sinRed/avisosDeLoNoAplicado';
+import { _reiniciarConexion, marcarConConexion, marcarSinConexion } from '../../../sinRed/estadoDeConexion';
 import { leerCola, ponerCuentaActual, procesarCola } from '../../../sinRed/colaSinRed';
 import { aplicarAjustesDeLectura } from '../../../sinRed/lecturasGuardadas';
 import type { ItemPlanDiario, RocaDiariaApi, RocaMaestraApi, RocaSemanalApi } from '../../types/objetivos.types';
@@ -165,6 +166,46 @@ describe('agendar las acciones sin señal (spec 048 fase 3)', () => {
     mockRed.hay = true;
     await procesarCola('ana', Date.now(), { adelantar: true });
     expect(mockPedidos[0].cabeceras).toMatchObject({ 'X-Id-Cliente': envio.idCliente, 'X-Origen-De-La-Hora': 'RELOJ_DEL_SISTEMA' });
+  });
+});
+
+describe('agendar de nuevo un día que ya espera señal (spec 048 fase 3, #183)', () => {
+  // Sin señal de verdad (el cliente HTTP está reemplazado, así que se marca a mano): lo que espera no sale hasta que vuelva.
+  beforeEach(() => {
+    _reiniciarConexion();
+    marcarSinConexion();
+  });
+  afterEach(() => _reiniciarConexion());
+
+  const OTRA: ItemPlanDiario = { eje: 'TRABAJO', posicion: 3, titulo: 'Cerrar la venta', puntajeImpacto: 5, esDelegable: false };
+
+  it('el plan nuevo del día (con lo que ya esperaba) sustituye al anterior en la cola: sale UN pedido por día, sin duplicar ni chocar', async () => { // spec 048 FR-019
+    await crearPlanDiario('2026-11-11', [ITEMS[0]]);
+    await crearPlanDiario('2026-11-11', [ITEMS[0], { ...ITEMS[1], posicion: 2 }]);
+
+    const cola = await leerCola('ana');
+    expect(cola).toHaveLength(1);
+    expect((cola[0].datos as { cuerpo: { rocas: ItemPlanDiario[] } }).cuerpo.rocas.map(r => r.titulo)).toEqual(['Enviar la propuesta', 'Llamar al cliente']);
+
+    mockRed.hay = true;
+    marcarConConexion();
+    await procesarCola('ana', Date.now(), { adelantar: true });
+    expect(mockPedidos.filter(x => x.ruta === '/api/v1/rocks/plan')).toHaveLength(1);
+  });
+
+  it('mientras esperan, lo agendado del día se ve completo (lo de antes más lo nuevo), no solo lo último', async () => { // spec 048 FR-019
+    await crearPlanDiario('2026-11-11', [ITEMS[0]]);
+    await crearPlanDiario('2026-11-11', [ITEMS[0], { ...ITEMS[1], posicion: 2 }]);
+    const manana = (await aplicarAjustesDeLectura('/api/v1/rocks/tomorrow', [])) as RocaDiariaApi[];
+    expect(manana.map(a => a.titulo)).toEqual(['Enviar la propuesta', 'Llamar al cliente']);
+  });
+
+  it('otro día no se toca: cada fecha conserva su pedido', async () => { // spec 048 FR-019
+    await crearPlanDiario('2026-11-11', [ITEMS[0]]);
+    await crearPlanDiario('2026-11-12', [OTRA]);
+    await crearPlanDiario('2026-11-11', [ITEMS[0], { ...ITEMS[1], posicion: 2 }]);
+    const fechas = (await leerCola('ana')).map(e => (e.datos as { cuerpo: { fecha: string } }).cuerpo.fecha).sort();
+    expect(fechas).toEqual(['2026-11-11', '2026-11-12']);
   });
 });
 

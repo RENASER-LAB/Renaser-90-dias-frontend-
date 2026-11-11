@@ -6,7 +6,8 @@ import { GoldButton } from '../../../components/GoldButton';
 import { RuedaHoraPicker } from '../../habits/components/RuedaHoraPicker';
 import { useTheme } from '../../../theme/ThemeContext';
 import type { useRocasSemanales } from '../hooks/useRocasSemanales';
-import type { EjeObjetivo, ItemPlanDiario } from '../types/objetivos.types';
+import type { EjeObjetivo, ItemPlanDiario, RocaDiariaApi } from '../types/objetivos.types';
+import { TEXTO_SE_GUARDARA } from '../utils/accionEnEspera';
 import { conAccionPropia, opcionesDelEje, sugeridasDelEje, type AccionOfrecida, type SugerenciaDeAccion } from '../utils/accionesPropias';
 import { EJES, ETIQUETA_EJE } from '../types/objetivos.types';
 import { FilaDeDiasDelPlan } from '../../habits/components/FilaDeDiasDelPlan';
@@ -81,6 +82,14 @@ interface AgendarAccionesModalProps {
   guardando: boolean;
   onGuardar: (items: ItemPlanDiario[], fecha: string) => void;
   onCerrar: () => void;
+  /**
+   * Spec 048 (#183): las acciones agendadas sin señal que todavía no llegaron al servidor (`pendienteDeEnvio`). Las del día elegido
+   * cuentan para el tope de tres por eje, se ven en la hoja con «Se guardará al volver la señal» y no se vuelven a ofrecer; al guardar
+   * viajan con las nuevas, porque agendar un día lo reemplaza (E-208) y sin ellas el plan nuevo las borraría.
+   */
+  enEspera?: readonly RocaDiariaApi[];
+  /** Al abrir, el día (`yyyy-MM-dd`) en que se abre la hoja: el de la acción que se tocó en Plan. Sin él, el último que estaba. */
+  abrirEnFecha?: string | null;
 }
 
 export function AgendarAccionesModal({
@@ -91,6 +100,8 @@ export function AgendarAccionesModal({
   guardando,
   onGuardar,
   onCerrar,
+  enEspera,
+  abrirEnFecha = null,
 }: AgendarAccionesModalProps) {
   const { c, t } = useTheme();
   const [elegidas, setElegidas] = useState<AccionElegida[]>([]);
@@ -102,6 +113,18 @@ export function AgendarAccionesModal({
   const [diaElegido, setDiaElegido] = useState<DiaDelPlan>(() => diaInicialDelPlanificador(fecha));
   const fechasIso = fechasIsoDeLaSemana();
   const fechaAGuardar = fechasIso[diaElegido] ?? fecha;
+  /* Spec 048 (#183): tocar una acción de otro día abre la hoja en ese día, donde se ve lo que espera. */
+  useEffect(() => {
+    if (!visible || !abrirEnFecha) return;
+    const dia = DIAS_DEL_PLAN.find(d => fechasIsoDeLaSemana()[d] === abrirEnFecha);
+    if (dia) setDiaElegido(dia);
+  }, [visible, abrirEnFecha]);
+  /** Lo que ya espera señal en el día que se está viendo, y por eje: cuenta para el tope y se ve (#183). */
+  const enEsperaDelDia = useMemo(
+    () => (enEspera ?? []).filter(a => a.pendienteDeEnvio === true && a.fecha === fechaAGuardar),
+    [enEspera, fechaAGuardar]
+  );
+  const enEsperaDe = (eje: EjeObjetivo) => enEsperaDelDia.filter(a => a.eje === eje);
   // Lo que marca la rueda antes de confirmar. Vive acá y no en la rueda porque `RuedaHoraPicker`
   // avisa por `onCambiar` y no guarda nada: es un selector, no un formulario.
   const [horaEnCurso, setHoraEnCurso] = useState({ hora: 6, minuto: 0 });
@@ -148,8 +171,10 @@ export function AgendarAccionesModal({
   const [escribiendo, setEscribiendo] = useState<Partial<Record<EjeObjetivo, string>>>({});
 
   /** Lo sugerido más lo escrito a mano. Las reglas y sus pruebas viven en `utils/accionesPropias`. */
-  const opcionesDe = (eje: EjeObjetivo, sugeridas: AccionOfrecida[]): AccionOfrecida[] =>
-    opcionesDelEje(eje, sugeridas, elegidas);
+  const opcionesDe = (eje: EjeObjetivo, sugeridas: AccionOfrecida[]): AccionOfrecida[] => {
+    const esperando = new Set(enEsperaDe(eje).map(a => a.titulo.trim()));
+    return opcionesDelEje(eje, sugeridas, elegidas).filter(o => !esperando.has(o.texto.trim()));
+  };
 
   /**
    * Agrega una acción escrita a mano. Si no corresponde —vacía, repetida, o el eje ya llegó a
@@ -157,7 +182,7 @@ export function AgendarAccionesModal({
    * sin completar.
    */
   const agregarPropia = (eje: EjeObjetivo) => {
-    const conLaNueva = conAccionPropia(elegidas, eje, escribiendo[eje] ?? '', MAXIMO_POR_EJE);
+    const conLaNueva = conAccionPropia(elegidas, eje, escribiendo[eje] ?? '', MAXIMO_POR_EJE, enEsperaDe(eje).map(a => a.titulo));
     if (conLaNueva === null) return;
     setElegidas(conLaNueva);
     setEscribiendo(previo => ({ ...previo, [eje]: '' }));
@@ -166,7 +191,8 @@ export function AgendarAccionesModal({
   const indiceDe = (eje: EjeObjetivo, titulo: string) =>
     elegidas.findIndex(e => e.eje === eje && e.titulo === titulo);
 
-  const cuantasDe = (eje: EjeObjetivo) => elegidas.filter(e => e.eje === eje).length;
+  /** Las del eje: las que ya esperan señal ese día más las que se están eligiendo (el tope de tres es de las dos juntas, #183). */
+  const cuantasDe = (eje: EjeObjetivo) => enEsperaDe(eje).length + elegidas.filter(e => e.eje === eje).length;
 
   const alternar = (eje: EjeObjetivo, titulo: string) => {
     const indice = indiceDe(eje, titulo);
@@ -228,8 +254,19 @@ export function AgendarAccionesModal({
 
   const guardar = () => {
     onGuardar(
-      posicionarPorEje(
-        elegidas.map(e => ({
+      posicionarPorEje([
+        // Primero lo que ya esperaba (conserva sus posiciones) y después lo nuevo: el plan del día viaja entero (#183).
+        ...enEsperaDelDia.map(a => ({
+          eje: a.eje,
+          titulo: a.titulo,
+          descripcion: a.descripcion ?? undefined,
+          puntajeImpacto: a.puntajeImpacto,
+          esDelegable: a.esDelegable,
+          horaInicio: a.horaInicio ? a.horaInicio.slice(0, 5) : undefined,
+          horaFin: a.horaFin ? a.horaFin.slice(0, 5) : undefined,
+          acciones: a.acciones,
+        })),
+        ...elegidas.map(e => ({
           eje: e.eje,
           titulo: e.titulo,
           // El backend guarda `LocalTime`; sin segundos lo parsea igual. Sin hora va ausente, no "".
@@ -237,8 +274,8 @@ export function AgendarAccionesModal({
           /* Los pasos en blanco se saltean acá y no en el servidor: un campo vacío es "no escribí
              nada", no "un paso sin texto" — que el dominio rechazaría con un 400. */
           acciones: e.pasos.map(p => p.trim()).filter(p => p !== ''),
-        }))
-      ),
+        })),
+      ]),
       fechaAGuardar
     );
   };
@@ -324,6 +361,26 @@ export function AgendarAccionesModal({
                 {ETIQUETA_EJE[eje]}  ·  {cuantasDe(eje)}/{MAXIMO_POR_EJE}
               </Text>
               <Text style={[t.small, { color: c.textSoft, fontSize: 14, lineHeight: 20 }]}>{roca.titulo}</Text>
+              {/* Spec 048 (#183): lo que ya se agendó sin señal para este día. Cuenta para las tres y no se puede quitar hasta que llegue. */}
+              {enEsperaDe(eje).map(esperando => {
+                const hora = esperando.horaInicio ? esperando.horaInicio.slice(0, 5) : null;
+                return (
+                  <View
+                    key={esperando.id}
+                    accessible
+                    accessibilityLabel={`${esperando.titulo}${hora ? `, a las ${hora}` : ''}, ${TEXTO_SE_GUARDARA}`}
+                    style={[estilos.opcion, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
+                  >
+                    <Icon name="hourglass" size={TAMANO_ICONO.normal} color={c.goldInk} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={[t.body, { color: c.textStrong, fontSize: 15, lineHeight: 21 }]}>{esperando.titulo}</Text>
+                      <Text style={[t.small, { color: c.textSoft, fontSize: 13, marginTop: 2 }]}>
+                        {hora ? `A las ${hora} · ${TEXTO_SE_GUARDARA}` : TEXTO_SE_GUARDARA}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })}
               {opcionesDe(eje, acciones).map(accion => {
                 const indice = indiceDe(eje, accion.texto);
                 const elegida = indice >= 0;

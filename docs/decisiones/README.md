@@ -41,7 +41,7 @@ también en el texto (`grep -n "Plan" docs/decisiones/*.md`). Si dos entradas ch
 | [ser-y-fenix.md](ser-y-fenix.md) | SER (el acompañante), el orbe, el fénix y las celebraciones | 9 |
 | [soporte-ti.md](soporte-ti.md) | Soporte TI: interruptores, despliegue, roles personalizados y «ver como» (spec 002) | 2 |
 | [training.md](training.md) | Training: lista por hora, hábitos, evidencias y el editor Planificar | 19 |
-| [transversal.md](transversal.md) | Lo que tocó varios tabs a la vez: diseño, fuentes, barra de pestañas, velocidad, CI y arreglos de E2E | 20 |
+| [transversal.md](transversal.md) | Lo que tocó varios tabs a la vez: diseño, fuentes, barra de pestañas, velocidad, CI y arreglos de E2E | 21 |
 | [yo.md](yo.md) | Yo: Ajustes, fase, evidencias, Caja, emergencia, perfil, cuenta y privacidad | 12 |
 | [reglas-historial.md](reglas-historial.md) | Las reglas de `AGENTS.md` tal como estaban, con sus notas «Corregido» | — |
 
@@ -49,6 +49,7 @@ también en el texto (`grep -n "Plan" docs/decisiones/*.md`). Si dos entradas ch
 
 | Fecha | Tabs | Tipo | Entrada | Archivo | Corregida |
 |---|---|---|---|---|---|
+| 2026-11-10 | Plan | Corrección | lo agendado sin señal cuenta en «Agendar mis acciones» (spec 048, issue #183) | [transversal.md](transversal.md) |  |
 | 2026-11-10 | Hoy, Plan, Training, Comunidad, Yo | Corrección | sin señal se dice «sin señal», no «No se pudo conectar» en rojo (spec 048, issue #182) | [transversal.md](transversal.md) |  |
 | 2026-11-10 | Hoy, Plan, Training | Cambio | la app funciona sin internet, fase 3: Plan, Cierra tu día, Código Renaser y planificar hábitos (spec 048, #180) | [transversal.md](transversal.md) |  |
 | 2026-11-10 | Comunidad | Cambio | Muro: fotos rápidas con miniatura (spec 049) | [comunidad.md](comunidad.md) |  |

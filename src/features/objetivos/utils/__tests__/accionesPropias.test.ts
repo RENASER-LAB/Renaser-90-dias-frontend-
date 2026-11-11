@@ -77,6 +77,15 @@ describe('opcionesDelEje', () => {
   });
 });
 
+describe('conAccionPropia con lo que ya espera señal (spec 048 #183)', () => {
+  it('lo que espera ese día cuenta para el tope de tres y no se repite', () => { // spec 048 FR-019
+    expect(conAccionPropia([], 'CUERPO', 'Otra', MAXIMO, ['Uno', 'Dos', 'Tres'])).toBeNull(); // ya hay tres esperando
+    expect(conAccionPropia([{ eje: 'CUERPO', titulo: 'Nueva', hora: '', pasos: [] }], 'CUERPO', 'Otra', MAXIMO, ['Uno', 'Dos'])).toBeNull();
+    expect(conAccionPropia([], 'CUERPO', '  Uno ', MAXIMO, ['Uno'])).toBeNull(); // la misma que espera: no se agenda dos veces
+    expect(conAccionPropia([], 'CUERPO', 'Otra', MAXIMO, ['Uno'])).toEqual([{ eje: 'CUERPO', titulo: 'Otra', hora: '', pasos: [] }]);
+  });
+});
+
 describe('sugeridasDelEje: la primera acción del diagnóstico', () => {
   const sugerencia = { eje: 'TRABAJO' as const, texto: 'El lunes revisaré mis ventas' };
 

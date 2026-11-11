@@ -870,3 +870,21 @@ Entrenar) y lleve hasta el primer post en el Muro; al publicar, confeti; y «el 
   * **Pruebas:** `src/features/objetivos/components/__tests__/planSinSenal.test.ts`,
     `src/features/objetivos/hooks/__tests__/planSinSenalAlLeer.test.ts`, `src/features/sinRed/__tests__/sinSenalAlCargar.test.ts`
     y la regla `sinSenalSeDiceSinSenal`. Solo JavaScript: no hace falta APK nuevo ni cambio en el backend.
+
+## Corrección — 2026-11-10 — tab `Plan`: lo agendado sin señal cuenta en «Agendar mis acciones» (spec 048, issue #183)
+
+* **Corrección — 2026-11-10 — la hoja «Agendar mis acciones» y las acciones que esperan señal (spec 048, FR-019, issue #183).** Lo
+  encontró el E2E de la fase 3: una acción agendada sin señal («Se guardará al volver la señal») no contaba en la hoja de su día
+  («Cuerpo · 0/3») y no se veía. Lo que cambia y nada más:
+  * La hoja del día cuenta lo que ya espera señal en el tope de tres por eje («Cuerpo · 1/3»), lo muestra con «Se guardará al volver
+    la señal» (y la hora, si la tiene) y **no lo vuelve a ofrecer** (ni la sugerida del diagnóstico ni una escrita igual): no se pasa
+    de tres ni se agenda dos veces. No se puede quitar hasta que llegue (P6).
+  * **Tocar en Plan una acción de otro día abre la hoja en ese día**, que es donde se ve lo que espera.
+  * Al guardar, el plan del día viaja entero —lo que esperaba más lo nuevo, con las posiciones seguidas—, porque agendar un día
+    futuro reemplaza al anterior (E-208) y sin ello el plan nuevo lo habría borrado. En la cola de lo hecho sin señal, el plan nuevo
+    **sustituye** al anterior de esa fecha: sale un solo pedido por día (y el día en curso, que el servidor no deja rehacer, no
+    choca con su propio plan).
+  * **No cambian:** con señal, la hoja arranca en 0/3 y el servidor reemplaza el día como siempre (E-208); las cinco pestañas.
+  * **Pruebas:** `src/features/objetivos/components/__tests__/agendarAccionesEnEspera.test.ts`,
+    `src/features/objetivos/api/__tests__/planSinRed.test.ts` («agendar de nuevo un día que ya espera señal») y
+    `src/features/objetivos/utils/__tests__/accionesPropias.test.ts`. Solo JavaScript: no hace falta APK nuevo ni cambio en el backend.

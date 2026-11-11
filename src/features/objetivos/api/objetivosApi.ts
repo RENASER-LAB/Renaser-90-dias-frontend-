@@ -19,6 +19,7 @@ import {
   accionesEnEspera,
   estaEnEspera,
   etiquetaDeAgendar,
+  quitarPlanesEnEsperaDe,
   resumenDeAgendar,
   revisarElDiaAAgendar,
   rocaMaestraEnEspera,
@@ -250,7 +251,10 @@ export async function crearPlanDiario(fecha: string, rocas: ItemPlanDiario[]): P
     },
     {
       validar: r => validarRespuesta(objetivosSchemas.rocasDiarias, r, 'POST /api/v1/rocks/plan'),
-      antesDeEncolar: hora => revisarElDiaAAgendar(fecha, fechaLocal(hora.instante)),
+      antesDeEncolar: async hora => {
+        revisarElDiaAAgendar(fecha, fechaLocal(hora.instante));
+        await quitarPlanesEnEsperaDe(fecha);
+      },
       optimista: envio => accionesEnEspera(fecha, rocas, envio.idCliente),
     },
   );

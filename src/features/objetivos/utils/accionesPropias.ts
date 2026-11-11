@@ -75,11 +75,14 @@ export function conAccionPropia(
   elegidas: AccionElegida[],
   eje: EjeObjetivo,
   texto: string,
-  maximoPorEje: number
+  maximoPorEje: number,
+  /** Spec 048 (#183): los títulos de las acciones de ese eje que ya esperan señal ese día. Cuentan para el tope y no se repiten. */
+  enEspera: readonly string[] = []
 ): AccionElegida[] | null {
   const limpio = texto.trim();
   if (!limpio) return null;
-  if (elegidas.filter(e => e.eje === eje).length >= maximoPorEje) return null;
+  if (elegidas.filter(e => e.eje === eje).length + enEspera.length >= maximoPorEje) return null;
   if (elegidas.some(e => e.eje === eje && e.titulo === limpio)) return null;
+  if (enEspera.some(t => t.trim() === limpio)) return null;
   return [...elegidas, { eje, titulo: limpio, hora: '', pasos: [] }];
 }

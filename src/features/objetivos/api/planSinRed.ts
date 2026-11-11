@@ -2,7 +2,7 @@ import { ApiError } from '../../../services/http/apiClient';
 import { fechaLocal } from '../../habits/notificaciones/utils/alarmasPorDia';
 import { avisarSinPuntos } from '../../sinRed/avisosDeLoNoAplicado';
 import { cabecerasDe } from '../../sinRed/cabecerasSinRed';
-import { agregarEnvio, cuentaDeLaSesion, leerCola, registrarManejador } from '../../sinRed/colaSinRed';
+import { agregarEnvio, cuentaDeLaSesion, leerCola, quitarEnvio, registrarManejador } from '../../sinRed/colaSinRed';
 import { borrarArchivoSinRed, existeArchivoSinRed, guardarArchivoSinRed, sinArchivo } from '../../sinRed/archivosSinRed';
 import { escriturasEsperando } from '../../sinRed/escrituraSinRed';
 import { horaReal } from '../../sinRed/horaReal';
@@ -72,6 +72,20 @@ export function accionesEnEspera(fecha: string, items: readonly ItemPlanDiario[]
     acciones: i.acciones ?? [],
     pendienteDeEnvio: true,
   }));
+}
+
+/**
+ * Spec 048 (#183): agendar un día que ya espera señal. El servidor reemplaza el plan de un día futuro (E-208) y rechaza rehacer el de HOY
+ * (409), así que el plan nuevo del día —que la hoja arma con lo que ya esperaba más lo que se sumó— sustituye a los anteriores de esa
+ * fecha en la cola: sale UN solo pedido por día, nada se duplica ni choca con su propio plan. Lo que ya salió o está saliendo no se toca.
+ */
+export async function quitarPlanesEnEsperaDe(fecha: string): Promise<void> {
+  const cuenta = cuentaDeLaSesion();
+  if (!cuenta) return;
+  for (const envio of await leerCola(cuenta)) {
+    const d = envio.tipo === 'escritura' ? (envio.datos as { metodo?: string; ruta?: string; cuerpo?: { fecha?: string } }) : null;
+    if (d?.metodo === 'POST' && d.ruta === '/api/v1/rocks/plan' && d.cuerpo?.fecha === fecha) await quitarEnvio(cuenta, envio.idCliente);
+  }
 }
 
 /** Las reglas de la app antes de guardar (P2): no se agenda un día que ya pasó, con la hora real. */
