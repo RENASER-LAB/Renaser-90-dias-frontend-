@@ -1,5 +1,5 @@
 import { fuentes } from '../../../theme/fuentes';
-import React, { useEffect } from 'react';
+import React, { memo, useCallback, useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Image, type ImageSource } from 'expo-image';
 import Animated, { ReduceMotion, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
@@ -68,7 +68,7 @@ const TAM_MARCA = 16;
  * Renaser» en dorado en cualquier conversación, no solo en los grupos: no los manda una persona
  * (aunque el servidor los guarde a nombre de una cuenta) y no son un aviso gris centrado.
  */
-export function BurbujaDeMensaje({
+export const BurbujaDeMensaje = memo(function BurbujaDeMensaje({
   mensaje,
   enGrupo,
   primeroDeLaTanda,
@@ -88,7 +88,8 @@ export function BurbujaDeMensaje({
   ultimoDeLaTanda: boolean;
   colores: ColoresDelChat;
   audioActivo: boolean;
-  alActivarAudio: () => void;
+  /** Recibe el id del mensaje: así la pantalla pasa UNA función para todas las filas y la burbuja memoizada no se re-dibuja. */
+  alActivarAudio: (id: string) => void;
   /** Recibe la misma fuente que la burbuja (con su clave de caché): el visor no vuelve a bajarla. */
   onAbrirFoto: (fuente: ImageSource | number) => void;
   /** Mantener presionada la burbuja: abre el menú del mensaje (Responder, Copiar). */
@@ -113,16 +114,7 @@ export function BurbujaDeMensaje({
      ícono de 16 px ocupa lo mismo que «✓✓» a 12,5 px. */
   const pie = `${mensaje.time}${propio ? (leido ? ' ✓✓' : ' ✓') : ''}`;
   const mantener = onMantener ? () => onMantener(mensaje) : undefined;
-  const tinte = useSharedValue(resaltado ? 1 : 0);
-  useEffect(() => {
-    tinte.set(withTiming(resaltado ? 1 : 0, {
-      duration: resaltado ? TINTE_ENTRA_MS : TINTE_SALE_MS,
-      easing: CURVA_SALIDA,
-      // Es un cambio de color que explica algo, no un desplazamiento: queda también con «reducir movimiento».
-      reduceMotion: ReduceMotion.Never,
-    }));
-  }, [resaltado, tinte]);
-  const estiloDelTinte = useAnimatedStyle(() => ({ opacity: tinte.get() }));
+  const activarAudio = useCallback(() => alActivarAudio(mensaje.id), [alActivarAudio, mensaje.id]);
   const etiquetaDeLaHora = `Enviado a las ${mensaje.time}${leido ? ', leído' : ''}`;
   const colorDelNombre = delPrograma
     ? c.goldInk
@@ -137,10 +129,7 @@ export function BurbujaDeMensaje({
         { marginTop: primeroDeLaTanda ? 8 : 2, marginBottom: ultimoDeLaTanda ? 2 : 0 },
       ]}
     >
-      <Animated.View
-        pointerEvents="none"
-        style={[StyleSheet.absoluteFill, { backgroundColor: colores.seleccion }, estiloDelTinte]}
-      />
+      <TinteDelRenglon resaltado={resaltado} color={colores.seleccion} />
       {/* El fénix va en el primero de la tanda; los siguientes dejan su lugar vacío para que las
           burbujas queden alineadas debajo de la primera. */}
       {delPrograma && (
@@ -265,7 +254,7 @@ export function BurbujaDeMensaje({
               colores={{ gold: c.gold, border: c.border, textSoft: colores.hora, cardBg: fondo, cardBgAlt: fondo }}
               estilos={{ caja: styles.audioCaja, boton: styles.audioBoton }}
               activo={audioActivo}
-              alActivar={alActivarAudio}
+              alActivar={activarAudio}
             />
           ) : (
             <View style={styles.audioCaja}>
@@ -307,6 +296,38 @@ export function BurbujaDeMensaje({
       </Pressable>
     </View>
   );
+});
+
+/**
+ * El tinte del renglón resaltado (menú abierto o llegada desde una cita). Solo existe mientras el renglón está resaltado y
+ * lo que dura su fundido de salida: antes cada burbuja montaba su propio valor animado de Reanimated para un tinte casi
+ * siempre apagado, y con 30 mensajes en la primera página eso pesaba en los teléfonos de gama baja (issue #190).
+ */
+function TinteDelRenglon({ resaltado, color }: { resaltado: boolean; color: string }) {
+  const [montado, setMontado] = useState(resaltado);
+  useEffect(() => {
+    if (resaltado) {
+      setMontado(true);
+      return;
+    }
+    const espera = setTimeout(() => setMontado(false), TINTE_SALE_MS + 50);
+    return () => clearTimeout(espera);
+  }, [resaltado]);
+  return montado ? <TinteAnimado resaltado={resaltado} color={color} /> : null;
+}
+
+function TinteAnimado({ resaltado, color }: { resaltado: boolean; color: string }) {
+  const tinte = useSharedValue(0);
+  useEffect(() => {
+    tinte.set(withTiming(resaltado ? 1 : 0, {
+      duration: resaltado ? TINTE_ENTRA_MS : TINTE_SALE_MS,
+      easing: CURVA_SALIDA,
+      // Es un cambio de color que explica algo, no un desplazamiento: queda también con «reducir movimiento».
+      reduceMotion: ReduceMotion.Never,
+    }));
+  }, [resaltado, tinte]);
+  const estilo = useAnimatedStyle(() => ({ opacity: tinte.get() }));
+  return <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: color }, estilo]} />;
 }
 
 const styles = StyleSheet.create({
