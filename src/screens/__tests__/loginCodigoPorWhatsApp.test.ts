@@ -12,7 +12,8 @@ const mockDisponible = jest.fn<() => Promise<boolean>>();
 const mockPedirRegistro = jest.fn<(email: string, whatsapp: string) => Promise<string | null>>();
 const mockPedirRecuperacion = jest.fn<(email: string) => Promise<void>>();
 const mockEnviarCodigo = jest.fn<(correo: string) => Promise<void>>();
-const mockConfirmar = jest.fn<(datos: Record<string, unknown>, codigo: string) => Promise<string>>();
+const mockConfirmarCodigo = jest.fn<(correo: string, codigo: string) => Promise<string>>();
+const mockCrear = jest.fn<(datos: Record<string, unknown>, token: string) => Promise<string>>();
 const mockEnviarCodigoReset = jest.fn<(correo: string) => Promise<void>>();
 
 jest.mock('../../theme/ThemeContext', () => {
@@ -41,7 +42,9 @@ jest.mock('../../features/auth/hooks/useRegistroConOtp', () => ({
     estadoSolicitud: null,
     enviarCodigo: (correo: string) => mockEnviarCodigo(correo),
     reenviarCodigo: jest.fn(),
-    confirmarYRegistrar: (datos: Record<string, unknown>, codigo: string) => mockConfirmar(datos, codigo),
+    confirmarCodigo: (correo: string, codigo: string) => mockConfirmarCodigo(correo, codigo),
+    crearSolicitud: (datos: Record<string, unknown>, token: string) => mockCrear(datos, token),
+    confirmarYRegistrar: jest.fn(),
     confirmarRegistroSocial: jest.fn(),
     consultarEstado: jest.fn(),
   }),
@@ -101,15 +104,18 @@ async function pasar(segundos: number) {
   });
 }
 
+/** «Solicitar acceso» por pasos (spec 052): nombre, correo y (con el canal) WhatsApp; el último «Continuar» pide el código y deja en la pantalla del código. */
 async function solicitarAcceso(r: ReactTestRenderer, conWhatsapp: boolean) {
   await act(async () => tocable(r, '¿No tienes cuenta? Solicitar acceso').props.onPress());
   act(() => campo(r, 'Nombres').props.onChangeText('Ana'));
   act(() => campo(r, 'Apellidos').props.onChangeText('Quispe'));
+  await act(async () => tocable(r, 'Continuar').props.onPress());
   act(() => campo(r, 'Correo electrónico').props.onChangeText('ana@renaser.test'));
-  if (conWhatsapp) act(() => campo(r, 'WhatsApp').props.onChangeText('987654321'));
-  act(() => campo(r, 'Contraseña').props.onChangeText('una-clave-muy-larga'));
-  act(() => campo(r, 'Confirmar contraseña').props.onChangeText('una-clave-muy-larga'));
-  await act(async () => tocable(r, 'Continuar y recibir código').props.onPress());
+  await act(async () => tocable(r, 'Continuar').props.onPress());
+  if (conWhatsapp) {
+    act(() => campo(r, 'Número de WhatsApp').props.onChangeText('987654321'));
+    await act(async () => tocable(r, 'Continuar').props.onPress());
+  }
 }
 
 beforeEach(() => {
@@ -118,7 +124,8 @@ beforeEach(() => {
   mockPedirRegistro.mockReset();
   mockPedirRecuperacion.mockReset();
   mockEnviarCodigo.mockReset().mockResolvedValue(undefined);
-  mockConfirmar.mockReset().mockResolvedValue('solicitud-1');
+  mockConfirmarCodigo.mockReset().mockResolvedValue('token-1');
+  mockCrear.mockReset().mockResolvedValue('solicitud-1');
   mockEnviarCodigoReset.mockReset().mockResolvedValue(undefined);
 });
 
@@ -135,7 +142,7 @@ describe('el código por WhatsApp en el ingreso (spec 043)', () => {
     await solicitarAcceso(r, false);
     expect(mockEnviarCodigo).toHaveBeenCalledWith('ana@renaser.test');
     await pasar(120);
-    expect(campo(r, 'WhatsApp')).toBeUndefined();
+    expect(campo(r, 'Número de WhatsApp')).toBeUndefined();
     expect(textos(r)).not.toContain('Por WhatsApp');
   });
 
@@ -144,16 +151,18 @@ describe('el código por WhatsApp en el ingreso (spec 043)', () => {
     mockDisponible.mockResolvedValue(true);
     const r = await montar();
     await act(async () => tocable(r, '¿No tienes cuenta? Solicitar acceso').props.onPress());
-    expect(campo(r, 'WhatsApp')).toBeDefined();
-    expect(tocable(r, /^Código de país/)).toBeDefined();
     act(() => campo(r, 'Nombres').props.onChangeText('Ana'));
     act(() => campo(r, 'Apellidos').props.onChangeText('Quispe'));
+    await act(async () => tocable(r, 'Continuar').props.onPress());
     act(() => campo(r, 'Correo electrónico').props.onChangeText('ana@renaser.test'));
-    act(() => campo(r, 'Contraseña').props.onChangeText('una-clave-muy-larga'));
-    act(() => campo(r, 'Confirmar contraseña').props.onChangeText('una-clave-muy-larga'));
-    await act(async () => tocable(r, 'Continuar y recibir código').props.onPress());
+    await act(async () => tocable(r, 'Continuar').props.onPress());
+    expect(campo(r, 'Número de WhatsApp')).toBeDefined();
+    expect(tocable(r, /^Código de país/)).toBeDefined();
+    await act(async () => tocable(r, 'Continuar').props.onPress());
     expect(mockEnviarCodigo).not.toHaveBeenCalled();
     expect(textos(r)).toMatch(/WhatsApp/);
+    // Sigue en el paso del WhatsApp.
+    expect(campo(r, 'Número de WhatsApp')).toBeDefined();
   });
 
   // spec 043 FR-003, FR-012, FR-015
@@ -176,12 +185,14 @@ describe('el código por WhatsApp en el ingreso (spec 043)', () => {
     expect(mockPedirRegistro).toHaveBeenCalledWith('ana@renaser.test', '+51 987654321');
     expect(textos(r)).toContain('Te lo enviamos por WhatsApp a +51 9•• ••• •21');
 
-    // El WhatsApp viaja con la solicitud, para que al aceptarla quede en la ficha.
-    const otp = r.root.findAll(n => typeof n.props.onChangeText === 'function' && n.props.maxLength === 6)[0]
-      ?? r.root.findAll(n => typeof n.props.onChangeText === 'function' && n.props.keyboardType === 'number-pad')[0];
+    // El WhatsApp viaja con la solicitud, para que al aceptarla quede en la ficha: se crea al final, tras verificar el código.
+    const otp = r.root.findAll(n => typeof n.props.onChangeText === 'function' && n.props.maxLength === 6)[0];
     act(() => otp.props.onChangeText('123456'));
     await act(async () => tocable(r, 'Verificar el código').props.onPress());
-    expect(mockConfirmar.mock.calls[0][0]).toMatchObject({ email: 'ana@renaser.test', whatsapp: '+51 987654321' });
+    act(() => campo(r, 'Contraseña').props.onChangeText('una-clave-muy-larga'));
+    act(() => tocable(r, 'Acepto los términos').props.onPress());
+    await act(async () => tocable(r, 'Crear mi cuenta').props.onPress());
+    expect(mockCrear.mock.calls[0][0]).toMatchObject({ email: 'ana@renaser.test', whatsapp: '+51 987654321' });
   });
 
   // spec 043 FR-015
@@ -218,12 +229,12 @@ describe('el código por WhatsApp en el ingreso (spec 043)', () => {
 
 describe('la pantalla del código, más limpia (pedido del dueño del 06/11)', () => {
   // spec 043 FR-012
-  it('dice «Ingresa tu código», a dónde se envió en una línea, «¿No te llegó? Reenviar» y «Confirmar», sin versalitas ni la caja repetida', async () => {
+  it('dice «Verifica tu correo» (en la recuperación, «Ingresa tu código»), a dónde se envió en una línea, «¿No te llegó? Reenviar» y «Confirmar», sin versalitas ni la caja repetida', async () => {
     mockDisponible.mockResolvedValue(false);
     const r = await montar();
     await solicitarAcceso(r, false);
     const todo = textos(r);
-    expect(todo).toContain('Ingresa tu código');
+    expect(todo).toContain('Verifica tu correo');
     expect(todo).toContain('Te lo enviamos a ana@renaser.test');
     expect(todo).toContain('¿No te llegó?');
     expect(todo).toContain('Confirmar');

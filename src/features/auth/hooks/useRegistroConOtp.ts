@@ -144,17 +144,22 @@ export function useRegistroConOtp() {
   }, [reenviarCodigo]);
 
   /**
-   * Canjea el código por el token y crea la solicitud. Devuelve el `accountRequestId`, que es la
-   * única credencial para consultar el estado después: no hay sesión que guardar acá.
+   * Canjea el código por el `verificationToken` (válido 30 min en el servidor, de un solo uso al crear la solicitud). Desde la
+   * spec 052 es un paso APARTE: el contacto se verifica antes de pedir la contraseña, y la solicitud se crea después con este token.
    */
-  const confirmarYRegistrar = useCallback(async (datos: DatosRegistro, codigo: string) => {
-    let verificationToken: string;
+  const confirmarCodigo = useCallback(async (email: string, codigo: string) => {
     try {
-      verificationToken = await authApi.confirmarCodigoVerificacion(datos.email, codigo);
+      return await authApi.confirmarCodigoVerificacion(email, codigo);
     } catch (error) {
-      throw conMensaje(error, 'El código no es válido o ya venció. Pedí uno nuevo.');
+      throw conMensaje(error, 'El código no es válido o ya venció. Pide uno nuevo.');
     }
+  }, []);
 
+  /**
+   * Crea la solicitud con un token ya verificado. Devuelve el `accountRequestId`, que es la única credencial para consultar el
+   * estado después: no hay sesión que guardar acá.
+   */
+  const crearSolicitud = useCallback(async (datos: DatosRegistro, verificationToken: string) => {
     try {
       const id = await authApi.registrarSolicitud({
         email: datos.email,
@@ -172,6 +177,12 @@ export function useRegistroConOtp() {
       throw conMensaje(error, 'No pudimos registrar tu solicitud. Revisa tus datos e inténtalo de nuevo.');
     }
   }, []);
+
+  /** Las dos cosas juntas (el camino de antes: código y solicitud en un solo paso). */
+  const confirmarYRegistrar = useCallback(async (datos: DatosRegistro, codigo: string) => {
+    const token = await confirmarCodigo(datos.email, codigo);
+    return crearSolicitud(datos, token);
+  }, [confirmarCodigo, crearSolicitud]);
 
   /**
    * Segundo paso del alta social (D-65): contraparte de `confirmarYRegistrar` para el camino de
@@ -216,6 +227,8 @@ export function useRegistroConOtp() {
     estadoSolicitud,
     enviarCodigo,
     reenviarCodigo,
+    confirmarCodigo,
+    crearSolicitud,
     confirmarYRegistrar,
     confirmarRegistroSocial,
     consultarEstado,

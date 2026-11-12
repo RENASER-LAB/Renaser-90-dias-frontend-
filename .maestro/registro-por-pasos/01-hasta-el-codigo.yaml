@@ -1,0 +1,50 @@
+# Spec 052 — «Solicitar acceso» por pasos, primera mitad: nombre, correo, (WhatsApp), validación por paso, atrás sin perder lo escrito, el
+# botón sobre el teclado y la pantalla del código (se pide ANTES de la contraseña). sin correr
+# Precondición: sesión cerrada (login a la vista); backend local con la base clonada. Sirve con o sin el canal de WhatsApp (el paso
+# «Tu WhatsApp» solo aparece con el canal). Termina EN la pantalla del código: quien corre el flujo lee el código del backend LOCAL
+# (README de esta carpeta) y sigue con `02-codigo-contrasena-y-listo.yaml -e CODIGO=…`. Nunca contra producción.
+appId: com.renaser.app
+env:
+  CORREO: e2e-052-${MAESTRO_RANDOM}@renaser.test
+---
+- launchApp
+# spec 052 FR-001
+- tapOn: "¿No tienes cuenta? Solicitar acceso"
+- assertVisible: "¿Cómo te llamas?"
+- assertVisible: "1 de .*"
+- takeScreenshot: 01-nombre
+# spec 052 FR-002: sin nombres no avanza y dice qué falta
+- tapOn: "Continuar"
+- assertVisible: "Por favor ingresa tus nombres"
+- takeScreenshot: 02-error-nombres
+- tapOn: "Nombres"
+- inputText: "Ana"
+- tapOn: "Apellidos"
+- inputText: "Prueba"
+# spec 052 FR-004: con el teclado abierto el botón sigue a la vista
+- assertVisible: "Continuar"
+- takeScreenshot: 03-nombre-con-teclado
+- tapOn: "Continuar"
+- assertVisible: "Tu correo"
+- tapOn: "Correo electrónico"
+- inputText: ${CORREO}
+- takeScreenshot: 04-correo-con-teclado
+# spec 052 FR-003: atrás conserva lo escrito
+- tapOn: "Volver al paso anterior"
+- assertVisible: "¿Cómo te llamas?"
+- assertVisible: "Ana"
+- tapOn: "Continuar"
+- assertVisible: ${CORREO}
+- tapOn: "Continuar"
+- runFlow:
+    when:
+      visible: "Tu WhatsApp"
+    commands:
+      - tapOn: "Número de WhatsApp"
+      - inputText: "987654321"
+      - takeScreenshot: 05-whatsapp-con-teclado
+      - tapOn: "Continuar"
+# spec 052 FR-006: el código, antes de la contraseña
+- assertVisible: "Verifica tu correo.*"
+- assertVisible: "Reenviar en .* s"
+- takeScreenshot: 06-codigo

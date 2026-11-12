@@ -23,14 +23,13 @@ import { useTheme } from '../theme/ThemeContext';
 import { useResponsive } from '../theme/responsive';
 import { useSystemBackHandler } from '../hooks/useSystemBackHandler';
 import { useAuth } from '../context/AuthContext';
-import { mensajeDeError } from '../services/http/apiClient';
+import { ApiError, mensajeDeError } from '../services/http/apiClient';
 import { Icon } from '../components/Icon';
 import { MicroLabel } from '../components/ui';
 import { Presionable } from '../components/Presionable';
 import { tacto } from '../utils/tacto';
 import {
   useRegistroConOtp,
-  validarDatosRegistro,
   validarContrasenaNueva,
   MIN_CONTRASENA,
 } from '../features/auth/hooks/useRegistroConOtp';
@@ -43,14 +42,25 @@ import { CabeceraDelIngreso } from '../features/auth/components/CabeceraDelIngre
 import { CampoDelIngreso, MensajeBajoElCampo } from '../features/auth/components/CampoDelIngreso';
 import { BotonDelIngreso } from '../features/auth/components/BotonDelIngreso';
 import { EntradaEscalonada } from '../features/auth/components/EntradaEscalonada';
+import { RegistroPorPasos } from '../features/auth/components/RegistroPorPasos';
+import { EncabezadoDePaso } from '../features/auth/components/EncabezadoDePaso';
+import { ListoDelRegistro } from '../features/auth/components/ListoDelRegistro';
+import {
+  pasosDelRegistro,
+  primerPasoIncompleto,
+  primerNombre,
+  indiceAnterior,
+  indiceSiguiente,
+  validarPasoDelRegistro,
+  type ErrorDePaso,
+} from '../features/auth/utils/registroPorPasos';
 import { useSacudida } from '../features/auth/hooks/useSacudida';
 import { abrirPoliticaDePrivacidad } from '../features/legal/enlacesLegales';
-import { PhoneCountryInput } from '../components/PhoneCountryInput';
 import { validarWhatsapp } from '../features/onboarding/data/pasosFicha';
 import { codigoPorWhatsAppDisponible } from '../features/auth/api/codigoPorWhatsAppApi';
 import { useOfertaDeWhatsApp } from '../features/auth/hooks/useOfertaDeWhatsApp';
 import { EnlaceDeWhatsApp, LineaDeWhatsApp } from '../features/auth/components/EnlaceDeWhatsApp';
-import { avisoDelWhatsappDelRegistro, WHATSAPP_INICIAL } from '../features/auth/utils/codigoPorWhatsApp';
+import { WHATSAPP_INICIAL } from '../features/auth/utils/codigoPorWhatsApp';
 
 /**
  * `forgot` → `forgot_otp` → `forgot_new_password` es la recuperación de contraseña dentro de la
@@ -60,7 +70,6 @@ import { avisoDelWhatsappDelRegistro, WHATSAPP_INICIAL } from '../features/auth/
  */
 type AuthStep =
   | 'form'
-  | 'otp'
   | 'forgot'
   | 'forgot_otp'
   | 'forgot_new_password'
@@ -109,7 +118,8 @@ export default function LoginScreen() {
     estadoSolicitud,
     enviarCodigo,
     reenviarCodigo,
-    confirmarYRegistrar,
+    confirmarCodigo,
+    crearSolicitud,
     confirmarRegistroSocial,
     consultarEstado,
   } = useRegistroConOtp();
@@ -145,10 +155,22 @@ export default function LoginScreen() {
   }, []);
   /* «¿No te llegó? Envíamelo por WhatsApp» a los 60 s de abrir la pantalla del código (FR-012). En el alta va al número que se escribió; en la
      recuperación, al guardado de la cuenta, sin mostrarlo (FR-008, FR-009). */
+  /* «Solicitar acceso» por pasos (spec 052): en qué paso va, lo que falta en él y si aceptó los términos. Viven acá, en la raíz del flujo,
+     para que ir y volver (o abrir el teclado) no pierda nada. */
+  const [pasoDelRegistro, setPasoDelRegistro] = useState(0);
+  const [errorDelPaso, setErrorDelPaso] = useState<ErrorDePaso | null>(null);
+  const [aceptaTerminos, setAceptaTerminos] = useState(false);
+  const pasosDeRegistro = pasosDelRegistro(canalWhatsapp);
+  const indiceDelPaso = Math.min(pasoDelRegistro, pasosDeRegistro.length - 1);
+  /* El token que devuelve el servidor al validar el código (spec 052): el contacto queda verificado ANTES de pedir la contraseña, y la
+     solicitud se crea al final con este token. Cambiar el correo lo invalida. */
+  const [tokenDeVerificacion, setTokenDeVerificacion] = useState<string | null>(null);
+  const indiceDelVerificar = pasosDeRegistro.indexOf('verificar');
+  const enVerificacion = step === 'form' && activeTab === 'register' && pasosDeRegistro[indiceDelPaso] === 'verificar';
   const whatsappDelAlta = useOfertaDeWhatsApp({
     flujo: 'registro',
     disponible: canalWhatsapp,
-    enLaPantallaDelCodigo: step === 'otp',
+    enLaPantallaDelCodigo: enVerificacion,
     email,
     whatsapp,
   });
@@ -309,10 +331,8 @@ export default function LoginScreen() {
   /* La tecla de acción del teclado lleva al campo siguiente («Siguiente») y, en el último, envía
      («Ir»), como en cualquier formulario de una app (2026-10-05). Antes todos los campos mostraban
      el tilde de «listo», que sólo cerraba el teclado: había que buscar el botón con el dedo. */
-  const apellidosRef = useRef<TextInput>(null);
   const correoRef = useRef<TextInput>(null);
   const contrasenaRef = useRef<TextInput>(null);
-  const confirmarRef = useRef<TextInput>(null);
 
   // UI state
   const [loading, setLoading] = useState(false);
@@ -359,7 +379,7 @@ export default function LoginScreen() {
   // Timer for OTP resend — el mismo para el código del alta y el de la recuperación.
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
-    if ((step === 'otp' || step === 'forgot_otp') && resendTimer > 0) {
+    if ((enVerificacion || step === 'forgot_otp') && resendTimer > 0) {
       interval = setInterval(() => {
         setResendTimer(prev => {
           if (prev <= 1) {
@@ -371,7 +391,7 @@ export default function LoginScreen() {
       }, 1000);
     }
     return () => clearInterval(interval);
-  }, [step, resendTimer]);
+  }, [step, enVerificacion, resendTimer]);
 
   const handleReturnToLogin = () => {
     setStep('form');
@@ -389,6 +409,10 @@ export default function LoginScreen() {
     recuperacion.reiniciar();
     setPassword('');
     setConfirmPassword('');
+    setPasoDelRegistro(0);
+    setErrorDelPaso(null);
+    setAceptaTerminos(false);
+    setTokenDeVerificacion(null);
   };
 
   /**
@@ -411,6 +435,17 @@ export default function LoginScreen() {
     handleReturnToLogin();
   };
 
+  /** Atrás dentro de «Solicitar acceso»: el paso anterior (sin repetir el código ya verificado), o el login si era el primero. */
+  const volverEnElRegistro = () => {
+    setErrorDelPaso(null);
+    setErrorMessage(null);
+    setSuccessMessage(null);
+    setOtpCode('');
+    const anterior = indiceAnterior(pasosDeRegistro, indiceDelPaso, tokenDeVerificacion !== null);
+    if (anterior !== null) setPasoDelRegistro(anterior);
+    else irA('login');
+  };
+
   // Interceptar gestos táctiles de retroceso en cualquier subpantalla (OTP, recuperación, etc.).
   // Desde que «Solicitar acceso» es una vista y no una pestaña (2026-10-05), atrás desde ahí vuelve
   // al login en vez de salir de la app.
@@ -420,11 +455,103 @@ export default function LoginScreen() {
       return true;
     }
     if (activeTab === 'register') {
-      irA('login');
+      volverEnElRegistro();
       return true;
     }
     return false;
   }, step !== 'form' || activeTab === 'register');
+
+  const datosDelRegistro = { nombres, apellidos, email, whatsapp, contrasena: password, aceptaTerminos };
+  const reglaDelWhatsapp = validarWhatsapp;
+
+  /** Pide el código al correo (con la comprobación de correo libre) y muestra la pantalla del código. Un 409 es del correo: vuelve a su paso. */
+  const pedirElCodigo = async (indiceDeLaVerificacion: number) => {
+    try {
+      setLoading(true);
+      await enviarCodigo(email);
+      setPasoDelRegistro(indiceDeLaVerificacion);
+      setResendTimer(45);
+      setCanResend(false);
+      setOtpCode('');
+      setErrorMessage(null);
+      setSuccessMessage(null);
+      setTimeout(() => otpInputRef.current?.focus(), 300);
+    } catch (error) {
+      const mensaje = mensajeDeError(error, 'Error al enviar el código de confirmación');
+      if (error instanceof ApiError && error.status === 409) {
+        setPasoDelRegistro(pasosDeRegistro.indexOf('correo'));
+        setErrorDelPaso({ campo: 'email', mensaje });
+      } else {
+        setErrorDelPaso({ campo: 'general', mensaje });
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
+   * «Continuar» / «Crear mi cuenta» de «Solicitar acceso»: valida SOLO el paso actual (diciendo qué falta) y avanza. Antes del paso del
+   * código pide el código al correo; en el último, con el contacto ya verificado, crea la solicitud con el token (spec 052).
+   */
+  const continuarElRegistro = async () => {
+    if (loading) return;
+    const paso = pasosDeRegistro[indiceDelPaso];
+    const error = validarPasoDelRegistro(paso, datosDelRegistro, reglaDelWhatsapp);
+    if (error) {
+      setErrorDelPaso(error);
+      return;
+    }
+    if (paso === 'correo' && disponibilidadCorreo === 'tomado') {
+      setErrorDelPaso({ campo: 'email', mensaje: 'Ese correo ya tiene una cuenta. Puedes iniciar sesión.' });
+      return;
+    }
+    setErrorDelPaso(null);
+    const verificado = tokenDeVerificacion !== null;
+    if (indiceDelPaso < pasosDeRegistro.length - 1) {
+      const siguiente = indiceSiguiente(pasosDeRegistro, indiceDelPaso, verificado);
+      if (pasosDeRegistro[indiceDelPaso + 1] === 'verificar' && !verificado) {
+        await pedirElCodigo(indiceDelPaso + 1);
+      } else {
+        setPasoDelRegistro(siguiente);
+      }
+      return;
+    }
+    // Último paso (contraseña y términos): repaso de todo y, solo con el contacto verificado, se crea la solicitud.
+    const pendiente = primerPasoIncompleto(pasosDeRegistro, datosDelRegistro, reglaDelWhatsapp);
+    if (pendiente) {
+      setPasoDelRegistro(pendiente.indice);
+      setErrorDelPaso(pendiente.error);
+      return;
+    }
+    if (!tokenDeVerificacion) {
+      await pedirElCodigo(indiceDelVerificar);
+      return;
+    }
+    try {
+      setLoading(true);
+      await crearSolicitud(
+        { nombres, apellidos, email, contrasena: password, whatsapp: canalWhatsapp ? whatsapp : undefined },
+        tokenDeVerificacion,
+      );
+      setSuccessMessage(null);
+      setStep('solicitud_enviada');
+    } catch (error) {
+      const mensaje = mensajeDeError(error, 'No pudimos registrar tu solicitud. Revisa tus datos e inténtalo de nuevo.');
+      if (error instanceof ApiError && error.status === 409) {
+        setPasoDelRegistro(pasosDeRegistro.indexOf('correo'));
+        setErrorDelPaso({ campo: 'email', mensaje });
+      } else if (error instanceof ApiError && error.status === 400 && /verific|venci|token/i.test(mensaje)) {
+        // El token de verificación venció (30 min) o ya se usó: hay que validar otro código.
+        setTokenDeVerificacion(null);
+        await pedirElCodigo(indiceDelVerificar);
+        setErrorMessage(mensaje);
+      } else {
+        setErrorDelPaso({ campo: 'general', mensaje });
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleFormSubmit = async () => {
     setErrorMessage(null);
@@ -432,38 +559,7 @@ export default function LoginScreen() {
     setCampoDelError(null);
 
     if (activeTab === 'register') {
-      // Las mismas reglas que el backend (incluida la contraseña de 12 caracteres), en un solo
-      // lugar: validarlas acá evita un 400 después de haber tipeado el código de 6 dígitos.
-      const errorDeValidacion = validarDatosRegistro(
-        { nombres, apellidos, email, contrasena: password },
-        confirmPassword,
-      );
-      if (errorDeValidacion) {
-        setErrorMessage(errorDeValidacion);
-        return;
-      }
-      const avisoDelWhatsapp = canalWhatsapp ? avisoDelWhatsappDelRegistro(whatsapp, validarWhatsapp) : null;
-      if (avisoDelWhatsapp) {
-        setErrorMessage(avisoDelWhatsapp);
-        return;
-      }
-
-      // Enviar código OTP y pasar a pantalla de verificación
-      try {
-        setLoading(true);
-        await enviarCodigo(email);
-        setStep('otp');
-        setResendTimer(45);
-        setCanResend(false);
-        setOtpCode('');
-        // La línea «Te lo enviamos a …» ya lo dice: sin una segunda caja con lo mismo.
-        setSuccessMessage(null);
-        setTimeout(() => otpInputRef.current?.focus(), 300);
-      } catch (error) {
-        setErrorMessage(mensajeDeError(error, 'Error al enviar el código de confirmación'));
-      } finally {
-        setLoading(false);
-      }
+      await continuarElRegistro();
     } else {
       // Iniciar sesión. Los mensajes son los de siempre; lo nuevo (2026-10-05) es DÓNDE se ven:
       // debajo del campo que hay que corregir, con la sacudida y la vibración de error. Lo que
@@ -501,6 +597,10 @@ export default function LoginScreen() {
     setTimeout(() => otpInputRef.current?.focus(), 300);
   };
 
+  /**
+   * El código del alta verifica el correo ANTES de crear nada (spec 052): el servidor lo canjea por un token y recién con él, en el
+   * último paso, se crea la solicitud. Un código malo se dice con el motivo del servidor y vacía las casillas.
+   */
   const handleVerifyOtp = async () => {
     setErrorMessage(null);
     if (otpCode.length !== LARGO_CODIGO) {
@@ -510,15 +610,11 @@ export default function LoginScreen() {
 
     try {
       setLoading(true);
-      // El código verifica el correo y habilita el alta, pero NO abre sesión: la solicitud queda
-      // pendiente de que un ADMIN/ALQUIMISTA la apruebe. Por eso la pantalla siguiente es el
-      // acuse de recibo y no el home.
-      await confirmarYRegistrar(
-        { nombres, apellidos, email, contrasena: password, whatsapp: canalWhatsapp ? whatsapp : undefined },
-        otpCode,
-      );
+      const token = await confirmarCodigo(email, otpCode);
+      setTokenDeVerificacion(token);
       setSuccessMessage(null);
-      setStep('solicitud_enviada');
+      setOtpCode('');
+      setPasoDelRegistro(indiceDelPaso + 1);
     } catch (error) {
       setErrorMessage(mensajeDeError(error, 'Código inválido o expirado. Inténtalo de nuevo.'));
       descartarCodigo();
@@ -800,12 +896,13 @@ export default function LoginScreen() {
     etiquetaConfirmar: string;
     whatsapp: ReturnType<typeof useOfertaDeWhatsApp>;
     flujo: 'registro' | 'recuperacion';
+    titulo?: string;
   }) {
     const completo = otpCode.length === LARGO_CODIGO;
     return (
       <View style={styles.pantallaDelCodigo}>
         <Text accessibilityRole="header" style={[styles.tituloDelCodigo, { color: c.textStrong }]}>
-          Ingresa tu código
+          {o.titulo ?? 'Ingresa tu código'}
         </Text>
         <Text style={[t.body, styles.lineaDelCodigo, { color: c.textSoft }]}>{o.linea}</Text>
 
@@ -861,6 +958,82 @@ export default function LoginScreen() {
           </LinearGradient>
         </Pressable>
       </View>
+    );
+  }
+
+  /* «Solicitar acceso» por pasos, el código del alta y el «Listo» llevan fondo liso (spec 051); el login y la recuperación, la cabecera de siempre. */
+  if (enVerificacion) {
+    return (
+      <View style={[styles.raiz, { backgroundColor: c.bg, paddingTop: insets.top }]}>
+        <KeyboardAvoidingView behavior="padding" keyboardVerticalOffset={0} style={styles.raiz}>
+          <EncabezadoDePaso
+            actual={indiceDelPaso + 1}
+            total={pasosDeRegistro.length}
+            alVolver={volverEnElRegistro}
+            horizontalPadding={horizontalPadding}
+          />
+          <ScrollView
+            style={styles.raiz}
+            contentContainerStyle={[styles.scrollContent, anchoDelContenido, { paddingBottom: insets.bottom + 28 }]}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            {pantallaDelCodigo({
+              titulo: canalWhatsapp ? 'Verifica tu correo o WhatsApp' : 'Verifica tu correo',
+              linea: `Te lo enviamos a ${email.trim()}`,
+              onReenviar: handleResendOtp,
+              onConfirmar: handleVerifyOtp,
+              etiquetaConfirmar: 'Verificar el código',
+              whatsapp: whatsappDelAlta,
+              flujo: 'registro',
+            })}
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </View>
+    );
+  }
+  if (step === 'form' && activeTab === 'register') {
+    return (
+      <RegistroPorPasos
+        paso={pasosDeRegistro[indiceDelPaso]}
+        indice={indiceDelPaso}
+        total={pasosDeRegistro.length}
+        datos={datosDelRegistro}
+        alCambiar={parcial => {
+          if (parcial.nombres !== undefined) setNombres(parcial.nombres);
+          if (parcial.apellidos !== undefined) setApellidos(parcial.apellidos);
+          if (parcial.email !== undefined) {
+            setEmail(parcial.email);
+            if (parcial.email !== email) setTokenDeVerificacion(null);
+          }
+          if (parcial.whatsapp !== undefined) setWhatsapp(parcial.whatsapp);
+          if (parcial.contrasena !== undefined) {
+            setPassword(parcial.contrasena);
+            setConfirmPassword(parcial.contrasena);
+          }
+          if (parcial.aceptaTerminos !== undefined) setAceptaTerminos(parcial.aceptaTerminos);
+          // Al corregir, el aviso de ese campo se va.
+          setErrorDelPaso(previo => (previo ? null : previo));
+        }}
+        error={errorDelPaso}
+        cargando={loading}
+        disponibilidadCorreo={disponibilidadCorreo}
+        alContinuar={() => void continuarElRegistro()}
+        alVolver={volverEnElRegistro}
+      />
+    );
+  }
+  if (step === 'solicitud_enviada') {
+    return (
+      <ListoDelRegistro
+        nombre={primerNombre(nombres)}
+        aviso={successMessage}
+        error={errorMessage}
+        consultando={loading}
+        puedeConsultar={Boolean(accountRequestId)}
+        alIrAlInicio={handleReturnToLogin}
+        alConsultarEstado={handleConsultarEstado}
+      />
     );
   }
 
@@ -925,7 +1098,7 @@ export default function LoginScreen() {
                   de una vista a la otra; dentro de una misma vista no se vuelve a animar nada. */}
               <EntradaEscalonada key={`titulo-${activeTab}`} indice={0}>
                 <Text accessibilityRole="header" style={[styles.titulo, { color: c.textStrong }]}>
-                  {activeTab === 'login' ? 'Iniciar sesión' : 'Solicitar acceso'}
+                  Iniciar sesión
                 </Text>
                 <View style={[styles.subrayadoDelTitulo, { backgroundColor: c.gold }]} />
               </EntradaEscalonada>
@@ -941,47 +1114,6 @@ export default function LoginScreen() {
                     </View>
                   ) : null}
 
-                  {activeTab === 'register' && (
-                    <CampoDelIngreso
-                      etiqueta="Nombres"
-                      icono="user"
-                      enfocado={focusedField === 'nombres'}
-                      value={nombres}
-                      onChangeText={setNombres}
-                      placeholder="Ej. Sebastián"
-                      onFocus={evento => enfocarCampo('nombres', evento)}
-                      onBlur={desenfocarCampo}
-                      autoCapitalize="words"
-                      autoCorrect={false}
-                      autoComplete="given-name"
-                      textContentType="givenName"
-                      returnKeyType="next"
-                      submitBehavior="submit"
-                      onSubmitEditing={() => apellidosRef.current?.focus()}
-                    />
-                  )}
-
-                  {activeTab === 'register' && (
-                    <CampoDelIngreso
-                      ref={apellidosRef}
-                      etiqueta="Apellidos"
-                      icono="user"
-                      enfocado={focusedField === 'apellidos'}
-                      value={apellidos}
-                      onChangeText={setApellidos}
-                      placeholder="Ej. Arango"
-                      onFocus={evento => enfocarCampo('apellidos', evento)}
-                      onBlur={desenfocarCampo}
-                      autoCapitalize="words"
-                      autoCorrect={false}
-                      autoComplete="family-name"
-                      textContentType="familyName"
-                      returnKeyType="next"
-                      submitBehavior="submit"
-                      onSubmitEditing={() => correoRef.current?.focus()}
-                    />
-                  )}
-
                   <CampoDelIngreso
                     ref={correoRef}
                     testID="campo-email"
@@ -996,7 +1128,7 @@ export default function LoginScreen() {
                     autoCapitalize="none"
                     autoCorrect={false}
                     autoComplete="email"
-                    textContentType={activeTab === 'login' ? 'username' : 'emailAddress'}
+                    textContentType="username"
                     returnKeyType="next"
                     submitBehavior="submit"
                     onSubmitEditing={() => contrasenaRef.current?.focus()}
@@ -1005,39 +1137,9 @@ export default function LoginScreen() {
                     debajo={
                       <>
                         {errorMessage && campoDelError === 'email' ? <MensajeBajoElCampo texto={errorMessage} /> : null}
-                        {/* Aviso en vivo de disponibilidad: solo al solicitar acceso, y solo cuando
-                            hay un veredicto real. "Verificando" y "idle" no muestran nada para no
-                            agregar ruido mientras la persona todavía está escribiendo. */}
-                        {activeTab === 'register' && disponibilidadCorreo === 'verificando' && (
-                          <Text style={[t.micro, { color: c.textSoft }]}>Verificando disponibilidad...</Text>
-                        )}
-                        {activeTab === 'register' && disponibilidadCorreo === 'disponible' && (
-                          <Text style={[t.micro, { color: c.goldInk }]}>Este correo está disponible.</Text>
-                        )}
-                        {activeTab === 'register' && disponibilidadCorreo === 'tomado' && (
-                          <Text style={[t.micro, { color: c.danger }]}>
-                            Ese correo ya tiene una cuenta. Puedes iniciar sesión.
-                          </Text>
-                        )}
                       </>
                     }
                   />
-
-                  {/* El teléfono se pedía solo en la Ficha Inicial. Desde la spec 043 (decisión del dueño, 06/11) se pide también acá, pero SOLO
-                      si el servidor puede mandar el código por WhatsApp: es el canal de respaldo si el correo no llega, y al aceptar la
-                      solicitud rellena la ficha. Sin el canal, el formulario es el de siempre. */}
-                  {activeTab === 'register' && canalWhatsapp && (
-                    <View style={styles.campoWhatsapp}>
-                      <PhoneCountryInput
-                        label="WhatsApp"
-                        helperText="Por si el código no te llega al correo."
-                        value={whatsapp}
-                        onChange={valor => setWhatsapp(valor)}
-                        returnKeyType="next"
-                        onSubmitEditing={() => contrasenaRef.current?.focus()}
-                      />
-                    </View>
-                  )}
 
                   <CampoDelIngreso
                     ref={contrasenaRef}
@@ -1048,19 +1150,15 @@ export default function LoginScreen() {
                     conError={errorMessage !== null && campoDelError === 'password'}
                     value={password}
                     onChangeText={setPassword}
-                    placeholder={activeTab === 'register' ? `Mínimo ${MIN_CONTRASENA} caracteres` : 'Tu contraseña'}
+                    placeholder="Tu contraseña"
                     secureTextEntry={!showPassword}
                     autoCapitalize="none"
                     autoCorrect={false}
-                    // Al solicitar acceso el gestor de contraseñas propone una nueva; al entrar, la guardada.
-                    autoComplete={activeTab === 'register' ? 'new-password' : 'current-password'}
-                    textContentType={activeTab === 'register' ? 'newPassword' : 'password'}
-                    returnKeyType={activeTab === 'register' ? 'next' : 'go'}
-                    submitBehavior={activeTab === 'register' ? 'submit' : 'blurAndSubmit'}
-                    onSubmitEditing={() => {
-                      if (activeTab === 'register') confirmarRef.current?.focus();
-                      else void handleFormSubmit();
-                    }}
+                    autoComplete="current-password"
+                    textContentType="password"
+                    returnKeyType="go"
+                    submitBehavior="blurAndSubmit"
+                    onSubmitEditing={() => void handleFormSubmit()}
                     onFocus={evento => enfocarCampo('password', evento)}
                     onBlur={desenfocarCampo}
                     accesorio={
@@ -1099,27 +1197,6 @@ export default function LoginScreen() {
                     </Pressable>
                   )}
 
-                  {activeTab === 'register' && (
-                    <CampoDelIngreso
-                      ref={confirmarRef}
-                      etiqueta="Confirmar contraseña"
-                      icono="lock"
-                      enfocado={focusedField === 'confirmPassword'}
-                      value={confirmPassword}
-                      onChangeText={setConfirmPassword}
-                      placeholder="Repite tu contraseña"
-                      secureTextEntry={!showPassword}
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                      autoComplete="new-password"
-                      textContentType="newPassword"
-                      returnKeyType="go"
-                      onSubmitEditing={() => void handleFormSubmit()}
-                      onFocus={evento => enfocarCampo('confirmPassword', evento)}
-                      onBlur={desenfocarCampo}
-                    />
-                  )}
-
                   {/* Un error que no es de un campo en particular (las validaciones del alta, un
                       fallo al enviar el código) va al final de los campos, junto al botón. */}
                   {errorMessage && campoDelError === null ? <MensajeBajoElCampo texto={errorMessage} /> : null}
@@ -1151,19 +1228,6 @@ export default function LoginScreen() {
               */}
             </>
           )}
-          {/* ========================================================================= */}
-          {/* VISTA 2: VERIFICACIÓN DE CÓDIGO OTP DE 6 DÍGITOS                          */}
-          {/* ========================================================================= */}
-          {step === 'otp' &&
-            pantallaDelCodigo({
-              linea: `Te lo enviamos a ${email.trim()}`,
-              onReenviar: handleResendOtp,
-              onConfirmar: handleVerifyOtp,
-              etiquetaConfirmar: 'Verificar el código',
-              whatsapp: whatsappDelAlta,
-              flujo: 'registro',
-            })}
-
           {/* ========================================================================= */}
           {/* VISTA 3: RECUPERACIÓN DE CONTRASEÑA (FORMULARIO)                          */}
           {/* ========================================================================= */}
@@ -1541,84 +1605,6 @@ export default function LoginScreen() {
             </View>
           )}
 
-          {/* ========================================================================= */}
-          {/* VISTA 6: SOLICITUD DE ALTA ENVIADA (PENDIENTE DE APROBACIÓN)              */}
-          {/* ========================================================================= */}
-          {step === 'solicitud_enviada' && (
-            <View style={[styles.card, { backgroundColor: c.cardBg, borderColor: c.border }]}>
-              <View style={{ alignItems: 'center', gap: 10, paddingVertical: 10 }}>
-                <View style={[styles.successIconWrap, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
-                  <Icon name="check" size={26} color={c.goldInk} strokeWidth={2} />
-                </View>
-
-                <MicroLabel>Solicitud recibida</MicroLabel>
-                <Text style={[t.sectionTitle, { color: c.text, textAlign: 'center' }]}>
-                  TU CUENTA ESTÁ EN REVISIÓN
-                </Text>
-                <Text style={[t.small, { color: c.textSoft, textAlign: 'center', lineHeight: 20 }]}>
-                  Confirmamos tu correo y registramos tu solicitud. Un administrador tiene que
-                  aprobarla antes de que puedas ingresar; te avisaremos a:
-                </Text>
-                <Text style={[t.small, { color: c.goldInk, fontFamily: fuentes.media, textAlign: 'center' }]}>
-                  {email}
-                </Text>
-              </View>
-
-              {errorMessage ? (
-                <View style={[styles.alertBox, { backgroundColor: 'rgba(217, 83, 79, 0.08)', borderColor: 'rgba(217, 83, 79, 0.25)' }]}>
-                  <Text style={[t.small, { color: c.danger, textAlign: 'center' }]}>{errorMessage}</Text>
-                </View>
-              ) : null}
-
-              {successMessage ? (
-                <View style={[styles.alertBox, { backgroundColor: c.goldWash, borderColor: c.borderStrong }]}>
-                  <Text style={[t.small, { color: c.goldInk, textAlign: 'center' }]}>{successMessage}</Text>
-                </View>
-              ) : null}
-
-              {/* Botón Volver al Login */}
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Volver a iniciar sesión"
-                onPress={handleReturnToLogin}
-                style={[styles.submitBtn, { shadowColor: c.gold, marginTop: 10 }]}
-              >
-                <LinearGradient
-                  colors={c.goldGrad}
-                  start={{ x: 0.1, y: 0 }}
-                  end={{ x: 0.9, y: 1 }}
-                  style={styles.gradientBtn}
-                >
-                  <Text style={[t.cardTitle, { color: c.onGold, letterSpacing: 0.1, fontFamily: fuentes.media, fontSize: 15 }]}>
-                    VOLVER AL INICIO DE SESIÓN
-                  </Text>
-                </LinearGradient>
-              </Pressable>
-
-              {/* Consulta del estado con el id de la solicitud, la única credencial que hay */}
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Consultar el estado de tu solicitud"
-                onPress={handleConsultarEstado}
-                disabled={loading || !accountRequestId}
-                style={[styles.returnLoginBtn, { borderColor: c.border }]}
-              >
-                {loading ? (
-                  <ActivityIndicator color={c.goldInk} size="small" />
-                ) : (
-                  <>
-                    <Icon name="clock" size={14} color={c.textSoft} />
-                    <Text style={[t.micro, { color: c.textSoft, letterSpacing: 1.5 }]}>
-                      {estadoSolicitud?.status === 'APPROVED'
-                        ? 'Solicitud aprobada'
-                        : 'Consultar estado de mi solicitud'}
-                    </Text>
-                  </>
-                )}
-              </Pressable>
-            </View>
-          )}
-
           </View>
         </ScrollView>
 
@@ -1643,7 +1629,7 @@ export default function LoginScreen() {
             <LinearGradient pointerEvents="none" colors={[`${c.bg}00`, c.bg]} style={styles.fundidoInferior} />
             <EntradaEscalonada key={`pie-${activeTab}`} indice={2} style={styles.pieAdentro}>
               <BotonDelIngreso
-                etiqueta={activeTab === 'login' ? 'Ingresar' : 'Continuar y recibir código'}
+                etiqueta="Ingresar"
                 cargando={loading}
                 onPress={() => void handleFormSubmit()}
               />

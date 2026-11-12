@@ -9,27 +9,26 @@ env:
 - launchApp
 # spec 043 FR-003
 - tapOn: "¿No tienes cuenta? Solicitar acceso"
+# «Solicitar acceso» es por pasos desde la spec 052: nombre, correo, WhatsApp, el código y, después, la contraseña. El código se pide
+# ANTES de la contraseña: este flujo se queda en la pantalla del código para probar «Por WhatsApp».
 - tapOn: "Nombres"
 - inputText: "Ana"
 - tapOn: "Apellidos"
 - inputText: "Prueba"
+- tapOn: "Continuar"
 - tapOn: "Correo electrónico"
 - inputText: ${CORREO}
-- assertVisible: "WhatsApp"
-- tapOn: "WhatsApp"
+- tapOn: "Continuar"
+- assertVisible: "Tu WhatsApp"
+- tapOn: "Número de WhatsApp"
 - inputText: "987654321"
-- tapOn: "Contraseña"
-- inputText: "una-clave-muy-larga"
-- tapOn: "Confirmar contraseña"
-- inputText: "una-clave-muy-larga"
-- hideKeyboard
-- tapOn: "Continuar y recibir código"
+- tapOn: "Continuar"
 - takeScreenshot: 01-codigo-sin-enlace
 # spec 043 FR-012
 - extendedWaitUntil:
     visible: "Envíamelo por WhatsApp. Va a \\+51 9•• ••• •21"
     timeout: 75000
-- assertVisible: "Ingresa tu código"
+- assertVisible: "Verifica tu correo o WhatsApp"
 - takeScreenshot: 02-enlace-a-los-60-segundos
 - tapOn: "Envíamelo por WhatsApp.*"
 # spec 043 FR-015
