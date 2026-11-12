@@ -31,7 +31,7 @@ jobs:
 
     steps:
       - name: Descargar el codigo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # Node 20 LTS. La maquina de desarrollo corre 18.20.4 (fuera de soporte desde abril de 2025);
       # si alguna vez algo pasa acá y falla localmente, o al reves, esta es la primera diferencia
