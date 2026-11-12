@@ -12,6 +12,9 @@ import type { OrigenDeLaHora } from './horaReal';
  * - Se procesa en orden. Si uno espera red, los siguientes esperan con él (el orden importa: una foto antes de cerrar el hábito).
  * - Sin red, 5xx, 408, 429 o 404: se reintenta con la misma espera creciente de la cola de carreras. 401 (o un 403 de sesión vencida):
  *   la sesión venció; la cola espera a que vuelva a entrar LA MISMA cuenta (D15).
+ * - **Un 429 (spec 050, FR-020) es «reintenta después», nunca final**: si trae `Retry-After`, el envío no sale antes de ese plazo (el
+ *   mayor entre él y la espera creciente), ni siquiera cuando vuelve la señal o la app vuelve al frente. No se pierde nada de lo que
+ *   la persona hizo.
  * - **Un 4xx es FINAL** (fase 3, D13, FR-016): un 409 con uno de los `codigo` de «no se aplicó» (el servidor se quedó con lo más
  *   nuevo) y cualquier otro 4xx salen de la cola y anotan un aviso con el motivo y lo que la persona escribió
  *   (`avisosDeLoNoAplicado`). Antes quedaban «bloqueados» para siempre y en silencio. La cola sigue con el siguiente.
@@ -38,6 +41,8 @@ export interface EnvioSinRed {
   origenDeLaHora: OrigenDeLaHora;
   intentos: number;
   proximoIntentoMs: number;
+  /** Lo que pidió esperar el servidor (`Retry-After`, spec 050): hasta este instante el envío no sale, ni adelantándolo. */
+  noAntesDeMs?: number;
   bloqueado: string | null;
   creadoMs: number;
 }
@@ -163,6 +168,15 @@ export async function quitarEnvio(cuentaId: string, idCliente: string): Promise<
 type Final = { tipo: Extract<TipoDeAviso, 'no-aplicado' | 'no-se-pudo'>; codigo: string | null; motivo: string };
 type Desenlace = 'listo' | 'reintentar' | 'sin-sesion' | { final: Final };
 
+/**
+ * Cuánto pidió esperar el servidor con `Retry-After` (milisegundos), si el error lo trae (`ApiError.reintentarEnMs`, spec 050 FR-020);
+ * `null` si no. Se lee con tipos sueltos: los manejadores pueden lanzar cualquier error con `status`.
+ */
+export function esperaPedidaPorElServidor(error: unknown): number | null {
+  const espera = (error as { reintentarEnMs?: unknown } | null | undefined)?.reintentarEnMs;
+  return typeof espera === 'number' && Number.isFinite(espera) && espera > 0 ? espera : null;
+}
+
 /** Qué hacer con el error de un envío (exportada para las pruebas). */
 export function desenlaceDe(error: unknown): Desenlace {
   const e = (error ?? {}) as { status?: number; sesionVencida?: boolean; codigo?: unknown; body?: unknown; message?: unknown };
@@ -179,6 +193,19 @@ export function desenlaceDe(error: unknown): Desenlace {
     return { final: { tipo: 'no-aplicado', codigo, motivo: motivoDeNoAplicado(codigo, mensaje) } };
   }
   return { final: { tipo: 'no-se-pudo', codigo, motivo: mensaje?.trim() || MOTIVO_NO_SE_PUDO } };
+}
+
+/** El envío con un intento más y el plazo del próximo: el mayor entre la espera creciente y lo que pidió el servidor. */
+function conSuReintento(envio: EnvioSinRed, ahora: number, esperaDelServidor: number | null): EnvioSinRed {
+  const intentos = envio.intentos + 1;
+  const espera = Math.max(esperaTrasIntentos(intentos), esperaDelServidor ?? 0);
+  const { noAntesDeMs: _anterior, ...sinPlazoAnterior } = envio;
+  return {
+    ...sinPlazoAnterior,
+    intentos,
+    proximoIntentoMs: ahora + espera,
+    ...(esperaDelServidor ? { noAntesDeMs: ahora + esperaDelServidor } : {}),
+  };
 }
 
 /** Cómo se llama lo que no se aplicó y qué escribió la persona, según el tipo de envío. */
@@ -233,9 +260,13 @@ export async function procesarCola(cuentaId: string, ahora: number = Date.now(),
     };
     // Volvió la señal o la app volvió al frente: lo que esperaba se intenta ya. Va DENTRO del candado (E2E 09/11): hecho
     // aparte, leía la cola, la cola mandaba y borraba un envío, y al guardar su copia vieja lo devolvía: salía dos veces.
-    if (opciones.adelantar) cola = cola.map(e => ({ ...e, proximoIntentoMs: Math.min(e.proximoIntentoMs, ahora) }));
+    // Lo que el servidor pidió esperar (`Retry-After`) no se adelanta: volver a pedir antes solo trae otro 429.
+    if (opciones.adelantar) {
+      cola = cola.map(e => ({ ...e, proximoIntentoMs: Math.max(Math.min(e.proximoIntentoMs, ahora), e.noAntesDeMs ?? 0) }));
+    }
     for (const envio of [...cola]) {
       let desenlace: Desenlace;
+      let esperaDelServidor: number | null = null;
       if (envio.bloqueado) {
         // Uno que una versión anterior dejó «bloqueado» en silencio: ahora también avisa y sale (FR-016).
         desenlace = { final: { tipo: 'no-se-pudo', codigo: null, motivo: envio.bloqueado } };
@@ -248,14 +279,14 @@ export async function procesarCola(cuentaId: string, ahora: number = Date.now(),
           desenlace = 'listo';
         } catch (error) {
           desenlace = desenlaceDe(error);
+          esperaDelServidor = esperaPedidaPorElServidor(error);
         }
       }
       if (desenlace === 'listo') {
         cola = cola.filter(e => e.idCliente !== envio.idCliente);
         terminoUnEnvio(envio, 'aplicado');
       } else if (desenlace === 'reintentar') {
-        cola = cola.map(e => (e.idCliente === envio.idCliente
-          ? { ...e, intentos: e.intentos + 1, proximoIntentoMs: ahora + esperaTrasIntentos(e.intentos + 1) } : e));
+        cola = cola.map(e => (e.idCliente === envio.idCliente ? conSuReintento(e, ahora, esperaDelServidor) : e));
         // Se guarda ANTES de cortar: si no, el reintento nunca quedaba anotado y la espera no crecía.
         await sumarNuevos();
         await guardarCola(cuentaId, cola);

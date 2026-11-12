@@ -5,6 +5,7 @@ import { almacenamientoSeguro } from '../storage/almacenamientoSeguro';
 import { registrarHoraDelServidor } from './relojServidor';
 import { registrarPedido } from './medicionDePedidos';
 import { registrarErrorSinDialogo } from './erroresSinDialogo';
+import { esperaDeRetryAfterMs } from './retryAfter';
 
 /**
  * Cliente HTTP contra el backend Java (Spring Boot).
@@ -29,13 +30,19 @@ export class ApiError extends Error {
    * estaba adentro y lo único que le pasó fue que se le venció la sesión.
    */
   readonly sesionVencida: boolean;
+  /**
+   * Lo que el servidor pidió esperar antes de volver a intentarlo (`Retry-After` de un 429 o un 503, spec 050 FR-020), en
+   * milisegundos; `null` si no lo dijo. Una cola de envíos espera por lo menos esto en vez de su espera creciente.
+   */
+  readonly reintentarEnMs: number | null;
 
-  constructor(status: number, message: string, body?: unknown, sesionVencida = false) {
+  constructor(status: number, message: string, body?: unknown, sesionVencida = false, reintentarEnMs: number | null = null) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
     this.body = body;
     this.sesionVencida = sesionVencida;
+    this.reintentarEnMs = reintentarEnMs;
   }
 
   /** Credenciales inválidas o sesión vencida. */
@@ -81,6 +88,14 @@ export class ApiError extends Error {
   get esModoSoloLectura(): boolean {
     return this.status === 403 && this.codigo === CODIGO_MODO_SOLO_LECTURA;
   }
+
+  /**
+   * Se pidió demasiado y el servidor, el WAF o nginx dijeron que se espere (429 `DEMASIADOS_PEDIDOS`, spec 050). No es un fallo:
+   * lo pendiente se reintenta después de {@link reintentarEnMs} y nada se descarta. El `message` ya es el texto para mostrar.
+   */
+  get esDemasiadosPedidos(): boolean {
+    return this.status === 429 && this.codigo === CODIGO_DEMASIADOS_PEDIDOS;
+  }
 }
 
 /** El código del 503 de un interruptor apagado (contrato de la spec 002, §2). */
@@ -91,6 +106,10 @@ export const CODIGO_FUNCIONALIDAD_NO_DISPONIBLE = 'FUNCIONALIDAD_NO_DISPONIBLE';
 export const CODIGO_MODO_SOLO_LECTURA = 'MODO_SOLO_LECTURA';
 /** El 401 de una sesión de «ver como» vencida (D-273): se vuelve a Soporte TI, no es la sesión de Soporte TI vencida. */
 export const CODIGO_VER_COMO_VENCIDO = 'VER_COMO_VENCIDO';
+/** El 429 del límite de pedidos (spec 050, FR-015): el filtro por cuenta, el WAF y nginx responden con este mismo `codigo`. */
+export const CODIGO_DEMASIADOS_PEDIDOS = 'DEMASIADOS_PEDIDOS';
+/** El texto de ese 429 cuando el cuerpo no lo trae (una respuesta de un intermediario sin JSON). Es el mismo que manda el servidor. */
+export const MENSAJE_DEMASIADOS_PEDIDOS = 'Espera un momento y vuelve a intentarlo.';
 
 /*
  * «Ver como» en curso (spec 002, fase 2, D-273): la sesión de la app es de solo lectura. Lo pone `AuthContext` al
@@ -340,11 +359,11 @@ export type RespuestaConCabeceras<T> = {
 async function leerMensajeDeError(respuesta: Response): Promise<{ mensaje: string; cuerpo: unknown }> {
   const texto = await respuesta.text();
   if (!texto) {
-    return { mensaje: `Error ${respuesta.status}`, cuerpo: null };
+    return { mensaje: mensajePorOmision(respuesta.status), cuerpo: null };
   }
   try {
     const json = JSON.parse(texto);
-    return { mensaje: json?.message || `Error ${respuesta.status}`, cuerpo: json };
+    return { mensaje: json?.message || mensajePorOmision(respuesta.status), cuerpo: json };
   } catch {
     // Un cuerpo que no es JSON lo armó un intermediario (CloudFront, el balanceador), no el backend:
     // mostrarlo tal cual dejaba una página HTML entera en la pantalla (E-464). Se traduce.
@@ -357,7 +376,12 @@ function mensajeSinCuerpoLegible(status: number): string {
   if (status >= 500) {
     return 'El servidor no responde en este momento. Intenta de nuevo en unos segundos.';
   }
-  return `Error ${status}`;
+  return mensajePorOmision(status);
+}
+
+/** Lo que se dice cuando el servidor no mandó un texto: el 429 del límite de pedidos tiene el suyo, el resto el código pelado. */
+function mensajePorOmision(status: number): string {
+  return status === 429 ? MENSAJE_DEMASIADOS_PEDIDOS : `Error ${status}`;
 }
 
 export async function apiFetch<T>(ruta: string, opciones: OpcionesPeticion = {}): Promise<T> {
@@ -495,7 +519,9 @@ async function pedir<T>(ruta: string, opciones: OpcionesPeticion, aceptar304: bo
       if (sesionVencida) {
         notificarSesionVencida();
       }
-      throw new ApiError(respuesta.status, mensaje, cuerpo, sesionVencida);
+      // Spec 050 (FR-020): un 429 o un 503 dicen cuánto esperar con `Retry-After`; la cola de envíos lo respeta.
+      const reintentarEnMs = esperaDeRetryAfterMs(respuesta.headers.get('Retry-After'));
+      throw new ApiError(respuesta.status, mensaje, cuerpo, sesionVencida, reintentarEnMs);
     }
 
     if (respuesta.status === 204) {
@@ -529,6 +555,10 @@ export function mensajeDeError(error: unknown, porDefecto: string): string {
   }
   if (error.esDeRed) {
     return error.message;
+  }
+  // Spec 050 (FR-020): «Espera un momento y vuelve a intentarlo.» viene del servidor; si el cuerpo no lo trajo, es el mismo texto.
+  if (error.status === 429) {
+    return error.message && !/^Error \d+$/.test(error.message.trim()) && !pareceInterno(error.message) ? error.message : MENSAJE_DEMASIADOS_PEDIDOS;
   }
   if (error.esNoAutenticado) {
     /* Dos situaciones muy distintas comparten el 401. Con sesión mandada, el token venció y lo
