@@ -112,6 +112,7 @@ import { useMiCaja } from '../features/caja/hooks/useMiCaja';
 import { MiCajaScreen } from '../features/caja/screens/MiCajaScreen';
 import { EliminarMiCuentaScreen } from '../features/cuenta/screens/EliminarMiCuentaScreen';
 import { etiquetaParaElAprendiz } from '../features/caja/utils/estadosDeCaja';
+import { esAprendiz } from '../features/community/utils/tarjetaDeTribu';
 import { useMiEmergencia } from '../features/emergencia/hooks/useMiEmergencia';
 import { EmergenciaScreen } from '../features/emergencia/screens/EmergenciaScreen';
 import { configDeMiRadar } from '../features/radar/hooks/useConfigDeMiRadar';
@@ -450,7 +451,7 @@ export default function YoScreen() {
   const [eliminandoCuenta, setEliminandoCuenta] = useState(false);
   /* Botón de emergencia (D-244, pedido del dueño del 02/10): un acceso discreto al pie de Yo, solo para
      un aprendiz, desde el Día 0 (el servidor responde 403 a quien no lo es). Pedir no cambia el día. */
-  const miEmergencia = useMiEmergencia();
+  const miEmergencia = useMiEmergencia(esAprendiz(user?.role));
   const [enEmergencia, setEnEmergencia] = useState(false);
   /* Mi diagnóstico (spec 026): la fila aparece según el estado que dice el servidor (en curso o completado; también «Completa tu
      diagnóstico» si todavía no lo empieza) y abre su lectura o el recorrido, a pantalla completa como la Caja y la emergencia.
