@@ -36,6 +36,25 @@ export async function pedirCodigoDelRegistroPorWhatsApp(email: string, whatsapp:
 }
 
 /**
+ * El paso del WhatsApp de «Solicitar acceso»: ¿ese número ya es de otra cuenta? (spec 051, FR-014, decisión del dueño del 13/11: «el número es
+ * único»). Resuelve si está libre. Un 409 `NUMERO_EN_USO`, un 422 o un 429 lanzan el `ApiError` del servidor, cuyo `message` ya está listo para
+ * mostrarse. Contra un servidor anterior (404) o con el interruptor apagado resuelve sin más: la app queda como siempre y la solicitud
+ * igual la valida el servidor al crearse.
+ */
+export async function comprobarNumeroDelRegistro(whatsapp: string): Promise<void> {
+  try {
+    await apiFetch<void>('/api/v1/auth/whatsapp-code/number', {
+      method: 'POST',
+      body: { whatsapp: whatsapp.trim() },
+      conSesion: false,
+    });
+  } catch (error) {
+    if ((error as { status?: number } | null)?.status === 404) return;
+    throw error;
+  }
+}
+
+/**
  * El código de la recuperación al WhatsApp GUARDADO de la cuenta. No lleva número a propósito (FR-008), y el servidor responde igual exista o no la
  * cuenta (FR-009): no hay nada que leer de la respuesta.
  */

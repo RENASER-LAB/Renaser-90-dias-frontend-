@@ -8,6 +8,7 @@ const mockConfirmarCodigo = jest.fn<(correo: string, codigo: string) => Promise<
 const mockCrear = jest.fn<(datos: Record<string, unknown>, token: string) => Promise<string>>();
 let mockCanal = false;
 const mockReenviar = jest.fn<(correo: string) => Promise<void>>();
+const mockComprobarNumero = jest.fn<(whatsapp: string) => Promise<void>>();
 const mockError = jest.fn();
 const mockSeleccion = jest.fn();
 let mockAtras: (() => boolean | void) | null = null;
@@ -73,6 +74,7 @@ jest.mock('../../features/auth/hooks/useDisponibilidadCorreo', () => ({ useDispo
 jest.mock('../../features/auth/api/codigoPorWhatsAppApi', () => ({
   codigoPorWhatsAppDisponible: () => Promise.resolve(mockCanal),
   pedirCodigoDelRegistroPorWhatsApp: jest.fn(),
+  comprobarNumeroDelRegistro: (whatsapp: string) => mockComprobarNumero(whatsapp),
   pedirCodigoDeRecuperacionPorWhatsApp: jest.fn(),
 }));
 
@@ -158,6 +160,7 @@ beforeEach(() => {
   mockError.mockReset();
   mockSeleccion.mockReset();
   mockCanal = false;
+  mockComprobarNumero.mockReset().mockResolvedValue(undefined);
   mockReenviar.mockReset().mockResolvedValue(undefined);
   mockAtras = null;
 });
@@ -408,5 +411,54 @@ describe('el código de verificación del registro (no se puede saltar)', () => 
     await continuar(r, 'Crear mi cuenta');
     expect(titulo(r)).toBe('Verifica tu correo');
     expect(textos(r)).toContain('La verificación de tu correo venció. Pide un código nuevo.');
+  });
+
+  // spec 051 FR-019
+  it('el número de otra cuenta se dice bajo el campo con el motivo del servidor y no se avanza ni se pide el código', async () => {
+    mockCanal = true;
+    mockComprobarNumero.mockRejectedValue(
+      new ApiError(409, 'Ese número de WhatsApp ya está en uso en otra cuenta.', { codigo: 'NUMERO_EN_USO' }),
+    );
+    const r = await montar();
+    await hastaElCodigo(r, true);
+    expect(mockComprobarNumero).toHaveBeenCalledWith('+51 987654321');
+    expect(titulo(r)).toBe('Tu WhatsApp');
+    expect(textos(r)).toContain('Ese número de WhatsApp ya está en uso en otra cuenta.');
+    expect(mockEnviarCodigo).not.toHaveBeenCalled();
+    expect(mockError).toHaveBeenCalled();
+
+    // Cambiando de número, el mismo paso deja pasar.
+    mockComprobarNumero.mockResolvedValue(undefined);
+    escribir(r, 'Número de WhatsApp', '911111111');
+    await continuar(r);
+    expect(mockEnviarCodigo).toHaveBeenCalledWith('ana@renaser.test');
+    expect(titulo(r)).toBe('Verifica tu correo o WhatsApp');
+  });
+
+  // spec 051 FR-019
+  it('un tope (429) o un número sin forma (422) también se dicen en el paso y no lo dejan avanzar', async () => {
+    mockCanal = true;
+    mockComprobarNumero.mockRejectedValue(new ApiError(429, 'Revisaste muchos números seguidos. Intenta de nuevo en una hora.'));
+    const r = await montar();
+    await hastaElCodigo(r, true);
+    expect(titulo(r)).toBe('Tu WhatsApp');
+    expect(textos(r)).toContain('Revisaste muchos números seguidos. Intenta de nuevo en una hora.');
+    expect(mockEnviarCodigo).not.toHaveBeenCalled();
+  });
+
+  // spec 051 FR-019
+  it('si al crear la solicitud el servidor dice NUMERO_EN_USO, vuelve al paso del WhatsApp (no al del correo)', async () => {
+    mockCanal = true;
+    mockCrear.mockRejectedValue(
+      new ApiError(409, 'Ese número de WhatsApp ya está en uso en otra cuenta.', { codigo: 'NUMERO_EN_USO' }),
+    );
+    const r = await montar();
+    await hastaElCodigo(r, true);
+    await verificar(r);
+    escribir(r, 'Contraseña', 'una-clave-muy-larga');
+    act(() => tocable(r, 'Acepto los términos').props.onPress());
+    await continuar(r, 'Crear mi cuenta');
+    expect(titulo(r)).toBe('Tu WhatsApp');
+    expect(textos(r)).toContain('Ese número de WhatsApp ya está en uso en otra cuenta.');
   });
 });

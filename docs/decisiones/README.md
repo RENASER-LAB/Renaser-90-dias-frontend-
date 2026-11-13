@@ -33,7 +33,7 @@ también en el texto (`grep -n "Plan" docs/decisiones/*.md`). Si dos entradas ch
 | [comunidad.md](comunidad.md) | Comunidad: Muro, chat, Tribu, Eventos, Cursos y Ranking | 23 |
 | [formaciones.md](formaciones.md) | Formaciones (Escuela, Diplomado, Certificación): specs 022–025, 035 y el plazo de cada formación | 8 |
 | [hoy.md](hoy.md) | Hoy: tarjetas, frase del día, semáforo y lo que Hoy muestra | 8 |
-| [ingreso-y-onboarding.md](ingreso-y-onboarding.md) | Login, onboarding, ficha, diagnóstico, términos y el Día 1 | 10 |
+| [ingreso-y-onboarding.md](ingreso-y-onboarding.md) | Login, onboarding, ficha, diagnóstico, términos y el Día 1 | 11 |
 | [kilometros-y-carrera.md](kilometros-y-carrera.md) | Kilómetros diarios: captura, pasos (Health Connect) y la carrera con GPS | 6 |
 | [liderazgo-y-administracion.md](liderazgo-y-administracion.md) | Mentor, líder de mentores, Administración, Alquimista y sus fichas | 15 |
 | [pagos.md](pagos.md) | Cronograma de pagos y «Mi ingreso» (spec 032) | 2 |
@@ -49,6 +49,7 @@ también en el texto (`grep -n "Plan" docs/decisiones/*.md`). Si dos entradas ch
 
 | Fecha | Tabs | Tipo | Entrada | Archivo | Corregida |
 |---|---|---|---|---|---|
+| 2026-11-13 | ninguno | Decisión | «El número es único»: «Solicitar acceso» rechaza un WhatsApp que ya es de otra cuenta, con el motivo del servidor en el paso del WhatsApp (spec 051, FR-014 a FR-019) | [ingreso-y-onboarding.md](ingreso-y-onboarding.md) |  |
 | 2026-11-12 | Yo | Cambio | Yo → Ajustes → Perfil: «WhatsApp» confirmado con un código, para que también el personal recupere su contraseña por WhatsApp (spec 051) | [yo.md](yo.md) |  |
 | 2026-11-12 | ninguno | Cambio | «Solicitar acceso» por pasos, con fondo liso y el botón sobre el teclado; el login queda pospuesto (spec 052) | [ingreso-y-onboarding.md](ingreso-y-onboarding.md) |  |
 | 2026-11-11 | ninguno | Decisión | la app entiende el 429 «Espera un momento» del límite de pedidos y la cola lo reintenta con Retry-After (spec 050, tramo C) | [transversal.md](transversal.md) |  |
