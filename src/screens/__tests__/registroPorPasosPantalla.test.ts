@@ -87,13 +87,25 @@ import LoginScreen from '../LoginScreen';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
+// Cada pantalla montada se desmonta al terminar su prueba: si no, la cuenta atrás del reenvío del código sigue viva y
+// Jest sale con error («import after the Jest environment has been torn down») aunque todas las pruebas pasen.
+const montadas: ReactTestRenderer[] = [];
+
 async function montar(): Promise<ReactTestRenderer> {
   let r!: ReactTestRenderer;
   await act(async () => {
     r = TestRenderer.create(React.createElement(LoginScreen));
   });
+  montadas.push(r);
   return r;
 }
+
+afterEach(() => {
+  while (montadas.length) {
+    const r = montadas.pop()!;
+    act(() => r.unmount());
+  }
+});
 
 const tocable = (r: ReactTestRenderer, etiqueta: string) =>
   r.root.findAll(n => n.props.accessibilityLabel === etiqueta && typeof n.props.onPress === 'function')[0];
