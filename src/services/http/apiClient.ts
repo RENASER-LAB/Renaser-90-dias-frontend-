@@ -6,6 +6,13 @@ import { registrarHoraDelServidor } from './relojServidor';
 import { registrarPedido } from './medicionDePedidos';
 import { registrarErrorSinDialogo } from './erroresSinDialogo';
 import { esperaDeRetryAfterMs } from './retryAfter';
+import {
+  CODIGO_PROGRAMA_NO_ACTIVADO_LOCAL,
+  MENSAJE_PROGRAMA_NO_ACTIVADO,
+  decidirLecturaDelProgramaPropio,
+  esLecturaDelProgramaPropio,
+  olvidarLoQueSabe,
+} from '../../features/programa/utils/guardaDelProgramaPropio';
 
 /**
  * Cliente HTTP contra el backend Java (Spring Boot).
@@ -385,6 +392,25 @@ function mensajePorOmision(status: number): string {
 }
 
 export async function apiFetch<T>(ruta: string, opciones: OpcionesPeticion = {}): Promise<T> {
+  const metodo = opciones.method ?? 'GET';
+  // Issue #203: el personal sin su programa activado no pide lo que el servidor le rechaza con 403 (rocas, Radar, Pastilla).
+  if (metodo === 'GET' && opciones.sesion === undefined && esLecturaDelProgramaPropio(ruta)) {
+    const decision = await decidirLecturaDelProgramaPropio(async () => {
+      const r = await pedir<{ activated?: boolean }>('/api/v1/onboarding/activate-program', { timeoutMs: 15_000 }, false);
+      // Sin el campo no se sabe (un servidor anterior): se deja pedir.
+      if (typeof r.datos?.activated !== 'boolean') throw new Error('Sin `activated`');
+      return r.datos.activated;
+    });
+    if (decision === 'sin-activar') {
+      throw new ApiError(403, MENSAJE_PROGRAMA_NO_ACTIVADO, { codigo: CODIGO_PROGRAMA_NO_ACTIVADO_LOCAL, message: MENSAJE_PROGRAMA_NO_ACTIVADO });
+    }
+  }
+  if (metodo !== 'GET' && ruta.split('?')[0] === '/api/v1/onboarding/activate-program') {
+    // Activar el programa cambia la respuesta de las lecturas de arriba: la próxima vuelve a preguntar.
+    const r = await pedir<T>(ruta, opciones, false);
+    olvidarLoQueSabe();
+    return r.datos as T;
+  }
   // Spec 048 (FR-004): las lecturas de Hoy, los hábitos de hoy y el Plan se guardan por sesión y, sin señal, se devuelve lo
   // último que dio el servidor. Escrituras y demás lecturas siguen igual.
   const guardable = (opciones.method ?? 'GET') === 'GET' && opciones.sesion === undefined && esLecturaGuardable(ruta);

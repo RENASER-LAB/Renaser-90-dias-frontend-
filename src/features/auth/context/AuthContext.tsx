@@ -36,6 +36,7 @@ import {
   esperaSimulada,
 } from '../data/usuariosDemo';
 import type { ResultadoLoginSocial, User } from '../types/auth.types';
+import { fijarCuentaDeLaGuarda } from '../../programa/utils/guardaDelProgramaPropio';
 
 /**
  * Resuelve si el onboarding ya está completo consultando `GET /onboarding/state` — la fuente de
@@ -156,6 +157,9 @@ async function alarmasListas(userId: string): Promise<void> {
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  /* Issue #203: la guarda de `apiFetch` necesita saber el rol ANTES de que los hijos hagan su primera lectura. Los efectos de los hijos
+     corren antes que los de este proveedor, así que se fija al dibujar (es idempotente: no hace nada si no cambió la cuenta). */
+  fijarCuentaDeLaGuarda(user?.id ?? null, user?.role ?? null);
   const [isOnboardingCompleted, setIsOnboardingCompleted] = useState<boolean>(false);
   const [fichaData, setFichaData] = useState<FichaInicialData | null>(null);
   const [sesionCargando, setSesionCargando] = useState<boolean>(true);
