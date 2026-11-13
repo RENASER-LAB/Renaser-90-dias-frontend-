@@ -96,7 +96,8 @@ if (ocupada.length && !FORZAR) {
 }
 
 // 2. Tipos.
-correr('Tipos (tsc --noEmit)', 'node', ['node_modules/typescript/bin/tsc', '--noEmit']);
+// tsc pasa el tope de heap por defecto de Node (~2 GB) en el CI y falla a veces con «allocation failure» (#198): se le da margen.
+correr('Tipos (tsc --noEmit)', 'node', ['--max-old-space-size=4096', 'node_modules/typescript/bin/tsc', '--noEmit']);
 
 // 3. Pruebas. Las reglas de código (src/__tests__/reglas) van dentro del Jest completo.
 // En el CI, como antes (`npm test -- --ci`): un solo proceso. En una máquina compartida, dos.
