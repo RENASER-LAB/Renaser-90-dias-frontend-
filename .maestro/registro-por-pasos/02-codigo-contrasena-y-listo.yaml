@@ -1,0 +1,34 @@
+# Spec 052 — «Solicitar acceso» por pasos, segunda mitad: el código (el que leíste del backend LOCAL), la contraseña con los términos y «Listo».
+# sin correr
+# Sigue donde terminó `01-hasta-el-codigo.yaml` (no abre la app de nuevo). Uso: `maestro test -e CODIGO=123456 …/02-….yaml`.
+appId: com.renaser.app
+---
+# spec 052 FR-006: un código malo se dice y no deja pasar
+- inputText: "000000"
+- tapOn: "Verificar el código"
+- assertVisible: ".*(no es válido|inválido|expir|venci).*"
+- takeScreenshot: 07-codigo-malo
+# El bueno avanza a la contraseña (todavía no hay solicitud)
+- inputText: ${CODIGO}
+- tapOn: "Verificar el código"
+- assertVisible: "Tu contraseña"
+- takeScreenshot: 08-contrasena
+- tapOn: "Contraseña"
+- inputText: "corta"
+- tapOn: "Crear mi cuenta"
+# spec 052 FR-002 y FR-005: contraseña corta y términos
+- assertVisible: "La contraseña debe tener al menos 12 caracteres"
+- takeScreenshot: 09-error-contrasena
+- eraseText: 5
+- inputText: "una-clave-muy-larga"
+- hideKeyboard
+- tapOn: "Crear mi cuenta"
+- assertVisible: "Acepta los términos para continuar"
+- tapOn: "Acepto los términos"
+- tapOn: "Crear mi cuenta"
+# spec 052 FR-007
+- assertVisible: "Listo, Ana"
+- assertVisible: "Te avisaremos cuando aprueben tu acceso."
+- takeScreenshot: 10-listo
+- tapOn: "Ir al inicio"
+- assertVisible: "Iniciar sesión"

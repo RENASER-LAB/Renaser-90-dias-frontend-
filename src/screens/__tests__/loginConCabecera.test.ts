@@ -224,22 +224,26 @@ describe('el login con cabecera', () => {
   });
 });
 
-describe('«Solicitar acceso»', () => {
-  it('se abre desde el pie con sus campos de siempre y vuelve con «¿Ya tienes cuenta? Iniciar sesión»', () => {
+describe('«Solicitar acceso» desde el login', () => {
+  // spec 052 FR-001, FR-008
+  it('se abre desde el pie con su primer paso (fondo liso, sin la cabecera) y la flecha vuelve al login', () => {
     const r = montar();
     act(() => tocable(r, '¿No tienes cuenta? Solicitar acceso').props.onPress());
-    expect(titulo(r)).toBe('Solicitar acceso');
-    for (const etiqueta of ['Nombres', 'Apellidos', 'Correo electrónico', 'Contraseña', 'Confirmar contraseña']) {
+    expect(titulo(r)).toBe('¿Cómo te llamas?');
+    for (const etiqueta of ['Nombres', 'Apellidos']) {
       expect(campo(r, etiqueta)).toBeDefined();
     }
-    expect(tocable(r, 'Continuar y recibir código')).toBeDefined();
-    expect(tocable(r, 'Volver a iniciar sesión')).toBeDefined();
+    expect(campo(r, 'Confirmar contraseña')).toBeUndefined();
+    expect(tocable(r, 'Continuar')).toBeDefined();
+    // Sin el fénix: el registro lleva fondo liso.
+    expect(r.root.findAll(n => (n.type as unknown) === 'ExpoImage')).toHaveLength(0);
 
-    act(() => tocable(r, '¿Ya tienes cuenta? Iniciar sesión').props.onPress());
+    act(() => tocable(r, 'Volver al paso anterior').props.onPress());
     expect(titulo(r)).toBe('Iniciar sesión');
     expect(campo(r, 'Nombres')).toBeUndefined();
   });
 
+  // spec 052 FR-003
   it('el atrás del sistema vuelve al login (en el login no se intercepta)', () => {
     const r = montar();
     expect(mockAtras).toBeNull();
@@ -251,13 +255,15 @@ describe('«Solicitar acceso»', () => {
     expect(titulo(r)).toBe('Iniciar sesión');
   });
 
-  it('valida igual que antes y no pide el código con datos incompletos', async () => {
+  // spec 052 FR-002
+  it('no avanza con el paso incompleto: dice qué falta y no pide el código', async () => {
     const r = montar();
     act(() => tocable(r, '¿No tienes cuenta? Solicitar acceso').props.onPress());
     await act(async () => {
-      tocable(r, 'Continuar y recibir código').props.onPress();
+      tocable(r, 'Continuar').props.onPress();
     });
     expect(mockEnviarCodigo).not.toHaveBeenCalled();
+    expect(titulo(r)).toBe('¿Cómo te llamas?');
     expect(r.root.findAll(n => (n.type as unknown) === 'Text' && n.props.accessibilityRole === 'alert')).toHaveLength(1);
   });
 });
@@ -273,7 +279,7 @@ describe('la cabecera', () => {
 });
 
 describe('la Política de privacidad (D-245)', () => {
-  it('está al pie del ingreso y de «Solicitar acceso», como enlace discreto que abre la página', () => {
+  it('está al pie del ingreso, como enlace discreto que abre la página', () => {
     const r = montar();
     const enlace = tocable(r, 'Política de privacidad');
     expect(enlace).toBeDefined();
@@ -281,8 +287,8 @@ describe('la Política de privacidad (D-245)', () => {
     act(() => enlace.props.onPress());
     expect(mockAbrirPolitica).toHaveBeenCalledTimes(1);
 
+    // En «Solicitar acceso» la política está en el último paso, junto a «Acepto los términos» (spec 052).
     act(() => tocable(r, '¿No tienes cuenta? Solicitar acceso').props.onPress());
-    expect(titulo(r)).toBe('Solicitar acceso');
-    expect(tocable(r, 'Política de privacidad')).toBeDefined();
+    expect(titulo(r)).toBe('¿Cómo te llamas?');
   });
 });
