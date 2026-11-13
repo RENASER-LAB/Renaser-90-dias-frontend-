@@ -21,7 +21,7 @@ env:
 - inputText: "Ana"
 - tapOn: "Apellidos"
 - inputText: "Prueba"
-# spec 052 FR-004: con el teclado abierto el botón sigue a la vista
+# spec 052 FR-004, SC-001: con el teclado abierto el botón sigue a la vista
 - assertVisible: "Continuar"
 - takeScreenshot: 03-nombre-con-teclado
 - tapOn: "Continuar"
