@@ -3,6 +3,9 @@ import { salirAvisandoPendientes } from '../features/sinRed/salirAvisandoPendien
 import { HojaDelSobrenombre } from '../features/sobrenombre/components/HojaDelSobrenombre';
 import { useMiSobrenombre } from '../features/sobrenombre/hooks/useMiSobrenombre';
 import { TEXTOS_DEL_SOBRENOMBRE } from '../features/sobrenombre/utils/reglasDelSobrenombre';
+import { HojaDelWhatsapp } from '../features/yo/components/HojaDelWhatsapp';
+import { useWhatsappConfirmado } from '../features/yo/hooks/useWhatsappConfirmado';
+import { TEXTOS_DEL_WHATSAPP, detalleDelWhatsapp } from '../features/yo/utils/whatsappConfirmado';
 import { pedirVerElRecorrido } from '../features/recorrido/estado/recorridoEnCurso';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -324,6 +327,9 @@ export default function YoScreen() {
   /* Spec 046: el sobrenombre del Muro (Ajustes → Perfil). */
   const sobrenombre = useMiSobrenombre();
   const [hojaDelSobrenombre, setHojaDelSobrenombre] = useState(false);
+  /* Spec 051: el WhatsApp confirmado con un código (Ajustes → Perfil); sirve para recuperar la contraseña. */
+  const whatsappConfirmado = useWhatsappConfirmado();
+  const [hojaDelWhatsapp, setHojaDelWhatsapp] = useState(false);
   /* La misma cuenta que «Fase actual» y «Arquitectura de tiempo» de Plan (`faseEnCurso`): número, nombre,
      rango y día dentro de la fase salen de un solo lugar, así Yo no puede decir otra cosa que Plan. */
   const faseActual = faseEnCurso(resumen?.fase, resumen?.diaPrograma, resumen?.duracionDias);
@@ -1199,8 +1205,23 @@ export default function YoScreen() {
                   onPress={() => setHojaDelSobrenombre(true)}
                 />
               ) : null}
+              {/* Spec 051: el WhatsApp confirmado con un código (solo si el servidor lo ofrece y el canal está listo). */}
+              {whatsappConfirmado.estado?.disponible && esDisponible(CLAVES.cuentaWhatsapp) ? (
+                <FilaDeAjuste
+                  icono="chat"
+                  titulo={TEXTOS_DEL_WHATSAPP.fila}
+                  detalle={detalleDelWhatsapp(whatsappConfirmado.estado.confirmado)}
+                  onPress={() => setHojaDelWhatsapp(true)}
+                />
+              ) : null}
             </GrupoDeAjustes>
             ) : null}
+            <HojaDelWhatsapp
+              visible={hojaDelWhatsapp}
+              confirmado={whatsappConfirmado.estado?.confirmado ?? null}
+              alCerrar={() => setHojaDelWhatsapp(false)}
+              alConfirmar={() => void whatsappConfirmado.recargar()}
+            />
             <HojaDelSobrenombre
               visible={hojaDelSobrenombre}
               mio={sobrenombre.mio}

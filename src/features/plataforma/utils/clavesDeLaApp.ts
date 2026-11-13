@@ -33,6 +33,8 @@ export const CLAVES = {
   pagos: 'pagos',
   emergencia: 'emergencia',
   cuentaEliminar: 'cuenta.eliminar',
+  /* Yo → «WhatsApp» confirmado con un código (spec 051): se esconde si el servidor no lo ofrece. */
+  cuentaWhatsapp: 'cuenta.whatsapp',
   notificaciones: 'notificaciones',
   perfil: 'perfil',
   /* El Código Renaser en las fichas del mentor, la guía y el líder (spec 034): nace apagado para ellos y se esconde. */

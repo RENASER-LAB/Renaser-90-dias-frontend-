@@ -48,7 +48,8 @@ describe('el código por WhatsApp, sin pantalla (spec 043)', () => {
     expect(lineaAntesDeEnviar('registro', '+51 9•• ••• •21')).toBe('Va a +51 9•• ••• •21');
     expect(lineaAntesDeEnviar('recuperacion', '+51 9•• ••• •21')).toBeNull();
     expect(textoDeEnviado('registro', '+51 9•• ••• •21')).toBe('Te lo enviamos por WhatsApp a +51 9•• ••• •21');
-    expect(textoDeEnviado('recuperacion', '+51 9•• ••• •21')).toBe('Si tu cuenta tiene un WhatsApp guardado, te lo enviamos ahí');
+    // spec 051 FR-013
+    expect(textoDeEnviado('recuperacion', '+51 9•• ••• •21')).toBe('Si tu cuenta tiene un WhatsApp confirmado en Yo o guardado en tu ficha, te lo enviamos ahí');
     expect(textoDeEnviado('recuperacion', null)).toBe(textoDeEnviado('recuperacion', '+51 9•• ••• •21'));
   });
 });
