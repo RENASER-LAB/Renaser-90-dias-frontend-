@@ -101,6 +101,7 @@ import { useChatConversaciones } from '../features/chat/hooks/useChatConversacio
 import { useChatEnVivo } from '../features/chat/hooks/useChatEnVivo';
 import { useEnvioMediaChat } from '../features/chat/hooks/useEnvioMediaChat';
 import { BurbujaDeMensaje } from '../features/chat/components/BurbujaDeMensaje';
+import { VENTANA_DEL_CHAT } from '../features/chat/utils/ventanaDelChat';
 import { SelectorDeStickers } from '../features/chat/components/SelectorDeStickers';
 import { BarraDeCita } from '../features/chat/components/CitaDeRespuesta';
 import { MenuDelMensaje } from '../features/chat/components/MenuDelMensaje';
@@ -1244,13 +1245,16 @@ function ComunidadPorFormacion({
    * dejarlo al medio y su renglón se tiñe un momento. Si todavía no se cargó (es más viejo que la
    * página), no se hace nada: la cita ya dice qué decía.
    */
+  /* Estable aunque lleguen mensajes (lee la lista desde una ref): si cambiara con cada mensaje, todas las burbujas memoizadas se re-dibujarían. */
+  const elementosDelChatRef = useRef(elementosDelChat);
+  elementosDelChatRef.current = elementosDelChat;
   const irAlMensaje = useCallback((id: string) => {
-    const indice = elementosDelChat.findIndex(elemento => elemento.tipo === 'mensaje' && elemento.mensaje.id === id);
+    const indice = elementosDelChatRef.current.findIndex(elemento => elemento.tipo === 'mensaje' && elemento.mensaje.id === id);
     if (indice < 0) return;
     reintentoDeIrAlMensaje.current = false;
     bajadaDelChat.listaRef.current?.scrollToIndex({ index: indice, viewPosition: 0.5, animated: true });
     setDestelloId(id);
-  }, [elementosDelChat, bajadaDelChat.listaRef]);
+  }, [bajadaDelChat.listaRef]);
   /* Sin `getItemLayout` (las burbujas miden lo que miden), un renglón lejano todavía no medido no se
      alcanza de una: se baja a una distancia estimada y se reintenta UNA vez, ya dibujado. */
   const reintentoDeIrAlMensaje = useRef(false);
@@ -1275,7 +1279,7 @@ function ComunidadPorFormacion({
           ultimoDeLaTanda={item.ultimoDeLaTanda}
           colores={paletaDelChat}
           audioActivo={playingAudioId === item.mensaje.id}
-          alActivarAudio={() => setPlayingAudioId(item.mensaje.id)}
+          alActivarAudio={setPlayingAudioId}
           onAbrirFoto={setFotoChatAmpliada}
           onMantener={abrirMenuDelMensaje}
           onTocarCita={irAlMensaje}
@@ -4677,7 +4681,7 @@ function ComunidadPorFormacion({
               maintainVisibleContentPosition={posicionAMantener(bajadaDelChat.estado)}
               onScrollToIndexFailed={alNoAlcanzarElMensaje}
               removeClippedSubviews={false}
-              initialNumToRender={20}
+              {...VENTANA_DEL_CHAT}
               showsVerticalScrollIndicator={false}
               ListEmptyComponent={
                 <Text style={[styles.chatAviso, { color: c.textSoft }]}>
