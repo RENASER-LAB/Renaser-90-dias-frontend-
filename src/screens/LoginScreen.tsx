@@ -901,7 +901,10 @@ export default function LoginScreen() {
     const completo = otpCode.length === LARGO_CODIGO;
     return (
       <View style={styles.pantallaDelCodigo}>
-        <Text accessibilityRole="header" style={[styles.tituloDelCodigo, { color: c.textStrong }]}>
+        <Text
+          accessibilityRole="header"
+          style={[styles.tituloDelCodigo, o.titulo ? styles.tituloDelPaso : null, { color: c.textStrong }]}
+        >
           {o.titulo ?? 'Ingresa tu código'}
         </Text>
         <Text style={[t.body, styles.lineaDelCodigo, { color: c.textSoft }]}>{o.linea}</Text>
@@ -974,7 +977,7 @@ export default function LoginScreen() {
           />
           <ScrollView
             style={styles.raiz}
-            contentContainerStyle={[styles.scrollContent, anchoDelContenido, { paddingBottom: insets.bottom + 28 }]}
+            contentContainerStyle={[styles.scrollContent, anchoDelContenido, { paddingTop: 16, paddingBottom: insets.bottom + 28 }]}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
@@ -1678,6 +1681,8 @@ const styles = StyleSheet.create({
   campoWhatsapp: { width: '100%' },
   pantallaDelCodigo: { width: '100%', gap: 8, paddingTop: 8 },
   tituloDelCodigo: { fontFamily: fuentes.negrita, fontSize: 24, letterSpacing: -0.3 },
+  /* El título del paso del código del alta, del mismo tamaño que el de los otros pasos. */
+  tituloDelPaso: { fontFamily: fuentes.display, fontSize: 32, lineHeight: 38, letterSpacing: -0.8, marginBottom: 8 },
   lineaDelCodigo: { fontSize: 16, marginBottom: 4 },
   avisoDelCodigo: { fontSize: 15, textAlign: 'center' },
   textoConfirmar: { fontFamily: fuentes.negrita, fontSize: 16, letterSpacing: 0 },

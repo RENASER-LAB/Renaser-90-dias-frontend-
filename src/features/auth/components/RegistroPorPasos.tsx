@@ -72,6 +72,7 @@ export function RegistroPorPasos({
   const [verContrasena, setVerContrasena] = useState(false);
   const [enfocado, setEnfocado] = useState<string | null>(null);
 
+  const listaRef = useRef<ScrollView>(null);
   const apellidosRef = useRef<TextInput>(null);
   const primerCampoRef = useRef<TextInput>(null);
 
@@ -91,6 +92,12 @@ export function RegistroPorPasos({
     return () => clearTimeout(temporizador);
   }, [paso]);
 
+  /* En un teléfono chico, con el teclado arriba, el último campo del paso puede quedar bajo el botón: al enfocarlo se lleva la lista hasta
+     el final (el botón vive fuera del scroll, así que el campo termina justo encima de él). Se espera a que el teclado termine de subir. */
+  const verElUltimoCampo = () => {
+    setTimeout(() => listaRef.current?.scrollToEnd({ animated: true }), 300);
+  };
+
   const errorEn = (campo: string) => (error?.campo === campo ? error.mensaje : null);
   const ultimo = indice === total - 1;
   const fuerza = fuerzaDeLaContrasena(datos.contrasena);
@@ -107,6 +114,7 @@ export function RegistroPorPasos({
         />
 
         <ScrollView
+          ref={listaRef}
           style={styles.raiz}
           contentContainerStyle={[
             styles.contenido,
@@ -119,7 +127,11 @@ export function RegistroPorPasos({
           <EntradaEscalonada key={`paso-${paso}`} indice={0}>
             <Text
               accessibilityRole="header"
-              style={[styles.titulo, { color: c.textStrong, fontSize: isShort ? 28 : 32, lineHeight: isShort ? 34 : 38 }]}
+              style={[
+                styles.titulo,
+                { color: c.textStrong, fontSize: isShort ? 28 : 32, lineHeight: isShort ? 34 : 38 },
+                tecladoAbierto && isShort && styles.tituloCompacto,
+              ]}
             >
               {TITULO_DEL_PASO[paso]}
             </Text>
@@ -164,7 +176,10 @@ export function RegistroPorPasos({
                     textContentType="familyName"
                     returnKeyType="next"
                     onSubmitEditing={alContinuar}
-                    onFocus={() => setEnfocado('apellidos')}
+                    onFocus={() => {
+                      setEnfocado('apellidos');
+                      verElUltimoCampo();
+                    }}
                     onBlur={() => setEnfocado(null)}
                     debajo={errorEn('apellidos') ? <MensajeBajoElCampo texto={errorEn('apellidos')!} /> : null}
                   />
@@ -316,6 +331,7 @@ const styles = StyleSheet.create({
   contenido: { flexGrow: 1, paddingTop: 24, paddingBottom: 16 },
   contenidoTablet: { maxWidth: 560, width: '100%', alignSelf: 'center' },
   titulo: { fontFamily: fuentes.display, letterSpacing: -0.8, marginBottom: 24 },
+  tituloCompacto: { fontSize: 26, lineHeight: 31, marginBottom: 14 },
   campos: { gap: 18 },
   ojo: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   medidor: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: -6 },
