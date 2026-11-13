@@ -9,8 +9,11 @@ env:
 ---
 - launchApp
 # spec 052 FR-001
-- tapOn: "¿No tienes cuenta? Solicitar acceso"
-- assertVisible: "¿Cómo te llamas?"
+- extendedWaitUntil:
+    visible: ".*Solicitar acceso"
+    timeout: 60000
+- tapOn: ".*Solicitar acceso"
+- assertVisible: "¿Cómo te llamas\\?"
 - assertVisible: "1 de .*"
 - takeScreenshot: 01-nombre
 # spec 052 FR-002: sin nombres no avanza y dice qué falta
@@ -31,7 +34,7 @@ env:
 - takeScreenshot: 04-correo-con-teclado
 # spec 052 FR-003: atrás conserva lo escrito
 - tapOn: "Volver al paso anterior"
-- assertVisible: "¿Cómo te llamas?"
+- assertVisible: "¿Cómo te llamas\\?"
 - assertVisible: "Ana"
 - tapOn: "Continuar"
 - assertVisible: ${CORREO}
