@@ -254,6 +254,7 @@ async function atras(): Promise<void> {
   });
 }
 
+const AVISO = 'Este mentor no sigue su propio programa: por eso no hay días ni evidencias. Lo activa desde Yo.';
 const hayFila = (r: ReactTestRenderer) => botones(r).some(b => b.startsWith(FILA));
 
 beforeEach(() => {
@@ -289,6 +290,28 @@ describe('la fila «Sus días y evidencias» de la ficha del mentor', () => {
     /* Lo demás de la ficha sigue igual. */
     expect(textos(r)).toContain('Sus grupos');
     expect(botones(r)).toContain('Escribirle');
+  });
+
+  // issue #202 — cambio de D-318 del 2026-11-13: con haceSuPrograma false se dice por qué no hay días
+  it('con haceSuPrograma false dice por qué no hay días ni evidencias, sin fila tocable', async () => {
+    const r = await montarLaFicha(ficha({ haceSuPrograma: false }));
+    expect(textos(r)).toContain(AVISO);
+    expect(hayFila(r)).toBe(false);
+  });
+
+  it.each([
+    ['true', true],
+    ['null', null],
+    ['ausente (un servidor anterior)', undefined],
+  ])('el aviso no sale si haceSuPrograma es %s', async (_nombre, valor) => {
+    const r = await montarLaFicha(ficha({ haceSuPrograma: valor as boolean | null | undefined }));
+    expect(textos(r)).not.toContain('no sigue su propio programa');
+  });
+
+  it('con la cuenta suspendida no sale el aviso (ya dice que está suspendida)', async () => {
+    const r = await montarLaFicha(ficha({ haceSuPrograma: false, accountActive: false }));
+    expect(textos(r)).not.toContain('no sigue su propio programa');
+    expect(textos(r)).toContain('suspendida');
   });
 
   it('no se dibuja sin quien la atienda (la ficha abierta desde un lugar que no sabe abrir días)', async () => {

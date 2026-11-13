@@ -63,6 +63,7 @@ también en el texto (`grep -n "Plan" docs/decisiones/*.md`). Si dos entradas ch
 | 2026-11-10 | Training | Corrección | Kilómetros diarios: una caminata normal cuenta (#172) | [kilometros-y-carrera.md](kilometros-y-carrera.md) |  |
 | 2026-11-10 | Hoy, Training, Comunidad | Corrección | sin señal, el Código Renaser ya no atrapa, la Pastilla se entrega y el ranking lo dice (spec 048, issue #178) | [transversal.md](transversal.md) | sí |
 | 2026-11-10 | Comunidad | Cambio | Comunidad: sin «Todas» en el selector de formación (#169) | [comunidad.md](comunidad.md) |  |
+| 2026-11-13 | Administración | Cambio | la ficha del mentor sin programa dice por qué no hay días (cambia D-318, #202) | [liderazgo-y-administracion.md](liderazgo-y-administracion.md) |  |
 | 2026-11-09 | Hoy, Plan, Training, Comunidad, Yo | Cambio | la app funciona sin internet, fase 1 (spec 048) | [transversal.md](transversal.md) | sí |
 | 2026-11-06 | Comunidad | Cambio | la transcripción de las sesiones por Meet se guarda, cifrada y sin mostrarse (spec 047) | [comunidad.md](comunidad.md) |  |
 | 2026-11-06 | Comunidad | Cambio | Comunidad → Eventos: eventos para quien tú elijas, y el líder en el chat de soporte (spec 044, D-326) | [comunidad.md](comunidad.md) |  |

@@ -23,6 +23,12 @@ import {
 import { escribirleAlMentor } from '../utils/irAlChat';
 import { encabezadoDeLaObservacion } from '../utils/textoDeObservacion';
 
+/**
+ * Cambio del 2026-11-13 sobre D-318 (pedido del dueño: el equipo de liderazgo «no ve la actividad de los mentores»): si el servidor dice
+ * `haceSuPrograma: false` (cuenta activa), en vez de omitir «Sus días y evidencias» se dice por qué no hay nada que abrir.
+ */
+export const AVISO_SIN_PROGRAMA = 'Este mentor no sigue su propio programa: por eso no hay días ni evidencias. Lo activa desde Yo.';
+
 const TIPOS: TipoObservacion[] = ['RECONOCIMIENTO', 'SUGERENCIA', 'ALERTA'];
 
 /**
@@ -122,6 +128,8 @@ function Ficha({
             primera
           />
         </ListaDeFilas>
+      ) : ficha.haceSuPrograma === false && ficha.accountActive ? (
+        <Linea>{AVISO_SIN_PROGRAMA}</Linea>
       ) : null}
 
       <View style={estilos.seccion}>
