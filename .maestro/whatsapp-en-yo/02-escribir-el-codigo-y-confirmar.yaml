@@ -1,0 +1,28 @@
+# Spec 051 — sigue a 01: el código (variable CODIGO, leído del YCloud falso) y el número queda confirmado; la fila de Yo lo muestra enmascarado.
+# Un código equivocado se dice bajo las casillas y no guarda nada.
+# cuenta: personal (la misma de 01)
+# corrido: 2026-11-12
+appId: com.renaser.app
+---
+# spec 051 FR-012
+- inputText: "000000"
+- tapOn: "Confirmar"
+- extendedWaitUntil:
+    visible: "El código no es válido o ya venció.*"
+    timeout: 15000
+- takeScreenshot: W02a-codigo-incorrecto
+# spec 051 FR-011
+- eraseText: 10
+- inputText: ${CODIGO}
+- tapOn: "Confirmar"
+- extendedWaitUntil:
+    visible: "Tu WhatsApp .* quedó confirmado."
+    timeout: 15000
+- takeScreenshot: W02b-confirmado
+- tapOn: "Listo"
+# spec 051 FR-010, FR-012
+- extendedWaitUntil:
+    visible: "\\+51 9•• ••• •.*"
+    timeout: 15000
+- assertNotVisible: "Agregar"
+- takeScreenshot: W02c-fila-confirmada

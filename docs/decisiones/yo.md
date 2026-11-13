@@ -312,3 +312,29 @@ nuevo**. Lo que cambia y nada más:
 * **Pruebas:** `whatsappDelPerfil` (de dónde sale, vaciarlo, la regla de la ficha), `guardarElPerfil`, `useWhatsappDelPerfil` (prellenado, relecturas, error, guardar), `campoWhatsappDelPerfil`
   (el control de la ficha prellenado, los tres estados) y `perfilConWhatsappSinBiografia` (ni `bio` en pantallas ni en pedidos; el campo en «Editar perfil», revisado antes de guardar).
   `navegacionDeYo`, `redisenoDeYo`, `barraDePestanasIconos` y `textosVerdaderosDeYo` se ajustaron (sin «Información»; el departamento en Editar perfil). Sin Maestro nuevo: no se probó en el emulador.
+
+
+## Cambio por pedido del dueño — 2026-11-12 — Yo → Ajustes → Perfil: «WhatsApp» confirmado con un código (spec 051)
+
+**Autorizado explícitamente: toca el tab `Yo`** (la fila «WhatsApp» y su hoja). Spec 051 del backend (`specs/051-whatsapp-confirmado-en-yo/`), D-352.
+
+**Pedido (decisión del dueño, 12/11/2026):** las cuentas del personal (ALQUIMISTA/admin, MENTOR, GUÍA y cualquier rol sin Ficha Inicial) no tienen WhatsApp, así que el código para recuperar la
+contraseña por WhatsApp (spec 043) nunca les llega: ese código lee la respuesta `whatsapp` de la Ficha Inicial. En `Yo`, cualquiera (personal y aprendices) puede agregar o cambiar su número de
+WhatsApp, y **solo se guarda después de confirmarlo con un código de 6 dígitos enviado por WhatsApp a ese número**. Ese número confirmado es el que usa la recuperación.
+
+**Lo que cambia y nada más:**
+* Yo → Ajustes → Perfil suma una fila **«WhatsApp»** (ícono de chat) para todos los roles: muestra el número confirmado enmascarado (`+51 9•• ••• •21`) o «Agregar». Solo aparece si el servidor la
+  ofrece (`GET /users/me/whatsapp` → `available: true`) y el interruptor `cuenta.whatsapp` está prendido; contra un servidor anterior o sin el canal listo, no aparece.
+* Tocarla abre una **hoja desde abajo** (`HojaDesdeAbajo`) con tres pasos: el número con el selector de país de la ficha (`PhoneCountryInput`, +51 por defecto) → «Enviar código» → las seis casillas
+  del código (`CodigoOtpInput`, con «Reenviar» a los 60 s) → «Confirmar» → «Tu WhatsApp +51 9•• ••• •21 quedó confirmado.» y «Listo». Volver (la ‹ y el atrás de Android) regresa del código al número;
+  «Cambiar número» también. Los errores del servidor se muestran con su texto bajo el campo: código incorrecto o vencido (422), número ya en uso en otra cuenta (409), límite de códigos (429), canal caído.
+  Un toque, un pedido: el botón se apaga mientras viaja. Al confirmar, Yo relee el estado del servidor.
+* La pantalla del código de la recuperación dice ahora «Si tu cuenta tiene un WhatsApp confirmado en Yo o guardado en tu ficha, te lo enviamos ahí» (sigue siendo la misma frase para todos: no revela
+  si la cuenta tiene número).
+
+**No cambian:** los otros cuatro tabs; «Editar perfil» y su campo «WhatsApp» (el de la ficha, sin confirmar) siguen como estaban y los aprendices con número en la ficha siguen recuperando por él (la
+recuperación prefiere el confirmado y, sin él, usa el de la ficha). No se puede quitar el número confirmado (fuera de alcance). Ningún ícono nuevo, ningún emoji, ninguna animación nueva.
+
+**Pruebas:** `whatsappConfirmado` (textos, número, motivo del servidor), `hojaDelWhatsapp` (pasos, código incorrecto, 429, un toque un pedido, cambiar número), `useWhatsappConfirmado` (esconde la fila
+sin servidor, relee, una lectura vieja no pisa), `whatsappConfirmadoEnYo` (la fila en el grupo «Perfil» sin condición de rol) y los textos de la recuperación (`codigoPorWhatsApp`,
+`loginCodigoPorWhatsApp`). Maestro: `.maestro/whatsapp-en-yo/`. **Hace falta backend** (V192, `cuenta.whatsapp`); **APK nuevo no**: solo JavaScript.

@@ -1,0 +1,31 @@
+# Spec 051 — Yo → Ajustes → Perfil → «WhatsApp»: agregar el número y confirmarlo con el código que llega por WhatsApp.
+# Precondición: backend local (nunca producción) con V192, `WHATSAPP_*` apuntando a un YCloud FALSO en 127.0.0.1:9099 (el código se lee del
+# `envios.jsonl` del YCloud falso con `.maestro/whatsapp-en-yo/leer-el-codigo.sh` y entra como CODIGO), y una cuenta del PERSONAL (sin Ficha
+# Inicial) con la sesión abierta. Variable NUMERO: el número local sin código de país (por ejemplo 987654321).
+# cuenta: personal (mentor o admin)
+# corrido: 2026-11-12
+appId: com.renaser.app
+---
+# La sesión ya está abierta y la app en la pestaña Yo (el personal no siempre muestra la barra de pestañas al entrar).
+- tapOn: "Ajustes"
+# spec 051 FR-010
+- scrollUntilVisible:
+    element: "WhatsApp"
+    timeout: 20000
+- assertVisible: "Agregar"
+- takeScreenshot: W01a-fila-agregar
+- tapOn: "WhatsApp"
+# spec 051 FR-011
+- extendedWaitUntil:
+    visible: "Tu WhatsApp"
+    timeout: 10000
+- assertVisible: "Enviar código"
+- tapOn: "999 999 999"
+- inputText: ${NUMERO}
+- hideKeyboard
+- takeScreenshot: W01b-numero
+- tapOn: "Enviar código"
+- extendedWaitUntil:
+    visible: "Enviamos un código por WhatsApp a.*"
+    timeout: 15000
+- takeScreenshot: W01c-codigo

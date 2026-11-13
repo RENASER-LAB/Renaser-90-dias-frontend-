@@ -54,7 +54,7 @@ export function lineaAntesDeEnviar(flujo: FlujoDelCodigo, enmascarado: string | 
 
 /** Lo que se dice al terminar (FR-015). En la recuperación es la misma frase siempre: tenga o no WhatsApp la cuenta. */
 export function textoDeEnviado(flujo: FlujoDelCodigo, enmascarado: string | null): string {
-  if (flujo === 'recuperacion') return 'Si tu cuenta tiene un WhatsApp guardado, te lo enviamos ahí';
+  if (flujo === 'recuperacion') return 'Si tu cuenta tiene un WhatsApp confirmado en Yo o guardado en tu ficha, te lo enviamos ahí';
   return enmascarado ? `Te lo enviamos por WhatsApp a ${enmascarado}` : 'Te lo enviamos por WhatsApp';
 }
 
