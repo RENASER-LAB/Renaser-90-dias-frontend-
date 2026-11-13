@@ -12,11 +12,16 @@ import { mostrarAccesoDeEmergencia } from '../utils/pedidoDeEmergencia';
  * `visible` es `false` solo para quien no es aprendiz (el servidor responde 403): el acceso no
  * aparece. Un fallo de red conserva lo último que se leyó.
  */
-export function useMiEmergencia() {
+/**
+ * `activo` es falso para el personal: el pedido de emergencia es solo de aprendices y el servidor responde 403 a cualquier otro rol
+ * (#197). Sin esto, cada apertura de Yo del personal dejaba un 403 en el log.
+ */
+export function useMiEmergencia(activo = true) {
   const [mia, setMia] = useState<MiEmergencia | null>(null);
   const pedido = useRef(0);
 
   const cargar = useCallback(async () => {
+    if (!activo) return;
     const este = ++pedido.current;
     try {
       const leida = await leerMiEmergencia();
@@ -25,7 +30,7 @@ export function useMiEmergencia() {
       const status = (error as { status?: number } | null)?.status;
       if (este === pedido.current && (status === 404 || status === 403)) setMia(null);
     }
-  }, []);
+  }, [activo]);
 
   useFocusEffect(
     useCallback(() => {
