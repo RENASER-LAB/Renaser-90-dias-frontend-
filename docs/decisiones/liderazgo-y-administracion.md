@@ -613,3 +613,14 @@ calcula nada):
   releer la ficha, el contrato) y `delGrupoALaPersona` (el mentor del grupo abre sus días por la ruta del grupo); `tsc` limpio.
 * **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire) **y el backend con D-318 antes**: contra uno anterior la ficha no
   trae `haceSuPrograma` y la fila no se dibuja; todo queda como estaba.
+
+## Cambio por pedido del dueño — 2026-11-13 — la ficha del mentor sin programa dice por qué no hay días (cambia D-318, #202)
+
+El equipo de liderazgo avisó de que «no ve la actividad de los mentores»: con D-318 la fila «Sus días y evidencias ›» **se omitía en silencio** cuando el
+mentor no seguía su propio programa («Seguir el programa como staff» apagado) y nadie sabía por qué faltaba. El dueño decidió (13/11) que en ese caso **se
+diga**. Solo JavaScript:
+* **`FichaMentorScreen`:** con `haceSuPrograma === false` y la cuenta activa, en lugar de la fila va una línea de texto (sin toque, sin ícono):
+  «Este mentor no sigue su propio programa: por eso no hay días ni evidencias. Lo activa desde Yo.».
+* **No cambian:** con `true` la fila de siempre; con `null` o sin el campo (servidor anterior) no se dibuja nada; con la cuenta suspendida solo «Su cuenta
+  está suspendida.». Administración no usa esta ficha (la de «Sus días y evidencias» de su semáforo por grupo es otra pantalla y no cambia).
+* **Pruebas:** `diasDelMentor.test.ts` (el aviso con `false`; ausente con `true`, `null`, sin campo y con la cuenta suspendida).
