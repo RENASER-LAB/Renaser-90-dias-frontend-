@@ -644,3 +644,15 @@ Spec en el backend (`specs/052-registro-por-pasos/`). Toca el ingreso (`LoginScr
 * **El contrato no cambia**: mismos endpoints y campos (`email-verification/send` con la comprobación de correo libre, `confirm`, `account-requests`), solo en otro orden (`useRegistroConOtp`: `confirmarYRegistrar` se parte en `confirmarCodigo` y `crearSolicitud`). Un 409 de correo ocupado vuelve al paso del correo. **«Listo, <nombre>»** (tras «Crear mi cuenta»): ícono de check, «Te avisaremos cuando aprueben tu acceso.» y «Ir al inicio»; se mantiene, como enlace chico, «Ver el estado de mi solicitud».
 * **No cambian**: el login, «¿Olvidaste tu contraseña?» y la recuperación, el alta con Google, los cinco tabs. Sin dependencias ni código nativo.
 * **Pruebas:** Jest `registroPorPasos` (lógica) y `registroPorPasosPantalla` (pasos, validación, atrás, estado conservado, payload sin cambios, teclado); Maestro `registro-por-pasos/`. **Hace falta un APK nuevo** (solo JavaScript).
+
+## Decisión del dueño — 2026-11-13 — «El número es único»: el WhatsApp de «Solicitar acceso» no puede ser de otra cuenta (spec 051, FR-014 a FR-019)
+
+> «El número es único.» Un número de WhatsApp que ya pertenece a otra cuenta se rechaza con un mensaje claro al pedir acceso.
+
+Spec en el backend: se amplió la **051** (`specs/051-whatsapp-confirmado-en-yo/`, D9–D11 y FR-014–FR-019; el porqué de no ser la 052 está en D10) y la decisión del servidor es la **D-353**. Toca el ingreso (`LoginScreen`), no los cinco tabs. Lo que cambia y nada más:
+* **El paso «Tu WhatsApp» consulta al servidor antes de avanzar** (`POST /auth/whatsapp-code/number`, `comprobarNumeroDelRegistro`). Un número «de otra cuenta» es uno confirmado en Yo por otra cuenta, declarado en la Ficha de otra persona o en una solicitud pendiente de otra. Si lo es (409 `NUMERO_EN_USO`), si no tiene forma de número (422) o si se pasó el tope de consultas (429), el **texto del servidor** sale bajo el campo con el borde de error y la persona **se queda en el paso**; el botón está apagado mientras viaja el pedido. Cambiar el número deja pasar.
+* **Si al crear la solicitud el servidor dice `NUMERO_EN_USO`** (otra cuenta se quedó con el número entre tanto), la app vuelve al paso del WhatsApp con ese motivo, no al del correo. Un correo ya registrado conserva su mensaje y su paso.
+* **Contra un servidor anterior** (404) el paso avanza como hoy: la solicitud igual la valida el servidor al crearse y al aprobarse.
+* **No cambian**: el orden y los textos de los pasos, el login, la recuperación, el alta con Google, Yo → «WhatsApp» (spec 051, que sigue rechazando solo al confirmar), los cinco tabs. Sin dependencias ni código nativo.
+* **Pruebas:** Jest `registroPorPasosPantalla` (409, 429 y el 409 al crear) y `codigoPorWhatsAppApi` (la consulta; un 404 no bloquea). **Hace falta un APK nuevo** (solo JavaScript) **y el backend de la 051/D-353 antes.**
+

@@ -57,7 +57,7 @@ import {
 import { useSacudida } from '../features/auth/hooks/useSacudida';
 import { abrirPoliticaDePrivacidad } from '../features/legal/enlacesLegales';
 import { validarWhatsapp } from '../features/onboarding/data/pasosFicha';
-import { codigoPorWhatsAppDisponible } from '../features/auth/api/codigoPorWhatsAppApi';
+import { codigoPorWhatsAppDisponible, comprobarNumeroDelRegistro } from '../features/auth/api/codigoPorWhatsAppApi';
 import { useOfertaDeWhatsApp } from '../features/auth/hooks/useOfertaDeWhatsApp';
 import { EnlaceDeWhatsApp, LineaDeWhatsApp } from '../features/auth/components/EnlaceDeWhatsApp';
 import { WHATSAPP_INICIAL } from '../features/auth/utils/codigoPorWhatsApp';
@@ -490,6 +490,23 @@ export default function LoginScreen() {
   };
 
   /**
+   * El paso del WhatsApp (spec 051, FR-019): pregunta al servidor si el número ya es de otra cuenta. Si lo es (o el servidor pone un tope), dice su
+   * motivo bajo el campo y devuelve `false`: no se avanza. El botón queda apagado mientras viaja el pedido (`loading`).
+   */
+  const numeroDelRegistroLibre = async (): Promise<boolean> => {
+    try {
+      setLoading(true);
+      await comprobarNumeroDelRegistro(whatsapp);
+      return true;
+    } catch (error) {
+      setErrorDelPaso({ campo: 'whatsapp', mensaje: mensajeDeError(error, 'No pudimos comprobar tu número. Inténtalo de nuevo.') });
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
    * «Continuar» / «Crear mi cuenta» de «Solicitar acceso»: valida SOLO el paso actual (diciendo qué falta) y avanza. Antes del paso del
    * código pide el código al correo; en el último, con el contacto ya verificado, crea la solicitud con el token (spec 052).
    */
@@ -507,6 +524,7 @@ export default function LoginScreen() {
     }
     setErrorDelPaso(null);
     const verificado = tokenDeVerificacion !== null;
+    if (paso === 'whatsapp' && !(await numeroDelRegistroLibre())) return;
     if (indiceDelPaso < pasosDeRegistro.length - 1) {
       const siguiente = indiceSiguiente(pasosDeRegistro, indiceDelPaso, verificado);
       if (pasosDeRegistro[indiceDelPaso + 1] === 'verificar' && !verificado) {
@@ -537,7 +555,11 @@ export default function LoginScreen() {
       setStep('solicitud_enviada');
     } catch (error) {
       const mensaje = mensajeDeError(error, 'No pudimos registrar tu solicitud. Revisa tus datos e inténtalo de nuevo.');
-      if (error instanceof ApiError && error.status === 409) {
+      if (error instanceof ApiError && error.status === 409 && error.codigo === 'NUMERO_EN_USO') {
+        // El número se lo quedó otra cuenta mientras tanto (spec 051, FR-017): vuelve al paso del WhatsApp con el motivo del servidor.
+        setPasoDelRegistro(Math.max(pasosDeRegistro.indexOf('whatsapp'), 0));
+        setErrorDelPaso({ campo: 'whatsapp', mensaje });
+      } else if (error instanceof ApiError && error.status === 409) {
         setPasoDelRegistro(pasosDeRegistro.indexOf('correo'));
         setErrorDelPaso({ campo: 'email', mensaje });
       } else if (error instanceof ApiError && error.status === 400 && /verific|venci|token/i.test(mensaje)) {

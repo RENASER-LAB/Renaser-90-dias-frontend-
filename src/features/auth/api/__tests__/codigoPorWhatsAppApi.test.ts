@@ -7,6 +7,7 @@ jest.mock('../../../../services/http/apiClient', () => ({
 
 import {
   codigoPorWhatsAppDisponible,
+  comprobarNumeroDelRegistro,
   pedirCodigoDeRecuperacionPorWhatsApp,
   pedirCodigoDelRegistroPorWhatsApp,
 } from '../codigoPorWhatsAppApi';
@@ -50,5 +51,25 @@ describe('la API del código por WhatsApp (spec 043)', () => {
       body: { email: 'ana@renaser.test' },
       conSesion: false,
     });
+  });
+
+  // spec 051 FR-014, FR-019
+  it('comprobar el número manda solo el WhatsApp escrito, sin sesión; el motivo del servidor (409) sube tal cual', async () => {
+    mockApiFetch.mockResolvedValueOnce(undefined);
+    await expect(comprobarNumeroDelRegistro(' +51 987654321 ')).resolves.toBeUndefined();
+    expect(mockApiFetch).toHaveBeenCalledWith('/api/v1/auth/whatsapp-code/number', {
+      method: 'POST',
+      body: { whatsapp: '+51 987654321' },
+      conSesion: false,
+    });
+    const enUso = Object.assign(new Error('Ese número de WhatsApp ya está en uso en otra cuenta.'), { status: 409 });
+    mockApiFetch.mockRejectedValueOnce(enUso);
+    await expect(comprobarNumeroDelRegistro('+51 987654321')).rejects.toBe(enUso);
+  });
+
+  // spec 051 FR-014
+  it('contra un servidor anterior o con el interruptor apagado (404) no bloquea el paso', async () => {
+    mockApiFetch.mockRejectedValueOnce(Object.assign(new Error('no'), { status: 404 }));
+    await expect(comprobarNumeroDelRegistro('+51 987654321')).resolves.toBeUndefined();
   });
 });

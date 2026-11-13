@@ -62,6 +62,7 @@ jest.mock('../../features/auth/hooks/useDisponibilidadCorreo', () => ({ useDispo
 jest.mock('../../features/auth/api/codigoPorWhatsAppApi', () => ({
   codigoPorWhatsAppDisponible: () => mockDisponible(),
   pedirCodigoDelRegistroPorWhatsApp: (email: string, whatsapp: string) => mockPedirRegistro(email, whatsapp),
+  comprobarNumeroDelRegistro: () => Promise.resolve(),
   pedirCodigoDeRecuperacionPorWhatsApp: (email: string) => mockPedirRecuperacion(email),
 }));
 
