@@ -42,13 +42,14 @@ también en el texto (`grep -n "Plan" docs/decisiones/*.md`). Si dos entradas ch
 | [soporte-ti.md](soporte-ti.md) | Soporte TI: interruptores, despliegue, roles personalizados y «ver como» (spec 002) | 2 |
 | [training.md](training.md) | Training: lista por hora, hábitos, evidencias y el editor Planificar | 19 |
 | [transversal.md](transversal.md) | Lo que tocó varios tabs a la vez: diseño, fuentes, barra de pestañas, velocidad, CI y arreglos de E2E | 23 |
-| [yo.md](yo.md) | Yo: Ajustes, fase, evidencias, Caja, emergencia, perfil, cuenta y privacidad | 12 |
+| [yo.md](yo.md) | Yo: Ajustes, fase, evidencias, Caja, emergencia, perfil, cuenta y privacidad | 13 |
 | [reglas-historial.md](reglas-historial.md) | Las reglas de `AGENTS.md` tal como estaban, con sus notas «Corregido» | — |
 
 ## Entradas (la más nueva primero)
 
 | Fecha | Tabs | Tipo | Entrada | Archivo | Corregida |
 |---|---|---|---|---|---|
+| 2026-11-12 | Yo | Cambio | Yo → Ajustes → Perfil: «WhatsApp» confirmado con un código, para que también el personal recupere su contraseña por WhatsApp (spec 051) | [yo.md](yo.md) |  |
 | 2026-11-12 | ninguno | Cambio | «Solicitar acceso» por pasos, con fondo liso y el botón sobre el teclado; el login queda pospuesto (spec 052) | [ingreso-y-onboarding.md](ingreso-y-onboarding.md) |  |
 | 2026-11-11 | ninguno | Decisión | la app entiende el 429 «Espera un momento» del límite de pedidos y la cola lo reintenta con Retry-After (spec 050, tramo C) | [transversal.md](transversal.md) |  |
 | 2026-11-11 | Training | Corrección | la Pastilla entregada sin señal se registra con su hora real (spec 048, issue #186) | [transversal.md](transversal.md) |  |

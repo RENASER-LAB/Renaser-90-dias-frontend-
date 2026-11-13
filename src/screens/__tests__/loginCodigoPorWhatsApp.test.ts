@@ -223,7 +223,8 @@ describe('el código por WhatsApp en el ingreso (spec 043)', () => {
     expect(textos(r)).not.toMatch(/•/);
     await act(async () => enlace.props.onPress());
     expect(mockPedirRecuperacion).toHaveBeenCalledWith('ana@renaser.test');
-    expect(textos(r)).toContain('Si tu cuenta tiene un WhatsApp guardado, te lo enviamos ahí');
+    // spec 051 FR-013
+    expect(textos(r)).toContain('Si tu cuenta tiene un WhatsApp confirmado en Yo o guardado en tu ficha, te lo enviamos ahí');
   });
 });
 

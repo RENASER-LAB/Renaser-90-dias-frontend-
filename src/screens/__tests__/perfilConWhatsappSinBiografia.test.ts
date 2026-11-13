@@ -93,9 +93,9 @@ describe('la fila «Información» se quitó y el departamento pasó a Editar pe
     expect(leer('features/yo/utils/navegacionDeYo.ts')).not.toContain('info_perfil');
   });
 
-  it('Ajustes → Perfil tiene «Editar perfil», que dice lo que se edita ahí, y (spec 046) «Sobrenombre en el Muro»', () => {
+  it('Ajustes → Perfil tiene «Editar perfil», que dice lo que se edita ahí, y (spec 046) «Sobrenombre en el Muro» y (spec 051) «WhatsApp»', () => {
     const grupo = yo.slice(yo.indexOf('<GrupoDeAjustes titulo="Perfil">'), yo.indexOf('</GrupoDeAjustes>', yo.indexOf('<GrupoDeAjustes titulo="Perfil">')));
-    expect(grupo.match(/<FilaDeAjuste/g)).toHaveLength(2);
+    expect(grupo.match(/<FilaDeAjuste/g)).toHaveLength(3); // Editar perfil, sobrenombre (046) y WhatsApp confirmado (051)
     expect(grupo).toContain('titulo={TEXTOS_DEL_SOBRENOMBRE.filaDeYo}');
     expect(grupo).toContain('titulo="Editar perfil"');
     expect(grupo).toContain('detalle="Nombre, foto, WhatsApp y departamento"');

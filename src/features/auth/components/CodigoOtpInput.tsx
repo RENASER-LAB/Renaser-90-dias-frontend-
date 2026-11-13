@@ -19,6 +19,8 @@ type Props = {
   deshabilitado?: boolean;
   /** Lo que va en la misma línea después de «Reenviar»: la opción de WhatsApp (spec 043). */
   otraOpcion?: React.ReactNode;
+  /** Lo que oye el lector de pantalla en «Reenviar»: por defecto, el correo (el código del alta y de la recuperación); Yo → WhatsApp (spec 051) dice otra cosa. */
+  etiquetaReenviar?: string;
 };
 
 /**
@@ -36,6 +38,7 @@ export function CodigoOtpInput({
   onReenviar,
   deshabilitado = false,
   otraOpcion,
+  etiquetaReenviar = 'Reenviar el código al correo',
 }: Props) {
   const { c, t } = useTheme();
 
@@ -92,7 +95,7 @@ export function CodigoOtpInput({
             onPress={onReenviar}
             disabled={deshabilitado}
             accessibilityRole="button"
-            accessibilityLabel="Reenviar el código al correo"
+            accessibilityLabel={etiquetaReenviar}
             style={styles.opcion}
           >
             <Text style={[t.small, styles.textoReenvio, { color: c.goldInk, fontFamily: fuentes.media }]}>Reenviar</Text>

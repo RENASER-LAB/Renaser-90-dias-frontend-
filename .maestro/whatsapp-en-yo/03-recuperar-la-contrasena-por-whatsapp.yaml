@@ -1,0 +1,21 @@
+# Spec 051 — la cuenta del PERSONAL que confirmó su número en Yo recupera su contraseña por WhatsApp (antes el código nunca le llegaba: no tenía ficha).
+# Precondición: 01 y 02 hechos; la sesión cerrada; `auth.codigo_whatsapp` prendido; CORREO es la cuenta del personal. Después del flujo, el
+# YCloud falso anotó un envío a ese número (se comprueba con `leer-el-codigo.sh`).
+# cuenta: personal (la misma de 01)
+# sin correr como flujo: en el E2E del 12/11 se hizo a mano por adb (Maestro tarda en escribir el correo); el envío al número confirmado quedó anotado en el YCloud falso
+appId: com.renaser.app
+---
+- launchApp
+- tapOn: "Recuperar la contraseña"
+- tapOn: "Correo electrónico"
+- inputText: ${CORREO}
+- tapOn: "ENVIARME UN CÓDIGO"
+# spec 051 FR-005
+- extendedWaitUntil:
+    visible: "Envíamelo por WhatsApp"
+    timeout: 75000
+- tapOn: "Envíamelo por WhatsApp"
+- extendedWaitUntil:
+    visible: "Si tu cuenta tiene un WhatsApp confirmado en Yo o guardado en tu ficha, te lo enviamos ahí"
+    timeout: 15000
+- takeScreenshot: W03-recuperar-enviado
