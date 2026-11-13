@@ -42,7 +42,7 @@ export function useRecuperacionContrasena() {
       const token = await authApi.verificarCodigoResetContrasena(email, codigo);
       setResetToken(token);
     } catch (error) {
-      throw conMensaje(error, 'El código no es válido o ya venció. Pedí uno nuevo.');
+      throw conMensaje(error, 'El código no es válido o ya venció. Pide uno nuevo.');
     }
   }, []);
 
