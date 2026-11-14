@@ -1,0 +1,82 @@
+# Spec 053 — el líder crea una «Sesión personalizada» repetida para el semáforo amarillo y cancela «esta y las siguientes».
+# Precondición: backend local (nunca producción) con V193 y `cancel-from` (backend #152), la sesión del LÍDER DE MENTORES abierta y al
+# menos una persona en amarillo según el semáforo de ayer. Mañana no debe ser jueves (el flujo suma el jueves a los días).
+# cuenta: lider (e2e-lider@renaser.test)
+# corrido: 2026-11-14
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "COMUNIDAD"
+- tapOn: "Eventos"
+- tapOn: "Crear evento"
+# spec 053 FR-001
+- extendedWaitUntil:
+    visible: "Tipo: Sesión personalizada"
+    timeout: 20000
+# spec 053 FR-013
+- assertVisible: "Nombre: Sesión personalizada"
+- takeScreenshot: E53-01-formulario-del-lider
+# spec 053 FR-007
+- scrollUntilVisible:
+    element: "Elige los días de la semana en que se repite."
+    direction: DOWN
+    timeout: 20000
+- tapOn:
+    text: "Repetir"
+    index: 1
+- extendedWaitUntil:
+    visible: "4 semanas"
+    timeout: 10000
+- tapOn: "jueves"
+- tapOn: "Menos"
+# spec 053 FR-008
+# Los días van en el orden de la semana (lunes primero), no en el orden en que se tocaron.
+- assertVisible: "Se repite .*jueves.*, 3 semanas, hasta el .*"
+- takeScreenshot: E53-02-repetir-tres-semanas
+# Sin link ni lugar no se guarda: se escribe un lugar corto (sin «rr»: en modo desarrollo dos «r» seguidas recargan la app).
+- scrollUntilVisible:
+    element: "Si es en persona, escribe la dirección."
+    direction: DOWN
+    timeout: 20000
+    centerElement: true
+- tapOn:
+    text: "O el lugar"
+    index: 1
+- inputText: "Sala uno"
+- hideKeyboard
+- scrollUntilVisible:
+    element: "Por semáforo"
+    direction: DOWN
+    timeout: 20000
+    centerElement: true
+- tapOn: "Por semáforo"
+# spec 053 FR-006
+- extendedWaitUntil:
+    visible: "Según el semáforo de ayer.|Según el semáforo del .*"
+    timeout: 15000
+- tapOn: "Amarillo, .*"
+- scrollUntilVisible:
+    element: "Llega a .*"
+    direction: DOWN
+    timeout: 20000
+- takeScreenshot: E53-03-amarillo-elegido
+- scrollUntilVisible:
+    element: "Nombre: Sesión personalizada · Semáforo amarillo"
+    direction: UP
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      text: "Crear evento"
+      index: 0
+    direction: DOWN
+    timeout: 30000
+- tapOn:
+    text: "Crear evento"
+    index: 0
+# Al crear, la app abre el detalle del evento nuevo.
+- extendedWaitUntil:
+    visible: "Lugar: Sala uno"
+    timeout: 30000
+- assertVisible: "Sesión personalizada · Semáforo amarillo"
+- assertVisible: "Llega a 1 persona"
+- takeScreenshot: E53-04-detalle-tras-crear

@@ -1,0 +1,45 @@
+# Spec 053 — sigue a 01: el líder abre la segunda fecha de la serie (el jueves) y cancela «esta y las siguientes»; queda solo la primera.
+# Precondición: la de 01 y la serie que 01 creó (domingo y jueves, 3 semanas). Variables: JUEVES y JUEVES_SIGUIENTE, el rótulo del
+# calendario de esas fechas (por ejemplo «Jueves 19 de noviembre» y «Jueves 26 de noviembre»); PRIMERA, el de la primera fecha.
+# cuenta: lider (e2e-lider@renaser.test)
+# corrido: 2026-11-14
+appId: com.renaser.app
+---
+# La app quedó en el detalle del evento recién creado: volver a la lista.
+- back
+- extendedWaitUntil:
+    visible: "Mi agenda"
+    timeout: 20000
+- tapOn: "${JUEVES}, 1 actividad programada"
+- scrollUntilVisible:
+    element: ".*Sesión personalizada · Semáforo amarillo. Sala uno. Ver el evento."
+    direction: DOWN
+    timeout: 30000
+    centerElement: true
+- tapOn: ".*Sesión personalizada · Semáforo amarillo. Sala uno. Ver el evento."
+- extendedWaitUntil:
+    visible: "Lugar: Sala uno"
+    timeout: 20000
+- scrollUntilVisible:
+    element: "Cancelar esta sesión"
+    direction: DOWN
+    timeout: 30000
+    centerElement: true
+- tapOn: "Cancelar esta sesión"
+# spec 053 FR-014
+- extendedWaitUntil:
+    visible: "¿Solo esta sesión o esta y las siguientes?"
+    timeout: 10000
+- assertVisible: "(?i)solo esta sesión"
+- takeScreenshot: E53-05-pregunta-al-cancelar
+- tapOn: "(?i)esta y las siguientes"
+- extendedWaitUntil:
+    visible: "Mi agenda"
+    timeout: 30000
+- scrollUntilVisible:
+    element: "${JUEVES_SIGUIENTE}, sin actividad programada"
+    direction: DOWN
+    timeout: 20000
+- assertVisible: "${JUEVES}, sin actividad programada"
+- assertVisible: "${PRIMERA}, 1 actividad programada"
+- takeScreenshot: E53-06-queda-solo-la-primera
