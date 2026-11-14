@@ -47,7 +47,7 @@ import { puedeVerAsistencia } from '../utils/asistencia';
 import { PantallaDeAsistencia } from './asistencia/PantallaDeAsistencia';
 import { useTheme } from '../../../theme/ThemeContext';
 import { CalendarioDelMes } from './CalendarioDelMes';
-import { DetalleDelEvento } from './DetalleDelEvento';
+import { DetalleDelEvento, type AlcanceDeLaCancelacion } from './DetalleDelEvento';
 import { FormularioDelEvento } from './FormularioDelEvento';
 import { MiAgenda } from './MiAgenda';
 import { Parrafo } from './piezas';
@@ -368,12 +368,13 @@ function SeccionEventosConRed({
     }
   };
 
-  const alCancelar = async (oc: Ocurrencia, todas: boolean) => {
+  const alCancelar = async (oc: Ocurrencia, alcance: AlcanceDeLaCancelacion) => {
     setEnviando(true);
     try {
-      if (todas) await eventosApi.cancelarEvento(oc.evento.id);
+      if (alcance === 'todas') await eventosApi.cancelarEvento(oc.evento.id);
+      else if (alcance === 'siguientes') await eventosApi.cancelarDesdeEstaFecha(oc.evento.id, oc.inicioOcurrencia);
       else await eventosApi.cancelarUnaFecha(oc.evento.id, oc.inicioOcurrencia);
-      await quitarDeLaLista(oc.evento.id, todas ? null : oc.inicioOcurrencia);
+      await quitarDeLaLista(oc.evento.id, alcance === 'todas' ? null : oc.inicioOcurrencia, alcance === 'siguientes');
       volverALista();
     } catch (e) {
       Alert.alert('No se pudo cancelar', mensajeDeError(e, 'Intenta de nuevo en unos segundos.'));
@@ -473,7 +474,7 @@ function SeccionEventosConRed({
           void recargar({ forzar: true });
           void releerElMes({ forzar: true });
         }}
-        onCancelar={todas => void alCancelar(oc, todas)}
+        onCancelar={alcance => void alCancelar(oc, alcance)}
       />
     );
   }

@@ -1,6 +1,8 @@
 import type { Evento, ReglaDeAviso } from '../types/eventos.types';
 import { esLinkSeguro, tipoDeUbicacionDelLink } from './linkDelEvento';
 import { camposDeAudiencia, eligioAlgo, type AudienciaDelFormulario } from './audienciaDelFormulario';
+import { MAX_TITULO_PERSONALIZADA } from './tituloDeLaSesion';
+import { camposDeRepeticion, repeticionInicial, type RepeticionDelFormulario } from './repeticionDelEvento';
 import { fechaEnZona, horaEnZona, instanteEnZona, zonaDelTelefono } from './zonaHoraria';
 
 /**
@@ -31,7 +33,27 @@ export const TIPOS_DE_EVENTO: ReadonlyArray<{ clave: string; nombre: string }> =
   { clave: 'MENTORIA_ALQUIMISTA', nombre: 'Mentoría del Alquimista' },
   { clave: 'ESPONTANEO', nombre: 'Encuentro espontáneo' },
   { clave: 'SEMANA_MANIFESTACION', nombre: 'Semana de Manifestación' },
+  // Spec 053 (D-355): la única que se le ofrece al líder de mentores. Solo aparece si el servidor la ofrece (`eventTypes`).
+  { clave: 'SESION_PERSONALIZADA', nombre: 'Sesión personalizada' },
 ];
+
+/** Los tipos de siempre, para un servidor que no dice cuáles ofrece: sin «Sesión personalizada», que es del líder. */
+export const TIPOS_SIN_OPCIONES: ReadonlyArray<{ clave: string; nombre: string }> = TIPOS_DE_EVENTO.filter(t => t.clave !== 'SESION_PERSONALIZADA');
+
+/**
+ * Los tipos que se le ofrecen a quien crea: los que dice el servidor (`eventTypes`), o los de siempre si no dice ninguno.
+ * Spec 053 FR-003: si queda uno solo, el formulario no pregunta.
+ */
+export function tiposQueSeOfrecen(delServidor: readonly string[] | undefined): ReadonlyArray<{ clave: string; nombre: string }> {
+  if (!delServidor || delServidor.length === 0) return TIPOS_SIN_OPCIONES;
+  const ofrecidos = TIPOS_DE_EVENTO.filter(t => delServidor.includes(t.clave));
+  return ofrecidos.length > 0 ? ofrecidos : TIPOS_SIN_OPCIONES;
+}
+
+/** El tipo con el que se guarda: el elegido si se ofrece; si no (el líder, que solo ve uno), el primero que se ofrece (FR-003). */
+export function tipoQueSeGuarda(elegido: string, ofrecidos: ReadonlyArray<{ clave: string }>): string {
+  return ofrecidos.some(t => t.clave === elegido) ? elegido : ofrecidos[0]?.clave ?? elegido;
+}
 
 /**
  * El rótulo de la tarjeta, como el «CURSO ABIERTO» de Classroom: «SESIÓN ESPECIAL», «MENTORÍA DEL
@@ -64,6 +86,8 @@ export interface FormularioDeEvento {
    * Si el servidor no ofrece el Meet automático, la pantalla lo guarda como `enlace` (`dondeQueSeGuarda`), el formulario de siempre.
    */
   donde: DondeEs;
+  /** Spec 053: «Repetir por días». Solo al crear; al editar no se ofrece (FR-011). Sin él, el evento no se repite. */
+  repeticion?: RepeticionDelFormulario;
 }
 
 export type DondeEs = 'meet' | 'lugar' | 'enlace';
@@ -91,6 +115,7 @@ export function formularioVacio(ahoraMs: number, zona: string = zonaDelTelefono(
     notificarAlCrear: true,
     zona,
     donde: 'meet',
+    repeticion: repeticionInicial(manana),
   };
 }
 
@@ -148,14 +173,26 @@ export function armarCuerpo(
   // Spec 044: con «¿Para quién es?» hay que elegir algo (FR-005).
   if (audiencia && !eligioAlgo(audiencia)) return { ok: false, error: 'Elige para quién es el evento.' };
   const titulo = form.titulo.trim();
+  // Spec 053 FR-013: el título de una «Sesión personalizada» lo arma la app y es más largo.
+  const tope = (original?.tipoEvento ?? form.tipoEvento) === 'SESION_PERSONALIZADA' ? MAX_TITULO_PERSONALIZADA : MAX_TITULO;
   if (!titulo) return { ok: false, error: 'Escribe el nombre del evento.' };
-  if (titulo.length > MAX_TITULO) return { ok: false, error: `El nombre puede tener hasta ${MAX_TITULO} letras.` };
+  if (titulo.length > tope) return { ok: false, error: `El nombre puede tener hasta ${tope} letras.` };
   const descripcion = form.descripcion.trim();
   if (descripcion.length > MAX_DESCRIPCION) {
     return { ok: false, error: `La descripción puede tener hasta ${MAX_DESCRIPCION} letras.` };
   }
 
-  const inicio = instanteEnZona(form.fecha, form.hora, form.zona);
+  // Spec 053 FR-009: con «Repetir», el evento empieza en el primer día marcado desde la fecha elegida.
+  let repeticion: Record<string, unknown> = {};
+  let fechaDeInicio = form.fecha;
+  if (!original && form.repeticion?.activa) {
+    const rep = camposDeRepeticion(form.repeticion, form.fecha, form.zona);
+    if (!rep.ok) return { ok: false, error: rep.error };
+    repeticion = rep.campos;
+    fechaDeInicio = rep.fecha;
+  }
+
+  const inicio = instanteEnZona(fechaDeInicio, form.hora, form.zona);
   if (inicio === null) return { ok: false, error: 'Revisa la fecha y la hora.' };
   if (inicio <= ahoraMs) return { ok: false, error: 'La fecha y la hora tienen que ser más adelante que ahora.' };
 
@@ -196,6 +233,7 @@ export function armarCuerpo(
     notifyOnCreate: form.notificarAlCrear,
     // Spec 044: la audiencia elegida (o «Todos»). Sin el paso, lo de siempre: la que tenía el evento.
     ...(audiencia ? camposDeAudiencia(audiencia) : {}),
+    ...repeticion,
   };
   if (form.donde === 'meet') {
     // La sala siempre es abierta (decisión del dueño del 2026-11-05): no viaja ningún acceso.

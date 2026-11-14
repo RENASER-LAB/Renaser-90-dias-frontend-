@@ -34,6 +34,8 @@ export interface OpcionesDeAudiencia {
   misAlumnos: number;
   grupos: GrupoConvocable[];
   personal: PersonaConvocable[];
+  /** Spec 053 FR-006: el día (`YYYY-MM-DD`) del que salen los colores del semáforo (ayer, o el último con datos). `null` si no se sabe. */
+  fechaDelSemaforo: string | null;
 }
 
 export interface ParteDelResumen {
