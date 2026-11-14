@@ -14,16 +14,20 @@ import {
   DURACIONES_MINUTOS,
   MAX_DESCRIPCION,
   MAX_TITULO,
-  TIPOS_DE_EVENTO,
   dondeQueSeGuarda,
+  tipoQueSeGuarda,
+  tiposQueSeOfrecen,
   type FormularioDeEvento,
 } from '../utils/formularioDeEvento';
 import { lineaDeLaSerie, motivoSinMeet } from '../utils/enlaceDeMeet';
+import { tituloDeLaSesionPersonalizada } from '../utils/tituloDeLaSesion';
+import { alCambiarLaFecha } from '../utils/repeticionDelEvento';
 import { elegirPortada, type PortadaElegida } from '../utils/portadaDelEvento';
 import { duracionEnPalabras, diaRelativo } from '../utils/textosDeFecha';
 import { fechaEnZona, sumarDiasIso } from '../utils/zonaHoraria';
 import { BotonVolver, CampoDeTexto, LETRA, Parrafo } from './piezas';
 import { DondeEsElEvento } from './DondeEsElEvento';
+import { RepetirPorDias } from './RepetirPorDias';
 import { ParaQuienEs } from './audiencia/ParaQuienEs';
 import { useVistaPreviaDeAudiencia } from '../hooks/useVistaPreviaDeAudiencia';
 import type { OpcionesDeAudiencia } from '../types/audiencia.types';
@@ -86,6 +90,10 @@ export function FormularioDelEvento({
   const cambiar = <K extends keyof FormularioDeEvento>(campo: K, valor: FormularioDeEvento[K]) =>
     setForm(f => ({ ...f, [campo]: valor }));
 
+  /* Spec 053 FR-007: al mover la fecha, los días de «Repetir» que nadie tocó siguen al día de la fecha. */
+  const cambiarFecha = (fecha: string) =>
+    setForm(f => ({ ...f, fecha, repeticion: f.repeticion ? alCambiarLaFecha(f.repeticion, fecha) : f.repeticion }));
+
   /* Spec 044: «¿Para quién es?», solo si el servidor ofrece partes a esta cuenta. Un evento con audiencia elegida abre con la suya; uno para todos,
      en «Todos». */
   const conAudiencia = !!opciones && opciones.partes.length > 0;
@@ -106,7 +114,13 @@ export function FormularioDelEvento({
   const partes = audiencia && !audiencia.todos && eligioAlgo(audiencia) ? partesDelCable(audiencia) : null;
   const llega = useVistaPreviaDeAudiencia(partes, formation);
   const soloAlumnos = !!opciones && opciones.partes.includes('MY_LEARNERS');
-  const tipos = opciones && opciones.tiposDeEvento.length > 0 ? TIPOS_DE_EVENTO.filter(t => opciones.tiposDeEvento.includes(t.clave)) : TIPOS_DE_EVENTO;
+  /* Spec 053 FR-003: si el servidor ofrece un solo tipo (el líder: «Sesión personalizada»), no se pregunta: queda elegido y se muestra fijo. */
+  const tipos = tiposQueSeOfrecen(opciones?.tiposDeEvento);
+  const tipoElegido = tipoQueSeGuarda(form.tipoEvento, tipos);
+  const tipoUnico = tipos.length === 1 ? tipos[0] : null;
+  const personalizada = tipoElegido === 'SESION_PERSONALIZADA';
+
+  const tituloAutomatico = tituloDeLaSesionPersonalizada(audiencia, opciones, llega.total);
 
   const hoy = fechaEnZona(Date.now(), form.zona);
   const manana = sumarDiasIso(hoy, 1);
@@ -119,20 +133,38 @@ export function FormularioDelEvento({
         {original ? 'Editar evento' : 'Nuevo evento'}
       </Text>
 
-      <CampoDeTexto
-        rotulo="Nombre"
-        ayuda={`Corto, hasta ${MAX_TITULO} letras.`}
-        value={form.titulo}
-        maxLength={MAX_TITULO}
-        onChangeText={v => cambiar('titulo', v)}
-        placeholder="Clase en vivo"
-      />
+      {/* Spec 053 FR-013: el líder no escribe el título de «Sesión personalizada»; lo arma la app según a quién va. */}
+      {!original && personalizada ? (
+        <View style={{ gap: 4 }} accessible accessibilityLabel={`Nombre: ${tituloAutomatico}`}>
+          <Text style={[estilos.rotulo, { color: c.textStrong }]}>Nombre</Text>
+          <Parrafo>{tituloAutomatico}</Parrafo>
+        </View>
+      ) : (
+        <CampoDeTexto
+          rotulo="Nombre"
+          ayuda={`Corto, hasta ${MAX_TITULO} letras.`}
+          value={form.titulo}
+          maxLength={MAX_TITULO}
+          onChangeText={v => cambiar('titulo', v)}
+          placeholder="Clase en vivo"
+        />
+      )}
 
-      {!original ? (
+      {!original && tipoUnico ? (
+        <View style={{ gap: 8 }} accessible accessibilityLabel={`Tipo: ${tipoUnico.nombre}`}>
+          <Text style={[estilos.rotulo, { color: c.textStrong }]}>Tipo</Text>
+          <View style={[estilos.opcion, { borderColor: c.gold, backgroundColor: c.goldWash }]}>
+            <Icon name="checkCircle" size={18} color={c.goldInk} />
+            <Text style={[estilos.opcionTexto, { color: c.textStrong }]}>{tipoUnico.nombre}</Text>
+          </View>
+        </View>
+      ) : null}
+
+      {!original && !tipoUnico ? (
         <View style={{ gap: 8 }}>
           <Text style={[estilos.rotulo, { color: c.textStrong }]}>Tipo</Text>
           {tipos.map(tipo => {
-            const elegido = form.tipoEvento === tipo.clave;
+            const elegido = tipoElegido === tipo.clave;
             return (
               <Pressable
                 key={tipo.clave}
@@ -160,14 +192,14 @@ export function FormularioDelEvento({
             accessibilityLabel="Un día antes"
             deshabilitado={!puedeRetroceder}
             estilo={estilos.flecha}
-            onPress={() => cambiar('fecha', sumarDiasIso(form.fecha, -1))}
+            onPress={() => cambiarFecha(sumarDiasIso(form.fecha, -1))}
           />
           <Text style={[estilos.valor, { color: c.textStrong }]}>{diaRelativo(form.fecha, hoy, manana)}</Text>
           <BotonSecundario
             etiqueta="›"
             accessibilityLabel="Un día después"
             estilo={estilos.flecha}
-            onPress={() => cambiar('fecha', sumarDiasIso(form.fecha, 1))}
+            onPress={() => cambiarFecha(sumarDiasIso(form.fecha, 1))}
           />
         </View>
       </View>
@@ -196,6 +228,10 @@ export function FormularioDelEvento({
           })}
         </View>
       </View>
+
+      {!original && form.repeticion ? (
+        <RepetirPorDias valor={form.repeticion} fecha={form.fecha} onCambiar={r => cambiar('repeticion', r)} />
+      ) : null}
 
       {meetPosible ? (
         <DondeEsElEvento
@@ -295,7 +331,7 @@ export function FormularioDelEvento({
         cargando={guardando}
         onPress={() => {
           setErrorOculto(false);
-          onGuardar({ ...form, donde }, portada, audiencia);
+          onGuardar({ ...form, donde, tipoEvento: tipoElegido, titulo: !original && personalizada ? tituloAutomatico : form.titulo }, portada, audiencia);
         }}
       />
 

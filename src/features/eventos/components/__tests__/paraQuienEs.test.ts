@@ -14,7 +14,10 @@ jest.mock('../../../../theme/ThemeContext', () => {
   };
 });
 jest.mock('../../../../utils/tacto', () => ({ tacto: { seleccion: () => undefined, logro: () => undefined, error: () => undefined } }));
-jest.mock('../../../../components/Alerta', () => ({ Alert: { alert: () => undefined } }));
+const mockAlertas: Array<{ titulo: string; botones: Array<{ text: string; onPress?: () => void }> }> = [];
+jest.mock('../../../../components/Alerta', () => ({
+  Alert: { alert: (titulo: string, _m: string, botones: Array<{ text: string; onPress?: () => void }>) => mockAlertas.push({ titulo, botones }) },
+}));
 jest.mock('../../../habits/components/HoraPickerModal', () => ({ HoraPickerModal: () => null }));
 jest.mock('../../../academy/components/CursoPortada', () => ({ CursoPortada: () => null }));
 jest.mock('../../utils/portadaDelEvento', () => ({ elegirPortada: async () => null }));
@@ -121,7 +124,7 @@ describe('«¿Para quién es?» en el formulario', () => {
 
     expect(conEtiqueta(r, 'Rojo, Necesitan tu ayuda, 4')).toBeDefined();
     expect(conEtiqueta(r, 'Verde, Van bien, 4')).toBeDefined();
-    expect(hay(r, 'Tus alumnos por semáforo · hoy')).toBe(true);
+    expect(hay(r, 'Tus alumnos por semáforo')).toBe(true);
   });
 
   // spec 044 FR-036
@@ -162,17 +165,17 @@ function evento(parcial: Partial<Evento> = {}): Evento {
   };
 }
 
-function detalle(e: Evento) {
+function detalle(e: Evento, onCancelar: (alcance: string) => void = () => undefined, puedeGestionar = false) {
   const oc: Ocurrencia = { evento: e, inicioOcurrencia: e.iniciaEn, iniciaEn: e.iniciaEn, duracionMinutos: 60, titulo: e.titulo, asistencia: null };
   return montar(
     React.createElement(DetalleDelEvento, {
       oc,
-      puedeGestionar: false,
+      puedeGestionar,
       enviando: false,
       onVolver: () => undefined,
       onResponder: () => undefined,
       onEditar: () => undefined,
-      onCancelar: () => undefined,
+      onCancelar,
     }),
   );
 }
@@ -215,5 +218,94 @@ describe('el detalle', () => {
     expect(hay(r, 'Elena Alquimista')).toBe(true);
     expect(hay(r, 'Llega a 17 personas')).toBe(true);
     expect(hay(r, 'Administrar')).toBe(true);
+  });
+});
+
+describe('Eventos del líder (spec 053)', () => {
+  const delLider: OpcionesDeAudiencia = {
+    ...delMentor,
+    partes: ['PERSON', 'GROUP', 'MENTORS', 'TRAFFIC_LIGHT', 'STAFF'],
+    tiposDeEvento: ['SESION_PERSONALIZADA'],
+    porDefecto: null,
+  };
+
+  // spec 053 FR-003
+  it('el líder no elige tipo: ve «Sesión personalizada» fija y lo que guarda lleva ese tipo', () => {
+    const guardar = jest.fn();
+    const r = formulario(delLider, guardar);
+
+    expect(hay(r, 'Sesión personalizada')).toBe(true);
+    expect(hay(r, 'Sesión especial')).toBe(false);
+    expect(hay(r, 'Encuentro espontáneo')).toBe(false);
+    expect(r.root.findAll(n => n.props.accessibilityRole === 'radio' && n.props.accessibilityState?.checked !== undefined && n.props.accessibilityLabel === 'Tipo: Sesión personalizada')).toHaveLength(0);
+
+    act(() => conEtiqueta(r, 'Crear evento')!.props.onPress());
+    expect(guardar).toHaveBeenCalledTimes(1);
+    expect((guardar.mock.calls[0][0] as { tipoEvento: string }).tipoEvento).toBe('SESION_PERSONALIZADA');
+  });
+
+  // spec 053 FR-003
+  it('el mentor sigue eligiendo entre sus dos tipos', () => {
+    const r = formulario(delMentor);
+    expect(hay(r, 'Sesión especial')).toBe(true);
+    expect(hay(r, 'Encuentro espontáneo')).toBe(true);
+    expect(hay(r, 'Sesión personalizada')).toBe(false);
+  });
+
+  // spec 053 FR-006
+  it('«Por semáforo» dice que es el de ayer', () => {
+    const r = formulario(delLider);
+    act(() => conEtiqueta(r, 'Por semáforo')!.props.onPress());
+    expect(hay(r, 'Según el semáforo de ayer.')).toBe(true);
+    expect(hay(r, '· hoy')).toBe(false);
+  });
+
+  // spec 053 FR-007, FR-008
+  it('«Repetir» sale apagado; al prenderlo marca el día de la fecha, sugiere 4 semanas y lo dice en palabras', () => {
+    const r = formulario(delLider);
+    expect(conEtiqueta(r, 'sábado')).toBeUndefined();
+
+    act(() => {
+      const sw = r.root.findAll(n => n.props.accessibilityLabel === 'Repetir' && typeof n.props.onPress === 'function')[0];
+      sw?.props.onPress();
+    });
+
+    // mañana de AHORA (6 de noviembre de 2026) es sábado 7.
+    expect(conEtiqueta(r, 'sábado')?.props.accessibilityState).toEqual({ checked: true });
+    expect(hay(r, 'Se repite sábado, 4 semanas, hasta el 4 de diciembre.')).toBe(true);
+  });
+});
+
+describe('Cancelar una serie (spec 053, FR-014)', () => {
+  beforeEach(() => {
+    mockAlertas.length = 0;
+  });
+
+  // spec 053 FR-014
+  it('en un evento que se repite pregunta «¿Solo esta sesión o esta y las siguientes?» y entrega cada alcance', () => {
+    const e = evento({ recurrente: true, creadoPor: 'yo' });
+    mockFresco = e;
+    const alcances: string[] = [];
+    const r = detalle(e, a => alcances.push(a), true);
+
+    act(() => conEtiqueta(r, 'Cancelar esta sesión')!.props.onPress());
+
+    expect(mockAlertas[0].titulo).toBe('¿Solo esta sesión o esta y las siguientes?');
+    expect(mockAlertas[0].botones.map(b => b.text)).toEqual(['Solo esta sesión', 'Esta y las siguientes', 'No, dejarlo']);
+    mockAlertas[0].botones[0].onPress?.();
+    mockAlertas[0].botones[1].onPress?.();
+    expect(alcances).toEqual(['esta', 'siguientes']);
+  });
+
+  // spec 053 FR-014
+  it('«Cancelar todas las fechas» sigue ahí y un evento suelto no pregunta por «las siguientes»', () => {
+    const serie = evento({ recurrente: true });
+    mockFresco = serie;
+    expect(hay(detalle(serie, () => undefined, true), 'Cancelar todas las fechas')).toBe(true);
+    const suelto = evento({ recurrente: false });
+    mockFresco = suelto;
+    const r = detalle(suelto, () => undefined, true);
+    expect(conEtiqueta(r, 'Cancelar esta sesión')).toBeUndefined();
+    expect(hay(r, 'Cancelar evento')).toBe(true);
   });
 });

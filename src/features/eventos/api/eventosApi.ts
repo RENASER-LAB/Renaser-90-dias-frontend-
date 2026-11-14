@@ -85,6 +85,14 @@ export async function cancelarUnaFecha(id: string, inicioOcurrencia: string): Pr
   });
 }
 
+/** Spec 053 FR-014: cancela esta fecha y las siguientes de un evento que se repite; las que ya pasaron no se tocan. */
+export async function cancelarDesdeEstaFecha(id: string, inicioOcurrencia: string): Promise<void> {
+  await apiFetch<unknown>(`${BASE}/${tramo(id)}/cancel-from`, {
+    method: 'POST',
+    body: { occurrenceStart: inicioOcurrencia },
+  });
+}
+
 /**
  * Paso 1 de la portada (solo ADMIN y ALCHEMIST): una URL prefirmada para subir la imagen directo al
  * almacenamiento (`EventoController.solicitarUrlPortada`). Los bytes nunca pasan por el backend.

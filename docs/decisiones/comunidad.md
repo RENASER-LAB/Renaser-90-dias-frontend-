@@ -905,3 +905,21 @@ visibles de diseño:
   existe o la foto es vieja, cae a la completa (`FotoMuro.urlRespaldo`). La publicación abierta sigue con la completa.
 * Al llegar cada página del Muro se adelantan sus primeras 8 fotos por el mismo camino de caché (`adelantarMiniaturas`, con
   `Image.loadAsync` y la misma `cacheKey`; `Image.prefetch` no sirve porque guarda con otra clave).
+
+## Cambio por pedido del dueño — 2026-11-14 — Eventos del líder: «Sesión personalizada», semáforo de ayer y «Repetir» (spec 053)
+
+Decidido por el dueño el 14/11/2026 (tras una ronda de preguntas). Los eventos viven donde siempre (Comunidad → Eventos); no se agrega ni se mueve ningún tab.
+* **D1. El líder ve un solo tipo, «Sesión personalizada», ya elegido y fijo** (sin lista). Administración y Alquimista conservan los suyos; mentor y guía, los dos de siempre.
+* **D2. El líder no escribe el título:** la app lo arma («Sesión personalizada · <Nombre>», «· <Grupo>», «· Semáforo verde», «· 5 personas»). Una sola persona o grupo da su nombre; un
+  solo color, «Semáforo verde/amarillo/rojo»; lo demás, el total de «Llega a N». Máximo 60 letras (el servidor lo admite solo para este tipo).
+* **D3. Sus avisos:** 1 día, 1 hora, 30 y 10 minutos antes, por la app y WhatsApp.
+* **D4 y D5. El semáforo se mira una vez al crear y con el día cerrado:** ayer o, si ayer no tuvo datos, el último día con datos; la pantalla dice cuál («Según el semáforo de
+  ayer.» / «del viernes 13.»). Los invitados quedan fijos para toda la serie.
+* **D6 y D7. «Repetir» al crear, para quien crea eventos** (líder, mentor, guía, Administración, Alquimista): interruptor apagado; L M M J V S D con el día de la fecha marcado;
+  «Semanas» (4 sugeridas, de 1 a 12) o «Hasta» una fecha; línea «Se repite lunes y jueves, 4 semanas, hasta el 13 de diciembre.» Si la fecha no cae en un día marcado, empieza el primer
+  día marcado. Un evento repetido sigue sin editarse desde la app.
+* **D8. Cancelar una serie pregunta «¿Solo esta sesión o esta y las siguientes?»** (botón «Cancelar esta sesión»); «Cancelar todas las fechas» sigue aparte. Lo pasado no se toca.
+
+No cambian: los cinco tabs, el Meet por ocurrencia (spec 040) ni la audiencia (una sola para la serie).
+Pruebas: `repeticionDelEvento.test.ts` y «Eventos del líder» / «Cancelar una serie» en `paraQuienEs.test.ts` (marcas `// spec 053 FR-…`). Hace falta APK y el backend con V193 y `cancel-from`
+desplegado antes (si no, el líder no podría guardar ni cancelar «las siguientes»).

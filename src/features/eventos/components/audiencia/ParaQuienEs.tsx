@@ -22,6 +22,8 @@ import {
   type AudienciaDelFormulario,
 } from '../../utils/audienciaDelFormulario';
 import { Parrafo } from '../piezas';
+import { notaDelSemaforo } from '../../utils/textosDeFecha';
+import { fechaEnZona, zonaDelTelefono } from '../../utils/zonaHoraria';
 import { ElegirPersonasHoja } from './ElegirPersonasHoja';
 import { PildorasDePersonas } from './PildorasDePersonas';
 
@@ -140,7 +142,9 @@ export function ParaQuienEs({
 
       {abiertas.has('TRAFFIC_LIGHT') ? (
         <View style={{ gap: 8 }}>
-          <Text style={[estilos.rotulo, { color: c.textSoft }]}>{esMentor ? 'Tus alumnos por semáforo · hoy' : 'Por semáforo · hoy'}</Text>
+          <Text style={[estilos.rotulo, { color: c.textSoft }]}>{esMentor ? 'Tus alumnos por semáforo' : 'Por semáforo'}</Text>
+          {/* Spec 053 FR-006: el color es el del día ya cerrado; hoy, a medio hacer, todos se ven incompletos. */}
+          <Parrafo>{notaDelSemaforo(opciones.fechaDelSemaforo, fechaEnZona(Date.now(), zonaDelTelefono()))}</Parrafo>
           <View style={[estilos.tarjeta, { borderColor: c.border, backgroundColor: c.cardBg }]}>
             {COLORES.map((color, i) => {
               const on = valor.colores.includes(color.clave);
@@ -165,7 +169,7 @@ export function ParaQuienEs({
             <View style={[estilos.interruptor, { borderColor: c.border, backgroundColor: c.cardBg }]}>
               <View style={{ flex: 1 }}>
                 <Text style={[estilos.chipTexto, { color: c.textStrong }]}>Volver a calcular</Text>
-                <Parrafo>Usa el semáforo de hoy en vez del que tenía al guardarlo.</Parrafo>
+                <Parrafo>Usa el semáforo de ayer en vez del que tenía al guardarlo.</Parrafo>
               </View>
               <Interruptor valor={valor.recalcular} onCambiar={v => onCambiar({ ...valor, recalcular: v })} etiqueta="Volver a calcular" />
             </View>
