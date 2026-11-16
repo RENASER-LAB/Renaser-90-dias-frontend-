@@ -624,3 +624,20 @@ diga**. Solo JavaScript:
 * **No cambian:** con `true` la fila de siempre; con `null` o sin el campo (servidor anterior) no se dibuja nada; con la cuenta suspendida solo «Su cuenta
   está suspendida.». Administración no usa esta ficha (la de «Sus días y evidencias» de su semáforo por grupo es otra pantalla y no cambia).
 * **Pruebas:** `diasDelMentor.test.ts` (el aviso con `false`; ausente con `true`, `null`, sin campo y con la cuenta suspendida).
+
+## Cambio por pedido del dueño — 2026-11-16 — Administración avisa cuando WhatsApp no sale por falta de saldo (spec 054, D-361)
+
+Del 13 al 16/11 los recordatorios por WhatsApp no llegaron: 35 envíos quedaron `FALLIDO` con «The account balance is insufficient.» (la cuenta de YCloud se
+quedó sin saldo) y nadie se enteró. El dueño pidió un aviso para Administración y Alquimista, con los valores de abajo ya decididos. Solo JavaScript:
+* **Tarjeta arriba del panel de Administración** (`AdminInicioScreen`, encima de «¿A quién atiendo hoy?»), con el estilo de avisos de la app (borde y fondo de
+  peligro, ícono de alerta): «WhatsApp sin saldo» / «Los mensajes por WhatsApp no están saliendo: la cuenta de YCloud no tiene saldo. Recárgala para que vuelvan a
+  llegar los recordatorios y los códigos.» / «12 sin enviar desde el sábado 14 a las 10:20» (hora de Lima).
+* **Cuándo sale:** cuando `GET /api/v1/admin/whatsapp/estado` responde `sinSaldo: true` (backend D-361: un `FALLIDO` por saldo en las últimas 24 h y ningún envío
+  bueno después). Si después sale uno bien, el servidor deja de avisar y la tarjeta desaparece sola al volver a entrar al panel.
+* **Solo ADMIN y ALCHEMIST:** los demás roles que entran a esa pantalla ni piden el estado. Si la lectura falla (sin red, un servidor anterior, un 403) no se
+  dibuja nada: el aviso es un extra y no bloquea el panel.
+* **No cambian:** los cinco tabs, las secciones del panel, sus contadores ni ningún otro texto. Sin dependencias ni código nativo.
+* **Pruebas:** `avisoDeWhatsAppSinSaldo.test.ts` (la tarjeta con la respuesta que avisa, sin ella, con la lectura fallida, los seis roles que no la ven y no la
+  piden, la hora de Lima y el cableado del panel); spec 054 FR-006 y FR-007.
+* **Hace falta un APK nuevo** (solo JavaScript) **y el backend con D-361 antes**: contra uno anterior el endpoint responde 404 y no se ve nada.
+

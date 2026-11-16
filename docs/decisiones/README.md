@@ -35,7 +35,7 @@ también en el texto (`grep -n "Plan" docs/decisiones/*.md`). Si dos entradas ch
 | [hoy.md](hoy.md) | Hoy: tarjetas, frase del día, semáforo y lo que Hoy muestra | 8 |
 | [ingreso-y-onboarding.md](ingreso-y-onboarding.md) | Login, onboarding, ficha, diagnóstico, términos y el Día 1 | 11 |
 | [kilometros-y-carrera.md](kilometros-y-carrera.md) | Kilómetros diarios: captura, pasos (Health Connect) y la carrera con GPS | 6 |
-| [liderazgo-y-administracion.md](liderazgo-y-administracion.md) | Mentor, líder de mentores, Administración, Alquimista y sus fichas | 15 |
+| [liderazgo-y-administracion.md](liderazgo-y-administracion.md) | Mentor, líder de mentores, Administración, Alquimista y sus fichas | 16 |
 | [pagos.md](pagos.md) | Cronograma de pagos y «Mi ingreso» (spec 032) | 2 |
 | [plan.md](plan.md) | Plan: objetivos, semana, mes, 80/20, Cierra tu día y el Mapa (retirado) | 12 |
 | [ser-y-fenix.md](ser-y-fenix.md) | SER (el acompañante), el orbe, el fénix y las celebraciones | 9 |
@@ -49,6 +49,7 @@ también en el texto (`grep -n "Plan" docs/decisiones/*.md`). Si dos entradas ch
 
 | Fecha | Tabs | Tipo | Entrada | Archivo | Corregida |
 |---|---|---|---|---|---|
+| 2026-11-16 | Administración | Cambio | Administración avisa cuando WhatsApp no sale por falta de saldo en YCloud (spec 054, D-361) | [liderazgo-y-administracion.md](liderazgo-y-administracion.md) |  |
 | 2026-11-16 | Comunidad | Cambio | Comunidad → Eventos: botón para copiar el enlace del evento, junto a «Unirme» (spec 040 FR-039) | [comunidad.md](comunidad.md) |  |
 | 2026-11-16 | Comunidad | Corrección | Comunidad → Tribu: los enlaces del chat se pueden tocar (#209) | [comunidad.md](comunidad.md) |  |
 | 2026-11-16 | Comunidad | Corrección | Comunidad → Eventos: el detalle de un evento por semáforo va sin fecha (#207) | [comunidad.md](comunidad.md) |  |
