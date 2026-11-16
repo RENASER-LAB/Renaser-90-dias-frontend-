@@ -18,6 +18,10 @@ import { etiquetaDeLaFilaDeAtencion } from '../utils/etiquetaDeAtencion';
 import type { PersonaDeFicha, SeccionAdmin } from '../types/admin.types';
 import { usePendientesAdmin } from '../hooks/usePendientesAdmin';
 import { useOcultarBarraAlDesplazar } from '../../../navigation/barraAlDesplazar/BarraInferior';
+import { useAuth } from '../../auth/context/AuthContext';
+import { AvisoDeWhatsAppSinSaldo } from '../components/AvisoDeWhatsAppSinSaldo';
+import { useEstadoDeWhatsApp } from '../hooks/useEstadoDeWhatsApp';
+import { veElAvisoDeSaldo } from '../utils/avisoDeWhatsAppSinSaldo';
 import { useDisponibilidad } from '../../plataforma/estado/useFuncionalidad';
 import { CLAVES } from '../../plataforma/utils/clavesDeLaApp';
 
@@ -66,6 +70,9 @@ export function AdminInicioScreen({
   const { c, t } = useTheme();
   const { horizontalPadding, contentMaxWidth } = useResponsive();
   const pendientes = usePendientesAdmin();
+  /* Spec 054: solo ADMIN y ALCHEMIST piden el estado de WhatsApp; los demás roles que entran aquí no lo piden. */
+  const { user } = useAuth();
+  const avisoDeSaldo = useEstadoDeWhatsApp({ activo: veElAvisoDeSaldo(user?.role) });
 
   useSystemBackHandler(() => {
     onSalir();
@@ -137,6 +144,8 @@ export function AdminInicioScreen({
           gap: 26,
         }}
       >
+        <AvisoDeWhatsAppSinSaldo estado={avisoDeSaldo} />
+
         <AQuienAtiendoHoy onAbrirFicha={onAbrirFicha} />
 
         <View style={{ gap: 10 }}>
