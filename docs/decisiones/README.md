@@ -30,7 +30,7 @@ también en el texto (`grep -n "Plan" docs/decisiones/*.md`). Si dos entradas ch
 |---|---|---|
 | [alarmas.md](alarmas.md) | Alarmas y recordatorios: specs 007–010, voces, canales, el puente de #33 | 9 |
 | [codigo-renaser-y-mi-radar.md](codigo-renaser-y-mi-radar.md) | Código Renaser (días 1–7) y Mi Radar (desde el día 8) | 7 |
-| [comunidad.md](comunidad.md) | Comunidad: Muro, chat, Tribu, Eventos, Cursos y Ranking | 26 |
+| [comunidad.md](comunidad.md) | Comunidad: Muro, chat, Tribu, Eventos, Cursos y Ranking | 27 |
 | [formaciones.md](formaciones.md) | Formaciones (Escuela, Diplomado, Certificación): specs 022–025, 035 y el plazo de cada formación | 8 |
 | [hoy.md](hoy.md) | Hoy: tarjetas, frase del día, semáforo y lo que Hoy muestra | 8 |
 | [ingreso-y-onboarding.md](ingreso-y-onboarding.md) | Login, onboarding, ficha, diagnóstico, términos y el Día 1 | 11 |
@@ -49,6 +49,7 @@ también en el texto (`grep -n "Plan" docs/decisiones/*.md`). Si dos entradas ch
 
 | Fecha | Tabs | Tipo | Entrada | Archivo | Corregida |
 |---|---|---|---|---|---|
+| 2026-11-16 | Comunidad | Cambio | Comunidad → Eventos: botón para copiar el enlace del evento, junto a «Unirme» (spec 040 FR-039) | [comunidad.md](comunidad.md) |  |
 | 2026-11-16 | Comunidad | Corrección | Comunidad → Tribu: los enlaces del chat se pueden tocar (#209) | [comunidad.md](comunidad.md) |  |
 | 2026-11-16 | Comunidad | Corrección | Comunidad → Eventos: el detalle de un evento por semáforo va sin fecha (#207) | [comunidad.md](comunidad.md) |  |
 | 2026-11-14 | Comunidad | Cambio | Eventos del líder: «Sesión personalizada» como único tipo, semáforo de ayer en «Para quién es» y «Repetir» por días al crear (spec 053; sin tab nuevo) | [comunidad.md](comunidad.md) |  |
