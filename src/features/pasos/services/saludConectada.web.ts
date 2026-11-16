@@ -1,7 +1,7 @@
 import type { LecturaCrudaDelDia } from '../types/pasos.types';
 
 /**
- * La web (y el iPhone, que entra por la web): sin Health Connect. Misma forma que `saludConectada.ts` para que quien la usa no
+ * La web (y el iPhone que entra por el navegador, no por la app): sin salud conectada. Misma forma que `saludConectada.ts` para que quien la usa no
  * ramifique por plataforma. La captura de siempre es el camino (spec 037, D-310).
  */
 

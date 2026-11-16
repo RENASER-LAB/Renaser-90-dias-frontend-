@@ -4,6 +4,7 @@
   "main": "index.ts",
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",
+    "@kingstinct/react-native-healthkit": "16.2.0",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-navigation/bottom-tabs": "^7.21.0",
     "@react-navigation/native": "^7.3.18",
@@ -41,6 +42,7 @@
     "react-native": "0.86.3",
     "react-native-health-connect": "4.1.3",
     "react-native-maps": "1.27.2",
+    "react-native-nitro-modules": "0.35.10",
     "react-native-reanimated": "4.5.1",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "~4.26.0",
@@ -83,6 +85,11 @@
         "buildFromSource": [
           "expo-notifications",
           "expo-location"
+        ],
+        "exclude": [
+          "@kingstinct/react-native-healthkit",
+          "@react-native-healthkit/core",
+          "react-native-nitro-modules"
         ]
       }
     }
