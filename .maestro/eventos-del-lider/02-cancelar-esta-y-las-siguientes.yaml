@@ -2,7 +2,7 @@
 # Precondición: la de 01 y la serie que 01 creó (domingo y jueves, 3 semanas). Variables: JUEVES y JUEVES_SIGUIENTE, el rótulo del
 # calendario de esas fechas (por ejemplo «Jueves 19 de noviembre» y «Jueves 26 de noviembre»); PRIMERA, el de la primera fecha.
 # cuenta: lider (e2e-lider@renaser.test)
-# corrido: 2026-11-14
+# corrido: 2026-11-16
 appId: com.renaser.app
 ---
 # La app quedó en el detalle del evento recién creado: volver a la lista.
