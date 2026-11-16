@@ -223,9 +223,13 @@ export function PodioRanking({ top1, top2, top3, activo }: PodioRankingProps) {
   // Las interpolaciones se crean UNA vez por valor, no en cada render. Ver `ColumnaPodio`: un nodo
   // animado nuevo por render hace que React Native suelte el anterior y restaure la vista a los
   // valores que conoce JS, que con el driver nativo no son los que se ven (podio gris al volver de «Kilómetros», 30/09).
+  // #216: en iOS nada gira en el eje vertical. Core Animation corta las capas giradas en 3D contra el plano de sus vecinas
+  // (el fondo y el foco): el 2.º puesto desaparecía y el 1.º quedaba cortado por la mitad. Las tapas (`rotateX`) se ven bien.
+  // Se lee al dibujar (no al cargar el módulo) para que las pruebas puedan simular cada plataforma.
+  const sinGiroVertical = Platform.OS === 'ios';
   const giroEscenario = useMemo(
-    () => balanceo.interpolate({ inputRange: [0, 1], outputRange: ['-2.5deg', '2.5deg'] }),
-    [balanceo]
+    () => (sinGiroVertical ? '0deg' : balanceo.interpolate({ inputRange: [0, 1], outputRange: ['-2.5deg', '2.5deg'] })),
+    [balanceo, sinGiroVertical]
   );
   const estiloChispas = useMemo(
     () =>
@@ -316,7 +320,7 @@ export function PodioRanking({ top1, top2, top3, activo }: PodioRankingProps) {
         <ColumnaPodio
           puesto={top2}
           avance={plata}
-          giroY={10}
+          giroY={sinGiroVertical ? 0 : 10}
           alto={ALTO_PLATA}
           numero="2"
           emoji="🥈"
@@ -358,7 +362,7 @@ export function PodioRanking({ top1, top2, top3, activo }: PodioRankingProps) {
         <ColumnaPodio
           puesto={top3}
           avance={bronce}
-          giroY={-10}
+          giroY={sinGiroVertical ? 0 : -10}
           alto={ALTO_BRONCE}
           numero="3"
           emoji="🥉"
