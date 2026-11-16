@@ -200,6 +200,7 @@ import { useOcultarBarraAlDesplazar } from '../navigation/barraAlDesplazar/Barra
 import { useEncabezadoAlDesplazar } from '../navigation/barraAlDesplazar/useEncabezadoAlDesplazar';
 import Reanimated from 'react-native-reanimated';
 import { ErrorDeCarga } from '../features/sinRed/components/ErrorDeCarga';
+import { ModalConZonaSegura } from '../components/ModalConZonaSegura';
 
 // =========================================================================
 // TIPOS: RECURSOS EXCLUSIVOS & CURSOS
@@ -4958,7 +4959,7 @@ function ComunidadPorFormacion({
         y `postId`, nada de lo cual existe en un mensaje de chat. Acá alcanza con ver la foto
         grande y cerrar, que es exactamente lo que hace WhatsApp.
       */}
-      <Modal
+      <ModalConZonaSegura
         visible={fotoChatAmpliada !== null}
         transparent
         animationType="fade"
@@ -4975,12 +4976,12 @@ function ComunidadPorFormacion({
             />
           )}
         </Pressable>
-      </Modal>
+      </ModalConZonaSegura>
 
       {/* ========================================================================= */}
       {/* MODAL: PERFIL DEL INTEGRANTE DEL GRUPO                                 */}
       {/* ========================================================================= */}
-      <Modal
+      <ModalConZonaSegura
         visible={selectedMemberProfile !== null}
         transparent
         animationType="slide"
@@ -5044,7 +5045,7 @@ function ComunidadPorFormacion({
             </View>
           )}
         </View>
-      </Modal>
+      </ModalConZonaSegura>
 
       {/* ========================================================================= */}
       {/* Nueva publicación, a pantalla completa (ver `NuevaPublicacion`)          */}

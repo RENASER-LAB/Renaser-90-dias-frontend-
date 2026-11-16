@@ -1,7 +1,7 @@
 import { fuentes } from '../../../theme/fuentes';
 import { SoloConConexion } from '../../sinRed/components/SoloConConexion';
 import React from 'react';
-import { ActivityIndicator, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Icon } from '../../../components/Icon';
 import { AvatarPersona } from '../../../components/ui';
@@ -11,6 +11,7 @@ import { space } from '../../../theme/tokens';
 import { tacto } from '../../../utils/tacto';
 import type { WallCategory } from '../types/community.types';
 import type { FotoMuroNormalizada } from '../utils/normalizarImagen';
+import { ModalConZonaSegura } from '../../../components/ModalConZonaSegura';
 
 /** Lado de cada foto del mosaico y del recuadro para agregar otra. */
 export const LADO_FOTO_NUEVA = 88;
@@ -102,7 +103,7 @@ export function NuevaPublicacion({
   };
 
   return (
-    <Modal visible={visible} transparent={false} animationType="slide" onRequestClose={alCancelar}>
+    <ModalConZonaSegura visible={visible} transparent={false} animationType="slide" onRequestClose={alCancelar}>
       <SafeAreaView style={[styles.raiz, { backgroundColor: c.bg }]}>
         <View style={[styles.cabecera, { borderBottomColor: c.divider }]}>
           {/* El título va centrado en TODO el ancho, como en las cabeceras del sistema; los dos
@@ -195,7 +196,7 @@ export function NuevaPublicacion({
         </ScrollView>
         </SoloConConexion>
       </SafeAreaView>
-    </Modal>
+    </ModalConZonaSegura>
   );
 }
 
