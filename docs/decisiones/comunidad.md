@@ -963,3 +963,11 @@ lienzo (opción C): https://claude.ai/artifact/M6dKAoJ2uGfDw6cyq6Ybpu. Lo que ca
 * **No cambian**: «Unirme» (principal si la persona va, secundario si no), la lista de eventos, el servidor ni los cinco tabs.
 * **Spec:** `specs/040-meet-automatico-en-eventos/spec.md`, FR-039 (app). **Pruebas:** Jest `copiarEnlaceDelEvento.test.ts` (marcas `// spec 040 FR-039`). Solo JavaScript: entra
   en el próximo .aab.
+
+## Corrección — 2026-11-16 — Comunidad → Tabla: en iPhone el podio no gira en el eje vertical (#216)
+
+Reporte del dueño en el simulador de iPhone: el podio se veía corrido. Lo comprobé: el 2.º puesto desaparecía y el 1.º quedaba cortado por la mitad. Lo que cambia y nada más:
+
+* En iOS las columnas laterales no giran ±10° y el escenario no se balancea ±2.5°. Core Animation cortaba esas capas 3D contra el fondo y el foco. Se quedan la subida, las tapas (`rotateX`), la corona, el foco, las chispas y el brillo.
+* **No cambian** Android ni la web: el escenario sigue igual que siempre.
+* **Pruebas:** `podioEnIos.test.ts`. Hace falta un build nuevo de iOS para verlo en iPhone.
