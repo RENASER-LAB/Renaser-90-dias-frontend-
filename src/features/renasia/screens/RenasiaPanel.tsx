@@ -46,6 +46,7 @@ import type { AgenteRenasia, PedidoDeFotoUI } from '../types/renasia.types';
 import { AvisoDeMantenimiento } from '../../plataforma/components/AvisoDeMantenimiento';
 import { useFuncionalidad } from '../../plataforma/estado/useFuncionalidad';
 import { CLAVES } from '../../plataforma/utils/clavesDeLaApp';
+import { ModalConZonaSegura } from '../../../components/ModalConZonaSegura';
 
 export interface RenasiaPanelProps {
   /**
@@ -198,7 +199,7 @@ export function RenasiaPanel({ agent, visible, onClose, contexto }: RenasiaPanel
   if (!visible) return null;
 
   return (
-    <Modal visible={visible && serDisponible} animationType="slide" onRequestClose={onClose} statusBarTranslucent>
+    <ModalConZonaSegura visible={visible && serDisponible} animationType="slide" onRequestClose={onClose} statusBarTranslucent>
       <SafeAreaView style={[styles.root, { backgroundColor: c.bg }]} edges={['top', 'bottom']}>
         {/* Header */}
         <View
@@ -416,7 +417,7 @@ export function RenasiaPanel({ agent, visible, onClose, contexto }: RenasiaPanel
 
       <RegistroConFotoModal {...registroConFoto.modal} />
       <RegistroDeRitualConTexto {...ritual.modal} />
-    </Modal>
+    </ModalConZonaSegura>
   );
 }
 

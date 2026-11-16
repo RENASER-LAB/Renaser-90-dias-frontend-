@@ -942,3 +942,11 @@ Entrenar) y lleve hasta el primer post en el Muro; al publicar, confeti; y «el 
     y nada se pierde). Solo JavaScript: llega con el siguiente APK. **Depende del backend** «Límite de pedidos por cuenta en modo solo
     registrar (spec 050, tramo C)», que además expone `Retry-After` en CORS para el build web. **E2E pendiente** (lo corre la sesión
     principal, con un grupo en `APLICAR` y `por-minuto` bajo en el backend local).
+
+## Corrección — 2026-11-16 — En iPhone, las ventanas a pantalla completa respetan la isla y la barrita de inicio (#215)
+
+Reporte del dueño en el simulador de iPhone: en el Código Renaser «sobresale la X» (la cabecera quedaba debajo de la isla). Lo que cambia y nada más:
+
+* Las ventanas `Modal` que usan `SafeAreaView` se abren con `ModalConZonaSegura` (`src/components/ModalConZonaSegura.tsx`), que les pone su propio `SafeAreaProvider`. En iOS un `Modal` es una ventana nativa aparte y el proveedor de la raíz no llega ahí. Son el Código Renaser, el registro con foto, la nueva publicación, SER y las dos de Comunidad.
+* **No cambian** el contenido de las ventanas, los cinco tabs ni Android: allí la ventana ya recibía los márgenes.
+* **Pruebas:** la guarda `modalesConZonaSegura.test.ts` exige el componente compartido. Hace falta un build nuevo de iOS para verlo en iPhone.
