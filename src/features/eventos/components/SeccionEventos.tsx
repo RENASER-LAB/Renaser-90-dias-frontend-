@@ -107,6 +107,7 @@ function SeccionEventosConRed({
   eventoPedido,
   onEventoPedidoAtendido,
   volverRef,
+  onAviso,
   estiloDelContenido,
   alDesplazar,
   rellenoDelEncabezado = 0,
@@ -118,6 +119,8 @@ function SeccionEventosConRed({
   onEventoPedidoAtendido: () => void;
   /** Comunidad lo llama con el «atrás» del sistema: `true` si la sección lo usó para volver. */
   volverRef: MutableRefObject<(() => boolean) | null>;
+  /** Un aviso corto de abajo (el de «Enlace copiado…»); lo dibuja la pantalla que aloja la sección. */
+  onAviso?: (texto: string) => void;
   /** El `contentContainerStyle` que Comunidad usa en todas sus secciones. */
   estiloDelContenido?: StyleProp<ViewStyle>;
   /** El encabezado de Comunidad, que se esconde al desplazar, sigue la `y` de esta lista (2026-10-02). */
@@ -470,6 +473,7 @@ function SeccionEventosConRed({
           setErrorFormulario(null);
           setVista({ nombre: 'formulario', original });
         }}
+        onAviso={onAviso}
         onSalaActualizada={() => {
           void recargar({ forzar: true });
           void releerElMes({ forzar: true });

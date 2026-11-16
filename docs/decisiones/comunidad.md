@@ -949,3 +949,17 @@ link, ajusta esa parte». Lo que cambia y nada más:
   solo `http` y `https`, por seguridad (`tel:`, `intent:` y demás siguen como texto).
 * **No cambian**: el texto de los mensajes, la hora, la doble marca, el menú al mantener presionado, las fotos, los audios ni el servidor.
 * **Pruebas:** Jest `enlacesEnElChat.test.ts`. Solo JavaScript: entra en el próximo .aab.
+
+## Cambio por pedido del dueño — 2026-11-16 — Comunidad → Eventos: botón para copiar el enlace del evento
+
+Pedido del dueño: junto a «Unirme», un botón chico, solo ícono, para copiar el enlace del evento y poder pegarlo en WhatsApp u otro lado. Diseño aprobado en el
+lienzo (opción C): https://claude.ai/artifact/M6dKAoJ2uGfDw6cyq6Ybpu. Lo que cambia y nada más:
+
+* En el detalle de un evento con enlace (Meet, Zoom, Drive u otro), «Unirme» ocupa el ancho de la fila y a su derecha va un botón cuadrado de 52×52 con borde, fondo de
+  tarjeta, radio 14 y el ícono de copiar. Al tocarlo copia el enlace, el ícono pasa a un check dorado unos 2,5 s y sale el aviso de abajo «Enlace copiado. Pégalo en
+  WhatsApp o donde quieras.». Etiqueta de accesibilidad: «Copiar el enlace de Google Meet» (o Zoom, etc.) y, ya copiado, «Enlace copiado».
+* Lo ve **cualquiera** que vea el enlace, no solo quien creó el evento. No aparece sin enlace ni si el binario no puede copiar (`sePuedeCopiar()`, sin `expo-clipboard`).
+  Si copiar falla, dice «No se pudo copiar» y no marca el check.
+* **No cambian**: «Unirme» (principal si la persona va, secundario si no), la lista de eventos, el servidor ni los cinco tabs.
+* **Spec:** `specs/040-meet-automatico-en-eventos/spec.md`, FR-039 (app). **Pruebas:** Jest `copiarEnlaceDelEvento.test.ts` (marcas `// spec 040 FR-039`). Solo JavaScript: entra
+  en el próximo .aab.

@@ -1,5 +1,5 @@
 import { fuentes } from '../../../theme/fuentes';
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Linking, StyleSheet, Text, View } from 'react-native';
 
 import { Alert } from '../../../components/Alerta';
@@ -20,6 +20,9 @@ import { TarjetaDeAsistencia } from './asistencia/TarjetaDeAsistencia';
 import { BotonVolver, EtiquetaAsistencia, LETRA, Parrafo } from './piezas';
 import { RotuloDeFormacion } from '../../formaciones/components/RotuloDeFormacion';
 import { Icon } from '../../../components/Icon';
+import { Presionable } from '../../../components/Presionable';
+import { tacto } from '../../../utils/tacto';
+import { copiarAlPortapapeles, sePuedeCopiar } from '../../chat/utils/portapapeles';
 import { lineaDelOrganizador } from '../utils/audienciaDelFormulario';
 import { ParaQuienEsDelEvento } from './audiencia/ParaQuienEsDelEvento';
 
@@ -37,6 +40,11 @@ import { ParaQuienEsDelEvento } from './audiencia/ParaQuienEsDelEvento';
 /** Spec 047 (decisión P4-B del dueño): la única línea nueva en Comunidad → Eventos. Solo sale si Google confirmó que la sala graba o transcribe. */
 export const AVISO_DE_GRABACION = 'Esta sesión se graba y se transcribe.';
 
+/** Spec 040 FR-039 (decisión del dueño, 2026-11-16): lo que dice el aviso al copiar el enlace del evento. */
+export const AVISO_ENLACE_COPIADO = 'Enlace copiado. Pégalo en WhatsApp o donde quieras.';
+/** Cuánto tiempo el botón de copiar muestra el check. */
+export const ENLACE_COPIADO_MS = 2500;
+
 export type AlcanceDeLaCancelacion = 'esta' | 'siguientes' | 'todas';
 
 export function DetalleDelEvento({
@@ -50,6 +58,7 @@ export function DetalleDelEvento({
   onEditar,
   onCancelar,
   onSalaActualizada,
+  onAviso,
 }: {
   oc: Ocurrencia;
   puedeGestionar: boolean;
@@ -65,6 +74,8 @@ export function DetalleDelEvento({
   onCancelar: (alcance: AlcanceDeLaCancelacion) => void;
   /** Tras «Reintentar» con éxito: la lista se relee para ver el enlace nuevo. */
   onSalaActualizada?: () => void;
+  /** Un aviso corto de abajo (p. ej. «Enlace copiado…»); quien monta el detalle lo dibuja. */
+  onAviso?: (texto: string) => void;
 }) {
   const { c } = useTheme();
   const { evento } = oc;
@@ -93,6 +104,27 @@ export function DetalleDelEvento({
   const avisoDeLaSala = lineaDeLaSala(meet);
   const avisoDelPlan = avisoDelPlanDeGoogle(meet);
   const lineaSerie = fresco ? lineaDeLaSerie(fresco) : null;
+
+  /* Spec 040 FR-039: copiar el enlace. El check dura 2,5 s; el temporizador se limpia al salir. */
+  const puedeCopiarEnlace = useRef(sePuedeCopiar()).current;
+  const [enlaceCopiado, setEnlaceCopiado] = useState(false);
+  const temporizadorDelCheck = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (temporizadorDelCheck.current) clearTimeout(temporizadorDelCheck.current);
+  }, []);
+  const copiarEnlace = async () => {
+    if (!link) return;
+    const copiado = await copiarAlPortapapeles(link);
+    if (!copiado) {
+      Alert.alert('No se pudo copiar', 'Intenta de nuevo.');
+      return;
+    }
+    tacto.logro();
+    setEnlaceCopiado(true);
+    onAviso?.(AVISO_ENLACE_COPIADO);
+    if (temporizadorDelCheck.current) clearTimeout(temporizadorDelCheck.current);
+    temporizadorDelCheck.current = setTimeout(() => setEnlaceCopiado(false), ENLACE_COPIADO_MS);
+  };
 
   const unirme = async () => {
     if (!link) return;
@@ -147,11 +179,23 @@ export function DetalleDelEvento({
             <Parrafo>Es por {nombreDelLink(link)}.</Parrafo>
           </View>
           {fresco?.seGrabaYTranscribe ? <Parrafo>{AVISO_DE_GRABACION}</Parrafo> : null}
-          {vas ? (
-            <BotonPrincipal etiqueta="Unirme" icono="play" onPress={unirme} accessibilityLabel={`Unirme por ${nombreDelLink(link)}`} />
-          ) : (
-            <BotonSecundario etiqueta="Unirme" icono="play" onPress={unirme} accessibilityLabel={`Unirme por ${nombreDelLink(link)}`} />
-          )}
+          <View style={estilos.fila}>
+            {vas ? (
+              <BotonPrincipal estilo={estilos.mitad} etiqueta="Unirme" icono="play" onPress={unirme} accessibilityLabel={`Unirme por ${nombreDelLink(link)}`} />
+            ) : (
+              <BotonSecundario estilo={estilos.mitad} etiqueta="Unirme" icono="play" onPress={unirme} accessibilityLabel={`Unirme por ${nombreDelLink(link)}`} />
+            )}
+            {puedeCopiarEnlace ? (
+              <Presionable
+                accessibilityRole="button"
+                accessibilityLabel={enlaceCopiado ? 'Enlace copiado' : `Copiar el enlace de ${nombreDelLink(link)}`}
+                onPress={() => void copiarEnlace()}
+                style={[estilos.copiar, { backgroundColor: c.cardBg, borderColor: c.border }]}
+              >
+                <Icon name={enlaceCopiado ? 'check' : 'copy'} size={20} color={enlaceCopiado ? c.goldInk : c.textStrong} />
+              </Presionable>
+            ) : null}
+          </View>
         </View>
       ) : evento.tipoUbicacion === 'ADDRESS' && evento.valorUbicacion ? (
         <Parrafo tono="fuerte">Lugar: {evento.valorUbicacion}</Parrafo>
@@ -262,4 +306,5 @@ const estilos = StyleSheet.create({
   fila: { flexDirection: 'row', gap: 10 },
   porFila: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   mitad: { flex: 1 },
+  copiar: { width: 52, height: 52, borderRadius: 14, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
 });

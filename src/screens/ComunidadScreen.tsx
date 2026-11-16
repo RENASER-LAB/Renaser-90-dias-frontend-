@@ -1663,6 +1663,8 @@ function ComunidadPorFormacion({
      sin ella). En vez de abrir el compositor, una línea dice qué falta; nada se envía. Las demás cuentas abren el compositor como
      siempre. */
   const [pidioPublicarSinFormacion, setPidioPublicarSinFormacion] = useState(false);
+  /** Spec 040 FR-039: «Enlace copiado…» al copiar el enlace de un evento. */
+  const [avisoDelEvento, setAvisoDelEvento] = useState<{ clave: number; texto: string } | null>(null);
   /* Spec 024: «Cambiamos a Diplomado Renaser.» al abrir el chat de un aviso de otra formación. */
   const [avisoDeFormacion, setAvisoDeFormacion] = useState<{ clave: number; texto: string } | null>(null);
   const hayQueElegirParaPublicar = formacionDeLaComunidad.hayQueElegirParaCrear;
@@ -3335,6 +3337,8 @@ function ComunidadPorFormacion({
       {seccionActiva === 'muro' ? (
         <AvisoDeAbajo aviso={confirmacionModeracion} onTerminar={() => setConfirmacionModeracion(null)} />
       ) : null}
+      {/* Spec 040 FR-039: «Enlace copiado…», solo en Eventos. */}
+      {seccionActiva === 'eventos' ? <AvisoDeAbajo aviso={avisoDelEvento} onTerminar={() => setAvisoDelEvento(null)} /> : null}
       {/* Spec 024: la línea de «Cambiamos a …» (sobre la barra de escribir si el chat ya está abierto). */}
       <AvisoDeAbajo aviso={avisoDeFormacion} abajo={96} onTerminar={() => setAvisoDeFormacion(null)} />
 
@@ -3366,6 +3370,7 @@ function ComunidadPorFormacion({
           eventoPedido={eventoPedido}
           onEventoPedidoAtendido={eventoPedidoAtendido}
           volverRef={eventosVolverRef}
+          onAviso={texto => setAvisoDelEvento({ clave: Date.now(), texto })}
           estiloDelContenido={[
             styles.content,
             {
