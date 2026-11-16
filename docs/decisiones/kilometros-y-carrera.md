@@ -304,3 +304,13 @@ lo que se ve):
   sin latidos es un hueco de GPS); solo queda en pausa cuando la abre la persona tras tenerla muerta.
 * **Los pasos recientes** cuentan 10 s en vez de 3 s (el sensor los entrega en tandas).
 Pruebas: `motorDeCarrera.test.ts` (#172) y `carreraLevantadaPorElGps.test.ts`. Falta confirmarlo caminando con un teléfono real.
+
+## Corrección — 2026-11-16 — Entrenar → Kilómetros: en iPhone el mapa de la carrera es Google Maps con su propia clave (#220)
+
+Pedido del dueño: el mapa de la carrera en iPhone, «Google Maps, igual que Android». Lo que cambia y nada más:
+
+* Cada plataforma mira su propia clave: Android `GOOGLE_MAPS_ANDROID_KEY` (`extra.mapaGoogle`), como hasta hoy, e iOS la nueva `GOOGLE_MAPS_IOS_KEY` (`extra.mapaGoogleIos`). Con la de iOS, el plugin de `react-native-maps` instala Google Maps en iPhone (`iosGoogleMapsApiKey`, `GMSApiKey` en el Info.plist).
+* Sin la clave de iOS, iPhone dibuja el fondo neutro con el avatar, como Android sin la suya. Antes pedía Google Maps sin tenerlo instalado y el mapa salía roto.
+* **No cambian** Android ni la carrera en sí (GPS, kilómetros, avisos).
+* **Hace falta:** la clave de Maps SDK for iOS en el proyecto NaSer de Google Cloud (pide facturación de Maps, que activa el dueño), restringida a `com.renaser.app`, guardada como variable de EAS `GOOGLE_MAPS_IOS_KEY`, y un build nuevo de iOS.
+* **Pruebas:** `mapaPorPlataforma.test.ts`.
