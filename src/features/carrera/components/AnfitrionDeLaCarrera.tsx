@@ -43,6 +43,7 @@ import { CuentaRegresiva } from './CuentaRegresiva';
 import { HojaGuiaDeBateria } from './HojaGuiaDeBateria';
 import { abrirGuiaDeLaMarca } from '../../alarmas/abrirGuiaDeLaMarca';
 import { esperarElRegreso, guiaDeBateriaPendiente } from '../servicios/guiaDeBateriaDeLaCarrera';
+import { laCarreraCorreEn } from '../utils/plataformaDeLaCarrera';
 import { PantallaCorriendo, PantallaTerminaste, type PanelDeLaPausa } from './PantallaDeCarrera';
 
 /**
@@ -58,7 +59,7 @@ import { PantallaCorriendo, PantallaTerminaste, type PanelDeLaPausa } from './Pa
  * - **La notificación única** (FR-011): reemplaza la del servicio del GPS (km, tiempo, ritmo, en pausa o no); se pone al día al
  *   cambiar de fase y al irse a segundo plano. «Pausar» la pausa y «Seguir» la sigue, al abrir.
  *
- * Solo Android: en la web no hace nada (FR-001).
+ * Android e iPhone (FR-001, FR-047): en la web no hace nada.
  */
 
 type Vista =
@@ -75,7 +76,7 @@ function iniciales(nombre: string | null | undefined): string {
 }
 
 export function AnfitrionDeLaCarrera() {
-  if (Platform.OS !== 'android') return null;
+  if (!laCarreraCorreEn(Platform.OS)) return null;
   return <Anfitrion />;
 }
 
@@ -239,7 +240,11 @@ function Anfitrion() {
         if (permiso !== 'concedido') {
           Alert.alert(
             'Ubicación',
-            permiso === 'gps-apagado' ? TEXTOS_DE_LA_CARRERA.sinGpsActivo : TEXTOS_DE_LA_CARRERA.sinPermisoUbicacion,
+            permiso === 'gps-apagado'
+              ? TEXTOS_DE_LA_CARRERA.sinGpsActivo
+              : Platform.OS === 'ios'
+                ? TEXTOS_DE_LA_CARRERA.sinPermisoUbicacionIos
+                : TEXTOS_DE_LA_CARRERA.sinPermisoUbicacion,
           );
           return;
         }

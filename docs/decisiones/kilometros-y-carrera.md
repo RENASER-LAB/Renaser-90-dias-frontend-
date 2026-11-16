@@ -304,3 +304,64 @@ lo que se ve):
   sin latidos es un hueco de GPS); solo queda en pausa cuando la abre la persona tras tenerla muerta.
 * **Los pasos recientes** cuentan 10 s en vez de 3 s (el sensor los entrega en tandas).
 Pruebas: `motorDeCarrera.test.ts` (#172) y `carreraLevantadaPorElGps.test.ts`. Falta confirmarlo caminando con un teléfono real.
+
+## Corrección — 2026-11-16 — Entrenar → Kilómetros: en iPhone el mapa de la carrera es Google Maps con su propia clave (#220)
+
+Pedido del dueño: el mapa de la carrera en iPhone, «Google Maps, igual que Android». Lo que cambia y nada más:
+
+* Cada plataforma mira su propia clave: Android `GOOGLE_MAPS_ANDROID_KEY` (`extra.mapaGoogle`), como hasta hoy, e iOS la nueva `GOOGLE_MAPS_IOS_KEY` (`extra.mapaGoogleIos`). Con la de iOS, el plugin de `react-native-maps` instala Google Maps en iPhone (`iosGoogleMapsApiKey`, `GMSApiKey` en el Info.plist).
+* Sin la clave de iOS, iPhone dibuja el fondo neutro con el avatar, como Android sin la suya. Antes pedía Google Maps sin tenerlo instalado y el mapa salía roto.
+* **No cambian** Android ni la carrera en sí (GPS, kilómetros, avisos).
+* **Hace falta:** la clave de Maps SDK for iOS en el proyecto NaSer de Google Cloud (pide facturación de Maps, que activa el dueño), restringida a `com.renaser.app`, guardada como variable de EAS `GOOGLE_MAPS_IOS_KEY`, y un build nuevo de iOS.
+* **Pruebas:** `mapaPorPlataforma.test.ts`.
+
+## Cambio por pedido del dueño — 2026-11-16 — Kilómetros diarios: en iPhone los pasos y la distancia salen de la app Salud de Apple (spec 037 FR-016 a FR-025, D-362)
+
+Pedido del dueño, textual en lo esencial: en iPhone, «Cuenta tus pasos solo» tiene que funcionar con la app Salud de Apple (HealthKit), igual que Health
+Connect en Android: leer los pasos **y la distancia** del día (incluye lo que midan un Apple Watch u otras apps), con su permiso, y con los mismos textos y
+el mismo flujo, adaptados a «Salud». Sin permiso o sin Salud en el dispositivo (un iPad) la app se queda con la captura. Android no cambia.
+
+Lo que cambia y nada más:
+* **`saludConectada.ios.ts` (nuevo)** elige la implementación de iPhone (`saludDeApple.ts`); `saludConectada.ts` sigue siendo Android (`saludDeHealthConnect.ts`) y
+  `saludConectada.web.ts` la web. La plataforma se elige en ese solo lugar; la app llama a las mismas funciones.
+* **Librería `@kingstinct/react-native-healthkit` 16.2.0** (con `react-native-nitro-modules` 0.35.10) y su plugin en `app.json`: entitlement de HealthKit,
+  `NSHealthShareUsageDescription` en español, **sin** `NSHealthUpdateUsageDescription` (no se escribe nada) y **sin** entrega en segundo plano. Solo lectura de Pasos y de
+  Distancia caminando y corriendo, estadísticas del día sin los datos escritos a mano. La librería se excluye del autolinking de Android
+  (`expo.autolinking.android.exclude`): el APK no cambia.
+* **Textos de iPhone** (`textosDePasosPara`): «Con la app Salud, de Apple.», «Tu iPhone o tu Apple Watch cuentan los pasos.», «Abrir Salud», etc. En Android siguen los de
+  Health Connect. Las fuentes se llaman «Tu teléfono», «Apple Watch» o el nombre de la app, nunca el nombre del dispositivo (lleva el de la persona).
+* **Apple no dice si la lectura se negó:** `permisosDeSalud` vale «otorgados» si el diálogo ya se mostró; una lectura vacía muestra «Todavía no vemos pasos hoy»,
+  con «Si no diste permiso, actívalo en Salud» y la captura de siempre.
+* **El servidor no cambia:** se guarda como `HEALTH_CONNECT` con `fuente` «Salud · Apple Watch»; el detalle dice «5,4 km · Salud · Apple Watch». Un origen propio queda para después.
+
+No cambian: Android, la web, el cierre en el servidor, la meta, el ranking, los cinco tabs. **Los pasos de la carrera con GPS en iOS quedan fuera** (el Pedometer de
+`expo-sensors` pide el permiso nuevo de Movimiento y actividad física y la carrera en iOS no se ha validado entera; sigue solo con GPS).
+Pruebas: `saludDeApple.test.ts`, `saludConectadaPorPlataforma.test.ts`, `textosDePasos.test.ts`, `healthKitEnLaApp.test.ts`. Hace falta un **build nativo nuevo de iOS**;
+**sin probar en un iPhone o simulador real** (lo corre la sesión principal).
+
+## Decisión del dueño — 2026-11-16 — La carrera con GPS también en iPhone, y sin permiso de Face ID
+
+La app ya sale para iOS. Pedido del dueño: «la carrera con GPS funciona en iPhone igual que en Android» (recorrido en el mapa, km en vivo,
+sigue contando con la pantalla apagada o la app en segundo plano y la misma cola sin red), y «quitar el permiso de Face ID: no se usa».
+Spec 042 FR-047 a FR-052; backend D-363.
+
+Lo que cambia y nada más:
+* **La carrera se ofrece y corre en iOS.** Un solo punto decide el sistema (`utils/plataformaDeLaCarrera.laCarreraCorreEn`: Android o iOS, no la
+  web) en `seOfreceLaCarrera`, el anfitrión, la tarea del GPS, el podómetro, el centro del mapa y el calentamiento. El motor, la cola por `carreraId`
+  y el envío único no se tocan.
+* **Segundo plano en iPhone:** `app.json` → `expo-location` con `isIosBackgroundLocationEnabled: true` (agrega `location` a `UIBackgroundModes`) y la
+  tarea de `expo-task-manager` arrancada con la app visible, con `showsBackgroundLocationIndicator: true`, `pausesUpdatesAutomatically: false` y
+  `activityType: Fitness`. Sin `foregroundService` (no existe en iOS). Android arranca igual que hoy.
+* **Permiso solo «mientras se usa».** `expo-location` no exige «siempre» para una tarea que se arranca con la app visible, así que las claves
+  `NSLocationAlways…` ya no se declaran (`locationAlwaysAndWhenInUsePermission: false` y `locationAlwaysPermission: false`): pedir «siempre» sin
+  usarlo sería falso ante Apple. Sin permiso, el aviso de iPhone dice dónde activarlo (Ajustes, Renaser, Ubicación).
+* **Pasos:** el `Pedometer` de `expo-sensors` (ya funcionaba igual en iOS) con `motionPermission` en español (y el mismo texto en `motionUsagePermission` de
+  `expo-location`, que declara la misma clave). Sin permiso o sin sensor, la carrera cuenta solo con el GPS.
+* **Sin guía de batería ni notificación fija en iPhone** (siguen siendo de Android; avisa la barra azul del sistema).
+* **Face ID fuera:** `expo-secure-store` con `faceIDPermission: false` (el plugin lo admite; no hay `requireAuthentication`). Comprobado con
+  `expo config --type introspect`.
+
+No cambian: Android, la web, el servidor, los cinco tabs ni el mapa (su clave de iOS es de #220/#221).
+Pruebas: `servicios/__tests__/carreraEnIos.test.ts`, `components/__tests__/anfitrionEnIos.test.ts` y `src/__tests__/reglas/carreraEnIosPermisos.test.ts`.
+Hace falta un build nuevo de iOS (cambia el `Info.plist`). **Sin comprobar en un iPhone:** que el recorrido siga sumando con la pantalla apagada, la barra
+azul y los pasos del podómetro; lo corre la sesión principal.

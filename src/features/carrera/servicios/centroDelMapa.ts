@@ -1,7 +1,9 @@
 import { Platform } from 'react-native';
+
 import { useSyncExternalStore } from 'react';
 
 import type { Coordenada } from '../utils/geo';
+import { laCarreraCorreEn } from '../utils/plataformaDeLaCarrera';
 import { almacen } from './almacenamiento';
 
 /**
@@ -109,7 +111,7 @@ export function useCentroDelMapa(): Coordenada | null {
 type ModuloUbicacion = typeof import('expo-location');
 
 function cargarUbicacion(): ModuloUbicacion | null {
-  if (Platform.OS !== 'android') return null;
+  if (!laCarreraCorreEn(Platform.OS)) return null;
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     return require('expo-location') as ModuloUbicacion;

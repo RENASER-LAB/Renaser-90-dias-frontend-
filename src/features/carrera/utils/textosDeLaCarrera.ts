@@ -40,6 +40,8 @@ export const TEXTOS_DE_LA_CARRERA = {
   porRevisar: 'Quedó marcada «por revisar»: tu mentor la ve con esa marca.',
   listo: 'Listo',
   sinPermisoUbicacion: 'Para contar tus km con el GPS necesitamos tu ubicación mientras corres. Sin ella, puedes subir tu captura como siempre.',
+  sinPermisoUbicacionIos:
+    'Para contar tus km con el GPS necesitamos tu ubicación mientras corres. Actívala en Ajustes, Renaser, Ubicación, o sube tu captura como siempre.',
   sinGpsActivo: 'Activa la ubicación de tu teléfono para empezar la carrera.',
   retomar: 'Tienes una carrera sin terminar',
   mapaSinClave: 'El mapa todavía no está disponible. Tu carrera se cuenta igual.',

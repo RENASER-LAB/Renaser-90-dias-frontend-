@@ -2,8 +2,9 @@
  * Lo que la persona ve de los pasos (spec 037, D-310; maqueta aprobada del 2026-11-02): la línea bajo «Kilómetros diarios», la hoja para
  * conectar (con su cara de «Sube tu captura» para Android menor a 14 y la web), y la hoja de los km con la meta, las fuentes y «Registrar».
  */
-import { afterEach, describe, expect, it, jest } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import React from 'react';
+import { Platform } from 'react-native';
 import TestRenderer, { act, type ReactTestInstance, type ReactTestRenderer } from 'react-test-renderer';
 
 jest.mock('../../../../theme/ThemeContext', () => {
@@ -63,10 +64,16 @@ const estiloPlano = (estilo: unknown) => Object.assign({}, ...[estilo].flat(3).f
 /** El ancho del relleno de la barra: el primer nodo de adentro con un `width` en su estilo. */
 const anchoDelRelleno = (barra: ReactTestInstance) => estiloPlano(barra.findAll(n => estiloPlano(n.props.style).width !== undefined)[0].props.style).width;
 
+/** Jest corre como iOS: los textos de Health Connect son los de Android, y los de Salud (FR-022) se prueban al final con `ios`. */
+beforeEach(() => {
+  jest.replaceProperty(Platform, 'OS', 'android');
+});
+
 afterEach(() => {
   act(() => raiz?.unmount());
   raiz = null;
   mockAbrirPolitica.mockReset();
+  jest.restoreAllMocks();
 });
 
 describe('la línea bajo «Kilómetros diarios»', () => {
@@ -307,5 +314,82 @@ describe('la hoja de los km', () => {
       expect(raiz!.toJSON()).toBeNull();
       act(() => raiz?.unmount());
     }
+  });
+});
+
+describe('en iPhone: la app Salud de Apple (spec 037, D-362)', () => {
+  beforeEach(() => {
+    jest.replaceProperty(Platform, 'OS', 'ios');
+  });
+  const props = (vista: VistaDeKilometros) => ({
+    visible: true,
+    titulo: 'Kilómetros diarios',
+    subtitulo: 'Cuerpo · 17:00 · 8 pts',
+    vista,
+    registrando: false,
+    onRegistrar: jest.fn(),
+    onActualizar: jest.fn(),
+    onDesconectar: jest.fn(),
+    onAbrirHealthConnect: jest.fn(),
+    onSubirCaptura: jest.fn(),
+    onCerrar: jest.fn(),
+  });
+  const propsParaConectar = (soporte: 'disponible' | 'no-disponible') => ({
+    visible: true,
+    soporte,
+    conectar: jest.fn<() => Promise<boolean>>().mockResolvedValue(true),
+    fuente: null,
+    desdeLasHoy: null,
+    onCerrar: jest.fn(),
+    onSubirCaptura: jest.fn(),
+    onAbrirHealthConnect: jest.fn(),
+  });
+
+  // spec 037 FR-016, FR-022
+  it('la hoja para conectar dice «Con la app Salud, de Apple.» y lo que lee el iPhone o el Apple Watch', () => {
+    montar(
+      React.createElement(HojaConectarPasos, propsParaConectar('disponible')),
+    );
+    const dicho = textos();
+    expect(dicho).toContain('Cuenta tus km solo');
+    expect(dicho).toContain('Con la app Salud, de Apple.');
+    expect(dicho).toContain('Tu iPhone o tu Apple Watch cuentan los pasos.');
+    expect(dicho).toContain('Conectar');
+    expect(dicho).not.toMatch(/Health Connect|Android/);
+  });
+
+  // spec 037 FR-017, FR-022
+  it('un iPad sin Salud: «Sube tu captura» y que los pasos automáticos necesitan la app Salud', () => {
+    montar(
+      React.createElement(HojaConectarPasos, propsParaConectar('no-disponible')),
+    );
+    expect(textos()).toContain('Sube tu captura');
+    expect(textos()).toContain('Los pasos automáticos necesitan la app Salud de Apple.');
+    expect(boton('Conectar')).toBeUndefined();
+  });
+
+  // spec 037 FR-019, FR-022
+  it('sin pasos hoy: pide revisar el permiso en Salud, ofrece abrir Salud, actualizar y la captura', () => {
+    const p = props({ modo: 'sin-datos', hayManuales: false });
+    montar(React.createElement(HojaDeKilometros, p));
+    expect(textos()).toContain('Todavía no vemos pasos hoy');
+    expect(textos()).toContain('Si no diste permiso, actívalo en Salud.');
+    act(() => boton('Abrir Salud')!.props.onPress());
+    expect(p.onAbrirHealthConnect).toHaveBeenCalledTimes(1);
+    expect(boton('Actualizar')).toBeDefined();
+    expect(boton('Subir captura')).toBeDefined();
+  });
+
+  // spec 037 FR-016, FR-022
+  it('con dos fuentes: «Apple Watch» y «Tu teléfono», y Salud cuenta una sola vez', () => {
+    const watch: FuenteDeLosPasos = { paquete: 'apple:watch', etiqueta: 'Apple Watch', dispositivo: 'RELOJ' };
+    const iphone: FuenteDeLosPasos = { paquete: 'apple:iphone', etiqueta: 'Tu teléfono', dispositivo: 'TELEFONO' };
+    const p = props(avance({ km: 5.9, metaLista: true, fuente: watch, fuentes: [watch], noSumadas: [iphone] }));
+    montar(React.createElement(HojaDeKilometros, p));
+    expect(textos()).toContain('Apple Watch');
+    expect(textos()).toContain('Contamos una sola vez lo que miden tu iPhone y tu Apple Watch.');
+    act(() => boton('Cambiar prioridad')!.props.onPress());
+    expect(p.onAbrirHealthConnect).toHaveBeenCalledTimes(1);
+    expect(boton('Registrar 5,9' + NBSP + 'km')).toBeDefined();
   });
 });

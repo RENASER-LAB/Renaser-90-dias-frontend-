@@ -37,11 +37,25 @@ export const PAQUETES_CONOCIDOS: Readonly<Record<string, string>> = {
   'fi.polar.polarflow': 'Polar Flow',
 };
 
+/**
+ * Los orígenes de la app Salud de Apple (spec 037, D-362, FR-021). `saludDeApple` los arma con estas claves y NO con el nombre del
+ * dispositivo, que en Apple lleva el de la persona («iPhone de Ana»): el iPhone y el Apple Watch tienen una clave fija y cada app
+ * (Strava…) la suya, con su nombre como «modelo».
+ */
+export const ORIGEN_APPLE_DEL_TELEFONO = 'apple:iphone';
+export const ORIGEN_APPLE_DEL_RELOJ = 'apple:watch';
+const PREFIJO_DE_APP_DE_APPLE = 'apple:app:';
+export const origenDeAppDeApple = (identificador: string): string => `${PREFIJO_DE_APP_DE_APPLE}${identificador}`;
+/** ¿Esta fuente viene de la app Salud de Apple y no de Health Connect? */
+export const esDeSaludDeApple = (paquete: string): boolean => paquete.startsWith('apple:');
+/** Lo que se antepone a la fuente que se manda al servidor para que el mentor vea que la medición salió de Salud (FR-023). */
+export const PREFIJO_DE_LA_FUENTE_DE_APPLE = 'Salud · ';
+
 export const ETIQUETA_DEL_TELEFONO = 'Tu teléfono';
 export const ETIQUETA_DE_OTRA_APP = 'Otra app';
 
 export function esElTelefono(paquete: string): boolean {
-  return paquete === ORIGEN_ANTIGUO_DEL_TELEFONO || paquete.startsWith(PREFIJO_DEL_TELEFONO);
+  return paquete === ORIGEN_ANTIGUO_DEL_TELEFONO || paquete === ORIGEN_APPLE_DEL_TELEFONO || paquete.startsWith(PREFIJO_DEL_TELEFONO);
 }
 
 /** ¿Este registro es de fiar? Un método que no se pudo verificar o escrito a mano no lo es. */

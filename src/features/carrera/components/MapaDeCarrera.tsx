@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View, Platform } from 'react-native';
 import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
 import Constants from 'expo-constants';
 
@@ -36,14 +36,17 @@ import { AvatarCaminante } from './AvatarCaminante';
  * no avise. Con «reducir movimiento», se quita sin fundido. Y el mapa avisa que Google Maps ya está cargado en este proceso
  * (`marcarMapaCalentado`), para que no se vuelva a calentar.
  *
- * **Sin clave de Google Maps** (`extra.mapaGoogle` en `app.config.js`, de la variable de EAS `GOOGLE_MAPS_ANDROID_KEY`) o sin el
+ * **Sin clave de Google Maps** (`extra.mapaGoogle` / `extra.mapaGoogleIos` en `app.config.js`, de las variables de EAS `GOOGLE_MAPS_ANDROID_KEY` / `GOOGLE_MAPS_IOS_KEY`) o sin el
  * módulo nativo, se dibuja un fondo neutro con el avatar y una línea que lo dice: la carrera se cuenta igual. Sin botón 2D/3D.
  */
 
 type ModuloMapas = typeof import('react-native-maps');
 
 export function cargarMapas(): ModuloMapas | null {
-  if (Constants.expoConfig?.extra?.mapaGoogle !== true) return null;
+  // #220: cada plataforma mira su propia clave. Sin `iosGoogleMapsApiKey` el plugin no instala Google Maps en iOS, y pedirlo
+  // con la marca de Android rompía el mapa en vez de dar el fondo neutro.
+  const marca = Platform.OS === 'ios' ? 'mapaGoogleIos' : 'mapaGoogle';
+  if (Constants.expoConfig?.extra?.[marca] !== true) return null;
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     return require('react-native-maps') as ModuloMapas;

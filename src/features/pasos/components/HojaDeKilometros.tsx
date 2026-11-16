@@ -10,7 +10,7 @@ import { useTheme } from '../../../theme/ThemeContext';
 import { formatoKm } from '../../habits/utils/formatoKm';
 import {
   kmConUnidad,
-  TEXTOS_DE_PASOS,
+  textosDeEstaPlataforma,
   textoDelBotonRegistrar,
   textoDesdeCuando,
   textoDeLosPasos,
@@ -59,7 +59,7 @@ export function HojaDeKilometros({
   const { c, t } = useTheme();
   const { height } = useWindowDimensions();
   const despues = useRef<(() => void) | null>(null);
-  const textos = TEXTOS_DE_PASOS;
+  const textos = textosDeEstaPlataforma();
 
   const irALaCaptura = () => {
     despues.current = onSubirCaptura;
@@ -104,6 +104,7 @@ export function HojaDeKilometros({
     pie = (
       <View style={{ gap: 6 }}>
         <GoldButton label={textos.actualizar} onPress={onActualizar} textStyle={estilos.textoDelBoton} />
+        {textos.sinDatos.abrir ? secundario(textos.sinDatos.abrir, onAbrirHealthConnect) : null}
         {secundario(textos.subirCaptura, irALaCaptura, 'camera')}
       </View>
     );
@@ -168,7 +169,7 @@ function CuerpoConPasos({
   onAbrirHealthConnect: () => void;
 }) {
   const { c, t } = useTheme();
-  const textos = TEXTOS_DE_PASOS;
+  const textos = textosDeEstaPlataforma();
   const pasos = textoDeLosPasos(vista.pasos, vista.aproximado);
   const dosFuentes = vista.noSumadas.length > 0;
   return (

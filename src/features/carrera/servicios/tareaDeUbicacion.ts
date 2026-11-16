@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 
+import { laCarreraCorreEn } from '../utils/plataformaDeLaCarrera';
 import type { PuntoGps } from '../types/carrera.types';
 import { cargarCarrera, carreraActual, recibirPuntos, resumenParaLaNotificacion } from './carreraEnVivo';
 import { borrarCentroGuardadoDelMapa, ponerCentroDelMapa } from './centroDelMapa';
@@ -18,7 +19,9 @@ import { TEXTOS_DE_LA_NOTIFICACION } from '../utils/textosDeLaCarrera';
  * de la carrera no esté montada. Si el proceso arrancó sin la carrera en memoria (Android lo mató y el servicio siguió), la carga
  * del teléfono antes de aplicar los puntos.
  *
- * Solo Android (FR-001). En la web y en las pruebas, todo esto no hace nada.
+ * Android e iPhone (FR-001, FR-047). En la web y en las pruebas, todo esto no hace nada. En iPhone no hay servicio en primer plano:
+ * la tarea sigue en segundo plano por el modo de fondo `location` (FR-048), con la barra azul del sistema como aviso, y alcanza el
+ * permiso «mientras se usa» (FR-049).
  */
 
 export const TAREA_GPS_DE_LA_CARRERA = 'renaser-carrera-gps';
@@ -27,7 +30,7 @@ type ModuloUbicacion = typeof import('expo-location');
 type ModuloTareas = typeof import('expo-task-manager');
 
 function cargar(): { Location: ModuloUbicacion; TaskManager: ModuloTareas } | null {
-  if (Platform.OS !== 'android') return null;
+  if (!laCarreraCorreEn(Platform.OS)) return null;
   try {
     /* eslint-disable @typescript-eslint/no-require-imports */
     const Location = require('expo-location') as ModuloUbicacion;
@@ -122,19 +125,28 @@ export async function empezarGps(): Promise<boolean> {
       if (arrancadoEnEsteProceso) return true;
       await m.Location.stopLocationUpdatesAsync(TAREA_GPS_DE_LA_CARRERA);
     }
-    await m.Location.startLocationUpdatesAsync(TAREA_GPS_DE_LA_CARRERA, {
+    const comunes = {
       accuracy: m.Location.Accuracy.BestForNavigation,
       timeInterval: 1000,
       distanceInterval: 0,
       pausesUpdatesAutomatically: false,
       activityType: m.Location.ActivityType.Fitness,
-      foregroundService: {
-        notificationTitle: TEXTOS_DE_LA_NOTIFICACION.titulo,
-        notificationBody: TEXTOS_DE_LA_NOTIFICACION.cuerpoDelServicio,
-        notificationColor: '#B2924F',
-        killServiceOnDestroy: false,
-      },
-    });
+    };
+    await m.Location.startLocationUpdatesAsync(
+      TAREA_GPS_DE_LA_CARRERA,
+      Platform.OS === 'ios'
+        ? // iPhone (FR-048): sin servicio en primer plano; la barra azul avisa que la app usa la ubicación en segundo plano.
+          { ...comunes, showsBackgroundLocationIndicator: true }
+        : {
+            ...comunes,
+            foregroundService: {
+              notificationTitle: TEXTOS_DE_LA_NOTIFICACION.titulo,
+              notificationBody: TEXTOS_DE_LA_NOTIFICACION.cuerpoDelServicio,
+              notificationColor: '#B2924F',
+              killServiceOnDestroy: false,
+            },
+          },
+    );
     arrancadoEnEsteProceso = true;
     return true;
   } catch {

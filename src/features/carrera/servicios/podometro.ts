@@ -1,8 +1,12 @@
 import { Platform } from 'react-native';
 
+import { laCarreraCorreEn } from '../utils/plataformaDeLaCarrera';
+
 /**
  * Los pasos del teléfono para la carrera (FR-031, FR-036): `expo-sensors` Pedometer. Entregan el total desde que se empezó a
  * escuchar; acá se convierte en «pasos nuevos» para el motor y el avatar.
+ *
+ * En iPhone (FR-050) es el mismo `Pedometer` (CMPedometer), con el permiso de movimiento (`NSMotionUsageDescription`).
  *
  * El permiso de actividad física es opcional: sin él, o sin sensor, la carrera funciona igual y el avatar se mueve con el GPS.
  *
@@ -15,7 +19,7 @@ import { Platform } from 'react-native';
 type ModuloSensores = typeof import('expo-sensors');
 
 function cargar(): ModuloSensores | null {
-  if (Platform.OS !== 'android') return null;
+  if (!laCarreraCorreEn(Platform.OS)) return null;
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     return require('expo-sensors') as ModuloSensores;

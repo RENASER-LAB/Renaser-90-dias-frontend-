@@ -35,7 +35,8 @@
     "plugins": [
       "expo-font",
       "expo-web-browser",
-      "expo-secure-store",
+      ["expo-secure-store", { "faceIDPermission": false }],
+      ["expo-sensors", { "motionPermission": "Renaser cuenta tus pasos con el sensor de movimiento mientras corres con «Correr con GPS», para sumar tus kilómetros." }],
       [
         "expo-build-properties",
         {
@@ -119,9 +120,21 @@
       ],
       "./plugins/withHealthConnect",
       [
+        "@kingstinct/react-native-healthkit",
+        {
+          "NSHealthShareUsageDescription": "Renaser lee tus pasos y la distancia que caminas o corres en la app Salud, para llenar tus kilómetros diarios sin que subas una captura. Tu mentor y la tabla de kilómetros ven tu total de km.",
+          "NSHealthUpdateUsageDescription": false,
+          "background": false
+        }
+      ],
+      [
         "expo-location",
         {
           "locationWhenInUsePermission": "Renaser usa tu ubicación solo mientras corres con «Correr con GPS», para contar tus kilómetros y dibujar tu ruta.",
+          "locationAlwaysAndWhenInUsePermission": false,
+          "locationAlwaysPermission": false,
+          "motionUsagePermission": "Renaser cuenta tus pasos con el sensor de movimiento mientras corres con «Correr con GPS», para sumar tus kilómetros.",
+          "isIosBackgroundLocationEnabled": true,
           "isAndroidBackgroundLocationEnabled": false,
           "isAndroidForegroundServiceEnabled": true,
           "isAndroidMotionActivityEnabled": true

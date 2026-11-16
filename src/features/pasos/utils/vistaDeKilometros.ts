@@ -10,7 +10,7 @@ import { ETIQUETA_DE_OTRA_APP } from './fuentesDeSalud';
  * 1. **Ya cumplido** (con el número del día): se dice cuánto fue y de dónde salió; no se ofrece nada más.
  * 2. **Sin meta** en la agenda (un backend anterior a la spec 037): la fila de siempre. No se ofrece conectar nada que el
  *    servidor no sabe cerrar.
- * 3. **Sin soporte** (Android menor a 14, sin Health Connect, iPhone/web) o **sin conectar**: se ofrece «Cuenta tus pasos solo»;
+ * 3. **Sin soporte** (Android menor a 14, sin Health Connect, iPad sin Salud, web) o **sin conectar**: se ofrece «Cuenta tus pasos solo»;
  *    en un teléfono sin soporte esa hoja explica que se sube la captura. Por decisión del dueño no se ofrece instalar nada.
  * 4. **Conectado sin permiso**: «Perdimos tus pasos».
  * 5. **Conectado con permiso**: sin lectura todavía, la fila de siempre (sin parpadeo); sin pasos, «Todavía no vemos pasos hoy»;
@@ -36,7 +36,7 @@ export interface EntradaDeLaVista {
   soporte: EstadoDelSoporte;
   /** La persona aceptó la hoja de «Conectar» en este teléfono; `null` mientras se lee. */
   conectado: boolean | null;
-  /** El permiso de Health Connect; `null` mientras no se sabe. */
+  /** El permiso de Health Connect o de Salud (en iPhone, «ya se le preguntó»: Apple no dice si lo negó); `null` mientras no se sabe. */
   permisos: 'otorgados' | 'faltan' | null;
   lectura: LecturaDelDia | null;
   errorDeLectura: boolean;

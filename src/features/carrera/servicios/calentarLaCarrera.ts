@@ -1,6 +1,7 @@
 import { useEffect, useSyncExternalStore } from 'react';
 import { Platform } from 'react-native';
 
+import { laCarreraCorreEn } from '../utils/plataformaDeLaCarrera';
 
 /**
  * Preparar la carrera ANTES de tocar «Correr» (spec 042, 2026-11-06: en el teléfono del dueño el mapa todavía tardaba ~3 s en
@@ -31,9 +32,9 @@ function avisar(): void {
   for (const o of oyentes) o();
 }
 
-/** Pide calentar el mapa. No hace nada si ya se calentó en este proceso o no es Android. */
+/** Pide calentar el mapa. No hace nada si ya se calentó en este proceso o no corre la carrera en este sistema. */
 export function pedirCalentarElMapa(): void {
-  if (Platform.OS !== 'android' || calentado || quiereCalentar) return;
+  if (!laCarreraCorreEn(Platform.OS) || calentado || quiereCalentar) return;
   quiereCalentar = true;
   avisar();
 }
@@ -62,7 +63,7 @@ export function useHayQueCalentarElMapa(): boolean {
 
 /** Lo que se adelanta para la cuenta con sesión: el mapa y los datos de la persona. Nunca lanza. */
 export function prepararLaCarreraDeAntemano(): void {
-  if (Platform.OS !== 'android') return;
+  if (!laCarreraCorreEn(Platform.OS)) return;
   pedirCalentarElMapa();
   // Cargados al usarse: la fila de Training importa este archivo y sus pruebas no simulan la red ni la ubicación.
   /* eslint-disable @typescript-eslint/no-require-imports */
@@ -85,7 +86,7 @@ export const ESPERA_ANTES_DE_PREPARAR_MS = 500;
  */
 export function usePrepararLaCarrera(activo = true): void {
   useEffect(() => {
-    if (!activo || Platform.OS !== 'android') return;
+    if (!activo || !laCarreraCorreEn(Platform.OS)) return;
     const id = setTimeout(prepararLaCarreraDeAntemano, ESPERA_ANTES_DE_PREPARAR_MS);
     return () => clearTimeout(id);
   }, [activo]);
