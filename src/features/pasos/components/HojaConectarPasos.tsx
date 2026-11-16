@@ -8,7 +8,7 @@ import { HojaDesdeAbajo } from '../../../components/hojaDesdeAbajo/HojaDesdeAbaj
 import { fuentes } from '../../../theme/fuentes';
 import { useTheme } from '../../../theme/ThemeContext';
 import { abrirPoliticaDePrivacidad } from '../../legal/enlacesLegales';
-import { textoDesdeCuando, TEXTOS_DE_PASOS } from '../utils/textosDePasos';
+import { textoDesdeCuando, textosDeEstaPlataforma } from '../utils/textosDePasos';
 
 /**
  * «Cuenta tus km solo» (spec 037, D-310; maqueta 1.2, 1.4 y 3.4): la hoja donde la persona acepta que Renaser lea sus pasos y
@@ -18,7 +18,7 @@ import { textoDesdeCuando, TEXTOS_DE_PASOS } from '../utils/textosDePasos';
  * Tres caras en la misma hoja, sin abrir otra encima (en Android una segunda ventana apilada se come los toques):
  * 1. **pregunta** (Android 14 con Health Connect): las tres líneas, «Conectar» y «Ahora no»;
  * 2. **listo**: «Ya contamos tus pasos», la fuente (cuando ya se leyó) y desde qué hora cuenta hoy;
- * 3. **sin soporte** (Android menor a 14, sin Health Connect, iPhone/web): «Sube tu captura». Por decisión del dueño no se
+ * 3. **sin soporte** (Android menor a 14, sin Health Connect, iPad sin Salud, web): «Sube tu captura». Por decisión del dueño no se
  *    ofrece instalar nada; el botón lleva a la captura de siempre.
  *
  * Sin animación propia: la hoja es la de la app y se ve una vez por cuenta.
@@ -105,7 +105,7 @@ export function HojaConectarPasos({
   };
 
   const sinSoporte = soporte === 'no-disponible';
-  const textos = TEXTOS_DE_PASOS;
+  const textos = textosDeEstaPlataforma();
 
   return (
     <HojaDesdeAbajo

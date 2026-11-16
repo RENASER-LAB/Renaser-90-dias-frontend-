@@ -304,3 +304,27 @@ lo que se ve):
   sin latidos es un hueco de GPS); solo queda en pausa cuando la abre la persona tras tenerla muerta.
 * **Los pasos recientes** cuentan 10 s en vez de 3 s (el sensor los entrega en tandas).
 Pruebas: `motorDeCarrera.test.ts` (#172) y `carreraLevantadaPorElGps.test.ts`. Falta confirmarlo caminando con un teléfono real.
+
+## Cambio por pedido del dueño — 2026-11-16 — Kilómetros diarios: en iPhone los pasos y la distancia salen de la app Salud de Apple (spec 037 FR-016 a FR-025, D-362)
+
+Pedido del dueño, textual en lo esencial: en iPhone, «Cuenta tus pasos solo» tiene que funcionar con la app Salud de Apple (HealthKit), igual que Health
+Connect en Android: leer los pasos **y la distancia** del día (incluye lo que midan un Apple Watch u otras apps), con su permiso, y con los mismos textos y
+el mismo flujo, adaptados a «Salud». Sin permiso o sin Salud en el dispositivo (un iPad) la app se queda con la captura. Android no cambia.
+
+Lo que cambia y nada más:
+* **`saludConectada.ios.ts` (nuevo)** elige la implementación de iPhone (`saludDeApple.ts`); `saludConectada.ts` sigue siendo Android (`saludDeHealthConnect.ts`) y
+  `saludConectada.web.ts` la web. La plataforma se elige en ese solo lugar; la app llama a las mismas funciones.
+* **Librería `@kingstinct/react-native-healthkit` 16.2.0** (con `react-native-nitro-modules` 0.35.10) y su plugin en `app.json`: entitlement de HealthKit,
+  `NSHealthShareUsageDescription` en español, **sin** `NSHealthUpdateUsageDescription` (no se escribe nada) y **sin** entrega en segundo plano. Solo lectura de Pasos y de
+  Distancia caminando y corriendo, estadísticas del día sin los datos escritos a mano. La librería se excluye del autolinking de Android
+  (`expo.autolinking.android.exclude`): el APK no cambia.
+* **Textos de iPhone** (`textosDePasosPara`): «Con la app Salud, de Apple.», «Tu iPhone o tu Apple Watch cuentan los pasos.», «Abrir Salud», etc. En Android siguen los de
+  Health Connect. Las fuentes se llaman «Tu teléfono», «Apple Watch» o el nombre de la app, nunca el nombre del dispositivo (lleva el de la persona).
+* **Apple no dice si la lectura se negó:** `permisosDeSalud` vale «otorgados» si el diálogo ya se mostró; una lectura vacía muestra «Todavía no vemos pasos hoy»,
+  con «Si no diste permiso, actívalo en Salud» y la captura de siempre.
+* **El servidor no cambia:** se guarda como `HEALTH_CONNECT` con `fuente` «Salud · Apple Watch»; el detalle dice «5,4 km · Salud · Apple Watch». Un origen propio queda para después.
+
+No cambian: Android, la web, el cierre en el servidor, la meta, el ranking, los cinco tabs. **Los pasos de la carrera con GPS en iOS quedan fuera** (el Pedometer de
+`expo-sensors` pide el permiso nuevo de Movimiento y actividad física y la carrera en iOS no se ha validado entera; sigue solo con GPS).
+Pruebas: `saludDeApple.test.ts`, `saludConectadaPorPlataforma.test.ts`, `textosDePasos.test.ts`, `healthKitEnLaApp.test.ts`. Hace falta un **build nativo nuevo de iOS**;
+**sin probar en un iPhone o simulador real** (lo corre la sesión principal).

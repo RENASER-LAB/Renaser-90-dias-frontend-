@@ -1,5 +1,5 @@
 import type { LecturaCrudaDelDia, LecturaDelDia } from '../types/pasos.types';
-import { fuenteDe, ordenarFuentes, origenesDelDia } from './fuentesDeSalud';
+import { esDeSaludDeApple, fuenteDe, ordenarFuentes, origenesDelDia, PREFIJO_DE_LA_FUENTE_DE_APPLE } from './fuentesDeSalud';
 
 /**
  * De lo que dice Health Connect a la lectura que se muestra y se manda (spec 037, D-310). Todo es puro: la lectura de Health
@@ -68,7 +68,8 @@ export function cuerpoParaElServidor(lectura: LecturaDelDia): CuerpoDeLaMedicion
   return {
     kilometros: lectura.km,
     ...(lectura.pasos != null && lectura.pasos >= 0 ? { pasos: Math.round(lectura.pasos) } : {}),
-    fuente: principal.etiqueta.slice(0, 60),
+    // En iPhone la fuente va como «Salud · Apple Watch»: el servidor guarda ambas como HEALTH_CONNECT y así el mentor las distingue (FR-023).
+    fuente: (esDeSaludDeApple(principal.paquete) ? `${PREFIJO_DE_LA_FUENTE_DE_APPLE}${principal.etiqueta}` : principal.etiqueta).slice(0, 60),
     dispositivo: principal.dispositivo,
     leidoEn: lectura.leidoEn.toISOString(),
   };

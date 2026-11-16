@@ -6,6 +6,7 @@ import {
   formatoPasos,
   kmConUnidad,
   TEXTOS_DE_PASOS,
+  textosDePasosPara,
   textoDeLaMeta,
   textoDeLaMetaLista,
   textoDelAvisoDeRegistro,
@@ -79,5 +80,54 @@ describe('lo que se promete y lo que no', () => {
 
   it('los pasos escritos a mano no cuentan, y lo dice', () => {
     expect(TEXTOS_DE_PASOS.sinDatos.manuales).toBe('Los pasos escritos a mano no cuentan.');
+  });
+});
+
+describe('los textos en iPhone: la app Salud de Apple (spec 037, D-362)', () => {
+  // spec 037 FR-022
+  it('en iPhone dicen «Salud» y no «Health Connect», ni «Android 14»', () => {
+    const iphone = textosDePasosPara('ios');
+    expect(iphone.conectar.subtitulo).toBe('Con la app Salud, de Apple.');
+    expect(iphone.conectar.lineas).toEqual([
+      'Tu iPhone o tu Apple Watch cuentan los pasos.',
+      'Renaser solo lee pasos y distancia.',
+      'Tu mentor y la tabla de kilómetros ven tu total de km.',
+    ]);
+    expect(iphone.abrirHealthConnect).toBe('Abrir Salud');
+    expect(iphone.sinPermiso.texto).toBe('Quitaste el permiso en Salud.');
+    expect(iphone.sinSoporte.texto).toBe('Los pasos automáticos necesitan la app Salud de Apple.');
+    expect(iphone.sinDatos.texto).toContain('Si no diste permiso, actívalo en Salud.');
+    expect(iphone.sinDatos.abrir).toBe('Abrir Salud');
+    expect(iphone.hoja.unaSolaVez).toBe('Contamos una sola vez lo que miden tu iPhone y tu Apple Watch.');
+    const todo = JSON.stringify(iphone);
+    expect(todo).not.toMatch(/Health Connect|Android|Google/);
+  });
+
+  // spec 037 FR-022, FR-024
+  it('Android y la web siguen con los textos de Health Connect, sin cambio', () => {
+    expect(textosDePasosPara('android')).toBe(TEXTOS_DE_PASOS);
+    expect(textosDePasosPara('web')).toBe(TEXTOS_DE_PASOS);
+    expect(TEXTOS_DE_PASOS.conectar.subtitulo).toBe('Con Health Connect, de Google.');
+    expect(TEXTOS_DE_PASOS.sinDatos.abrir).toBeNull();
+  });
+
+  // spec 037 FR-022
+  it('las líneas que no dependen de la plataforma son las mismas (mismo flujo, mismos botones)', () => {
+    const iphone = textosDePasosPara('ios');
+    expect(iphone.conectar.boton).toBe(TEXTOS_DE_PASOS.conectar.boton);
+    expect(iphone.registrar).toBe(TEXTOS_DE_PASOS.registrar);
+    expect(iphone.subirCaptura).toBe(TEXTOS_DE_PASOS.subirCaptura);
+    expect(iphone.errores).toEqual(TEXTOS_DE_PASOS.errores);
+  });
+
+  // spec 037 FR-022
+  it('tuteo, sin voseo', () => {
+    expect(JSON.stringify(textosDePasosPara('ios'))).not.toMatch(/\b(tenés|podés|querés|sabés|elegí|tocá|mirá)\b/i);
+  });
+
+  // spec 037 FR-023
+  it('lo cumplido con la medición de Salud dice «Salud · Apple Watch» y no «Health Connect»', () => {
+    expect(detalleDeLosKm(5.4, 'HEALTH_CONNECT', 'Salud · Apple Watch')).toBe(`5,4${NBSP}km · Salud · Apple Watch`);
+    expect(detalleDeLosKm(5.4, 'HEALTH_CONNECT', 'Galaxy Watch')).toBe(`5,4${NBSP}km · Health Connect · Galaxy Watch`);
   });
 });
