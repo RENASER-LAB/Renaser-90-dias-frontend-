@@ -24,7 +24,7 @@ export function AvisoDeWhatsAppSinSaldo({ estado }: { estado: EstadoDeWhatsApp |
       <View style={estilos.cuerpo}>
         <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 17 }]}>{TITULO_SIN_SALDO}</Text>
         <Text style={[t.body, { color: c.text, fontSize: 16, lineHeight: 23 }]}>{TEXTO_SIN_SALDO}</Text>
-        <Text style={[t.body, { color: c.textSoft, fontSize: 15 }]}>{linea}</Text>
+        <Text style={[t.body, { color: c.textSoft, fontSize: 16 }]}>{linea}</Text>
       </View>
     </View>
   );

@@ -45,8 +45,12 @@ async function montar(rol: string): Promise<ReactTestRenderer> {
   return r;
 }
 
-beforeEach(() => leer.mockReset());
-afterEach(() => jest.clearAllMocks());
+beforeEach(() => {
+  leer.mockReset();
+});
+afterEach(() => {
+  jest.clearAllMocks();
+});
 
 describe('aviso de WhatsApp sin saldo (spec 054)', () => {
   // spec 054 FR-006
