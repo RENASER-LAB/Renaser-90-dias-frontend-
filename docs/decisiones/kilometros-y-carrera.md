@@ -304,3 +304,30 @@ lo que se ve):
   sin latidos es un hueco de GPS); solo queda en pausa cuando la abre la persona tras tenerla muerta.
 * **Los pasos recientes** cuentan 10 s en vez de 3 s (el sensor los entrega en tandas).
 Pruebas: `motorDeCarrera.test.ts` (#172) y `carreraLevantadaPorElGps.test.ts`. Falta confirmarlo caminando con un teléfono real.
+
+## Decisión del dueño — 2026-11-16 — La carrera con GPS también en iPhone, y sin permiso de Face ID
+
+La app ya sale para iOS. Pedido del dueño: «la carrera con GPS funciona en iPhone igual que en Android» (recorrido en el mapa, km en vivo,
+sigue contando con la pantalla apagada o la app en segundo plano y la misma cola sin red), y «quitar el permiso de Face ID: no se usa».
+Spec 042 FR-047 a FR-052; backend D-363.
+
+Lo que cambia y nada más:
+* **La carrera se ofrece y corre en iOS.** Un solo punto decide el sistema (`utils/plataformaDeLaCarrera.laCarreraCorreEn`: Android o iOS, no la
+  web) en `seOfreceLaCarrera`, el anfitrión, la tarea del GPS, el podómetro, el centro del mapa y el calentamiento. El motor, la cola por `carreraId`
+  y el envío único no se tocan.
+* **Segundo plano en iPhone:** `app.json` → `expo-location` con `isIosBackgroundLocationEnabled: true` (agrega `location` a `UIBackgroundModes`) y la
+  tarea de `expo-task-manager` arrancada con la app visible, con `showsBackgroundLocationIndicator: true`, `pausesUpdatesAutomatically: false` y
+  `activityType: Fitness`. Sin `foregroundService` (no existe en iOS). Android arranca igual que hoy.
+* **Permiso solo «mientras se usa».** `expo-location` no exige «siempre» para una tarea que se arranca con la app visible, así que las claves
+  `NSLocationAlways…` ya no se declaran (`locationAlwaysAndWhenInUsePermission: false` y `locationAlwaysPermission: false`): pedir «siempre» sin
+  usarlo sería falso ante Apple. Sin permiso, el aviso de iPhone dice dónde activarlo (Ajustes, Renaser, Ubicación).
+* **Pasos:** el `Pedometer` de `expo-sensors` (ya funcionaba igual en iOS) con `motionPermission` en español (y el mismo texto en `motionUsagePermission` de
+  `expo-location`, que declara la misma clave). Sin permiso o sin sensor, la carrera cuenta solo con el GPS.
+* **Sin guía de batería ni notificación fija en iPhone** (siguen siendo de Android; avisa la barra azul del sistema).
+* **Face ID fuera:** `expo-secure-store` con `faceIDPermission: false` (el plugin lo admite; no hay `requireAuthentication`). Comprobado con
+  `expo config --type introspect`.
+
+No cambian: Android, la web, el servidor, los cinco tabs ni el mapa (su clave de iOS es de #220/#221).
+Pruebas: `servicios/__tests__/carreraEnIos.test.ts`, `components/__tests__/anfitrionEnIos.test.ts` y `src/__tests__/reglas/carreraEnIosPermisos.test.ts`.
+Hace falta un build nuevo de iOS (cambia el `Info.plist`). **Sin comprobar en un iPhone:** que el recorrido siga sumando con la pantalla apagada, la barra
+azul y los pasos del podómetro; lo corre la sesión principal.
