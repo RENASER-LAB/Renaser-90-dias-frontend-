@@ -1,4 +1,7 @@
+import { Platform } from 'react-native';
+
 import { formatoKm } from '../../habits/utils/formatoKm';
+import { PREFIJO_DE_LA_FUENTE_DE_APPLE } from './fuentesDeSalud';
 
 /**
  * Todo lo que la persona lee en los pasos (spec 037). Tuteo, tipo oración y pocas palabras (maqueta aprobada del 2026-11-02).
@@ -65,6 +68,8 @@ export const TEXTOS_DE_PASOS = {
     titulo: 'Todavía no vemos pasos hoy',
     texto: 'Lleva tu teléfono contigo o revisa que tu reloj sincronice.',
     manuales: 'Los pasos escritos a mano no cuentan.',
+    /** Un botón para abrir la app de salud desde aquí; solo en iPhone (Apple no dice si el permiso se negó, ver `textosDePasosPara`). */
+    abrir: null as string | null,
   },
   hoja: {
     hoy: 'Hoy',
@@ -80,6 +85,44 @@ export const TEXTOS_DE_PASOS = {
     noSePudoConectar: 'No pudimos conectar tus pasos. Intenta de nuevo.',
   },
 } as const;
+
+/** Todos los textos, con cada frase ancha (`string`) para que la versión de iPhone pueda decir otra cosa con la misma forma. */
+type Ancho<T> = T extends string ? string : T extends readonly (infer U)[] ? readonly Ancho<U>[] : T extends null ? string | null : { [K in keyof T]: Ancho<T[K]> };
+export type TextosDePasos = Ancho<typeof TEXTOS_DE_PASOS>;
+
+/**
+ * Los textos en iPhone (spec 037, D-362, FR-022): el mismo flujo y los mismos botones, con «Salud» donde en Android dice «Health Connect».
+ * Apple no dice si la persona negó la lectura, así que «Todavía no vemos pasos hoy» le pide revisar el permiso en Salud y le ofrece abrirla.
+ */
+export const TEXTOS_DE_PASOS_EN_IPHONE: TextosDePasos = {
+  ...TEXTOS_DE_PASOS,
+  abrirHealthConnect: 'Abrir Salud',
+  conectar: {
+    ...TEXTOS_DE_PASOS.conectar,
+    subtitulo: 'Con la app Salud, de Apple.',
+    lineas: [
+      'Tu iPhone o tu Apple Watch cuentan los pasos.',
+      'Renaser solo lee pasos y distancia.',
+      'Tu mentor y la tabla de kilómetros ven tu total de km.',
+    ],
+  },
+  sinSoporte: { ...TEXTOS_DE_PASOS.sinSoporte, texto: 'Los pasos automáticos necesitan la app Salud de Apple.' },
+  sinPermiso: { ...TEXTOS_DE_PASOS.sinPermiso, texto: 'Quitaste el permiso en Salud.' },
+  sinDatos: {
+    ...TEXTOS_DE_PASOS.sinDatos,
+    texto: 'Lleva tu iPhone contigo o revisa que tu Apple Watch sincronice. Si no diste permiso, actívalo en Salud.',
+    abrir: 'Abrir Salud',
+  },
+  hoja: { ...TEXTOS_DE_PASOS.hoja, unaSolaVez: 'Contamos una sola vez lo que miden tu iPhone y tu Apple Watch.' },
+};
+
+/** Los textos de la plataforma (`Platform.OS`): iPhone con Salud; Android y la web, los de Health Connect. */
+export function textosDePasosPara(plataforma: string): TextosDePasos {
+  return plataforma === 'ios' ? TEXTOS_DE_PASOS_EN_IPHONE : TEXTOS_DE_PASOS;
+}
+
+/** Los de este teléfono. Va en el cuerpo de los componentes, no al importar el archivo. */
+export const textosDeEstaPlataforma = (): TextosDePasos => textosDePasosPara(Platform.OS);
 
 export function textoDeLaMeta(km: number, meta: number): string {
   return `${formatoKm(km)} de ${kmConUnidad(meta)}`;
@@ -117,6 +160,8 @@ export function detalleDeLosKm(
   fuente: string | null | undefined,
 ): string | null {
   if (km == null || !Number.isFinite(km)) return null;
+  // Spec 037 FR-023: el servidor guarda la medición de iPhone como HEALTH_CONNECT; la fuente que manda la app lleva «Salud · ».
+  if (origen === 'HEALTH_CONNECT' && fuente?.startsWith(PREFIJO_DE_LA_FUENTE_DE_APPLE)) return `${kmConUnidad(km)} · ${fuente}`;
   if (origen === 'HEALTH_CONNECT') return [kmConUnidad(km), 'Health Connect', fuente].filter(Boolean).join(' · ');
   // Spec 042: los km del día salieron de una carrera con GPS.
   if (origen === 'GPS') return kmConUnidad(km) + ' · Carrera con GPS';

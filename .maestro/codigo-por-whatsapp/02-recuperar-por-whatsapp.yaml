@@ -16,6 +16,6 @@ appId: com.renaser.app
 - tapOn: "Envíamelo por WhatsApp"
 # spec 043 FR-009
 - extendedWaitUntil:
-    visible: "Si tu cuenta tiene un WhatsApp guardado, te lo enviamos ahí"
+    visible: "Si tu cuenta tiene un WhatsApp confirmado en Yo o guardado en tu ficha, te lo enviamos ahí"
     timeout: 15000
 - takeScreenshot: 05-recuperar-enviado

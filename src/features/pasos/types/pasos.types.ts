@@ -1,5 +1,5 @@
 /**
- * Los pasos del teléfono para «Kilómetros diarios» (spec 037, D-310). Solo Health Connect (Android 14 o más): la app lee el
+ * Los pasos del teléfono para «Kilómetros diarios» (spec 037, D-310). Solo Health Connect (Android 14 o más) o la app Salud de Apple (iPhone, FR-016): la app lee el
  * agregado del día, el servidor valida y cierra el hábito.
  */
 

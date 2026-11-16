@@ -18,7 +18,7 @@ import {
   permisosDeSalud,
   RELECTURAS_DEL_PERMISO,
   soporteDeSalud,
-} from '../saludConectada';
+} from '../saludDeHealthConnect';
 
 jest.mock('react-native-health-connect', () => ({
   aggregateRecord: jest.fn(),
