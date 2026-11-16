@@ -30,6 +30,7 @@ import {
   respuestaValida,
   totalConHoy,
 } from '../utils/registroConFoto';
+import { ModalConZonaSegura } from '../../../components/ModalConZonaSegura';
 
 /**
  * La pantalla partida del REGISTRO CON FOTO (pedido del dueño, 2026-09-26): arriba la foto que se
@@ -83,7 +84,7 @@ export function RegistroConFotoModal({
   if (!registro) return <HojaDeOrigenDeLaFoto origen={origen} />;
 
   return (
-    <Modal visible animationType="slide" onRequestClose={() => !enviando && onCerrar()} statusBarTranslucent>
+    <ModalConZonaSegura visible animationType="slide" onRequestClose={() => !enviando && onCerrar()} statusBarTranslucent>
       <SafeAreaView style={[estilos.raiz, { backgroundColor: c.bg }]} edges={['top', 'bottom']}>
         <KeyboardAvoidingView style={estilos.raiz} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           {/* Mitad de arriba: la foto. */}
@@ -225,7 +226,7 @@ export function RegistroConFotoModal({
         </KeyboardAvoidingView>
       </SafeAreaView>
       <HojaDeOrigenDeLaFoto origen={origen} />
-    </Modal>
+    </ModalConZonaSegura>
   );
 }
 

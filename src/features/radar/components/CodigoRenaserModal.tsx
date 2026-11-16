@@ -1,15 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  KeyboardAvoidingView,
-  type LayoutChangeEvent,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { KeyboardAvoidingView, type LayoutChangeEvent, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { GoldButton } from '../../../components/GoldButton';
@@ -38,6 +28,7 @@ import type { SlotRadar } from '../utils/slotsDelRadar';
 import { EnergiaEnChips } from './EnergiaEnChips';
 import { IndicadorDeGuardado } from './IndicadorDeGuardado';
 import { PreguntaDelRadar } from './PreguntaDelRadar';
+import { ModalConZonaSegura } from '../../../components/ModalConZonaSegura';
 
 const CAMPOS_DEL_RADAR: readonly CampoRadar[] = PREGUNTAS_RADAR.map(p => p.campo);
 const EN_BLANCO: Record<CampoRadar, string> = {
@@ -259,7 +250,7 @@ export function CodigoRenaserModal({
   }, [completo, faltan, energia, respuestas, dictados, dictado, descartarElBorrador, onEnviar, onCerrar]);
 
   return (
-    <Modal
+    <ModalConZonaSegura
       visible={visible}
       animationType="fade"
       statusBarTranslucent
@@ -362,7 +353,7 @@ export function CodigoRenaserModal({
           </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
-    </Modal>
+    </ModalConZonaSegura>
   );
 }
 
