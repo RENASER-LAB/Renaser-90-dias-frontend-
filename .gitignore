@@ -80,3 +80,6 @@ funcionalidades.json
 
 # Bloqueo de skills de cada desarrollador: no va al repo (2026-11-09).
 skills-lock.json
+
+# Sesión del simulador en la nube de EAS (lleva un token): no se commitea
+.env.eas-simulator
