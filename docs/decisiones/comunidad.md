@@ -923,3 +923,14 @@ Decidido por el dueño el 14/11/2026 (tras una ronda de preguntas). Los eventos 
 No cambian: los cinco tabs, el Meet por ocurrencia (spec 040) ni la audiencia (una sola para la serie).
 Pruebas: `repeticionDelEvento.test.ts` y «Eventos del líder» / «Cancelar una serie» en `paraQuienEs.test.ts` (marcas `// spec 053 FR-…`). Hace falta APK y el backend con V193 y `cancel-from`
 desplegado antes (si no, el líder no podría guardar ni cancelar «las siguientes»).
+
+## Corrección — 2026-11-16 — Comunidad → Tribu: los enlaces del chat se pueden tocar (#209)
+
+Reporte del cliente, pasado por el dueño: «el link o recordatorio que se manda dentro de cada evento del chat de nuestra tribu sale como texto no como
+link, ajusta esa parte». Lo que cambia y nada más:
+
+* En la burbuja del chat (grupo, soporte, comunidad y 1 a 1), un `http://` o `https://` dentro del texto se ve subrayado, en el color del texto de la burbuja,
+  y al tocarlo se abre (el recordatorio de un evento trae «Entra aquí: https://meet.google.com/…»). Usa `TextoConEnlaces` / `partirEnEnlaces` de Cursos:
+  solo `http` y `https`, por seguridad (`tel:`, `intent:` y demás siguen como texto).
+* **No cambian**: el texto de los mensajes, la hora, la doble marca, el menú al mantener presionado, las fotos, los audios ni el servidor.
+* **Pruebas:** Jest `enlacesEnElChat.test.ts`. Solo JavaScript: entra en el próximo .aab.

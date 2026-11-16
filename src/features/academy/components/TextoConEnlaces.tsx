@@ -23,9 +23,15 @@ import { partirEnEnlaces } from '../utils/enlacesEnTexto';
 export function TextoConEnlaces({
   texto,
   style,
+  colorDelEnlace,
+  children,
 }: {
   texto: string;
   style?: StyleProp<TextStyle>;
+  /** El color del enlace; por omisión, el dorado de enlace del tema. El chat pasa el de su texto (#209). */
+  colorDelEnlace?: string;
+  /** Lo que va al final del mismo párrafo, dentro del mismo `<Text>` (el chat pone ahí el hueco de la hora). */
+  children?: React.ReactNode;
 }) {
   const { c } = useTheme();
   const segmentos = partirEnEnlaces(texto);
@@ -49,7 +55,7 @@ export function TextoConEnlaces({
             onPress={() => void abrir(segmento.url)}
             accessibilityRole="link"
             accessibilityLabel={`Abrir ${segmento.url}`}
-            style={{ color: c.goldInk, textDecorationLine: 'underline' }}
+            style={{ color: colorDelEnlace ?? c.goldInk, textDecorationLine: 'underline' }}
           >
             {segmento.valor}
           </Text>
@@ -59,6 +65,7 @@ export function TextoConEnlaces({
           <Text key={indice}>{segmento.valor}</Text>
         )
       )}
+      {children}
     </Text>
   );
 }
