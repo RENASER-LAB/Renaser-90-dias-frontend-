@@ -5,15 +5,25 @@
  * Spec 042 (Kilómetros en vivo con GPS): la clave de Google Maps SDK for Android sale de la variable de EAS
  * `GOOGLE_MAPS_ANDROID_KEY` (restringida al paquete `com.renaser.app` y a las huellas SHA-1 de la llave de subida y la de firma de
  * Play). Sin la variable, el APK sale igual: el plugin de `react-native-maps` no escribe la clave y la app lo sabe por
- * `extra.mapaGoogle`, así la pantalla de la carrera dibuja un fondo neutro en vez de un mapa gris roto.
+ * `extra.mapaGoogle`, así la pantalla de la carrera dibuja un fondo neutro en vez de un mapa gris roto. En iOS, lo mismo con
+ * `GOOGLE_MAPS_IOS_KEY` y `extra.mapaGoogleIos` (#220).
  */
 module.exports = ({ config }) => {
   const clave = (process.env.GOOGLE_MAPS_ANDROID_KEY || '').trim();
+  // #220 (2026-11-16): la clave de iOS es aparte (Maps SDK for iOS, restringida al bundle `com.renaser.app`). Con ella el
+  // plugin instala Google Maps en iPhone; sin ella, iPhone dibuja el fondo neutro, como Android sin la suya.
+  const claveIos = (process.env.GOOGLE_MAPS_IOS_KEY || '').trim();
   const plugins = [...(config.plugins || [])];
-  plugins.push(['react-native-maps', clave ? { androidGoogleMapsApiKey: clave } : {}]);
+  plugins.push([
+    'react-native-maps',
+    {
+      ...(clave ? { androidGoogleMapsApiKey: clave } : {}),
+      ...(claveIos ? { iosGoogleMapsApiKey: claveIos } : {}),
+    },
+  ]);
   return {
     ...config,
     plugins,
-    extra: { ...(config.extra || {}), mapaGoogle: clave.length > 0 },
+    extra: { ...(config.extra || {}), mapaGoogle: clave.length > 0, mapaGoogleIos: claveIos.length > 0 },
   };
 };
