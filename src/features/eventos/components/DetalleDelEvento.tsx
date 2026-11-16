@@ -164,7 +164,7 @@ export function DetalleDelEvento({
         </View>
       ) : null}
 
-      {fresco?.audienciaElegida ? <ParaQuienEsDelEvento resumen={fresco.audienciaElegida} zona={evento.zona} /> : null}
+      {fresco?.audienciaElegida ? <ParaQuienEsDelEvento resumen={fresco.audienciaElegida} /> : null}
 
       {gestionaEste && meet ? (
         <View style={{ gap: 8 }}>
