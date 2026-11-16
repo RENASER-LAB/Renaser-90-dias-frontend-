@@ -65,6 +65,7 @@ const opcionesSchema = z
     myLearners: z.number().catch(0),
     groups: z.array(z.unknown()).catch([]),
     staff: z.array(z.unknown()).catch([]),
+    trafficLightDate: z.string().nullish(),
   })
   .passthrough();
 
@@ -80,6 +81,7 @@ export const SIN_OPCIONES: OpcionesDeAudiencia = {
   misAlumnos: 0,
   grupos: [],
   personal: [],
+  fechaDelSemaforo: null,
 };
 
 export function leerOpciones(datos: unknown): OpcionesDeAudiencia {
@@ -94,6 +96,7 @@ export function leerOpciones(datos: unknown): OpcionesDeAudiencia {
     todos: o.canChooseAll,
     colores: { GREEN: o.trafficLight.GREEN ?? 0, YELLOW: o.trafficLight.YELLOW ?? 0, RED: o.trafficLight.RED ?? 0 },
     misAlumnos: o.myLearners,
+    fechaDelSemaforo: o.trafficLightDate && /^\d{4}-\d{2}-\d{2}$/.test(o.trafficLightDate) ? o.trafficLightDate : null,
     grupos: listaTolerante(o.groups, fila => {
       const g = grupoSchema.safeParse(fila);
       return g.success ? { id: g.data.id, nombre: g.data.name?.trim() || 'Grupo', integrantes: g.data.members ?? 0 } : null;
