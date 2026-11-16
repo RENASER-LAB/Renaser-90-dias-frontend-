@@ -6,6 +6,7 @@ import Animated, { ReduceMotion, useAnimatedStyle, useSharedValue, withTiming } 
 
 import type { ChatMessage } from '../../../screens/ComunidadScreen';
 import { Icon } from '../../../components/Icon';
+import { TextoConEnlaces } from '../../academy/components/TextoConEnlaces';
 import { useTheme } from '../../../theme/ThemeContext';
 import { CURVA_SALIDA } from '../../../theme/movimiento';
 import { colorDeRemitente } from '../utils/formatoChat';
@@ -269,10 +270,10 @@ export const BurbujaDeMensaje = memo(function BurbujaDeMensaje({
         {/* El texto lleva al final un hueco invisible del ancho de la hora: así la hora se sienta
             en la esquina de abajo sin tapar la última palabra, como en WhatsApp. */}
         {texto && mensaje.type !== 'audio' && (
-          <Text style={[styles.texto, { color: colores.texto }, conFoto && styles.pieDeFoto]}>
-            {texto}
+          // #209: los `http(s)://` se tocan (el recordatorio de un evento trae «Entra aquí: https://meet.google.com/…»).
+          <TextoConEnlaces texto={texto} colorDelEnlace={colores.texto} style={[styles.texto, { color: colores.texto }, conFoto && styles.pieDeFoto]}>
             <Text style={styles.huecoDeHora}>{huecoParaLaHora(pie)}</Text>
-          </Text>
+          </TextoConEnlaces>
         )}
 
         {(!conFoto || texto) && (

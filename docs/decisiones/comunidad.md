@@ -938,3 +938,14 @@ Pedido del dueño: «arregla el bug que no diga fecha, que esté limpio… nada 
   era la de guardado (`resolvedAt`), no la del semáforo usado (spec 053: el último día cerrado), y contradecía al formulario.
 * **No cambian**: el formulario («Según el semáforo de ayer.», spec 053 FR-006), las filas de personas y de personal, «Llega a N», el servidor.
 * **Pruebas:** Jest `paraQuienEs.test.ts` («el detalle»). Solo JavaScript: entra en el próximo .aab.
+
+## Corrección — 2026-11-16 — Comunidad → Tribu: los enlaces del chat se pueden tocar (#209)
+
+Reporte del cliente, pasado por el dueño: «el link o recordatorio que se manda dentro de cada evento del chat de nuestra tribu sale como texto no como
+link, ajusta esa parte». Lo que cambia y nada más:
+
+* En la burbuja del chat (grupo, soporte, comunidad y 1 a 1), un `http://` o `https://` dentro del texto se ve subrayado, en el color del texto de la burbuja,
+  y al tocarlo se abre (el recordatorio de un evento trae «Entra aquí: https://meet.google.com/…»). Usa `TextoConEnlaces` / `partirEnEnlaces` de Cursos:
+  solo `http` y `https`, por seguridad (`tel:`, `intent:` y demás siguen como texto).
+* **No cambian**: el texto de los mensajes, la hora, la doble marca, el menú al mantener presionado, las fotos, los audios ni el servidor.
+* **Pruebas:** Jest `enlacesEnElChat.test.ts`. Solo JavaScript: entra en el próximo .aab.
