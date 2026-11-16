@@ -163,11 +163,3 @@ export function lineaDelOrganizador(nombre: string | null | undefined, rol: stri
   return papel ? `Te invitó ${primero}, ${papel.charAt(0).toLowerCase()}${papel.slice(1)}` : `Te invitó ${primero}`;
 }
 
-/** «Según el semáforo del 6 de noviembre» (la foto, P1). */
-export function lineaDeLaFoto(resueltoEn: string | null, zona: string | null): string | null {
-  if (!resueltoEn) return null;
-  const fecha = new Date(resueltoEn);
-  if (Number.isNaN(fecha.getTime())) return null;
-  const texto = fecha.toLocaleDateString('es-PE', { day: 'numeric', month: 'long', timeZone: zona ?? undefined });
-  return `Según el semáforo del ${texto}`;
-}

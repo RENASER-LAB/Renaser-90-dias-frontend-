@@ -2,7 +2,7 @@
 # Precondición: backend local (nunca producción) con V193 y `cancel-from` (backend #152), la sesión del LÍDER DE MENTORES abierta y al
 # menos una persona en amarillo según el semáforo de ayer. Mañana no debe ser jueves (el flujo suma el jueves a los días).
 # cuenta: lider (e2e-lider@renaser.test)
-# corrido: 2026-11-14
+# corrido: 2026-11-16
 appId: com.renaser.app
 ---
 - runFlow: ../comun/ya-adentro.yaml
@@ -79,4 +79,7 @@ appId: com.renaser.app
     timeout: 30000
 - assertVisible: "Sesión personalizada · Semáforo amarillo"
 - assertVisible: "Llega a 1 persona"
+# #207: la fila del color va sin fecha ni subtítulo (antes decía «Según el semáforo del <día de guardado>»).
+- assertVisible: "Amarillo.*"
+- assertNotVisible: "Según el semáforo del .*"
 - takeScreenshot: E53-04-detalle-tras-crear
