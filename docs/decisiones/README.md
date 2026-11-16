@@ -41,7 +41,7 @@ también en el texto (`grep -n "Plan" docs/decisiones/*.md`). Si dos entradas ch
 | [ser-y-fenix.md](ser-y-fenix.md) | SER (el acompañante), el orbe, el fénix y las celebraciones | 9 |
 | [soporte-ti.md](soporte-ti.md) | Soporte TI: interruptores, despliegue, roles personalizados y «ver como» (spec 002) | 2 |
 | [training.md](training.md) | Training: lista por hora, hábitos, evidencias y el editor Planificar | 19 |
-| [transversal.md](transversal.md) | Lo que tocó varios tabs a la vez: diseño, fuentes, barra de pestañas, velocidad, CI y arreglos de E2E | 23 |
+| [transversal.md](transversal.md) | Lo que tocó varios tabs a la vez: diseño, fuentes, barra de pestañas, velocidad, CI y arreglos de E2E | 24 |
 | [yo.md](yo.md) | Yo: Ajustes, fase, evidencias, Caja, emergencia, perfil, cuenta y privacidad | 13 |
 | [reglas-historial.md](reglas-historial.md) | Las reglas de `AGENTS.md` tal como estaban, con sus notas «Corregido» | — |
 
@@ -49,6 +49,7 @@ también en el texto (`grep -n "Plan" docs/decisiones/*.md`). Si dos entradas ch
 
 | Fecha | Tabs | Tipo | Entrada | Archivo | Corregida |
 |---|---|---|---|---|---|
+| 2026-11-16 | Hoy, Plan, Training, Comunidad, Yo | Corrección | En iPhone, las ventanas a pantalla completa respetan la isla y la barrita de inicio (#215) | [transversal.md](transversal.md) |  |
 | 2026-11-16 | Administración | Cambio | Administración avisa cuando WhatsApp no sale por falta de saldo en YCloud (spec 054, D-361) | [liderazgo-y-administracion.md](liderazgo-y-administracion.md) |  |
 | 2026-11-16 | Comunidad | Cambio | Comunidad → Eventos: botón para copiar el enlace del evento, junto a «Unirme» (spec 040 FR-039) | [comunidad.md](comunidad.md) |  |
 | 2026-11-16 | Comunidad | Corrección | Comunidad → Tribu: los enlaces del chat se pueden tocar (#209) | [comunidad.md](comunidad.md) |  |
