@@ -21,7 +21,7 @@ jest.mock('expo-constants', () => ({
   __esModule: true,
   default: {
     get expoConfig() {
-      return { extra: { mapaGoogle: mockConClave } };
+      return { extra: { mapaGoogle: mockConClave, mapaGoogleIos: mockConClave } };
     },
   },
 }));

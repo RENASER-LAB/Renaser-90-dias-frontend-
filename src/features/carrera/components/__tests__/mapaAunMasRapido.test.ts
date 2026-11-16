@@ -17,7 +17,7 @@ jest.mock('../../../../theme/ThemeContext', () => {
 });
 jest.mock('@react-native-async-storage/async-storage', () => require('@react-native-async-storage/async-storage/jest/async-storage-mock'));
 jest.mock('../../../../utils/tacto', () => ({ tacto: { seleccion: jest.fn(), logro: jest.fn(), error: jest.fn() } }));
-jest.mock('expo-constants', () => ({ __esModule: true, default: { expoConfig: { extra: { mapaGoogle: true } } } }));
+jest.mock('expo-constants', () => ({ __esModule: true, default: { expoConfig: { extra: { mapaGoogle: true, mapaGoogleIos: true } } } }));
 const mockAnimar = jest.fn();
 /** Si el mapa simulado avisa «listo» al montarse (como el nativo) o hay que avisarlo a mano. */
 let mockListoAlMontar = true;
