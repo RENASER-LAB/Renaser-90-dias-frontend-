@@ -20,17 +20,14 @@ import * as path from 'path';
 const RAIZ = path.resolve(__dirname, '..', '..', '..');
 
 /**
- * Claves que hoy siguen con el texto en inglés porque la app NO usa ese permiso en iOS (2026-11-16): `Face ID` (no hay
- * `requireAuthentication` en SecureStore), «ubicación siempre» (el GPS de la carrera es solo de Android y en iOS no hay modo
- * de fondo `location`) y `movimiento` (el podómetro es solo de Android). Un texto inventado para algo que no se usa sería falso
- * ante Apple; quitarlas o dejarlas lo decide el dueño. Solo se achica: al decidir, se borra la clave de aquí.
+ * Claves que siguen con el texto en inglés porque la app no usa ese permiso en iOS y el dueño todavía no decidió si se quita.
+ * Un texto inventado para algo que no se usa sería falso ante Apple. Solo se achica: al decidir, se borra la clave de aquí.
+ *
+ * Vacía desde el 2026-11-16: la carrera con GPS en iPhone (#223, spec 042 FR-047 a FR-052) quitó `NSFaceIDUsageDescription`
+ * (`faceIDPermission: false`) y las dos `NSLocationAlways…` (solo «mientras se usa»), y puso en español `NSMotionUsageDescription`
+ * (el podómetro de la carrera también corre en iOS).
  */
-const PENDIENTES_DEL_DUENO: string[] = [
-  'NSFaceIDUsageDescription',
-  'NSLocationAlwaysAndWhenInUseUsageDescription',
-  'NSLocationAlwaysUsageDescription',
-  'NSMotionUsageDescription',
-];
+const PENDIENTES_DEL_DUENO: string[] = [];
 
 function textosDePermiso(): Record<string, string> {
   const salida = execFileSync(path.join(RAIZ, 'node_modules', '.bin', 'expo'), ['config', '--type', 'introspect', '--json'], {
