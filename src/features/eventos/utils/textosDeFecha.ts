@@ -1,4 +1,4 @@
-import { fechaEnZona, horaEnZona } from './zonaHoraria';
+import { fechaEnZona, horaEnZona, sumarDiasIso } from './zonaHoraria';
 
 /**
  * Fechas en palabras, sin depender del `Intl` en español del motor (Hermes no siempre trae los
@@ -22,6 +22,12 @@ export function diaEnPalabras(fechaIso: string): string {
   return `${mayuscula(DIAS[diaSemana])} ${d} de ${MESES[m - 1]}`;
 }
 
+/** `YYYY-MM-DD` → «viernes 13». */
+export function diaYNumero(fechaIso: string): string {
+  const [a, m, d] = fechaIso.split('-').map(Number);
+  return `${DIAS[new Date(Date.UTC(a, m - 1, d)).getUTCDay()]} ${d}`;
+}
+
 /** «Hoy», «Mañana» o «Jueves 1 de octubre», comparando con `hoyIso` (misma zona). */
 export function diaRelativo(fechaIso: string, hoyIso: string, mananaIso: string): string {
   if (fechaIso === hoyIso) return 'Hoy';
@@ -39,4 +45,13 @@ export function duracionEnPalabras(minutos: number | null): string | null {
   if (!minutos || minutos <= 0) return null;
   if (minutos % 60 === 0) return minutos === 60 ? '1 hora' : `${minutos / 60} horas`;
   return `${minutos} minutos`;
+}
+
+/**
+ * Spec 053 FR-006 (D-356): de qué día es el color con el que se arma la audiencia. Ayer, o el último día cerrado con datos si ayer no tuvo
+ * («Según el semáforo del viernes 13.»). Sin fecha del servidor se dice «ayer», que es la regla.
+ */
+export function notaDelSemaforo(fechaDelSemaforo: string | null, hoy: string): string {
+  if (!fechaDelSemaforo || fechaDelSemaforo === sumarDiasIso(hoy, -1)) return 'Según el semáforo de ayer.';
+  return `Según el semáforo del ${diaYNumero(fechaDelSemaforo)}.`;
 }

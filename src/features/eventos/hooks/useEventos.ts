@@ -131,12 +131,20 @@ export function useEventos(userId: string | null, activo: boolean) {
 
   /** Tras cancelar un evento: sale de la lista y se quita su alarma (de todas sus fechas si `todas`). */
   const quitarDeLaLista = useCallback(
-    async (eventoId: string, inicioOcurrencia: string | null) => {
+    async (eventoId: string, inicioOcurrencia: string | null, desdeEsta = false) => {
       lectura.current?.invalidar();
+      const corte = inicioOcurrencia !== null ? Date.parse(inicioOcurrencia) : null;
       setOcurrencias(prev =>
-        prev.filter(x => x.evento.id !== eventoId || (inicioOcurrencia !== null && x.inicioOcurrencia !== inicioOcurrencia)),
+        prev.filter(x => {
+          if (x.evento.id !== eventoId) return true;
+          if (inicioOcurrencia === null) return false;
+          // Spec 053 FR-014: «esta y las siguientes» quita la fecha elegida y todas las posteriores; las pasadas se quedan.
+          return desdeEsta && corte !== null ? Date.parse(x.inicioOcurrencia) < corte : x.inicioOcurrencia !== inicioOcurrencia;
+        }),
       );
-      if (userId) await cancelarAlarmaDeEvento(userId, eventoId, inicioOcurrencia ?? undefined);
+      if (userId && !desdeEsta) await cancelarAlarmaDeEvento(userId, eventoId, inicioOcurrencia ?? undefined);
+      // Las alarmas de las fechas que se fueron: se vuelven a armar con la lista que queda (la relectura las reprograma).
+      if (userId && desdeEsta) await cancelarAlarmaDeEvento(userId, eventoId);
     },
     [userId],
   );

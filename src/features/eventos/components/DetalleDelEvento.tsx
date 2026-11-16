@@ -37,6 +37,8 @@ import { ParaQuienEsDelEvento } from './audiencia/ParaQuienEsDelEvento';
 /** Spec 047 (decisión P4-B del dueño): la única línea nueva en Comunidad → Eventos. Solo sale si Google confirmó que la sala graba o transcribe. */
 export const AVISO_DE_GRABACION = 'Esta sesión se graba y se transcribe.';
 
+export type AlcanceDeLaCancelacion = 'esta' | 'siguientes' | 'todas';
+
 export function DetalleDelEvento({
   oc,
   puedeGestionar,
@@ -59,8 +61,8 @@ export function DetalleDelEvento({
   onResponder: (respuesta: Exclude<Asistencia, null>) => void;
   /** Recibe el evento recién leído (con `meet` si usa el enlace automático): el formulario lo necesita para no perderlo al editar. */
   onEditar: (original: Evento) => void;
-  /** `todas` = el evento entero; si no, solo esta fecha (eventos que se repiten). */
-  onCancelar: (todas: boolean) => void;
+  /** `todas` = el evento entero; `siguientes` = esta fecha y las que siguen (spec 053); `esta` = solo esta fecha. */
+  onCancelar: (alcance: AlcanceDeLaCancelacion) => void;
   /** Tras «Reintentar» con éxito: la lista se relee para ver el enlace nuevo. */
   onSalaActualizada?: () => void;
 }) {
@@ -101,17 +103,24 @@ export function DetalleDelEvento({
     }
   };
 
-  const confirmarCancelacion = (todas: boolean) => {
+  const confirmarCancelacion = () => {
     Alert.alert(
-      todas ? '¿Cancelar este evento?' : '¿Cancelar solo esta fecha?',
-      todas
-        ? 'Se borra para todos y ya no aparece en la lista. No se puede deshacer.'
-        : 'Las otras fechas del evento siguen igual.',
+      '¿Cancelar este evento?',
+      'Se borra para todos y ya no aparece en la lista. No se puede deshacer.',
       [
         { text: 'No, dejarlo', style: 'cancel' },
-        { text: 'Sí, cancelar', style: 'destructive', onPress: () => onCancelar(todas) },
+        { text: 'Sí, cancelar', style: 'destructive', onPress: () => onCancelar('todas') },
       ],
     );
+  };
+
+  /* Spec 053 FR-014 (D8): en una serie se pregunta si es solo esta sesión o esta y las siguientes. Las que ya pasaron no se tocan. */
+  const preguntarAlcance = () => {
+    Alert.alert('¿Solo esta sesión o esta y las siguientes?', 'Las sesiones que ya pasaron no se tocan.', [
+      { text: 'Solo esta sesión', style: 'destructive', onPress: () => onCancelar('esta') },
+      { text: 'Esta y las siguientes', style: 'destructive', onPress: () => onCancelar('siguientes') },
+      { text: 'No, dejarlo', style: 'cancel' },
+    ]);
   };
 
   return (
@@ -219,11 +228,11 @@ export function DetalleDelEvento({
             <Parrafo tono="peligro">No pudimos leer el estado del enlace de Meet. Vuelve a abrir el evento en un rato.</Parrafo>
           ) : null}
           {evento.recurrente ? (
-            <BotonPeligro etiqueta="Cancelar solo esta fecha" onPress={() => confirmarCancelacion(false)} />
+            <BotonPeligro etiqueta="Cancelar esta sesión" onPress={preguntarAlcance} />
           ) : null}
           <BotonPeligro
             etiqueta={evento.recurrente ? 'Cancelar todas las fechas' : 'Cancelar evento'}
-            onPress={() => confirmarCancelacion(true)}
+            onPress={confirmarCancelacion}
           />
         </View>
       ) : null}

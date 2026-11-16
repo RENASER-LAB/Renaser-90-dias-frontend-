@@ -30,7 +30,7 @@ también en el texto (`grep -n "Plan" docs/decisiones/*.md`). Si dos entradas ch
 |---|---|---|
 | [alarmas.md](alarmas.md) | Alarmas y recordatorios: specs 007–010, voces, canales, el puente de #33 | 9 |
 | [codigo-renaser-y-mi-radar.md](codigo-renaser-y-mi-radar.md) | Código Renaser (días 1–7) y Mi Radar (desde el día 8) | 7 |
-| [comunidad.md](comunidad.md) | Comunidad: Muro, chat, Tribu, Eventos, Cursos y Ranking | 23 |
+| [comunidad.md](comunidad.md) | Comunidad: Muro, chat, Tribu, Eventos, Cursos y Ranking | 24 |
 | [formaciones.md](formaciones.md) | Formaciones (Escuela, Diplomado, Certificación): specs 022–025, 035 y el plazo de cada formación | 8 |
 | [hoy.md](hoy.md) | Hoy: tarjetas, frase del día, semáforo y lo que Hoy muestra | 8 |
 | [ingreso-y-onboarding.md](ingreso-y-onboarding.md) | Login, onboarding, ficha, diagnóstico, términos y el Día 1 | 11 |
@@ -49,6 +49,7 @@ también en el texto (`grep -n "Plan" docs/decisiones/*.md`). Si dos entradas ch
 
 | Fecha | Tabs | Tipo | Entrada | Archivo | Corregida |
 |---|---|---|---|---|---|
+| 2026-11-14 | Comunidad | Cambio | Eventos del líder: «Sesión personalizada» como único tipo, semáforo de ayer en «Para quién es» y «Repetir» por días al crear (spec 053; sin tab nuevo) | [comunidad.md](comunidad.md) |  |
 | 2026-11-13 | ninguno | Decisión | «El número es único»: «Solicitar acceso» rechaza un WhatsApp que ya es de otra cuenta, con el motivo del servidor en el paso del WhatsApp (spec 051, FR-014 a FR-019) | [ingreso-y-onboarding.md](ingreso-y-onboarding.md) |  |
 | 2026-11-12 | Yo | Cambio | Yo → Ajustes → Perfil: «WhatsApp» confirmado con un código, para que también el personal recupere su contraseña por WhatsApp (spec 051) | [yo.md](yo.md) |  |
 | 2026-11-12 | ninguno | Cambio | «Solicitar acceso» por pasos, con fondo liso y el botón sobre el teclado; el login queda pospuesto (spec 052) | [ingreso-y-onboarding.md](ingreso-y-onboarding.md) |  |
