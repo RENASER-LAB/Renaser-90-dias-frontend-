@@ -865,6 +865,12 @@ por semáforo. Prioridad: los eventos y los recordatorios a los números especí
 * **Pruebas:** Jest `audienciaDelFormulario`, `audienciaSchemas`, `paraQuienEs` y `seccionDeSoportes`. **Hace falta el backend con la spec 044 (V182 y
   V183) y un APK nuevo** (solo JavaScript: la app no se actualiza por aire).
 
+> **Corregido 2026-11-16 (#207, decisión del dueño: «que no diga fecha, que esté limpio… nada de subtítulo»).** En el detalle, la fila de un color
+> ya no lleva «Según el semáforo del 6 de noviembre»: queda solo el color y su cifra («Rojo · 15»). Esa fecha era la del instante en que se guardó
+> (`resolvedAt`), y desde la spec 053 los colores salen del último día cerrado, así que decía «del 14» cuando el formulario había dicho «de ayer».
+> El formulario sigue diciendo «Según el semáforo de ayer.» (spec 053, FR-006). Las filas de personas siguen con sus nombres. Sin cambio en el
+> servidor. Prueba: `paraQuienEs.test.ts` («el detalle»).
+
 ## Cambio por pedido del dueño — 2026-11-06 — la transcripción de las sesiones por Meet se guarda, cifrada y sin mostrarse (spec 047)
 
 Textual: «el link es automático pero lo más importante: que puede ingresar cualquier persona si está abierto y se guarde la transcripción, igual que el repo que
@@ -905,3 +911,12 @@ visibles de diseño:
   existe o la foto es vieja, cae a la completa (`FotoMuro.urlRespaldo`). La publicación abierta sigue con la completa.
 * Al llegar cada página del Muro se adelantan sus primeras 8 fotos por el mismo camino de caché (`adelantarMiniaturas`, con
   `Image.loadAsync` y la misma `cacheKey`; `Image.prefetch` no sirve porque guarda con otra clave).
+
+## Corrección — 2026-11-16 — Comunidad → Eventos: el detalle de un evento por semáforo va sin fecha (#207)
+
+Pedido del dueño: «arregla el bug que no diga fecha, que esté limpio… nada de subtítulo o lo que hace marear al usuario». Lo que cambia y nada más:
+
+* En «Para quién es» del detalle, la fila de un color muestra solo el color y su cifra («Rojo · 15»), sin «Según el semáforo del …». La fecha que salía
+  era la de guardado (`resolvedAt`), no la del semáforo usado (spec 053: el último día cerrado), y contradecía al formulario.
+* **No cambian**: el formulario («Según el semáforo de ayer.», spec 053 FR-006), las filas de personas y de personal, «Llega a N», el servidor.
+* **Pruebas:** Jest `paraQuienEs.test.ts` («el detalle»). Solo JavaScript: entra en el próximo .aab.

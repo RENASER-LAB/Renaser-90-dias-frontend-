@@ -208,7 +208,11 @@ describe('el detalle', () => {
     expect(hay(r, 'Para quién es')).toBe(true);
     expect(hay(r, 'Solo lo ves tú')).toBe(true);
     expect(hay(r, 'Rojo')).toBe(true);
-    expect(hay(r, 'Según el semáforo del 6 de noviembre')).toBe(true);
+    // #207 (2026-11-16, decisión del dueño): la fila del color no lleva fecha ni subtítulo. La fecha era la de guardado, no la del
+    // semáforo usado («del 14» cuando el formulario dijo «de ayer»), y confundía. Si vuelve una fecha acá, se rompe esta prueba.
+    // spec 053 FR-006
+    expect(hay(r, 'Según el semáforo del 6 de noviembre')).toBe(false);
+    expect(textos(r).some(t => /según el semáforo/i.test(t))).toBe(false);
     expect(hay(r, 'Personas')).toBe(true);
     expect(hay(r, 'Rosa Quispe, Jorge Torres')).toBe(true);
     expect(hay(r, 'Personal')).toBe(true);
