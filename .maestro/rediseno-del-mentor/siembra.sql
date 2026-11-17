@@ -12,3 +12,21 @@ ON CONFLICT (name) DO UPDATE SET lock_until = now() + interval '6 hours', locked
 -- Las notas de pruebas anteriores no se mezclan con las de esta corrida (la tabla existe desde la migración de la spec 055).
 DELETE FROM renaser.notas_del_mentor_versiones;
 DELETE FROM renaser.notas_del_mentor;
+-- Flujo 03 (evidencia): dos hábitos de HOY de E2E Aprendiz cumplidos, cada uno con una evidencia de texto, para el ojo y para
+-- «anterior / siguiente». Idempotente: borra antes las evidencias sembradas por este bloque.
+DELETE FROM renaser.evidencias WHERE contenido_texto LIKE '[e2e-055]%';
+WITH hoy AS (
+  SELECT r.id, h.titulo, row_number() OVER (ORDER BY h.orden) n
+    FROM renaser.registros_habito r
+    JOIN renaser.habitos h ON h.id = r.habito_id
+    JOIN renaser.usuarios u ON u.id = r.participante_id
+   WHERE u.email = 'e2e-aprendiz@renaser.test'
+     AND r.fecha_ejecucion = (now() AT TIME ZONE 'America/Lima')::date
+     AND h.titulo IN ('DESPERTAR', 'AGUA TIBIA CON LIMÓN')
+), cumplidos AS (
+  UPDATE renaser.registros_habito r SET estado = 'COMPLETADO', completado_en = now() - interval '2 hours', actualizado_en = now()
+    FROM hoy WHERE r.id = hoy.id RETURNING r.id, r.participante_id
+)
+INSERT INTO renaser.evidencias (participante_id, registro_habito_id, tipo, contenido_texto, subida_en)
+SELECT c.participante_id, c.id, 'TEXTO', '[e2e-055] Me levanté a las 6 y tomé agua tibia con limón.', now() - interval '2 hours'
+  FROM cumplidos c;
