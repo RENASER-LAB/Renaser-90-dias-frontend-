@@ -44,7 +44,7 @@ import { useNotasDelAprendiz } from '../hooks/useNotasDelAprendiz';
 import { useSemanasDelAprendiz } from '../hooks/useSemanasDelAprendiz';
 import { diasDeLaSemana, nombreDelMesDe, sePuedeElegir, tituloDelDia, viernesDeLaSemana } from '../utils/fechasDeLaFicha';
 import { agruparPorPilar } from '../utils/habitosDelDia';
-import { estadoDeLaSemana } from '../utils/motivoDeLaFila';
+import { estadoDeLaSemana, motivoCorto } from '../utils/motivoDeLaFila';
 import type { AlumnoConEstado } from '../types/mentor.types';
 import { useOcultarBarraAlDesplazar } from '../../../navigation/barraAlDesplazar/BarraInferior';
 
@@ -160,7 +160,7 @@ export function AlumnoScreen({
     ? null
     : diaUno === null
       ? 'Todavía no empieza su programa'
-      : motivoDelAviso ?? estadoDeLaSemana(colorDeLaCabecera, diasDeColorDeLaSemanaEnCurso, enCurso.etiqueta ?? null);
+      : (motivoDelAviso ? motivoCorto(motivoDelAviso, nombre) : null) ?? estadoDeLaSemana(colorDeLaCabecera, diasDeColorDeLaSemanaEnCurso, enCurso.etiqueta ?? null);
   const subtituloDeLaCabecera = [diaDePrograma && diaDePrograma > 0 ? `Día ${diaDePrograma}` : null, motivo].filter(Boolean).join(' · ');
 
   /* Las lecturas de las secciones del final (las de siempre, por la ruta del mentor): estables por persona. */

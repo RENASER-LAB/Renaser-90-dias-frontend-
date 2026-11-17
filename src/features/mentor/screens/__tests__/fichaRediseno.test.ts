@@ -179,7 +179,7 @@ describe('la ficha del aprendiz rediseñada', () => {
   it('si hay un aviso vigente, el motivo de la cabecera es ese aviso', async () => { // spec 055 FR-010
     mockMotivoDelAviso = 'no registra actividad hace 3 días';
     const r = await montarFicha();
-    expect(todoElTexto(r)).toContain('Día 8 · no registra actividad hace 3 días');
+    expect(todoElTexto(r)).toContain('Día 8 · 3 días sin actividad');
   });
 
   it('la semana son 7 círculos de sábado a viernes, con el color de cada día y hoy elegido', async () => { // spec 055 FR-011, FR-012
