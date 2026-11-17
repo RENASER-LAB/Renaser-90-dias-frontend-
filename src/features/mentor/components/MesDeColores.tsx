@@ -92,10 +92,12 @@ export function MesDeColores({
                 testID={`dia-${celda.fecha}`}
                 style={[
                   estilos.dia,
-                  color && color !== 'SIN_DATOS'
-                    ? { backgroundColor: coloresDelSemaforo(color, c).lavado, borderWidth: 1.5, borderColor: coloresDelSemaforo(color, c).relleno }
-                    : null,
-                  esElElegido ? { borderWidth: 2.5, borderColor: c.gold } : null,
+                  /* El borde tiene SIEMPRE el mismo grosor y solo cambia de color: en Android, quitarle el borde a la celda al soltar un
+                     día la dejaba en blanco (el 17 desaparecía al elegir el 10). Igual que el anillo de la fila de la semana. */
+                  {
+                    backgroundColor: color && color !== 'SIN_DATOS' ? coloresDelSemaforo(color, c).lavado : 'transparent',
+                    borderColor: esElElegido ? c.gold : color && color !== 'SIN_DATOS' ? coloresDelSemaforo(color, c).relleno : 'transparent',
+                  },
                 ]}
               >
                 <Text
@@ -125,6 +127,6 @@ const estilos = StyleSheet.create({
   flecha: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center' },
   celda: { flex: 1, height: 52 },
   contenidoDeLaCelda: { height: 52, alignItems: 'center', justifyContent: 'center' },
-  dia: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  dia: { width: 36, height: 36, borderRadius: 18, borderWidth: 2.5, alignItems: 'center', justifyContent: 'center' },
   numero: { fontSize: 15 /* metadato */},
 });

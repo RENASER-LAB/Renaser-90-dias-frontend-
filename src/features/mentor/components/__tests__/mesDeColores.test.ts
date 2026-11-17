@@ -65,4 +65,14 @@ describe('el mes de colores de la ficha', () => {
     };
     expect(fuenteDel16('2026-11-16')).toBe(fuenteDel16('2026-11-17'));
   });
+
+  it('el borde de cada día tiene siempre el mismo grosor; solo cambia de color (en Android, quitar el borde al soltar un día lo dejaba en blanco)', () => { // spec 055 FR-015
+    const bordeDel17 = (elegido: string) => {
+      const vista = montarMes(elegido).root.findAll(n => n.props?.testID === 'dia-2026-11-17' && typeof n.type === 'string')[0];
+      return StyleSheet.flatten(vista.props.style as never) as { borderWidth?: number; borderColor?: string };
+    };
+    expect(bordeDel17('2026-11-17').borderWidth).toBeGreaterThan(0);
+    expect(bordeDel17('2026-11-10').borderWidth).toBe(bordeDel17('2026-11-17').borderWidth);
+    expect(bordeDel17('2026-11-10').borderColor).toBe('transparent');
+  });
 });
