@@ -109,7 +109,7 @@ describe('«Mi grupo» rediseñado', () => {
     mockAvisos = [{ id: 1, body: 'no registra actividad hace 12 días', createdAt: '2026-11-13T10:00:00Z', readAt: null, route: '/mentor/groups/g-1/learners/u-beto' }];
     const r = await montar(React.createElement(MiCelulaScreen, props()));
     const lineas = textos(r);
-    expect(lineas).toContain('no registra actividad hace 12 días');
+    expect(lineas).toContain('12 días sin actividad');
     expect(lineas).toContain('Al día');
     expect(lineas).toContain('Todavía sin datos');
   });

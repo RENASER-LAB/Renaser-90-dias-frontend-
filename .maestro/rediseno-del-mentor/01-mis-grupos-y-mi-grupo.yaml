@@ -1,7 +1,7 @@
 # Spec 055, historia 1 (FR-001 a FR-008): Yo → «Mis grupos» (3 grupos con su cantidad), «Mi grupo» con los aprendices ordenados
 # rojo → ámbar → verde → sin datos (color en el borde de la foto), la línea del motivo y el chat en un toque. Sin lista de avisos
 # arriba, sin conteos por color y sin la insignia del rol; al pie, «Mi evaluación».
-# ESCRITO Y SIN CORRER. cuenta: mentor (la ranura E2E_MENTOR_*), con 3 grupos; el grupo «Cupo [e2e-piso-1314]» con 9 aprendices de
+# corrido: 2026-11-17. cuenta: mentor (la ranura E2E_MENTOR_*), con 3 grupos; el grupo «Cupo [e2e-piso-1314]» con 9 aprendices de
 # colores distintos. Precondición: `siembra.sql` en la base local clonada (nunca producción).
 # spec 055 FR-001, FR-002, FR-003, FR-004, FR-005, FR-006, FR-007, FR-008
 appId: com.renaser.app
@@ -28,8 +28,9 @@ appId: com.renaser.app
 # Sin lo que se quitó.
 - assertNotVisible: "Necesitan tu ayuda esta semana"
 - assertNotVisible: "MENTOR"
-# La línea gris con el motivo de quien no tiene datos y el enlace del pie.
-- assertVisible: "Todavía sin datos"
+# La línea gris dice el motivo corto, sin repetir el nombre (con aviso vigente) o el estado de la semana (sin aviso).
+- assertVisible: "\\d+ (días sin actividad|evidencias pendientes)"
+- assertNotVisible: "E2E Aprendiz tiene .*"
 - scrollUntilVisible:
     element: "Mi evaluación.*"
     direction: DOWN
@@ -41,8 +42,9 @@ appId: com.renaser.app
     direction: UP
     timeout: 20000
 - tapOn: "Escribirle a .*"
+# Se abre la conversación 1 a 1 con esa persona (el chat a pantalla completa esconde la barra de pestañas).
 - extendedWaitUntil:
-    visible: "COMUNIDAD"
+    visible: ".*1 a 1.*"
     timeout: 30000
 - takeScreenshot: R01d-chat-abierto
 # Volver sube un nivel por vez: chat → Yo (la fila sigue abajo).

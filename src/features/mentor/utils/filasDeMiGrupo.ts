@@ -34,7 +34,7 @@ export function filasDeMiGrupo(params: {
       nombre: a.nombre,
       avatarUrl: a.avatarUrl,
       color: a.color,
-      motivo: motivoDeLaFila({ aprendizId: a.aprendizId, color: a.color, dias: a.dias, etiqueta: a.etiqueta, avisos }),
+      motivo: motivoDeLaFila({ aprendizId: a.aprendizId, nombre: a.nombre, color: a.color, dias: a.dias, etiqueta: a.etiqueta, avisos }),
       alumno: delPadron(a.aprendizId),
     }));
   }
@@ -43,7 +43,7 @@ export function filasDeMiGrupo(params: {
     nombre: a.nombre,
     avatarUrl: null,
     color: 'SIN_DATOS' as const,
-    motivo: motivoDeLaFila({ aprendizId: a.participanteId, color: 'SIN_DATOS', dias: [], avisos }),
+    motivo: motivoDeLaFila({ aprendizId: a.participanteId, nombre: a.nombre, color: 'SIN_DATOS', dias: [], avisos }),
     alumno: a,
   }));
 }
