@@ -1,0 +1,43 @@
+# Spec 055, historia 4 (FR-023 a FR-027): el mentor escribe una nota desde el lápiz, la ve arriba de las anteriores y la corrige el
+# mismo día; el líder la lee desde la ficha de la persona (sin campo ni botón).
+# ESCRITO Y SIN CORRER. cuenta: mentor (E2E_MENTOR_*). Para el paso del líder se corre aparte con la cuenta del líder
+# (`# cuenta: lider` no existe en `correr.sh`: se abre «Mis mentores → Todos los aprendices → una persona» a mano y se mira el lápiz).
+# Para probar «ya no se puede corregir» se cambia en la base: `update notas_del_mentor set dia_del_autor = current_date - 1`.
+# spec 055 FR-023, FR-024, FR-025, FR-026, FR-027
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "YO"
+- scrollUntilVisible:
+    element: "Abrir Mis grupos"
+    direction: DOWN
+    timeout: 40000
+- tapOn: "Abrir Mis grupos"
+- tapOn: ".*Cupo \\[e2e-piso-1314\\].*"
+- tapOn: "Abrir la ficha de .*"
+- extendedWaitUntil:
+    visible: "Notas sobre .*"
+    timeout: 30000
+- tapOn: "Notas sobre .*"
+- extendedWaitUntil:
+    visible: "Nota sobre .*"
+    timeout: 20000
+- assertVisible: "Solo la ven tú, tu líder y Administración"
+- takeScreenshot: R04a-la-hoja-de-notas
+# Una nota vacía no se guarda y dice qué falta.
+- tapOn: "Guardar nota"
+- assertVisible: "Escribe la nota antes de guardarla."
+# Escribir y guardar: aparece arriba.
+- tapOn: "Nota sobre .*"
+- inputText: "Hablamos de su rutina de la mañana"
+- hideKeyboard
+- tapOn: "Guardar nota"
+- extendedWaitUntil:
+    visible: "Hablamos de su rutina de la mañana"
+    timeout: 20000
+- takeScreenshot: R04b-la-nota-guardada
+# Corregirla el mismo día.
+- tapOn: "Corregir la nota.*"
+- assertVisible: "Guardar corrección"
+- takeScreenshot: R04c-corregir-la-nota
+- back

@@ -129,6 +129,7 @@ entradas, con los tabs que nombra cada una, en [`README.md`](README.md). Cuando 
   * **Chat**: en la info, un guía fuera del grupo que acompaña se lee «Guía de aprendiz» (en su grupo, «Mentor»).
   * **«Mi grupo»** (`MiCelulaScreen`): el sello de la cabecera dice «GUÍA DE APRENDIZ» a la guía y «MENTOR» a cualquier
     otro que acompañe (`mentor/utils/insigniaDeQuienAcompana`). «Más opciones» nombra los seis roles.
+    > **Corregido 2026-11-17 (spec 055).** «Mi grupo» ya no lleva insignia del rol: se quitó con el rediseño del mentor (ver la entrada del 2026-11-17).
   * **E2E en el emulador** (backend `docs/informes/e2e-guia-de-aprendiz-2026-10-13.md`): aprobar con cada rol, el atrás
     en las confirmaciones, Equipo y roles, hábitos por rol, la guía al frente de un grupo y entrando con su cuenta.
   * **E-606:** el atrás de Android cierra los diálogos nativos como «Cancelar» (`opcionesNativasDeDescarte` en
@@ -277,6 +278,7 @@ entradas, con los tabs que nombra cada una, en [`README.md`](README.md). Cuando 
   * **«Ver evidencia»** (en «Detalle de hábitos (lunes a domingo)») abre la hoja del líder (`EvidenciaDeObligacion`): foto,
     audio, video y **texto** dentro de la app. El enlace se sigue pidiendo al abrir la hoja (vence a los diez minutos).
     Se quitaron de la ficha `Linking`, `urlDeEvidencia` y su estado de «Abriendo…». «Ver publicación» del post diario queda.
+    > **Corregido 2026-11-17 (spec 055).** El «Detalle de hábitos (lunes a domingo)» de la ficha del mentor ya no existe: el ojo de cada hábito cumplido abre la misma hoja (ver la entrada del 2026-11-17).
   * **El servidor ya lo permite**: `GET /evidence/{id}` y `/evidence/{id}/url` responden al dueño, a quien actúa como mentor
     (`MENTOR` y `TRAINEE_GUIDE`) **si es el asignado a esa persona** (`participantes_programa.mentor_id`), al líder y a
     Administración (`EvidenciaService.requireDuenoOAdmin`). Un mentor que ya no acompaña a esa persona recibe 403 y la hoja
@@ -640,4 +642,38 @@ quedó sin saldo) y nadie se enteró. El dueño pidió un aviso para Administrac
 * **Pruebas:** `avisoDeWhatsAppSinSaldo.test.ts` (la tarjeta con la respuesta que avisa, sin ella, con la lectura fallida, los seis roles que no la ven y no la
   piden, la hora de Lima y el cableado del panel); spec 054 FR-006 y FR-007.
 * **Hace falta un APK nuevo** (solo JavaScript) **y el backend con D-361 antes**: contra uno anterior el endpoint responde 404 y no se ve nada.
+
+## Cambio por pedido del dueño — 2026-11-17 — el rol de mentor rediseñado: Mis grupos, Mi grupo, la ficha, la evidencia y las notas (spec 055, fase 1)
+
+Visto en el emulador el 17/11: «Mi grupo» abría con 40 avisos y el semáforo quedaba cinco pantallas más abajo; la ficha del aprendiz ocupaba nueve pantallas y
+«Escribirle» estaba en la tercera; los hábitos eran una lista de horarios sin saber qué cumplió ni con qué evidencia; y el mentor no tenía dónde anotar lo que
+habló. El dueño aprobó los bocetos 0, A, B, B2, G y H (https://claude.ai/artifact/1NGKi8rKZxxm6BmRmU3GRz) y **autorizó el cambio de la fila del mentor en `Yo` y de
+su vista en `Comunidad` → Tribu**, que son lo único de los cinco tabs que se toca. Lo que cambia y nada más:
+* **«Mis grupos»** (nueva): los grupos que acompaña, cada uno con su nombre y, a la derecha, «N aprendices». Con un solo grupo se entra directo a «Mi grupo». La fila
+  de Yo dice «Mis grupos» con dos o más grupos y «Mi grupo» con uno; en Comunidad → Tribu, la entrada «Acompañamiento» hace lo mismo. Volver sube un nivel por vez
+  (ficha → Mi grupo → Mis grupos → Yo; con un solo grupo, Mi grupo → Yo).
+* **«Mi grupo»:** el título del grupo con «N aprendices» a la derecha y UNA tarjeta con TODAS las filas, ordenadas rojo → ámbar → verde → sin datos (dentro de cada
+  color, del que menos cumplió al que más; a igualdad, por nombre). El color del semáforo va en el **borde de la foto** (anillo de 2,5 px; gris suave sin datos) y el
+  nombre en texto normal. Debajo, una línea gris: el aviso de acompañamiento vigente más reciente o «Cumplió N de 7 días» / «Al día» / «Todavía sin datos». A la derecha,
+  un ícono de chat redondo que abre el 1 a 1 sin enviar nada. **Se quitan:** la lista de avisos de arriba, «Necesitan tu ayuda esta semana», los conteos por color y la
+  insignia «MENTOR» / «GUÍA DE APRENDIZ». Al pie, el enlace «Mi evaluación · N %» (abre la evaluación de siempre en una hoja desde abajo).
+* **La ficha del aprendiz** (`AlumnoScreen`): arriba, la foto con el borde de su color, el nombre, «Día N · motivo», el lápiz de notas (con un puntito rojo si hay) y el
+  chat; debajo, la semana en 7 círculos de sábado a viernes con el color de cada día (el día elegido, con anillo dorado) y «<Mes> ⌄», que despliega el mes en el mismo
+  lugar («Ver solo la semana» lo pliega; no deja ir antes del Día 1 ni a futuros); el título del día con «N de M» y los pilares (Cuerpo, Mente, Espíritu, Emociones)
+  como secciones, cerradas con puntitos y «N de M»; cada hábito con su estado (✓ cumplido, ✕ vencido, círculo punteado pendiente), un **ojo** solo si hay evidencia, el
+  título y la hora. Un solo scroll. **Se quitan** el detalle de hábitos de lunes a domingo, la rejilla semanal, «Escribirle» como botón grande, la tarjeta del semáforo y
+  la lista larga de hábitos con horarios (`HabitosDelAlumno`).
+* **La evidencia:** el ojo abre una hoja desde abajo con la foto, el audio, el video o el texto, «1 de N», la hora y el pilar, y «‹ Anterior · Ver en el Muro · Siguiente ›»
+  entre los hábitos del día.
+* **Las notas privadas:** el lápiz abre «Nota sobre <nombre>» con la aclaración «Solo la ven tú, tu líder y Administración», el campo, «Guardar nota» y las notas
+  anteriores con fecha y autor. Escribe solo el mentor que acompaña hoy; se corrige solo el mismo día y solo la propia; no se borra. El líder de su formación y
+  Administración leen desde la ficha que ya abren (`PersonaDelLiderScreen`, `FichaAprendizScreen`), con el mismo lápiz y sin campo.
+* **Se quedan al final de la ficha, cada una solo si tiene algo que mostrar:** Código Renaser (si está encendido), Diagnóstico, 80/20 de SER, Tiempo libre, los cierres
+  del día y el chip de la caja. Se dibujan como secciones y no como filas cerradas para que ninguna abra una hoja vacía cuando el servidor no tiene nada que decir.
+* **No cambian:** los cinco tabs, el semáforo y sus reglas de color, el chat, «Mi evaluación», los permisos (los decide el servidor) ni la ficha del líder y de Administración
+  más allá del lápiz.
+* **Pruebas:** `misGrupos`, `miGrupoRediseno`, `fichaRediseno`, `evidenciaDelHabito`, `notasDelAprendiz`, `ordenDeAprendices`, `motivoDeLaFila`, `habitosDelDia`,
+  `useSemanasDelAprendiz`, `useAvisosDelAprendiz`, las vistas de Yo y de Comunidad, y los flujos de `.maestro/rediseno-del-mentor/` (escritos, sin correr).
+* **Hace falta un APK nuevo** (solo JavaScript) **y el backend de la spec 055 antes** (`/semana`, `/dias`, `/notas` y el campo `pilar`): contra uno anterior la ficha dice que no se
+  pudo cargar y el resto de la app sigue igual.
 

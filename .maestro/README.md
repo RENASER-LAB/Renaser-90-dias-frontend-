@@ -145,3 +145,8 @@ Corrida contra la base local `renaser_e2e_final` (resultados en `~/Imágenes/e2e
 - `guia-de-ser/01`: Ana ya firmó el Pacto; la guía solo existe sin Pacto ni primer post.
 - `identidad-por-formacion/03`: la bienvenida del soporte no se envió porque «las bienvenidas automáticas están apagadas» en esa base (precondición `BIENVENIDA_ACTIVA`).
 - `semaforo-podio/31`: aun eligiendo la formación, la hoja de compartir del sistema puede no salir en el emulador (límite del emulador).
+
+- `rediseno-del-mentor/` (spec 055, 2026-11-17): el rol de mentor rediseñado — Yo → «Mis grupos» → «Mi grupo» ordenado con el color en el borde de la
+  foto, la ficha con la semana en 7 círculos y el mes desplegable, el ojo de la evidencia y la nota privada. **Escritos y sin correr**; piden la
+  cuenta del mentor con 3 grupos y `siembra.sql` en la base local clonada (lo dice arriba de cada archivo). Se corren de a uno con
+  `.maestro/correr.sh .maestro/rediseno-del-mentor/<flujo>.yaml` o juntos con `npm run verificar -- --e2e .maestro/rediseno-del-mentor/`.
