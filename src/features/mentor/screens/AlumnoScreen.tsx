@@ -202,7 +202,7 @@ export function AlumnoScreen({
                 {nombre}
               </Text>
               {subtituloDeLaCabecera ? (
-                <Text style={[t.body, { color: c.textSoft, fontSize: 14.5, lineHeight: 20 }]} numberOfLines={2}>
+                <Text style={[t.body, { color: c.textSoft, fontSize: 15 /* metadato */, lineHeight: 20 }]} numberOfLines={2}>
                   {subtituloDeLaCabecera}
                 </Text>
               ) : null}
@@ -268,29 +268,29 @@ export function AlumnoScreen({
                     {tituloDelDia(diaElegido)}
                   </Text>
                   {dentroDelPrograma && semana && totalDelDia > 0 ? (
-                    <Text style={[t.body, { color: c.textSoft, fontSize: 15, fontVariant: ['tabular-nums'] }]}>
+                    <Text style={[t.body, { color: c.textSoft, fontSize: 15 /* metadato */, fontVariant: ['tabular-nums'] }]}>
                       {cumplidosDelDia} de {totalDelDia}
                     </Text>
                   ) : null}
                 </View>
 
                 {!dentroDelPrograma ? (
-                  <Text style={[t.body, { color: c.textSoft, fontSize: 15.5, lineHeight: 22 }]}>
+                  <Text style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 22 }]}>
                     {diaUno === null ? `${nombre} todavía no empieza su programa.` : 'Este día queda fuera de su programa.'}
                   </Text>
                 ) : semana ? (
                   pilares.length === 0 ? (
-                    <Text style={[t.body, { color: c.textSoft, fontSize: 15.5 }]}>Sin hábitos programados este día.</Text>
+                    <Text style={[t.body, { color: c.textSoft, fontSize: 16}]}>Sin hábitos programados este día.</Text>
                   ) : (
                     pilares.map(p => <PilarDeHabitos key={`${diaElegido}-${p.clave}`} pilar={p} onVerEvidencia={setEvidenciaAbierta} />)
                   )
                 ) : falloDeLaSemana ? (
                   <View style={{ gap: 10 }}>
-                    <Text style={[t.body, { color: c.textSoft, fontSize: 15.5, lineHeight: 22 }]}>{falloDeLaSemana.mensaje}</Text>
+                    <Text style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 22 }]}>{falloDeLaSemana.mensaje}</Text>
                     {viernes ? <BotonSecundario etiqueta="Reintentar" onPress={() => semanas.reintentar(viernes)} /> : null}
                   </View>
                 ) : (
-                  <Text style={[t.body, { color: c.textSoft, fontSize: 15.5 }]}>
+                  <Text style={[t.body, { color: c.textSoft, fontSize: 16}]}>
                     {estadoDeLaSemanaElegida === 'cargando' || estadoDeLaSemanaElegida === 'sin_pedir' ? 'Cargando los hábitos…' : 'No se pudo cargar este día.'}
                   </Text>
                 )}

@@ -27,7 +27,7 @@ export function PilarDeHabitos({ pilar, onVerEvidencia }: { pilar: PilarDelDia; 
               ))}
             </View>
           ) : null}
-          <Text style={[t.body, { color: c.textSoft, fontSize: 14, fontFamily: fuentes.media, fontVariant: ['tabular-nums'] }]}>
+          <Text style={[t.body, { color: c.textSoft, fontSize: 15 /* metadato */, fontFamily: fuentes.media, fontVariant: ['tabular-nums'] }]}>
             {pilar.cumplidos} de {pilar.total}
           </Text>
         </View>

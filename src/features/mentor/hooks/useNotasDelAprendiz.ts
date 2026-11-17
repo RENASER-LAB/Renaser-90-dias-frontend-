@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { ApiError, mensajeDeError } from '../../../services/http/apiClient';
+import { useRecargarAlVolverLaSenal } from '../../sinRed/useRecargarAlVolverLaSenal';
+import { mensajeDeCargaEnLinea } from '../../sinRed/utils/sinSenal';
 import {
   corregirNotaDelAprendiz,
   crearNotaDelAprendiz,
@@ -43,7 +45,7 @@ export function useNotasDelAprendiz(origen: OrigenDeLasNotas | null) {
       setFallo(null);
     } catch (e) {
       if (mio !== turno.current) return;
-      setFallo(mensajeDeError(e, 'No se pudieron cargar las notas.'));
+      setFallo(mensajeDeCargaEnLinea(e, 'No se pudieron cargar las notas.'));
     } finally {
       if (mio === turno.current) setCargando(false);
     }
@@ -57,6 +59,9 @@ export function useNotasDelAprendiz(origen: OrigenDeLasNotas | null) {
       turno.current++;
     };
   }, [cargar]);
+
+  /* Spec 048 (FR-005): si la lectura falló sin señal, se pide de nuevo sola cuando vuelve; con notas en pantalla nunca las pisa. */
+  useRecargarAlVolverLaSenal(cargar, fallo !== null && notas.length === 0);
 
   const trabajar = useCallback(async (hacer: () => Promise<NotaDelMentor>, alTerminar: (n: NotaDelMentor) => void): Promise<boolean> => {
     if (enCurso.current) return false;

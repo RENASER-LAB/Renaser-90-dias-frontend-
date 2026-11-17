@@ -225,7 +225,7 @@ function evidenciasDe(crudo: ObligacionCruda): EvidenciaDeLaObligacion[] {
 
 function pilarDe(valor: string | null | undefined): PilarDelHabito | null {
   const clave = valor?.trim().toUpperCase();
-  return clave === 'CUERPO' || clave === 'MENTE' || clave === 'ESPIRITU' || clave === 'EMOCIONES' ? clave : null;
+  return clave ? clave : null;
 }
 
 function aObligacion(crudo: ObligacionCruda): ObligacionDeLaPersona {

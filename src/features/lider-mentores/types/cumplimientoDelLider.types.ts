@@ -26,7 +26,8 @@ export interface EvidenciaDeLaObligacion {
 }
 
 /** Spec 055 FR-013: los cuatro pilares con los que se agrupan los hábitos de un día. */
-export type PilarDelHabito = 'CUERPO' | 'MENTE' | 'ESPIRITU' | 'EMOCIONES';
+/** Llega tal cual la `categoria_clave` del hábito (`CUERPO`, `MENTE`, `ESPIRITU`, `CONSCIENCIA`, o la de otra formación, p. ej. `DIPLOMADO_ESTUDIO`). */
+export type PilarDelHabito = string;
 
 /** Un hábito del día, tal como la persona lo tenía ESE día (no el de hoy proyectado hacia atrás). */
 export interface ObligacionDeLaPersona {

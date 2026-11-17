@@ -87,7 +87,7 @@ function Cuerpo({ evaluacion, cohorteId, grupoId }: { evaluacion: EvaluacionProp
               ) : null}
             </View>
           ) : null}
-          <Text style={[t.body, { color: c.textSoft, fontSize: 14, marginTop: 10, lineHeight: 20 }]}>
+          <Text style={[t.body, { color: c.textSoft, fontSize: 15 /* metadato */, marginTop: 10, lineHeight: 20 }]}>
             Se promedia el porcentaje de cada aprendiz, no el total de evidencias. Cuenta la entrega dentro de tu período; la verificación se informa
             aparte{evaluacion.verificadas > 0 ? ` (${evaluacion.verificadas} verificadas)` : ''}.
           </Text>

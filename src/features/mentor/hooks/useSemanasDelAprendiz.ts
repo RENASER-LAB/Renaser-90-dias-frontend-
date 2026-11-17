@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useReducer, useRef } from 'react';
 
 import { ApiError } from '../../../services/http/apiClient';
+import { useRecargarAlVolverLaSenal } from '../../sinRed/useRecargarAlVolverLaSenal';
+import { mensajeDeCargaEnLinea } from '../../sinRed/utils/sinSenal';
 import { sumarDiasIso } from '../../eventos/utils/zonaHoraria';
 import { obtenerSemanaDelAprendiz, type SemanaDelAprendiz } from '../api/mentorApi';
 import { viernesDeLaSemana } from '../utils/fechasDeLaFicha';
@@ -74,7 +76,7 @@ export function useSemanasDelAprendiz(grupoId: string | null, aprendizId: string
             aviso.current?.(e.message);
             return;
           }
-          fallos.current.set(clave, e instanceof ApiError && e.status === 0 ? { tipo: 'sin_red', mensaje: SIN_RED } : { tipo: 'servidor', mensaje: e instanceof Error ? e.message : 'No se pudo cargar la semana.' });
+          fallos.current.set(clave, e instanceof ApiError && e.status === 0 ? { tipo: 'sin_red', mensaje: SIN_RED } : { tipo: 'servidor', mensaje: mensajeDeCargaEnLinea(e, 'No se pudo cargar la semana.') });
         })
         .finally(() => {
           enVuelo.current.delete(clave);
@@ -96,6 +98,14 @@ export function useSemanasDelAprendiz(grupoId: string | null, aprendizId: string
       mapa.clear();
     };
   }, [cargar]);
+
+  /* Spec 048 (FR-005): lo que falló sin señal se pide de nuevo solo cuando vuelve; lo ya cargado no se toca. */
+  useRecargarAlVolverLaSenal(() => {
+    for (const clave of Array.from(fallos.current.keys())) {
+      fallos.current.delete(clave);
+      cargar(clave === 'en-curso' ? null : clave, true);
+    }
+  }, fallos.current.size > 0);
 
   const semanaDe = useCallback((viernes: string | null): SemanaDelAprendiz | null => (viernes ? cache.current.get(viernes) ?? null : null), []);
   const estadoDe = (viernes: string): EstadoDeSemana =>

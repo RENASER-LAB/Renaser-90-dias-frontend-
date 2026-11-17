@@ -125,9 +125,9 @@ function Cuerpo({
             mensajeDeErrorAparte
             accessibilityLabel={`Nota sobre ${nombre}`}
           />
-          {falta ? <Text style={[t.body, { color: c.danger, fontSize: 14 }]}>{falta}</Text> : null}
-          {falloAlGuardar ? <Text style={[t.body, { color: c.danger, fontSize: 15 }]}>{falloAlGuardar}</Text> : null}
-          <Text style={[t.body, { color: c.textSoft, fontSize: 13, textAlign: 'right', fontVariant: ['tabular-nums'] }]}>
+          {falta ? <Text style={[t.body, { color: c.danger, fontSize: 15 /* metadato */}]}>{falta}</Text> : null}
+          {falloAlGuardar ? <Text style={[t.body, { color: c.danger, fontSize: 15 /* metadato */}]}>{falloAlGuardar}</Text> : null}
+          <Text style={[t.body, { color: c.textSoft, fontSize: 14 /* metadato */, textAlign: 'right', fontVariant: ['tabular-nums'] }]}>
             {texto.trim().length} / {LARGO_MAXIMO_DE_LA_NOTA}
           </Text>
           <BotonPrincipal etiqueta={corrigiendo ? 'Guardar corrección' : 'Guardar nota'} onPress={() => void guardar()} cargando={guardando} deshabilitado={guardando} />
@@ -148,26 +148,26 @@ function Cuerpo({
         </View>
       )}
 
-      {cargando && notas.length === 0 ? <Text style={[t.body, { color: c.textSoft, fontSize: 15 }]}>Cargando las notas…</Text> : null}
-      {fallo && notas.length === 0 ? <Text style={[t.body, { color: c.danger, fontSize: 15 }]}>{fallo}</Text> : null}
+      {cargando && notas.length === 0 ? <Text style={[t.body, { color: c.textSoft, fontSize: 15 /* metadato */}]}>Cargando las notas…</Text> : null}
+      {fallo && notas.length === 0 ? <Text style={[t.body, { color: c.danger, fontSize: 15 /* metadato */}]}>{fallo}</Text> : null}
       {!cargando && !fallo && notas.length === 0 ? (
-        <Text style={[t.body, { color: c.textSoft, fontSize: 15 }]}>
+        <Text style={[t.body, { color: c.textSoft, fontSize: 15 /* metadato */}]}>
           {soloLectura ? `Todavía no hay notas sobre ${nombre}.` : `Todavía no escribiste notas sobre ${nombre}.`}
         </Text>
       ) : null}
 
       {notas.length > 0 ? (
         <View style={{ gap: 4 }}>
-          <Text accessibilityRole="header" style={[t.body, { color: c.textStrong, fontFamily: fuentes.negrita, fontSize: 15 }]}>
+          <Text accessibilityRole="header" style={[t.body, { color: c.textStrong, fontFamily: fuentes.negrita, fontSize: 15 /* metadato */}]}>
             Notas anteriores
           </Text>
           {notas.map((n, i) => (
             <View key={n.id} style={[estilos.nota, i > 0 ? { borderTopWidth: 1, borderTopColor: c.border } : null]}>
-              <Text style={[t.body, { color: c.textSoft, fontSize: 13.5 }]}>
+              <Text style={[t.body, { color: c.textSoft, fontSize: 14 /* metadato */}]}>
                 {fechaDeLaNota(n.creadoEn)} · {n.autor.nombre ?? 'Mentor'}
                 {n.corregidoEn ? ' · corregida' : ''}
               </Text>
-              <Text selectable style={[t.body, { color: c.text, fontSize: 15.5, lineHeight: 22 }]}>
+              <Text selectable style={[t.body, { color: c.text, fontSize: 16, lineHeight: 22 }]}>
                 {n.texto}
               </Text>
               {n.puedeCorregir && !soloLectura ? (
@@ -181,7 +181,7 @@ function Cuerpo({
                   accessibilityLabel={`Corregir la nota del ${fechaDeLaNota(n.creadoEn)}`}
                   style={estilos.corregir}
                 >
-                  <Text style={[t.body, { color: c.goldInk, fontFamily: fuentes.media, fontSize: 15 }]}>Corregir</Text>
+                  <Text style={[t.body, { color: c.goldInk, fontFamily: fuentes.media, fontSize: 15 /* metadato */}]}>Corregir</Text>
                 </Presionable>
               ) : null}
             </View>

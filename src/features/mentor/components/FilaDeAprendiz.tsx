@@ -53,7 +53,7 @@ export function FilaDeAprendiz({
           <Text style={[t.body, { color: c.text, fontSize: 16 }]} numberOfLines={1}>
             {quien}
           </Text>
-          <Text style={[t.body, { color: c.textSoft, fontSize: 14, lineHeight: 19 }]} numberOfLines={2}>
+          <Text style={[t.body, { color: c.textSoft, fontSize: 15 /* metadato */, lineHeight: 19 }]} numberOfLines={2}>
             {motivo}
           </Text>
         </View>

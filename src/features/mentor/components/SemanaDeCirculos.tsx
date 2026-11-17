@@ -77,8 +77,8 @@ const estilos = StyleSheet.create({
   fila: { flexDirection: 'row' },
   columna: { flex: 1, minHeight: 72 },
   contenido: { alignItems: 'center', justifyContent: 'center', gap: 2, minHeight: 72 },
-  inicial: { fontFamily: fuentes.negrita, fontSize: 12, lineHeight: 16 },
+  inicial: { fontFamily: fuentes.negrita, fontSize: 14 /* metadato */, lineHeight: 16 },
   anillo: { width: LADO_DEL_CIRCULO + 10, height: LADO_DEL_CIRCULO + 10, borderRadius: (LADO_DEL_CIRCULO + 10) / 2, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
   circulo: { width: LADO_DEL_CIRCULO, height: LADO_DEL_CIRCULO, borderRadius: LADO_DEL_CIRCULO / 2 },
-  numero: { fontSize: 13, lineHeight: 17, fontVariant: ['tabular-nums'] },
+  numero: { fontSize: 14 /* metadato */, lineHeight: 17, fontVariant: ['tabular-nums'] },
 });

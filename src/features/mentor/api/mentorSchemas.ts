@@ -100,10 +100,7 @@ export const aprendicesGrupoSchema = z
  * miró). `revision` es null cuando no hay entrega — nunca se convierte en "rechazada".
  */
 /** Spec 055 FR-013: el pilar de un hábito; cualquier otro valor (o su ausencia) se lee como `null`. */
-export const pilarSchema = z
-  .enum(['CUERPO', 'MENTE', 'ESPIRITU', 'EMOCIONES'])
-  .nullish()
-  .catch(null);
+export const pilarSchema = z.string().nullish().catch(null);
 
 export const semanaAlumnoSchema = z
   .object({

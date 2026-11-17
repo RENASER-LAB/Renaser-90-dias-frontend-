@@ -114,7 +114,7 @@ export function MiCelulaScreen({
               {vista?.celula.nombre ?? 'Mi grupo'}
             </Text>
             {vista ? (
-              <Text style={[t.body, { color: c.textSoft, fontSize: 15, fontVariant: ['tabular-nums'] }]}>{cantidadDeAprendices(cuantos)}</Text>
+              <Text style={[t.body, { color: c.textSoft, fontSize: 15 /* metadato */, fontVariant: ['tabular-nums'] }]}>{cantidadDeAprendices(cuantos)}</Text>
             ) : null}
           </View>
 
@@ -146,16 +146,16 @@ export function MiCelulaScreen({
           <>
             {semaforo.fallo !== null && !sinSemaforo ? (
               <View style={estilos.sinColores}>
-                <Text style={[t.body, { color: c.textSoft, fontSize: 15, flexShrink: 1 }]}>
+                <Text style={[t.body, { color: c.textSoft, fontSize: 15 /* metadato */, flexShrink: 1 }]}>
                   No se pudieron cargar los colores del grupo.
                 </Text>
                 <Presionable onPress={semaforo.recargar} accessibilityRole="button" accessibilityLabel="Reintentar los colores del grupo" style={estilos.reintentar}>
-                  <Text style={[t.body, { color: c.goldInk, fontFamily: fuentes.media, fontSize: 15 }]}>Reintentar</Text>
+                  <Text style={[t.body, { color: c.goldInk, fontFamily: fuentes.media, fontSize: 15 /* metadato */}]}>Reintentar</Text>
                 </Presionable>
               </View>
             ) : null}
             {esperandoSemaforo ? (
-              <Text style={[t.body, { color: c.textSoft, fontSize: 15, marginTop: 14 }]}>Cargando el semáforo del grupo…</Text>
+              <Text style={[t.body, { color: c.textSoft, fontSize: 15 /* metadato */, marginTop: 14 }]}>Cargando el semáforo del grupo…</Text>
             ) : (
               <Aparicion retardo={40} style={{ marginTop: 14 }}>
                 <View style={[estilos.tarjeta, { borderColor: c.border, backgroundColor: c.cardBg }]}>

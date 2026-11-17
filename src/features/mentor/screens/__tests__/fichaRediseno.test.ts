@@ -207,7 +207,7 @@ describe('la ficha del aprendiz rediseñada', () => {
     expect(volver).not.toHaveBeenCalled();
   });
 
-  it('los hábitos van por pilar con «N de M»; abre el primero con pendientes o vencidos y los demás quedan cerrados con puntitos', async () => { // spec 055 FR-013
+  it('los hábitos van por pilar con «N de M»; abre el primero con pendientes o vencidos y los demás quedan cerrados con puntitos', async () => { // spec 055 FR-013, SC-003
     const r = await montarFicha();
     const texto = todoElTexto(r);
     expect(texto).toContain('2 de 5'); // el día

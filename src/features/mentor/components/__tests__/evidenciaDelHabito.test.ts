@@ -81,7 +81,7 @@ describe('el ojo de la evidencia en cada hábito', () => {
     expect(hayTocable(await fila({ evidencias: [], evidenciaId: null, publicacionId: 'p-1' }), 'Ver la evidencia')).toBe(true);
   });
 
-  it('el ojo avisa qué hábito se quiere ver, con un solo toque', async () => { // spec 055 FR-020
+  it('el ojo avisa qué hábito se quiere ver, con un solo toque', async () => { // spec 055 FR-020, SC-005
     const ver = jest.fn<(id: string) => void>();
     const r = await fila({}, ver);
     await tocar(r, 'Ver la evidencia');

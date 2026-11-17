@@ -128,7 +128,7 @@ function FilaDeGrupo({ grupoId, nombre, conSeparador, onAbrir }: { grupoId: stri
         {nombre}
       </Text>
       {total !== null ? (
-        <Text style={[t.body, { color: c.textSoft, fontSize: 15, fontVariant: ['tabular-nums'] }]}>{cantidadDeAprendices(total)}</Text>
+        <Text style={[t.body, { color: c.textSoft, fontSize: 15 /* metadato */, fontVariant: ['tabular-nums'] }]}>{cantidadDeAprendices(total)}</Text>
       ) : null}
       <Icon name="chevron" size={14} color={c.chevron} />
     </Presionable>

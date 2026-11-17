@@ -121,5 +121,5 @@ const estilos = StyleSheet.create({
   celda: { flex: 1, height: 52 },
   contenidoDeLaCelda: { height: 52, alignItems: 'center', justifyContent: 'center' },
   dia: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
-  numero: { fontSize: 15 },
+  numero: { fontSize: 15 /* metadato */},
 });

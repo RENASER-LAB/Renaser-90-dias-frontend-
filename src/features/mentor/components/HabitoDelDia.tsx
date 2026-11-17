@@ -37,10 +37,10 @@ export function HabitoDelDia({ habito, onVerEvidencia }: { habito: HabitoDelDiaD
         </Presionable>
       ) : null}
       <View style={estilos.titulo}>
-        <Text style={[t.body, { color: c.text, fontSize: 15.5, lineHeight: 21 }]}>{titulo}</Text>
+        <Text style={[t.body, { color: c.text, fontSize: 16, lineHeight: 21 }]}>{titulo}</Text>
         <LineaDeLaMedicionCruda crudo={o.medicion} />
       </View>
-      {hora ? <Text style={[t.body, { color: c.textSoft, fontSize: 14, fontVariant: ['tabular-nums'], fontFamily: fuentes.media }]}>{hora}</Text> : null}
+      {hora ? <Text style={[t.body, { color: c.textSoft, fontSize: 15 /* metadato */, fontVariant: ['tabular-nums'], fontFamily: fuentes.media }]}>{hora}</Text> : null}
     </View>
   );
 }

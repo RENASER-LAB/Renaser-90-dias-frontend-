@@ -114,7 +114,7 @@ describe('«Mi grupo» rediseñado', () => {
     expect(lineas).toContain('Todavía sin datos');
   });
 
-  it('el ícono de chat abre la conversación con ESA persona, una sola vez aunque se toque dos veces', async () => { // spec 055 FR-007
+  it('el ícono de chat abre la conversación con ESA persona, una sola vez aunque se toque dos veces', async () => { // spec 055 FR-007, SC-002
     let resolver!: (v: { id: string }) => void;
     mockAbrirChat.mockImplementation(() => new Promise(r => (resolver = r)));
     const r = await montar(React.createElement(MiCelulaScreen, props()));
@@ -145,6 +145,21 @@ describe('«Mi grupo» rediseñado', () => {
     expect(texto).not.toMatch(/\b\d+ (en rojo|en verde|en amarillo|al día)\b/i);
     expect(texto).toContain('Mi evaluación · 72 %');
     expect(texto).toContain('4 aprendices');
+  });
+
+  it('los rojos de un grupo van todos arriba y caben en la primera pantalla de un teléfono de 1080 × 2400 (hasta 6 en rojo)', async () => { // spec 055 SC-001
+    mockAprendices = [
+      ...['Ana', 'Beto', 'Carla', 'Dani', 'Eva', 'Fito'].map((n, i) => fila(`u-${n}`, n, 'ROJO', 10 + i)),
+      fila('u-gus', 'Gus', 'VERDE', 95),
+      fila('u-zoe', 'Zoe', 'SIN_DATOS', null),
+    ];
+    const r = await montar(React.createElement(MiCelulaScreen, props()));
+    const etiquetas = Array.from(new Set(r.root.findAll(n => typeof n.props.accessibilityLabel === 'string' && n.props.accessibilityLabel.startsWith('Abrir la ficha de')).map(n => n.props.accessibilityLabel as string)));
+    expect(etiquetas.slice(0, 6)).toEqual(['Ana', 'Beto', 'Carla', 'Dani', 'Eva', 'Fito'].map(n => `Abrir la ficha de ${n}`));
+    /* Alto de las seis filas (mínimo de cada una) más la barra y el título: 1080 × 2400 a ~2,6 de densidad son ~920 dp de alto. */
+    const filas = r.root.findAll(n => typeof n.type === 'string' && estiloDe(n).minHeight === 64);
+    expect(filas.length).toBeGreaterThanOrEqual(6);
+    expect(6 * 64 + 56 /* barra */ + 70 /* título */).toBeLessThan(920);
   });
 
   it('cada toque mide al menos 48 de alto', async () => { // spec 055 FR-029

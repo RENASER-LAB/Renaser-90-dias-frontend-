@@ -39,7 +39,7 @@ export function habitoDelDia(o: ObligacionDeLaPersona, zona: string | null): Hab
   };
 }
 
-export type ClaveDePilar = PilarDelHabito | 'OTROS';
+export type ClaveDePilar = string;
 
 export interface PilarDelDia {
   clave: ClaveDePilar;
@@ -51,31 +51,40 @@ export interface PilarDelDia {
   abiertoAlEmpezar: boolean;
 }
 
-const ORDEN: readonly ClaveDePilar[] = ['CUERPO', 'MENTE', 'ESPIRITU', 'EMOCIONES', 'OTROS'];
-const TITULOS: Record<ClaveDePilar, string> = {
-  CUERPO: 'Cuerpo',
-  MENTE: 'Mente',
-  ESPIRITU: 'Espíritu',
-  EMOCIONES: 'Emociones',
-  OTROS: 'Otros hábitos',
-};
+const PRINCIPALES = ['CUERPO', 'MENTE', 'ESPIRITU', 'EMOCIONES'] as const;
+const TITULOS: Record<string, string> = { CUERPO: 'Cuerpo', MENTE: 'Mente', ESPIRITU: 'Espíritu', EMOCIONES: 'Emociones', OTROS: 'Otros hábitos' };
+
+/** `CONSCIENCIA` es la clave real de «Emociones» en el catálogo; `EMOCIONES` se acepta por si acaso. Lo demás queda como vino. */
+export function clavePilar(valor: string | null | undefined): ClaveDePilar {
+  const clave = valor?.trim().toUpperCase();
+  if (!clave) return 'OTROS';
+  return clave === 'CONSCIENCIA' ? 'EMOCIONES' : clave;
+}
+
+/** El nombre legible de una clave que no es de los cuatro pilares: `DIPLOMADO_ESTUDIO` → «Diplomado estudio». */
+function tituloDelPilar(clave: ClaveDePilar): string {
+  if (TITULOS[clave]) return TITULOS[clave];
+  const texto = clave.toLowerCase().replace(/_/g, ' ');
+  return texto.charAt(0).toUpperCase() + texto.slice(1);
+}
 
 /**
- * Agrupa los hábitos del día por pilar, en el orden Cuerpo, Mente, Espíritu, Emociones; los que no traen pilar (un servidor
- * anterior, o un hábito sin categoría) van al final en «Otros hábitos», para que ninguno desaparezca. Un pilar sin hábitos ese día
+ * Agrupa los hábitos del día por pilar, en el orden Cuerpo, Mente, Espíritu, Emociones; `CONSCIENCIA` es «Emociones»; las claves de otras formaciones van después con su nombre legible y los que no traen pilar al final en «Otros hábitos», para que ninguno desaparezca. Un pilar sin hábitos ese día
  * no se dibuja. Si ninguno tiene pendientes ni vencidos, se abre el primero para que la ficha no abra toda cerrada.
  */
 export function agruparPorPilar(obligaciones: readonly ObligacionDeLaPersona[], zona: string | null): PilarDelDia[] {
   const porClave = new Map<ClaveDePilar, HabitoDelDia[]>();
   for (const o of obligaciones) {
-    const clave: ClaveDePilar = o.pilar ?? 'OTROS';
+    const clave = clavePilar(o.pilar);
     porClave.set(clave, [...(porClave.get(clave) ?? []), habitoDelDia(o, zona)]);
   }
-  const pilares = ORDEN.filter(c => porClave.has(c)).map(clave => {
+  const otras = Array.from(porClave.keys()).filter(c => !(PRINCIPALES as readonly string[]).includes(c) && c !== 'OTROS');
+  const orden = [...PRINCIPALES.filter(c => porClave.has(c)), ...otras, ...(porClave.has('OTROS') ? ['OTROS'] : [])];
+  const pilares = orden.map(clave => {
     const habitos = porClave.get(clave) as HabitoDelDia[];
     return {
       clave,
-      titulo: TITULOS[clave],
+      titulo: tituloDelPilar(clave),
       habitos,
       cumplidos: habitos.filter(h => h.estado === 'cumplido').length,
       total: habitos.length,

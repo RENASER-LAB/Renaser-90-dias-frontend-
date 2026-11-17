@@ -71,6 +71,11 @@ describe('los hábitos agrupados por pilar', () => {
     expect(sinCuerpoPendiente.map(p => p.abiertoAlEmpezar)).toEqual([false, true]);
   });
 
+  it('CONSCIENCIA es «Emociones» y una clave de otra formación va después con su nombre legible', () => { // spec 055 FR-013
+    const titulos = agruparPorPilar([o('x', 'PENDIENTE', 'DIPLOMADO_ESTUDIO'), o('e', 'PENDIENTE', 'CONSCIENCIA'), o('m', 'PENDIENTE', 'MENTE'), o('n', 'PENDIENTE', null)], null).map(p => p.titulo);
+    expect(titulos).toEqual(['Mente', 'Emociones', 'Diplomado estudio', 'Otros hábitos']);
+  });
+
   it('un día sin hábitos no tiene pilares', () => { // spec 055 FR-013
     expect(agruparPorPilar([], null)).toEqual([]);
   });
