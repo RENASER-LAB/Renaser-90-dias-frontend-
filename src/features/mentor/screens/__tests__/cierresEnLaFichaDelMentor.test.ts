@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 import React from 'react';
 import TestRenderer, { act, type ReactTestRenderer } from 'react-test-renderer';
 
-import type { SemanaAlumnoApi } from '../../api/mentorSchemas';
 import { alumnoDesdeLaInfo } from '../../utils/alumnoDesdeLaInfo';
 import type { CargarCierres } from '../../../cierre/types/cierre.types';
 
@@ -36,22 +35,28 @@ jest.mock('expo-image', () => ({ Image: () => null }));
 jest.mock('../../../lider-mentores/components/ReproductorDeAudio', () => ({ ReproductorDeAudio: () => null }));
 jest.mock('../../../academy/components/LeccionVideoPlayer', () => ({ LeccionVideoPlayer: () => null }));
 jest.mock('../../../lider-mentores/components/VisorDePublicacion', () => ({ VerPublicacion: () => null }));
-jest.mock('../../components/RejillaSemanal', () => ({ RejillaSemanal: () => null }));
-jest.mock('../../components/HabitosDelAlumno', () => ({ HabitosDelAlumno: () => null }));
-jest.mock('../../../semaforo/components/TarjetaSemaforoDeAprendiz', () => ({ TarjetaSemaforoDeAprendiz: () => null }));
 jest.mock('../../../caja/components/ChipDeCaja', () => ({ ChipDeCaja: () => null }));
 jest.mock('../../../chat/api/chatApi', () => ({ abrirConversacionDirecta: jest.fn() }));
 jest.mock('../../../lider-mentores/api/cumplimientoDelLiderApi', () => ({ leerEvidencia: jest.fn(), obtenerPublicacion: jest.fn() }));
-jest.mock('../../hooks/useSemanaDelAlumno', () => ({
-  useSemanaDelAlumno: () => ({
-    semana: { dias: [], cobertura: 'SIN_DATOS' } as unknown as SemanaAlumnoApi,
-    diasConContenido: [],
-    cargando: false,
-    fallo: null,
-    desplazar: () => undefined,
-    recargar: async () => undefined,
+jest.mock('../../hooks/useSemanasDelAprendiz', () => ({
+  useSemanasDelAprendiz: () => ({
+    semanaEnCurso: null,
+    semanaDe: () => null,
+    estadoDe: () => 'sin_pedir',
+    falloDe: () => null,
+    falloDeLaPrimera: null,
+    cargandoLaPrimera: true,
+    pedirFecha: () => undefined,
+    reintentar: () => undefined,
+    reintentarLaPrimera: () => undefined,
   }),
 }));
+jest.mock('../../hooks/useDiasDelMes', () => ({ useDiasDelMes: () => ({ asegurarMes: () => undefined, diaDe: () => null, diaUnoDeLosDias: null }) }));
+jest.mock('../../hooks/useAvisosDelAprendiz', () => ({ useAvisosDelAprendiz: () => ({ motivoDelAviso: null }) }));
+jest.mock('../../hooks/useNotasDelAprendiz', () => ({
+  useNotasDelAprendiz: () => ({ notas: [], hayNotas: false, cargando: false, fallo: null, guardando: false, falloAlGuardar: null, guardar: async () => true, corregir: async () => true }),
+}));
+jest.mock('../../components/HojaDeNotas', () => ({ HojaDeNotas: () => null }));
 
 /* Las dos secciones de la ficha se vuelven una marca: importa el ORDEN y con qué `cargar` se montan. */
 const mockRadar = jest.fn();

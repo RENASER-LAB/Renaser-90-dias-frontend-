@@ -75,13 +75,14 @@ export function usePanelesDeRol({
   });
 
   const [vista, setVista] = useState<VistaDelPanel>(SIN_VISTA);
-  const volver = useCallback(() => setVista(actual => vistaDeRegreso(actual)), []);
+  const variosGrupos = (celula.vista?.grupos.length ?? 0) > 1;
+  const volver = useCallback(() => setVista(actual => vistaDeRegreso(actual, variosGrupos)), [variosGrupos]);
   const cerrarTodo = useCallback(() => setVista(SIN_VISTA), []);
 
   /* Los paneles que dejan de corresponderle a la cuenta (cambió de cuenta, un interruptor se apagó) no quedan abiertos. */
   useEffect(() => {
     setVista(actual => {
-      const delGrupo = actual.tipo === 'miGrupo' || actual.tipo === 'alumno';
+      const delGrupo = actual.tipo === 'miGrupo' || actual.tipo === 'misGrupos' || actual.tipo === 'alumno';
       if (delGrupo && !esMentor) return SIN_VISTA;
       const delLider = ['misMentores', 'consultas', 'mentores', 'todos', 'habitosDeTodos', 'cumplimiento'].includes(actual.tipo);
       if (delLider && !esLider) return SIN_VISTA;

@@ -65,11 +65,15 @@ describe('la semana del mentor y de administración con la publicación del post
 describe('las dos fichas ofrecen «Ver publicación» solo con `publicacionId`', () => {
   const leer = (ruta: string) => readFileSync(join(__dirname, '..', '..', '..', ruta), 'utf8');
 
-  it('la del mentor (AlumnoScreen) y la de administración (FichaAprendizScreen)', () => {
-    for (const ruta of ['mentor/screens/AlumnoScreen.tsx', 'admin/screens/FichaAprendizScreen.tsx']) {
-      const fuente = leer(ruta);
-      expect(fuente).toContain("from '../../lider-mentores/components/VisorDePublicacion'");
-      expect(fuente).toMatch(/\{o\.publicacionId \? <VerPublicacion publicacionId=\{o\.publicacionId\} titulo=\{tituloEnTipoOracion\(o\.titulo\)\} \/> : null\}/);
-    }
+  it('la de administración (FichaAprendizScreen) lo ofrece tal cual', () => {
+    const fuente = leer('admin/screens/FichaAprendizScreen.tsx');
+    expect(fuente).toContain("from '../../lider-mentores/components/VisorDePublicacion'");
+    expect(fuente).toMatch(/\{o\.publicacionId \? <VerPublicacion publicacionId=\{o\.publicacionId\} titulo=\{tituloEnTipoOracion\(o\.titulo\)\} \/> : null\}/);
+  });
+
+  it('la del mentor (AlumnoScreen, spec 055) lo ofrece como «Ver en el Muro» dentro de la hoja de la evidencia', () => {
+    const fuente = leer('mentor/screens/AlumnoScreen.tsx');
+    expect(fuente).toContain('publicacionId={habitoConEvidencia.obligacion.publicacionId}');
+    expect(leer('lider-mentores/components/EvidenciaDeObligacion.tsx')).toMatch(/\{publicacionId \? <VerPublicacion publicacionId=\{publicacionId\}[^>]*etiqueta="Ver en el Muro"/);
   });
 });

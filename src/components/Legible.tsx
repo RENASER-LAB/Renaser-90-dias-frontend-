@@ -40,12 +40,15 @@ export function SeccionPlegable({
   titulo,
   detalle,
   abiertaAlEmpezar = false,
+  derecha,
   children,
 }: {
   titulo: string;
   /** Una línea bajo el título, visible también plegada. */
   detalle?: string | null;
   abiertaAlEmpezar?: boolean;
+  /** Algo a la derecha del título, antes de la flecha (spec 055: los puntitos y «N de M» de un pilar). Recibe si está abierta. */
+  derecha?: React.ReactNode | ((abierta: boolean) => React.ReactNode);
   children: React.ReactNode;
 }) {
   const { c } = useTheme();
@@ -64,6 +67,7 @@ export function SeccionPlegable({
           <Text style={[estilos.titulo, { color: c.textStrong }]}>{titulo}</Text>
           {detalle ? <Text style={[estilos.detalle, { color: c.textSoft }]}>{detalle}</Text> : null}
         </View>
+        {derecha ? (typeof derecha === 'function' ? derecha(abierta) : derecha) : null}
         <View style={{ transform: [{ rotate: abierta ? '270deg' : '90deg' }] }}>
           <Icon name="chevron" size={18} color={c.chevron} />
         </View>

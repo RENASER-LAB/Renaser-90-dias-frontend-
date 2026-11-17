@@ -76,3 +76,30 @@ describe('la navegación de siempre no cambia', () => {
     expect(loQueTapaComunidad(conLaFicha, false)).toBeNull();
   });
 });
+
+
+describe('«Mis grupos» en Comunidad → Tribu (spec 055)', () => {
+  it('con dos o más grupos se entra por «Mis grupos» y de ahí a «Mi grupo»; volver desde «Mi grupo» regresa a la lista', () => { // spec 055 FR-003
+    const enLaLista = aplicar({ tipo: 'abrir-mis-grupos' });
+    expect(loQueTapaComunidad(enLaLista, true)).toBe('mis-grupos');
+    const enElGrupo = vistasDelMentor(enLaLista, { tipo: 'abrir-mi-grupo' });
+    expect(loQueTapaComunidad(enElGrupo, true)).toBe('mi-grupo');
+    expect(loQueTapaComunidad(vistasDelMentor(enElGrupo, { tipo: 'salir-de-mi-grupo', variosGrupos: true }), true)).toBe('mis-grupos');
+    expect(loQueTapaComunidad(vistasDelMentor(enLaLista, { tipo: 'salir-de-mis-grupos' }), true)).toBeNull();
+  });
+
+  it('con un solo grupo, volver desde «Mi grupo» deja Tribu a la vista (no hay lista a la que volver)', () => { // spec 055 FR-003
+    const enElGrupo = aplicar({ tipo: 'abrir-mi-grupo' });
+    expect(loQueTapaComunidad(vistasDelMentor(enElGrupo, { tipo: 'salir-de-mi-grupo', variosGrupos: false }), true)).toBeNull();
+    expect(loQueTapaComunidad(vistasDelMentor(enElGrupo, { tipo: 'salir-de-mi-grupo' }), true)).toBeNull();
+  });
+
+  it('pedir un chat despeja también «Mis grupos» (E-341)', () => { // spec 055 FR-003
+    const enLaLista = aplicar({ tipo: 'abrir-mis-grupos' });
+    expect(loQueTapaComunidad(vistasDelMentor(enLaLista, { tipo: 'pedir-un-chat' }), true)).toBeNull();
+  });
+
+  it('quien no es mentor nunca ve estas vistas', () => { // spec 055 FR-003
+    expect(loQueTapaComunidad(aplicar({ tipo: 'abrir-mis-grupos' }), false)).toBeNull();
+  });
+});

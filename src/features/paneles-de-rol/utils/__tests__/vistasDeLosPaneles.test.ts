@@ -1,7 +1,7 @@
 import { describe, expect, it } from '@jest/globals';
 
 import type { AlumnoConEstado } from '../../../mentor/types/mentor.types';
-import { SIN_VISTA, hayPanelAbierto, vistaDeRegreso, type VistaDelPanel } from '../vistasDeLosPaneles';
+import { SIN_VISTA, hayPanelAbierto, vistaDeEntradaAlGrupo, vistaDeRegreso, type VistaDelPanel } from '../vistasDeLosPaneles';
 
 /**
  * El atrás de los paneles de rol sube un nivel por vez hasta Yo (AGENTS.md §6; pedido del dueño del 2026-10-31).
@@ -10,11 +10,11 @@ const alumno = { participanteId: 'p-1' } as unknown as AlumnoConEstado;
 const grupo = { grupoId: 'g-1', nombre: 'Octubre', inicio: null } as unknown as NonNullable<Extract<VistaDelPanel, { tipo: 'cumplimiento' }>['grupo']>;
 
 /** Sigue el «volver» desde `vista` hasta salir a Yo y devuelve los pasos. */
-function recorrido(vista: VistaDelPanel): string[] {
+function recorrido(vista: VistaDelPanel, variosGrupos = false): string[] {
   const pasos: string[] = [vista.tipo];
   let actual = vista;
   while (actual.tipo !== 'ninguna' && pasos.length < 10) {
-    actual = vistaDeRegreso(actual);
+    actual = vistaDeRegreso(actual, variosGrupos);
     pasos.push(actual.tipo);
   }
   return pasos;
@@ -59,5 +59,27 @@ describe('Yo', () => {
       { tipo: 'cumplimiento', grupo: null },
     ];
     for (const v of abiertas) expect({ v: v.tipo, abierto: hayPanelAbierto(v) }).toEqual({ v: v.tipo, abierto: true });
+  });
+});
+
+
+describe('«Mis grupos» (spec 055)', () => {
+  it('con dos o más grupos, la fila de Yo entra a «Mis grupos»; con uno, directo a «Mi grupo»', () => { // spec 055 FR-002, FR-003
+    expect(vistaDeEntradaAlGrupo(3)).toEqual({ tipo: 'misGrupos' });
+    expect(vistaDeEntradaAlGrupo(2)).toEqual({ tipo: 'misGrupos' });
+    expect(vistaDeEntradaAlGrupo(1)).toEqual({ tipo: 'miGrupo', enfocarSemaforo: false });
+    expect(vistaDeEntradaAlGrupo(0)).toEqual({ tipo: 'miGrupo', enfocarSemaforo: false });
+  });
+
+  it('volver sube un nivel por vez: ficha → Mi grupo → Mis grupos → Yo', () => { // spec 055 FR-003
+    expect(recorrido({ tipo: 'alumno', alumno }, true)).toEqual(['alumno', 'miGrupo', 'misGrupos', 'ninguna']);
+  });
+
+  it('con un solo grupo, volver desde «Mi grupo» sale a Yo sin pasar por la lista', () => { // spec 055 FR-003
+    expect(recorrido({ tipo: 'alumno', alumno }, false)).toEqual(['alumno', 'miGrupo', 'ninguna']);
+  });
+
+  it('con «Mis grupos» abierto, Yo no dibuja su lista', () => { // spec 055 FR-003
+    expect(hayPanelAbierto({ tipo: 'misGrupos' })).toBe(true);
   });
 });

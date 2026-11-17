@@ -25,6 +25,10 @@ export interface EvidenciaDeLaObligacion {
   subidaEn: string | null;
 }
 
+/** Spec 055 FR-013: los cuatro pilares con los que se agrupan los hábitos de un día. */
+/** Llega tal cual la `categoria_clave` del hábito (`CUERPO`, `MENTE`, `ESPIRITU`, `CONSCIENCIA`, o la de otra formación, p. ej. `DIPLOMADO_ESTUDIO`). */
+export type PilarDelHabito = string;
+
 /** Un hábito del día, tal como la persona lo tenía ESE día (no el de hoy proyectado hacia atrás). */
 export interface ObligacionDeLaPersona {
   registroId: string;
@@ -43,6 +47,8 @@ export interface ObligacionDeLaPersona {
   evidencias: EvidenciaDeLaObligacion[];
   /** El post diario: la publicación del Muro con la que se cumplió. */
   publicacionId: string | null;
+  /** Spec 055: el pilar del hábito; `null` si no lo tiene o con un servidor anterior. */
+  pilar?: PilarDelHabito | null;
   /** Spec 037: los km del día y de dónde salieron; `null` en un hábito que no mide nada o con un backend anterior. */
   medicion: MedicionDeLaFicha | null;
 }

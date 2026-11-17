@@ -1,0 +1,56 @@
+# Spec 055, historia 2 (FR-010 a FR-018): la ficha de un aprendiz del día 78: cabecera con el borde de su color, la semana en 7 círculos
+# (sábado a viernes), un día elegido que cambia los pilares sin salir, el mes desplegable («<Mes> ⌄» / «Ver solo la semana») y los
+# accesos del final.
+# corrido: 2026-11-17. cuenta: mentor (E2E_MENTOR_*), con un aprendiz del día 78 con varias semanas de datos en «Cupo [e2e-piso-1314]».
+# Precondición: `siembra.sql`. Volver a una semana ya vista no hace un pedido nuevo (se comprueba en el log del backend, `sin-senal.sh logs`).
+# spec 055 FR-010, FR-011, FR-012, FR-013, FR-014, FR-015, FR-016, FR-017, FR-018
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "YO"
+- scrollUntilVisible:
+    element: "Abrir Mis grupos"
+    direction: DOWN
+    timeout: 40000
+- tapOn: "Abrir Mis grupos"
+- tapOn: ".*Cupo \\[e2e-piso-1314\\].*"
+- extendedWaitUntil:
+    visible: "Abrir la ficha de .*"
+    timeout: 30000
+- tapOn: "Abrir la ficha de .*"
+- extendedWaitUntil:
+    visible: "Día 78.*"
+    timeout: 30000
+- takeScreenshot: R02a-ficha-semana-y-primer-pilar
+# Los cuatro pilares como secciones; el primero con pendientes o vencidos va abierto.
+- assertVisible: "Cuerpo"
+# Cuerpo va abierto: los demás pilares (cerrados) quedan debajo.
+- scrollUntilVisible:
+    element: "Emociones"
+    direction: DOWN
+    timeout: 20000
+- assertVisible: "Mente"
+- assertVisible: "Espíritu"
+- takeScreenshot: R02a2-pilares-cerrados
+- scrollUntilVisible:
+    element: "E2E Aprendiz"
+    direction: UP
+    timeout: 20000
+# Elegir otro día cambia los hábitos, sin salir de la ficha.
+- tapOn: "Lunes .*"
+- takeScreenshot: R02b-otro-dia-de-la-semana
+- assertVisible: "Abrir Mis grupos|Cuerpo"
+# El mes se despliega en el mismo lugar.
+- tapOn: ".*, ver el mes"
+- takeScreenshot: R02c-mes-desplegado
+- assertVisible: "Ver solo la semana"
+- tapOn: "Mes anterior"
+- takeScreenshot: R02d-mes-anterior
+- tapOn: "Ver solo la semana"
+- assertNotVisible: "Ver solo la semana"
+# Los accesos del final, cada uno solo si corresponde.
+- scrollUntilVisible:
+    element: "(?i).*Tiempo libre.*"
+    direction: DOWN
+    timeout: 30000
+- takeScreenshot: R02e-accesos-del-final

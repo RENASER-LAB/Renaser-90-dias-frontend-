@@ -35,7 +35,7 @@ también en el texto (`grep -n "Plan" docs/decisiones/*.md`). Si dos entradas ch
 | [hoy.md](hoy.md) | Hoy: tarjetas, frase del día, semáforo y lo que Hoy muestra | 8 |
 | [ingreso-y-onboarding.md](ingreso-y-onboarding.md) | Login, onboarding, ficha, diagnóstico, términos y el Día 1 | 11 |
 | [kilometros-y-carrera.md](kilometros-y-carrera.md) | Kilómetros diarios: captura, pasos (Health Connect y Salud de Apple) y la carrera con GPS | 9 |
-| [liderazgo-y-administracion.md](liderazgo-y-administracion.md) | Mentor, líder de mentores, Administración, Alquimista y sus fichas | 17 |
+| [liderazgo-y-administracion.md](liderazgo-y-administracion.md) | Mentor, líder de mentores, Administración, Alquimista y sus fichas | 18 |
 | [pagos.md](pagos.md) | Cronograma de pagos y «Mi ingreso» (spec 032) | 2 |
 | [plan.md](plan.md) | Plan: objetivos, semana, mes, 80/20, Cierra tu día y el Mapa (retirado) | 12 |
 | [ser-y-fenix.md](ser-y-fenix.md) | SER (el acompañante), el orbe, el fénix y las celebraciones | 9 |
@@ -49,6 +49,7 @@ también en el texto (`grep -n "Plan" docs/decisiones/*.md`). Si dos entradas ch
 
 | Fecha | Tabs | Tipo | Entrada | Archivo | Corregida |
 |---|---|---|---|---|---|
+| 2026-11-17 | Yo, Comunidad | Cambio | El rol de mentor rediseñado: Mis grupos, Mi grupo, la ficha con la semana y el mes, la evidencia y las notas privadas (spec 055, fase 1) | [liderazgo-y-administracion.md](liderazgo-y-administracion.md) |  |
 | 2026-11-16 | Training | Decisión del dueño | La carrera con GPS también en iPhone, y sin permiso de Face ID | [kilometros-y-carrera.md](kilometros-y-carrera.md) |  |
 | 2026-11-16 | Training | Cambio | Kilómetros diarios: en iPhone los pasos y la distancia salen de la app Salud de Apple (spec 037 FR-016 a FR-025, D-362) | [kilometros-y-carrera.md](kilometros-y-carrera.md) |  |
 | 2026-11-16 | Training | Corrección | Entrenar → Kilómetros: en iPhone el mapa de la carrera es Google Maps con su propia clave (#220) | [kilometros-y-carrera.md](kilometros-y-carrera.md) |  |
@@ -151,7 +152,7 @@ también en el texto (`grep -n "Plan" docs/decisiones/*.md`). Si dos entradas ch
 | 2026-10-27 | Plan | Cambio | tab `Plan`: los objetivos esperan al Mapa de Renacimiento (issue #37) | [plan.md](plan.md) | sí |
 | 2026-10-27 | Training, Yo | Corrección | los recordatorios de un hábito cumplido ya no suenan ese día (issue #33) | [alarmas.md](alarmas.md) |  |
 | 2026-10-27 | Hoy, Administración | Cambio | Administración (estado de `Hoy`): Administración y Alquimista ven las evidencias como el líder | [liderazgo-y-administracion.md](liderazgo-y-administracion.md) | sí |
-| 2026-10-27 | Administración | Corrección | la ficha del mentor abre las evidencias dentro de la app | [liderazgo-y-administracion.md](liderazgo-y-administracion.md) |  |
+| 2026-10-27 | Administración | Corrección | la ficha del mentor abre las evidencias dentro de la app | [liderazgo-y-administracion.md](liderazgo-y-administracion.md) | sí |
 | 2026-10-20 | Training | Cambio | tab `Training` → Planificar: días solo con íconos, «Otra» en su lugar y pantalla completa | [training.md](training.md) |  |
 | 2026-10-20 | Training | Cambio | tab `Training` → Planificar: el recordatorio por día | [alarmas.md](alarmas.md) | sí |
 | 2026-10-20 | Training | Cambio | tab `Training` → Planificar: cómo suena la alarma | [alarmas.md](alarmas.md) | sí |
@@ -164,7 +165,7 @@ también en el texto (`grep -n "Plan" docs/decisiones/*.md`). Si dos entradas ch
 | 2026-10-17 | Training | Corrección | hábitos al cambiar de día | [training.md](training.md) |  |
 | 2026-10-14 | Hoy, Plan, Training, Comunidad, Yo, Administración | Cambio | los cinco tabs y Administración: lo no disponible se esconde, y la consola Soporte TI suma despliegue, roles personalizados y «ver como» (spec 002, fase 2) | [soporte-ti.md](soporte-ti.md) | sí |
 | 2026-10-13 | Training, Comunidad | Cambio | tabs `Training` y `Comunidad` (ranking): el hábito GIMNASIO y su pestaña | [training.md](training.md) |  |
-| 2026-10-13 | Hoy, Comunidad, Administración | Cambio | Administración (estado de `Hoy`) y `Comunidad` (info del chat): el rol «Guía de aprendiz», el rol al aprobar y dos arreglos | [liderazgo-y-administracion.md](liderazgo-y-administracion.md) |  |
+| 2026-10-13 | Hoy, Comunidad, Administración | Cambio | Administración (estado de `Hoy`) y `Comunidad` (info del chat): el rol «Guía de aprendiz», el rol al aprobar y dos arreglos | [liderazgo-y-administracion.md](liderazgo-y-administracion.md) | sí |
 | 2026-10-13 | Hoy, Plan, Training, Comunidad, Yo | Cambio | los cinco tabs: aviso de mantenimiento cuando una funcionalidad está apagada (spec 002) | [soporte-ti.md](soporte-ti.md) |  |
 | 2026-10-12 | Hoy, Administración | Cambio | Administración (estado de `Hoy`): «Hábitos del programa», con audiencia por rol | [liderazgo-y-administracion.md](liderazgo-y-administracion.md) |  |
 | 2026-10-10 | Plan | Corrección | Corrección encontrada en el E2E del Mapa del Poder por rol  (backend E-592) | [plan.md](plan.md) |  |

@@ -1,3 +1,4 @@
+import { NotasDeLectura } from '../../mentor/components/NotasDeLectura';
 import { tituloEnTipoOracion } from '../../habits/utils/tituloEnTipoOracion';
 import { fuentes } from '../../../theme/fuentes';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -272,6 +273,9 @@ export function FichaAprendizScreen({
             <BotonSecundario etiqueta="Recuperar cuenta" onPress={() => void recuperarCuenta()} cargando={recuperando} />
           </View>
         ) : null}
+
+        {/* Spec 055 FR-024: el lápiz de las notas del acompañamiento, solo de lectura. */}
+        <NotasDeLectura origen={{ quien: 'admin', aprendizId: aprendiz.id }} nombre={nombre} />
 
         {datosDeCabecera.length > 0 ? (
           <View style={[estilos.tarjeta, { backgroundColor: c.cardBg, borderColor: c.border, gap: 6 }]}>

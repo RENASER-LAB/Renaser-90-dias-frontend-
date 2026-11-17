@@ -1,0 +1,36 @@
+# Spec 055, historia 3 (FR-019 a FR-022): el ojo de un hábito cumplido con evidencia abre la hoja desde abajo (foto, audio, texto), con
+# «1 de N», la hora y el pilar, «‹ Anterior · Ver en el Muro · Siguiente ›»; el gesto de volver del sistema la cierra y deja la ficha en
+# el mismo día.
+# corrido: 2026-11-17. cuenta: mentor (E2E_MENTOR_*) con un aprendiz que subió foto, audio y texto a distintos hábitos de hoy.
+# spec 055 FR-019, FR-020, FR-021, FR-022
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "YO"
+- scrollUntilVisible:
+    element: "Abrir Mis grupos"
+    direction: DOWN
+    timeout: 40000
+- tapOn: "Abrir Mis grupos"
+- tapOn: ".*Cupo \\[e2e-piso-1314\\].*"
+- tapOn: "Abrir la ficha de .*"
+- extendedWaitUntil:
+    visible: "Ver la evidencia de .*"
+    timeout: 30000
+- takeScreenshot: R03a-el-ojo-en-el-habito
+# Un toque abre la hoja.
+- tapOn: "Ver la evidencia de .*"
+- extendedWaitUntil:
+    visible: "Cerrar la evidencia"
+    timeout: 20000
+- takeScreenshot: R03b-la-hoja-de-la-evidencia
+- assertVisible: "Anterior"
+- assertVisible: "Siguiente"
+# Pasar al siguiente hábito del día sin cerrar la hoja.
+- tapOn: "Siguiente"
+- takeScreenshot: R03c-el-siguiente-habito
+# El gesto de volver del sistema la cierra; la ficha sigue en el mismo día.
+- back
+- assertNotVisible: "Cerrar la evidencia"
+- assertVisible: "Cuerpo"
+- takeScreenshot: R03d-de-vuelta-en-la-ficha

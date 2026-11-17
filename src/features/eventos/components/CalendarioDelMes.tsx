@@ -7,10 +7,8 @@ import { BotonSecundario } from '../../../components/Legible';
 import { LogoDeMarca } from '../../../components/LogoDeMarca';
 import { useTheme } from '../../../theme/ThemeContext';
 import type { Ocurrencia } from '../types/eventos.types';
+import { GrillaDelMes } from './GrillaDelMes';
 import {
-  DIAS_DE_LA_SEMANA,
-  DIAS_DE_LA_SEMANA_COMPLETOS,
-  grillaDelMes,
   marcaDelDia,
   soloElMes,
   type CeldaDelDia,
@@ -61,8 +59,7 @@ export function CalendarioDelMes({
   onReintentar: () => void;
   onAbrir: (oc: Ocurrencia) => void;
 }) {
-  const { c, space } = useTheme();
-  const semanas = grillaDelMes(mes);
+  const { c } = useTheme();
   const delDia = diaElegido ? porDia[diaElegido] ?? [] : [];
 
   return (
@@ -85,34 +82,19 @@ export function CalendarioDelMes({
         <BotonSecundario etiqueta="›" compacto onPress={() => onCambiarMes(1)} estilo={estilos.flecha} accessibilityLabel="Mes siguiente" />
       </View>
 
-      <View style={[estilos.grilla, { borderColor: c.border, backgroundColor: c.cardBg, borderRadius: space.radius }]}>
-        <View style={estilos.semana}>
-          {DIAS_DE_LA_SEMANA.map((inicial, i) => (
-            <Text
-              key={i}
-              accessibilityLabel={DIAS_DE_LA_SEMANA_COMPLETOS[i]}
-              style={[estilos.inicial, { color: i >= 5 ? c.goldInk : c.textSoft }]}
-            >
-              {inicial}
-            </Text>
-          ))}
-        </View>
-        {semanas.map(semana => (
-          <View key={semana[0].fecha} style={estilos.semana}>
-            {semana.map(celda => (
-              <Celda
-                key={celda.fecha}
-                celda={celda}
-                hoy={celda.fecha === hoyIso}
-                elegida={celda.fecha === diaElegido}
-                marca={marcaDelDia(porDia[celda.fecha])}
-                cuantos={porDia[celda.fecha]?.length ?? 0}
-                onPress={() => onElegirDia(celda.fecha)}
-              />
-            ))}
-          </View>
-        ))}
-      </View>
+      <GrillaDelMes
+        mes={mes}
+        renderDia={celda => (
+          <Celda
+            celda={celda}
+            hoy={celda.fecha === hoyIso}
+            elegida={celda.fecha === diaElegido}
+            marca={marcaDelDia(porDia[celda.fecha])}
+            cuantos={porDia[celda.fecha]?.length ?? 0}
+            onPress={() => onElegirDia(celda.fecha)}
+          />
+        )}
+      />
 
       {/* La leyenda de los puntos (2026-11-03, el dueño: «El lenguaje se fue, hay que ponerle allí, por ejemplo, Actividad programada /
           Confirmé asistencia»). Cada pieza es un punto con su palabra; si las dos no caben en un renglón, la segunda baja a otro, y
@@ -252,9 +234,6 @@ const estilos = StyleSheet.create({
   anio: { fontFamily: fuentes.media, fontSize: 14, lineHeight: 18 },
   botonHoy: { minWidth: 60, paddingHorizontal: 12 },
   flecha: { width: 44, paddingHorizontal: 0 },
-  grilla: { borderWidth: 1, paddingVertical: 8, paddingHorizontal: 4 },
-  semana: { flexDirection: 'row' },
-  inicial: { flex: 1, textAlign: 'center', fontFamily: fuentes.negrita, fontSize: LETRA.cuerpo, paddingVertical: 6 },
   celda: { flex: 1, height: 56, alignItems: 'center', justifyContent: 'center', gap: 3 },
   circulo: { width: 40, height: 40, borderRadius: 20, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
   numero: { fontSize: 17 },
