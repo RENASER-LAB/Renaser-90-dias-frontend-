@@ -49,6 +49,7 @@ describe('Hoy: solo el programa propio', () => {
       'TarjetaMentoresHoy',
       'TarjetaSemaforoGruposHoy',
       'MiCelulaScreen',
+      'MisGruposScreen',
       'AlumnoScreen',
       'AdminScreen',
       'BandejaTicketsScreen',
@@ -84,10 +85,10 @@ describe('Hoy: solo el programa propio', () => {
 
 describe('Yo: una fila por panel de rol, junto a Administración', () => {
   it('«Mi grupo» y «Mis mentores» son `FilaDeAjuste` de la misma lista, justo después de Administración y antes de la emergencia', () => {
-    expect(YO).toMatch(/\{paneles\.filas\.miGrupo \? \(\s*<FilaDeAjuste\s+key="mi-grupo"\s+icono="users"\s+titulo="Mi grupo"/);
+    expect(YO).toMatch(/\{paneles\.filas\.miGrupo \? \(\s*<FilaDeAjuste\s+key="mi-grupo"\s+icono="users"\s+titulo=\{[^}]*'Mi grupo'\}/);
     expect(YO).toMatch(/\{paneles\.filas\.misMentores \? \(\s*<FilaDeAjuste\s+key="mis-mentores"\s+icono="award"\s+titulo="Mis mentores"/);
     const admin = YO.indexOf('setEnAdministracion(true)}');
-    const miGrupo = YO.indexOf('titulo="Mi grupo"');
+    const miGrupo = YO.indexOf("? 'Mis grupos' : 'Mi grupo'}");
     const misMentores = YO.indexOf('titulo="Mis mentores"');
     const emergencia = YO.indexOf('{miEmergencia.visible &&');
     expect(admin).toBeGreaterThan(-1);
@@ -97,7 +98,8 @@ describe('Yo: una fila por panel de rol, junto a Administración', () => {
   });
 
   it('tocar una fila abre el panel: «Mi grupo» → `miGrupo` sin enfocar el semáforo, «Mis mentores» → `misMentores`', () => {
-    expect(YO).toContain("onPress={() => paneles.ir({ tipo: 'miGrupo', enfocarSemaforo: false })}");
+    /* Spec 055: con dos o más grupos la fila entra a «Mis grupos»; con uno, directo a `miGrupo` sin enfocar el semáforo (`vistaDeEntradaAlGrupo`). */
+    expect(YO).toContain('onPress={() => paneles.ir(vistaDeEntradaAlGrupo(paneles.celula.vista?.grupos.length ?? 0))}');
     expect(YO).toContain("onPress={() => paneles.ir({ tipo: 'misMentores' })}");
   });
 
@@ -138,7 +140,7 @@ describe('el hook de los paneles', () => {
   });
 
   it('volver sube un nivel por vez y se queda en Yo cuando no hay más', () => {
-    expect(HOOK).toContain('const volver = useCallback(() => setVista(actual => vistaDeRegreso(actual)), []);');
+    expect(HOOK).toContain('const volver = useCallback(() => setVista(actual => vistaDeRegreso(actual, variosGrupos)), [variosGrupos]);');
   });
 
   it('un aviso se toma de los parámetros una sola vez: se limpia la ruta para que volver atrás no lo reabra', () => {
@@ -152,14 +154,15 @@ describe('el hook de los paneles', () => {
 
 describe('la pantalla del panel', () => {
   it('«Mi grupo» abre `MiCelulaScreen` con la cabecera «‹ Mi grupo»; «Mis mentores», la suya con «‹ Mis mentores»', () => {
-    expect(PANTALLA).toMatch(/<MiCelulaScreen\s+rotuloDeVolver="Mi grupo"/);
+    expect(PANTALLA).toMatch(/<MiCelulaScreen\s+rotuloDeVolver=\{\(celula\.vista\?\.grupos\.length \?\? 0\) > 1 \? 'Mis grupos' : 'Mi grupo'\}/);
+    expect(PANTALLA).toMatch(/<MisGruposScreen\s+rotuloDeVolver="Yo"/);
     expect(PANTALLA).toMatch(/<MisMentoresEnYo/);
     expect(leer('features/paneles-de-rol/screens/MisMentoresEnYo.tsx')).toContain('titulo="Mis mentores"');
   });
 
   it('todo lo que cuelga de ellos vuelve con `volver` (un nivel por vez)', () => {
     expect(PANTALLA).toContain('onSalir={volver}');
-    expect(PANTALLA).toContain('<AlumnoScreen alumno={vista.alumno} grupoId={celula.vista?.celula.id ?? null} onVolver={volver} />');
+    expect(PANTALLA).toMatch(/<AlumnoScreen\s+alumno=\{vista\.alumno\}\s+grupoId=\{celula\.vista\?\.celula\.id \?\? null\}\s+onVolver=\{volver\}/);
     expect(PANTALLA).toContain('<BandejaTicketsScreen onVolver={volver} />');
     expect(PANTALLA).toContain('<LiderMentoresScreen onSalir={volver} />');
     expect(PANTALLA).toContain('<AprendicesDelLiderScreen onSalir={volver} />');

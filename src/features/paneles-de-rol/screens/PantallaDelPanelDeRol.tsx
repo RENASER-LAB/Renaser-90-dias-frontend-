@@ -7,8 +7,11 @@ import { CumplimientoDelLiderScreen } from '../../lider-mentores/screens/Cumplim
 import { LiderMentoresScreen } from '../../lider-mentores/screens/LiderMentoresScreen';
 import { AlumnoScreen } from '../../mentor/screens/AlumnoScreen';
 import { MiCelulaScreen } from '../../mentor/screens/MiCelulaScreen';
+import { MisGruposScreen } from '../../mentor/screens/MisGruposScreen';
+import { Alert } from '../../../components/Alerta';
 import { BandejaTicketsScreen } from '../../tickets/screens/BandejaTicketsScreen';
 import type { PanelesDeRol } from '../hooks/usePanelesDeRol';
+import { vistaDeEntradaAlGrupo } from '../utils/vistasDeLosPaneles';
 import { MisMentoresEnYo } from './MisMentoresEnYo';
 
 /**
@@ -23,24 +26,51 @@ export function PantallaDelPanelDeRol({ paneles }: { paneles: PanelesDeRol }) {
     case 'ninguna':
       return null;
 
+    case 'misGrupos':
+      return (
+        <MisGruposScreen
+          rotuloDeVolver="Yo"
+          onSalir={volver}
+          onAbrirGrupo={grupoId => {
+            void celula.elegirGrupo(grupoId);
+            ir({ tipo: 'miGrupo', enfocarSemaforo: false });
+          }}
+          vista={celula.vista}
+          cargando={celula.cargando}
+          fallo={celula.fallo}
+          detalle={celula.detalle}
+          recargar={celula.recargar}
+        />
+      );
+
     case 'miGrupo':
       return (
         <MiCelulaScreen
-          rotuloDeVolver="Mi grupo"
+          rotuloDeVolver={(celula.vista?.grupos.length ?? 0) > 1 ? 'Mis grupos' : 'Mi grupo'}
           onSalir={volver}
-          enfocarSemaforo={vista.enfocarSemaforo}
           onAbrirAlumno={alumno => ir({ tipo: 'alumno', alumno })}
           vista={celula.vista}
           cargando={celula.cargando}
           fallo={celula.fallo}
           detalle={celula.detalle}
           recargar={celula.recargar}
-          onElegirGrupo={celula.elegirGrupo}
         />
       );
 
     case 'alumno':
-      return <AlumnoScreen alumno={vista.alumno} grupoId={celula.vista?.celula.id ?? null} onVolver={volver} />;
+      return (
+        <AlumnoScreen
+          alumno={vista.alumno}
+          grupoId={celula.vista?.celula.id ?? null}
+          onVolver={volver}
+          onYaNoAcompana={motivo => {
+            /* El servidor dijo que ya no lo acompaña (FR-017, FR-028): se dice por qué y se vuelve a la lista, releída y sin datos viejos. */
+            Alert.alert('Ya no acompañas a este aprendiz', motivo);
+            celula.recargar();
+            ir(vistaDeEntradaAlGrupo(celula.vista?.grupos.length ?? 0));
+          }}
+        />
+      );
 
     case 'misMentores':
       return (

@@ -32,6 +32,7 @@ import { MicroLabel, ScreenHeader } from '../components/ui';
 import { AdminScreen, type EntradaDeAdmin } from '../features/admin/screens/AdminScreen';
 import { usePanelesDeRol } from '../features/paneles-de-rol/hooks/usePanelesDeRol';
 import { PantallaDelPanelDeRol } from '../features/paneles-de-rol/screens/PantallaDelPanelDeRol';
+import { vistaDeEntradaAlGrupo } from '../features/paneles-de-rol/utils/vistasDeLosPaneles';
 import { useCapacidades } from '../features/admin/hooks/useCapacidades';
 import { EntradaAlProgramaPropio } from '../features/programa/components/EntradaAlProgramaPropio';
 import { useDiaUnoPorElegir } from '../features/programa/hooks/useDiaUnoPorElegir';
@@ -1056,10 +1057,10 @@ export default function YoScreen() {
               <FilaDeAjuste
                 key="mi-grupo"
                 icono="users"
-                titulo="Mi grupo"
-                detalle="Tus aprendices"
-                etiqueta="Abrir Mi grupo"
-                onPress={() => paneles.ir({ tipo: 'miGrupo', enfocarSemaforo: false })}
+                titulo={(paneles.celula.vista?.grupos.length ?? 0) > 1 ? 'Mis grupos' : 'Mi grupo'}
+                detalle={(paneles.celula.vista?.grupos.length ?? 0) > 1 ? 'Tus grupos y aprendices' : 'Tus aprendices'}
+                etiqueta={(paneles.celula.vista?.grupos.length ?? 0) > 1 ? 'Abrir Mis grupos' : 'Abrir Mi grupo'}
+                onPress={() => paneles.ir(vistaDeEntradaAlGrupo(paneles.celula.vista?.grupos.length ?? 0))}
               />
             ) : null}
             {paneles.filas.misMentores ? (

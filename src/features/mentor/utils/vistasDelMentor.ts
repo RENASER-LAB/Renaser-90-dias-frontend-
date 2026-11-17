@@ -1,7 +1,7 @@
 import type { AlumnoConEstado } from '../types/mentor.types';
 
 /**
- * Las vistas del mentor que TAPAN la pantalla de Comunidad: «Mi grupo», la ficha de un aprendiz abierta
+ * Las vistas del mentor que TAPAN la pantalla de Comunidad: «Mis grupos», «Mi grupo», la ficha de un aprendiz abierta
  * desde ahí y la ficha abierta desde la info del chat del grupo (D-207). `ComunidadScreen` las dibuja
  * con un `return` temprano, así que mientras una está abierta no se ve nada más: ni la lista de chats
  * ni el chat que alguien acaba de pedir.
@@ -12,7 +12,7 @@ import type { AlumnoConEstado } from '../types/mentor.types';
  * las demás.
  */
 export type VistasDelMentor = {
-  vista: 'ninguna' | 'celula' | 'alumno';
+  vista: 'ninguna' | 'misGrupos' | 'celula' | 'alumno';
   /** El aprendiz cuya ficha se abrió desde «Mi grupo». */
   alumnoAbierto: AlumnoConEstado | null;
   /** D-207: la ficha abierta desde la info del chat de SU grupo, con el id de ese grupo. */
@@ -22,8 +22,12 @@ export type VistasDelMentor = {
 export const SIN_VISTAS_DEL_MENTOR: VistasDelMentor = { vista: 'ninguna', alumnoAbierto: null, fichaDesdeLaInfo: null };
 
 export type AccionDeLasVistasDelMentor =
+  /** Spec 055 FR-001: «Mis grupos», la entrada con dos o más grupos. */
+  | { tipo: 'abrir-mis-grupos' }
+  | { tipo: 'salir-de-mis-grupos' }
   | { tipo: 'abrir-mi-grupo' }
-  | { tipo: 'salir-de-mi-grupo' }
+  /** Con `variosGrupos`, salir de «Mi grupo» lleva a «Mis grupos»; con uno solo, a Tribu (FR-003). */
+  | { tipo: 'salir-de-mi-grupo'; variosGrupos?: boolean }
   | { tipo: 'abrir-ficha'; alumno: AlumnoConEstado }
   | { tipo: 'volver-a-mi-grupo' }
   | { tipo: 'abrir-ficha-desde-la-info'; alumno: AlumnoConEstado; grupoId: string }
@@ -32,11 +36,15 @@ export type AccionDeLasVistasDelMentor =
 
 export function vistasDelMentor(estado: VistasDelMentor, accion: AccionDeLasVistasDelMentor): VistasDelMentor {
   switch (accion.tipo) {
+    case 'abrir-mis-grupos':
+      return { ...estado, vista: 'misGrupos' };
+    case 'salir-de-mis-grupos':
+      return { ...estado, vista: 'ninguna' };
     case 'abrir-mi-grupo':
     case 'volver-a-mi-grupo':
       return { ...estado, vista: 'celula' };
     case 'salir-de-mi-grupo':
-      return { ...estado, vista: 'ninguna' };
+      return { ...estado, vista: accion.variosGrupos ? 'misGrupos' : 'ninguna' };
     case 'abrir-ficha':
       return { ...estado, vista: 'alumno', alumnoAbierto: accion.alumno };
     case 'abrir-ficha-desde-la-info':
@@ -50,11 +58,12 @@ export function vistasDelMentor(estado: VistasDelMentor, accion: AccionDeLasVist
 }
 
 /** Qué vista tapa Comunidad ahora, en el orden en que se dibujan; `null` si ninguna. */
-export type LoQueTapaComunidad = 'ficha-desde-la-info' | 'ficha-de-mi-grupo' | 'mi-grupo' | null;
+export type LoQueTapaComunidad = 'ficha-desde-la-info' | 'ficha-de-mi-grupo' | 'mi-grupo' | 'mis-grupos' | null;
 
 export function loQueTapaComunidad(estado: VistasDelMentor, esMentor: boolean): LoQueTapaComunidad {
   if (estado.fichaDesdeLaInfo) return 'ficha-desde-la-info';
   if (esMentor && estado.vista === 'alumno' && estado.alumnoAbierto) return 'ficha-de-mi-grupo';
   if (esMentor && estado.vista === 'celula') return 'mi-grupo';
+  if (esMentor && estado.vista === 'misGrupos') return 'mis-grupos';
   return null;
 }

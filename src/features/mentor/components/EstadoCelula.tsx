@@ -27,7 +27,7 @@ type Props = {
 const POR_FALLO: Record<FalloCelula, { icono: IconName; titulo: string; texto: string; reintentar: boolean }> = {
   sin_celula: {
     icono: 'users',
-    titulo: 'Todavía no lideras ningún grupo',
+    titulo: 'Todavía no acompañas ningún grupo',
     texto:
       'Cuando se te asigne uno, verás aquí a tus aprendices con su avance y qué necesita cada uno.',
     reintentar: false,

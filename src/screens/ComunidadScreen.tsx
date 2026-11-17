@@ -37,6 +37,8 @@ import { useCelulaQueAcompano } from '../features/mentor/hooks/useCelulaQueAcomp
 import { useEsMentor } from '../features/mentor/hooks/useEsMentor';
 import { AlumnoScreen } from '../features/mentor/screens/AlumnoScreen';
 import { MiCelulaScreen } from '../features/mentor/screens/MiCelulaScreen';
+import { MisGruposScreen } from '../features/mentor/screens/MisGruposScreen';
+import { entradaAMisGrupos, hayVariosGrupos } from '../features/mentor/utils/entradaAMisGrupos';
 import { alumnoDesdeLaInfo } from '../features/mentor/utils/alumnoDesdeLaInfo';
 import { loQueTapaComunidad, SIN_VISTAS_DEL_MENTOR, vistasDelMentor } from '../features/mentor/utils/vistasDelMentor';
 import { entradaAlGrupoVisible } from '../features/mentor/utils/entradaAlGrupo';
@@ -2937,6 +2939,10 @@ function ComunidadPorFormacion({
         alumno={vistas.fichaDesdeLaInfo.alumno}
         grupoId={vistas.fichaDesdeLaInfo.grupoId}
         onVolver={() => despacharVista({ tipo: 'volver-a-la-info' })}
+        onYaNoAcompana={motivo => {
+          Alert.alert('Ya no acompañas a este aprendiz', motivo);
+          despacharVista({ tipo: 'volver-a-la-info' });
+        }}
       />
     );
   }
@@ -2946,6 +2952,14 @@ function ComunidadPorFormacion({
         alumno={vistas.alumnoAbierto}
         grupoId={celulaQueAcompano.vista?.celula.id ?? null}
         onVolver={() => despacharVista({ tipo: 'volver-a-mi-grupo' })}
+        onYaNoAcompana={motivo => {
+          /* FR-017: se dice por qué, se relee el grupo (sin datos viejos) y se vuelve a la lista. */
+          Alert.alert('Ya no acompañas a este aprendiz', motivo);
+          celulaQueAcompano.recargar();
+          despacharVista(
+            hayVariosGrupos(celulaQueAcompano.vista?.grupos.length ?? 0) ? { tipo: 'abrir-mis-grupos' } : { tipo: 'volver-a-mi-grupo' },
+          );
+        }}
       />
     );
   }
@@ -2979,17 +2993,34 @@ function ComunidadPorFormacion({
       </SafeAreaView>
     );
   }
+  if (loQueTapa === 'mis-grupos') {
+    return (
+      <MisGruposScreen
+        onSalir={() => despacharVista({ tipo: 'salir-de-mis-grupos' })}
+        onAbrirGrupo={grupoId => {
+          void celulaQueAcompano.elegirGrupo(grupoId);
+          despacharVista({ tipo: 'abrir-mi-grupo' });
+        }}
+        vista={celulaQueAcompano.vista}
+        cargando={celulaQueAcompano.cargando}
+        fallo={celulaQueAcompano.fallo}
+        detalle={celulaQueAcompano.detalle}
+        recargar={celulaQueAcompano.recargar}
+      />
+    );
+  }
   if (loQueTapa === 'mi-grupo') {
+    const variosGrupos = hayVariosGrupos(celulaQueAcompano.vista?.grupos.length ?? 0);
     return (
       <MiCelulaScreen
-        onSalir={() => despacharVista({ tipo: 'salir-de-mi-grupo' })}
+        rotuloDeVolver={variosGrupos ? 'Mis grupos' : 'Volver'}
+        onSalir={() => despacharVista({ tipo: 'salir-de-mi-grupo', variosGrupos })}
         onAbrirAlumno={alumno => despacharVista({ tipo: 'abrir-ficha', alumno })}
         vista={celulaQueAcompano.vista}
         cargando={celulaQueAcompano.cargando}
         fallo={celulaQueAcompano.fallo}
         detalle={celulaQueAcompano.detalle}
         recargar={celulaQueAcompano.recargar}
-        onElegirGrupo={celulaQueAcompano.elegirGrupo}
       />
     );
   }
@@ -4236,18 +4267,24 @@ function ComunidadPorFormacion({
             <View style={styles.tribuBloqueInicial}>
               <MicroLabel>Acompañamiento</MicroLabel>
               <Presionable
-                onPress={() => despacharVista({ tipo: 'abrir-mi-grupo' })}
+                onPress={() =>
+                  despacharVista({
+                    tipo: entradaAMisGrupos(celulaQueAcompano.vista?.grupos.length ?? 0) === 'misGrupos' ? 'abrir-mis-grupos' : 'abrir-mi-grupo',
+                  })
+                }
                 accessibilityRole="button"
-                accessibilityLabel="Abrir el grupo que acompañas"
+                accessibilityLabel={hayVariosGrupos(celulaQueAcompano.vista?.grupos.length ?? 0) ? 'Abrir los grupos que acompañas' : 'Abrir el grupo que acompañas'}
                 style={[styles.entradaMentor, { borderColor: c.goldInk, backgroundColor: c.goldWash }]}
               >
                 <View style={{ flex: 1 }}>
                   <Text style={[t.cardTitle, { color: c.textStrong }]} numberOfLines={1}>
-                    {celulaQueAcompano.vista?.celula.nombre ?? 'Mi grupo'}
+                    {hayVariosGrupos(celulaQueAcompano.vista?.grupos.length ?? 0) ? 'Mis grupos' : celulaQueAcompano.vista?.celula.nombre ?? 'Mi grupo'}
                   </Text>
                   <Text style={[t.small, { color: c.textSoft, marginTop: 2 }]}>
                     {celulaQueAcompano.cargando
                       ? 'Cargando…'
+                      : hayVariosGrupos(celulaQueAcompano.vista?.grupos.length ?? 0)
+                        ? `${celulaQueAcompano.vista?.grupos.length} grupos`
                       : celulaQueAcompano.vista
                         ? `${celulaQueAcompano.vista.resumen.total} ${
                             celulaQueAcompano.vista.resumen.total === 1 ? 'aprendiz' : 'aprendices'

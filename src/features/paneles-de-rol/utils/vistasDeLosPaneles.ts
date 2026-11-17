@@ -1,4 +1,5 @@
 import type { GrupoAbierto } from '../../lider-mentores/screens/CumplimientoDelLiderScreen';
+import { entradaAMisGrupos } from '../../mentor/utils/entradaAMisGrupos';
 import type { AlumnoConEstado } from '../../mentor/types/mentor.types';
 
 /**
@@ -6,11 +7,13 @@ import type { AlumnoConEstado } from '../../mentor/types/mentor.types';
  * líder), con las que cuelgan de ellas. **El atrás sube un nivel por vez hasta Yo** (AGENTS.md §6): `vistaDeRegreso` dice a dónde.
  * Pura, para probar el recorrido sin montar nada.
  *
- *   Yo ← Mi grupo ← ficha del aprendiz
+ *   Yo ← Mis grupos (si acompaña a más de uno) ← Mi grupo ← ficha del aprendiz   (con un solo grupo: Yo ← Mi grupo ← ficha)
  *   Yo ← Mis mentores ← consultas | mentores y reporte del mes | todos los aprendices | hábitos de todos (← un hábito ← persona) | resultado por grupo (← su grupo ← persona)
  */
 export type VistaDelPanel =
   | { tipo: 'ninguna' }
+  /** Spec 055 FR-001: la lista de los grupos que acompaña; solo se llega con dos o más (con uno, la entrada va directo a `miGrupo`). */
+  | { tipo: 'misGrupos' }
   | { tipo: 'miGrupo'; enfocarSemaforo: boolean }
   | { tipo: 'alumno'; alumno: AlumnoConEstado }
   | { tipo: 'misMentores' }
@@ -24,8 +27,16 @@ export type VistaDelPanel =
 
 export const SIN_VISTA: VistaDelPanel = { tipo: 'ninguna' };
 
-/** Adónde lleva «volver» (la flecha o el atrás del sistema) desde `vista`. */
-export function vistaDeRegreso(vista: VistaDelPanel): VistaDelPanel {
+/** Spec 055 FR-001 y FR-002: la vista a la que entra la fila de Yo — «Mis grupos» con dos o más grupos, «Mi grupo» con uno. */
+export function vistaDeEntradaAlGrupo(cantidadDeGrupos: number): VistaDelPanel {
+  return entradaAMisGrupos(cantidadDeGrupos) === 'misGrupos' ? { tipo: 'misGrupos' } : { tipo: 'miGrupo', enfocarSemaforo: false };
+}
+
+/**
+ * Adónde lleva «volver» (la flecha o el atrás del sistema) desde `vista`. `variosGrupos`: acompaña a más de un grupo, y entonces
+ * desde «Mi grupo» se vuelve a «Mis grupos»; con uno solo se sale a Yo (spec 055 FR-003).
+ */
+export function vistaDeRegreso(vista: VistaDelPanel, variosGrupos = false): VistaDelPanel {
   switch (vista.tipo) {
     case 'alumno':
       return { tipo: 'miGrupo', enfocarSemaforo: false };
@@ -36,6 +47,8 @@ export function vistaDeRegreso(vista: VistaDelPanel): VistaDelPanel {
     case 'cumplimiento':
       return { tipo: 'misMentores' };
     case 'miGrupo':
+      return variosGrupos ? { tipo: 'misGrupos' } : SIN_VISTA;
+    case 'misGrupos':
     case 'misMentores':
     case 'ninguna':
       return SIN_VISTA;

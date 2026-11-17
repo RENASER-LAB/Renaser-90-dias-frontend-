@@ -1,0 +1,48 @@
+# Spec 055, historia 1 (FR-001 a FR-008): Yo → «Mis grupos» (3 grupos con su cantidad), «Mi grupo» con los aprendices ordenados
+# rojo → ámbar → verde → sin datos (color en el borde de la foto), la línea del motivo y el chat en un toque. Sin lista de avisos
+# arriba, sin conteos por color y sin la insignia del rol; al pie, «Mi evaluación».
+# ESCRITO Y SIN CORRER. cuenta: mentor (la ranura E2E_MENTOR_*), con 3 grupos; el grupo «Cupo [e2e-piso-1314]» con 9 aprendices de
+# colores distintos. Precondición: `siembra.sql` en la base local clonada (nunca producción).
+# spec 055 FR-001, FR-002, FR-003, FR-004, FR-005, FR-006, FR-007, FR-008
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "YO"
+- scrollUntilVisible:
+    element: "Abrir Mis grupos"
+    direction: DOWN
+    timeout: 40000
+- tapOn: "Abrir Mis grupos"
+- extendedWaitUntil:
+    visible: "Mis grupos"
+    timeout: 20000
+# Los tres grupos, cada uno con la cantidad a la derecha.
+- assertVisible: ".*Cupo \\[e2e-piso-1314\\].*"
+- assertVisible: ".*9 aprendices.*"
+- takeScreenshot: R01a-mis-grupos
+- tapOn: ".*Cupo \\[e2e-piso-1314\\].*"
+- extendedWaitUntil:
+    visible: "Escribirle a .*"
+    timeout: 30000
+- takeScreenshot: R01b-mi-grupo-ordenado
+# Sin lo que se quitó.
+- assertNotVisible: "Necesitan tu ayuda esta semana"
+- assertNotVisible: "MENTOR"
+# La línea gris con el motivo de quien no tiene datos y el enlace del pie.
+- assertVisible: "Todavía sin datos"
+- scrollUntilVisible:
+    element: "Mi evaluación.*"
+    direction: DOWN
+    timeout: 20000
+- takeScreenshot: R01c-mi-evaluacion-al-pie
+# El chat abre la conversación 1 a 1, sin enviar nada.
+- scrollUntilVisible:
+    element: "Escribirle a .*"
+    direction: UP
+    timeout: 20000
+- tapOn: "Escribirle a .*"
+- extendedWaitUntil:
+    visible: "COMUNIDAD"
+    timeout: 30000
+- takeScreenshot: R01d-chat-abierto
+# Volver sube un nivel por vez: chat → Yo (la fila sigue abajo).
