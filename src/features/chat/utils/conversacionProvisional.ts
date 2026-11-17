@@ -1,4 +1,4 @@
-import type { ChatConversation } from '../../../types/schema.types';
+import type { ChatConversation } from '../../../screens/ComunidadScreen';
 import { SUBTITULO_DE_UN_1_A_1_SIN_ROL } from '../api/chatMappers';
 
 /**
@@ -11,11 +11,12 @@ export function conversacionProvisional({ id, titulo }: { id: string; titulo: st
   return {
     id,
     type: 'direct',
+    celulaId: null,
     title: titulo?.trim() || 'Chat',
     subtitle: SUBTITULO_DE_UN_1_A_1_SIN_ROL,
     avatar: '',
-    lastMessageText: '',
-    lastMessageTime: '',
+    lastMessage: '',
+    lastTime: '',
     unreadCount: 0,
     messages: [],
   };

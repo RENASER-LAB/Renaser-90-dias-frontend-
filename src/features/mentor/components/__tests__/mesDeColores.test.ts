@@ -28,7 +28,8 @@ const montarMes = (elegido: string): ReactTestRenderer => {
   });
   return r;
 };
-const textos = (r: ReactTestRenderer) => r.root.findAllByType(Text).map(t => ({ texto: String(t.props.children), estilo: StyleSheet.flatten(t.props.style) ?? {} }));
+type TextoDibujado = { texto: string; estilo: { color?: unknown; fontFamily?: unknown } };
+const textos = (r: ReactTestRenderer): TextoDibujado[] => r.root.findAll(n => n.type === Text).map((t: { props: { children?: unknown; style?: unknown } }) => ({ texto: String(t.props.children), estilo: (StyleSheet.flatten(t.props.style as never) ?? {}) as TextoDibujado["estilo"] }));
 
 describe('el mes de colores de la ficha', () => {
   it('va de sábado a viernes, como la fila de la semana y la semana del semáforo', () => { // spec 055 FR-011
