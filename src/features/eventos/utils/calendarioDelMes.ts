@@ -78,10 +78,20 @@ function diasDelMes(m: Mes): number {
   return new Date(Date.UTC(m.anio, m.mes, 0)).getUTCDate();
 }
 
-/** 0 = lunes … 6 = domingo. */
-function columnaDeLaSemana(fechaIso: string): number {
+/** Con qué día empieza cada fila: el lunes (calendario de Eventos) o el sábado (la semana del semáforo, ficha del mentor). */
+export type PrimerDiaDeLaSemana = 'lunes' | 'sabado';
+const DESPLAZAMIENTO: Record<PrimerDiaDeLaSemana, number> = { lunes: 6, sabado: 1 };
+
+/** 0 = primer día de la fila … 6 = el último (lunes→domingo, o sábado→viernes). */
+function columnaDeLaSemana(fechaIso: string, empiezaEn: PrimerDiaDeLaSemana = 'lunes'): number {
   const [a, m, d] = fechaIso.split('-').map(Number);
-  return (new Date(Date.UTC(a, m - 1, d)).getUTCDay() + 6) % 7;
+  return (new Date(Date.UTC(a, m - 1, d)).getUTCDay() + DESPLAZAMIENTO[empiezaEn]) % 7;
+}
+
+/** Las iniciales de la fila, en el orden de `empiezaEn`, con el nombre completo para el lector de pantalla y si es fin de semana. */
+export function inicialesDeLaSemana(empiezaEn: PrimerDiaDeLaSemana = 'lunes'): { inicial: string; completo: string; finDeSemana: boolean }[] {
+  const dias = DIAS_DE_LA_SEMANA.map((inicial, i) => ({ inicial, completo: DIAS_DE_LA_SEMANA_COMPLETOS[i], finDeSemana: i >= 5 }));
+  return empiezaEn === 'sabado' ? [...dias.slice(5), ...dias.slice(0, 5)] : dias;
 }
 
 /**
@@ -89,11 +99,11 @@ function columnaDeLaSemana(fechaIso: string): number {
  * arranca con los últimos días del mes anterior y la última termina con los primeros del siguiente
  * (se dibujan apagados).
  */
-export function grillaDelMes(m: Mes): CeldaDelDia[][] {
+export function grillaDelMes(m: Mes, empiezaEn: PrimerDiaDeLaSemana = 'lunes'): CeldaDelDia[][] {
   const primero = primerDiaDelMes(m);
-  const inicio = sumarDiasIso(primero, -columnaDeLaSemana(primero));
+  const inicio = sumarDiasIso(primero, -columnaDeLaSemana(primero, empiezaEn));
   const ultimo = `${m.anio}-${dos(m.mes)}-${dos(diasDelMes(m))}`;
-  const fin = sumarDiasIso(ultimo, 6 - columnaDeLaSemana(ultimo));
+  const fin = sumarDiasIso(ultimo, 6 - columnaDeLaSemana(ultimo, empiezaEn));
 
   const semanas: CeldaDelDia[][] = [];
   for (let fecha = inicio; fecha <= fin; ) {

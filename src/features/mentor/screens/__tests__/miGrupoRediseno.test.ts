@@ -126,7 +126,7 @@ describe('«Mi grupo» rediseñado', () => {
     expect(mockAbrirChat).toHaveBeenCalledTimes(1);
     expect(mockAbrirChat).toHaveBeenCalledWith('u-beto');
     await act(async () => resolver({ id: 'conv-9' }));
-    expect(mockIrAPestana).toHaveBeenCalledWith('Comunidad', { abrirChatConversacionId: 'conv-9' });
+    expect(mockIrAPestana).toHaveBeenCalledWith('Comunidad', { abrirChatConversacionId: 'conv-9', abrirChatTitulo: 'Beto' });
   });
 
   it('tocar el resto de la fila abre la ficha de esa persona; el chat no la abre', async () => { // spec 055 FR-007

@@ -3,7 +3,7 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { useTheme } from '../../../theme/ThemeContext';
-import { DIAS_DE_LA_SEMANA, DIAS_DE_LA_SEMANA_COMPLETOS, grillaDelMes, type CeldaDelDia, type Mes } from '../utils/calendarioDelMes';
+import { grillaDelMes, inicialesDeLaSemana, type CeldaDelDia, type Mes, type PrimerDiaDeLaSemana } from '../utils/calendarioDelMes';
 import { LETRA } from './piezas';
 
 /**
@@ -11,14 +11,23 @@ import { LETRA } from './piezas';
  * La usan el calendario de Eventos (marcas de actividades) y el mes de colores de la ficha del mentor (color del semáforo de cada
  * día). La lógica de qué días hay vive en `utils/calendarioDelMes.ts`; acá solo se acomodan las celdas en filas de siete.
  */
-export function GrillaDelMes({ mes, renderDia }: { mes: Mes; renderDia: (celda: CeldaDelDia) => React.ReactNode }) {
+export function GrillaDelMes({
+  mes,
+  renderDia,
+  empiezaEn = 'lunes',
+}: {
+  mes: Mes;
+  renderDia: (celda: CeldaDelDia) => React.ReactNode;
+  /** El calendario de Eventos va de lunes a domingo; la ficha del mentor, de sábado a viernes (la semana del semáforo). */
+  empiezaEn?: PrimerDiaDeLaSemana;
+}) {
   const { c, space } = useTheme();
-  const semanas = grillaDelMes(mes);
+  const semanas = grillaDelMes(mes, empiezaEn);
   return (
     <View style={[estilos.grilla, { borderColor: c.border, backgroundColor: c.cardBg, borderRadius: space.radius }]}>
       <View style={estilos.semana}>
-        {DIAS_DE_LA_SEMANA.map((inicial, i) => (
-          <Text key={i} accessibilityLabel={DIAS_DE_LA_SEMANA_COMPLETOS[i]} style={[estilos.inicial, { color: i >= 5 ? c.goldInk : c.textSoft }]}>
+        {inicialesDeLaSemana(empiezaEn).map(({ inicial, completo, finDeSemana }) => (
+          <Text key={completo} accessibilityLabel={completo} style={[estilos.inicial, { color: finDeSemana ? c.goldInk : c.textSoft }]}>
             {inicial}
           </Text>
         ))}

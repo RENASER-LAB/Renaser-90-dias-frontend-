@@ -6,6 +6,7 @@ import {
   agruparPorMes,
   diaElegidoAlAbrir,
   grillaDelMes,
+  inicialesDeLaSemana,
   marcaDelDia,
   mesDeLaFecha,
   moverMes,
@@ -229,5 +230,22 @@ describe('rótulo y vista preferida', () => {
     await guardarVistaPreferida('ana', 'tarjetas');
     expect(await leerVistaPreferida('ana')).toBe('tarjetas');
     expect(await leerVistaPreferida('beto')).toBe('calendario');
+  });
+});
+
+describe('la grilla del mes puede empezar en sábado (ficha del mentor, spec 055 FR-011 y FR-015)', () => {
+  it('con empiezaEn «sabado», cada fila va de sábado a viernes, igual que la semana del semáforo', () => { // spec 055 FR-015
+    const semanas = grillaDelMes({ anio: 2026, mes: 11 }, 'sabado');
+    expect(semanas[0][0].fecha).toBe('2026-10-31'); // sábado 31/10: la semana del 1 de noviembre (domingo)
+    expect(semanas[0][6].fecha).toBe('2026-11-06'); // viernes
+    for (const s of semanas) expect(s).toHaveLength(7);
+    expect(semanas[semanas.length - 1][6].fecha >= '2026-11-30').toBe(true);
+    expect(inicialesDeLaSemana('sabado').map(d => d.inicial)).toEqual(['S', 'D', 'L', 'M', 'M', 'J', 'V']);
+  });
+
+  it('sin decir nada sigue de lunes a domingo (el calendario de Eventos no cambia)', () => { // spec 055 FR-015
+    const semanas = grillaDelMes({ anio: 2026, mes: 11 });
+    expect(semanas[0][0].fecha).toBe('2026-10-26');
+    expect(inicialesDeLaSemana().map(d => d.inicial)).toEqual(['L', 'M', 'M', 'J', 'V', 'S', 'D']);
   });
 });

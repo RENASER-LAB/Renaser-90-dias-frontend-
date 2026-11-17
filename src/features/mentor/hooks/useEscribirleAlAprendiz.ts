@@ -23,7 +23,7 @@ export function useEscribirleAlAprendiz() {
     setEscribiendoId(aprendizId);
     try {
       const conversacion = await abrirConversacionDirecta(aprendizId);
-      const navego = irAPestana('Comunidad', { abrirChatConversacionId: conversacion.id });
+      const navego = irAPestana('Comunidad', { abrirChatConversacionId: conversacion.id, abrirChatTitulo: nombre?.trim() || undefined });
       if (!navego) {
         /* La conversación SÍ quedó creada: callarse dejaría al mentor creyendo que el ícono no hizo nada. */
         Alert.alert(

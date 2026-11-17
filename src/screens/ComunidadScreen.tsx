@@ -156,6 +156,7 @@ import { useParticipantesDelChat } from '../features/chat/hooks/useParticipantes
 import { conversacionAPantallaCompleta } from '../features/chat/utils/pantallaCompletaDelChat';
 import { OPCIONES_CON_PESTANAS, OPCIONES_SIN_PESTANAS } from '../navigation/pestanasOcultas';
 import { mapearMensaje, resumenDelUltimoMensaje } from '../features/chat/api/chatMappers';
+import { conversacionProvisional, datosDelChatPedido } from '../features/chat/utils/conversacionProvisional';
 import { abrirConversacionDirecta } from '../features/chat/api/chatApi';
 import { formacionDeLaLectura, MENSAJE_ELEGIR_PARA_PUBLICAR } from '../features/formaciones/estado/formacionDeLaComunidad';
 import { useFormacionDeLaComunidad } from '../features/formaciones/hooks/useFormacionDeLaComunidad';
@@ -2063,9 +2064,10 @@ function ComunidadPorFormacion({
    * con esa persona. Misma forma que las otras dos — parámetro de pestaña, consumido una vez.
    */
   useEffect(() => {
-    const params = route.params as { abrirChatConversacionId?: string; abrirChatAviso?: string } | undefined;
-    const id = params?.abrirChatConversacionId;
-    if (!id) return;
+    const params = route.params as { abrirChatConversacionId?: string; abrirChatAviso?: string; abrirChatTitulo?: string } | undefined;
+    const pedido = datosDelChatPedido(params);
+    if (!pedido) return;
+    const id = pedido.id;
 
     irASeccion('tribu');
     /* Spec 024 (FR-032): si el aviso era de un chat de OTRA formación, antes de llegar acá se cambió la formación (la activa del
@@ -2078,11 +2080,17 @@ function ComunidadPorFormacion({
        E-341: antes no se cerraban «Mi grupo» ni su ficha, y el botón parecía no hacer nada. */
     despacharVista({ tipo: 'pedir-un-chat' });
     setGroupInfoVisible(false);
-    setChatPedidoDeOtraPestana(id);
+    if (pedido.enElActo) {
+      /* Spec 055 FR-007: se abre YA, con una conversación provisional (id y nombre); no se espera al listado, que antes dejaba ver
+         Tribu y una espera. Los mensajes llegan por id (`abrirConversacion`) y el listado se pone al día detrás. */
+      handleAbrirChat(conversacionProvisional({ id, titulo: pedido.titulo }));
+    } else {
+      setChatPedidoDeOtraPestana(id);
+    }
     // Recién creada, puede no estar en el listado: se pide de nuevo para que aparezca. `forzar`:
     // una lectura que ya estuviera en vuelo salió antes de crearla y no la traería.
     void recargarConversaciones({ forzar: true });
-    (navigation as any).setParams({ abrirChatConversacionId: undefined, abrirChatAviso: undefined });
+    (navigation as any).setParams({ abrirChatConversacionId: undefined, abrirChatAviso: undefined, abrirChatTitulo: undefined });
   }, [route.params, navigation, recargarConversaciones]);
 
   /**

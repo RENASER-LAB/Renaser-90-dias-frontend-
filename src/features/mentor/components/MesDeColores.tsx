@@ -71,7 +71,10 @@ export function MesDeColores({
 
       <GrillaDelMes
         mes={mes}
+        empiezaEn="sabado"
         renderDia={celda => {
+          /* Los días de otro mes no se dibujan: en Android un texto «transparente» sale negro y parecían elegibles. */
+          if (!celda.delMes) return <View key={celda.fecha} style={estilos.celda} />;
           const elegible = celda.delMes && sePuedeElegir(celda.fecha, diaUno, hoy);
           const color = elegible ? colorDe(celda.fecha) : null;
           const esElElegido = celda.fecha === elegido;
@@ -99,8 +102,10 @@ export function MesDeColores({
                   style={[
                     estilos.numero,
                     {
-                      color: !celda.delMes ? 'transparent' : elegible ? c.textStrong : c.tabInactive,
-                      fontFamily: esElElegido ? fuentes.negrita : fuentes.media,
+                      color: elegible ? c.textStrong : c.tabInactive,
+                      /* La letra no cambia al elegir: en Android, cambiar la fuente de un texto ya dibujado lo dejaba invisible
+                         (el 17 desaparecía al elegir otro día). El elegido se marca con el anillo dorado. */
+                      fontFamily: fuentes.media,
                     },
                   ]}
                 >

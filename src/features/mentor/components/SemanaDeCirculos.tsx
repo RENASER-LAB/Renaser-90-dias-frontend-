@@ -63,7 +63,7 @@ export function SemanaDeCirculos({
                 ]}
               />
             </View>
-            <Text style={[estilos.numero, { color: elegible ? c.text : c.tabInactive, fontFamily: esElElegido ? fuentes.negrita : fuentes.regular }]}>
+            <Text style={[estilos.numero, { color: elegible ? c.text : c.tabInactive, fontFamily: fuentes.media /* fija: cambiarla al elegir dejaba el texto invisible en Android */ }]}>
               {numeroDelDia(fecha)}
             </Text>
           </Presionable>
