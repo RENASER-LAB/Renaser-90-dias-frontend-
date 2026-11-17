@@ -1,27 +1,26 @@
-import { tituloEnTipoOracion } from '../../habits/utils/tituloEnTipoOracion';
 import { fuentes } from '../../../theme/fuentes';
 import React, { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Alert } from '../../../components/Alerta';
 import { Icon } from '../../../components/Icon';
 import { Aparicion } from '../../../components/Aparicion';
-import { BotonPrincipal, SeccionPlegable } from '../../../components/Legible';
+import { BotonSecundario } from '../../../components/Legible';
+import { Presionable } from '../../../components/Presionable';
 import { CodigoRenaserDelAlumno } from '../components/CodigoRenaserDelAlumno';
-import { HabitosDelAlumno } from '../components/HabitosDelAlumno';
-import { RejillaSemanal } from '../components/RejillaSemanal';
-import { irAPestana } from '../../../navigation/navegacionRef';
+import { AvatarConSemaforo } from '../components/AvatarConSemaforo';
+import { HojaDeNotas } from '../components/HojaDeNotas';
+import { BotonDeChat, BotonDeNota } from '../components/IconosDeLaCabecera';
+import { MesDeColores } from '../components/MesDeColores';
+import { PilarDeHabitos } from '../components/PilarDeHabitos';
+import { SemanaDeCirculos } from '../components/SemanaDeCirculos';
 import { useSystemBackHandler } from '../../../hooks/useSystemBackHandler';
 import { useResponsive } from '../../../theme/responsive';
 import { useTheme } from '../../../theme/ThemeContext';
 import { ESPACIO_PARA_LANZADOR } from '../../renasia/components/RenasiaLauncher';
-import { TarjetaSemaforoDeAprendiz } from '../../semaforo/components/TarjetaSemaforoDeAprendiz';
 import { ChipDeCaja } from '../../caja/components/ChipDeCaja';
-import { abrirConversacionDirecta } from '../../chat/api/chatApi';
 import { EvidenciaDeObligacion } from '../../lider-mentores/components/EvidenciaDeObligacion';
-import { LineaDeLaMedicionCruda } from '../../pasos/components/LineaDeLaMedicion';
-import { VerPublicacion } from '../../lider-mentores/components/VisorDePublicacion';
 import { obtenerRadarDeAlumno } from '../api/mentorApi';
 import { obtenerCierresDeAlumno } from '../../cierre/api/cierreApi';
 import { CierresDelDia } from '../../cierre/components/CierresDelDia';
@@ -35,33 +34,49 @@ import type { CargarCierres } from '../../cierre/types/cierre.types';
 import { obtenerHuecosDeAlumno } from '../../huecos/api/huecosApi';
 import { TiempoLibreDeLaSemana } from '../../huecos/components/TiempoLibreDeLaSemana';
 import type { CargarHuecos } from '../../huecos/types/huecos.types';
-import { useSemanaDelAlumno } from '../hooks/useSemanaDelAlumno';
-import { diasDesde } from '../reglas';
-import { diaInicialDelDetalle } from '../utils/diaInicialDelDetalle';
-import { etiquetaDeEntrega } from '../utils/etiquetaDeEntrega';
-import { subtituloDelAlumno } from '../utils/subtituloDelAlumno';
+import { fechaEnZona } from '../../eventos/utils/zonaHoraria';
+import { mesDeLaFecha, type Mes } from '../../eventos/utils/calendarioDelMes';
+import type { ColorSemaforo } from '../../semaforo/types/semaforo.types';
+import { useAvisosDelAprendiz } from '../hooks/useAvisosDelAprendiz';
+import { useDiasDelMes } from '../hooks/useDiasDelMes';
+import { useEscribirleAlAprendiz } from '../hooks/useEscribirleAlAprendiz';
+import { useNotasDelAprendiz } from '../hooks/useNotasDelAprendiz';
+import { useSemanasDelAprendiz } from '../hooks/useSemanasDelAprendiz';
+import { diasDeLaSemana, nombreDelMesDe, sePuedeElegir, tituloDelDia, viernesDeLaSemana } from '../utils/fechasDeLaFicha';
+import { agruparPorPilar } from '../utils/habitosDelDia';
+import { estadoDeLaSemana } from '../utils/motivoDeLaFila';
 import type { AlumnoConEstado } from '../types/mentor.types';
 import { useOcultarBarraAlDesplazar } from '../../../navigation/barraAlDesplazar/BarraInferior';
-import { medicionDeLaFichaDe, seMidioSolo } from '../../pasos/utils/medicionDeLaFicha';
 
 /**
- * El detalle de un aprendiz, para que el mentor sepa QUÉ decirle antes de escribirle.
+ * La ficha de un aprendiz para su mentor (spec 055, historia 2; bocetos aprobados por el dueño el 17/11). Todo en un solo scroll:
  *
- * La semana viene de `GET /mentor/groups/{g}/learners/{u}/progress`, que devuelve la
- * programación que ese aprendiz tenía ESE día — no la de hoy proyectada hacia atrás. Es la
- * diferencia entre mostrar lo que pasó y reconstruir una semana que nunca existió.
+ * 1. Arriba: la foto con el color de su semáforo en el borde, el nombre, «Día N · motivo», el lápiz de notas (con un puntito si hay)
+ *    y el chat.
+ * 2. La semana en siete círculos (sábado a viernes) con el color de cada día y el día elegido con un anillo dorado; «<Mes> ⌄»
+ *    despliega el mes en el mismo lugar y «Ver solo la semana» lo pliega.
+ * 3. El título del día con «N de M» y los pilares (Cuerpo, Mente, Espíritu, Emociones) como secciones; cada hábito con su estado, el
+ *    ojo de la evidencia y su hora.
+ * 4. Al final, lo que ya existía y se queda: Código Renaser (si está encendido), Diagnóstico, 80/20 de SER, Tiempo libre, los cierres
+ *    del día y la caja. Cada uno se dibuja solo cuando tiene algo que mostrar: nada de huecos.
  *
- * En 320–360 px no hay tabla de siete columnas: un selector de día y una sola columna. Los
- * estados van en palabras además de en color, porque verde y rojo solos no alcanzan.
+ * Las semanas vienen de `GET …/semana` (la caché y el adelanto de la anterior viven en `useSemanasDelAprendiz`) y los colores de `GET
+ * …/dias`. Los días y las horas son los del aprendiz, no los del teléfono. Si el servidor dice que ya no lo acompaña, se vuelve a
+ * «Mis grupos» con ese motivo (`onYaNoAcompana`) y no queda nada del aprendiz en pantalla.
  */
 export function AlumnoScreen({
   alumno,
   grupoId,
   onVolver,
+  onYaNoAcompana,
+  rotuloDeVolver = 'Mi grupo',
 }: {
   alumno: AlumnoConEstado;
   grupoId: string | null;
   onVolver: () => void;
+  /** El servidor respondió que ya no lo acompaña: quien llama vuelve a la lista (con `motivo` a la vista). Sin esto, se vuelve atrás con un aviso. */
+  onYaNoAcompana?: (motivo: string) => void;
+  rotuloDeVolver?: string;
 }) {
   const barraAlDesplazar = useOcultarBarraAlDesplazar();
   const { c, t } = useTheme();
@@ -73,106 +88,100 @@ export function AlumnoScreen({
   });
 
   const nombre = alumno.nombre?.trim() || 'Aprendiz sin nombre';
-  const subtitulo = subtituloDelAlumno(alumno.diaPrograma, diasDesde(alumno.ultimaActividadEn));
-  const { semana, diasConContenido, cargando, fallo, desplazar } = useSemanaDelAlumno(
-    grupoId,
-    alumno.participanteId,
-  );
-  const [diaElegido, setDiaElegido] = useState<string | null>(null);
-  /* Cómo pide el mentor el Código Renaser de esta persona (la ruta de siempre). Sin grupo no hay a quién preguntarle. */
-  const cargarRadar = useMemo(
-    () => (grupoId ? (cursor?: string | null) => obtenerRadarDeAlumno(grupoId, alumno.participanteId, cursor) : null),
-    [grupoId, alumno.participanteId],
-  );
-  /* Spec 015: su tiempo libre de la semana, por la ruta del mentor. Una función estable por persona: es la llave de lo
-     que la sección guarda mientras la ficha está abierta. */
-  const cargarHuecos = useMemo<CargarHuecos | null>(
-    () => (grupoId ? (lunes?: string | null) => obtenerHuecosDeAlumno(grupoId, alumno.participanteId, lunes) : null),
-    [grupoId, alumno.participanteId],
-  );
-  /* Spec 017: lo que dijo al cerrar cada día, por la ruta del mentor. También estable por persona. */
-  const cargarCierres = useMemo<CargarCierres | null>(
-    () => (grupoId ? (lunes?: string | null) => obtenerCierresDeAlumno(grupoId, alumno.participanteId, lunes) : null),
-    [grupoId, alumno.participanteId],
-  );
-  /* Spec 026: su diagnóstico inicial, por la ruta del mentor (solo lectura). Estable por persona. */
-  const cargarDiagnostico = useMemo<CargarLecturaDelDiagnostico | null>(
-    () => (grupoId ? () => lecturaParaElMentor(grupoId, alumno.participanteId) : null),
-    [grupoId, alumno.participanteId],
-  );
+  const aprendizId = alumno.participanteId;
 
-  /* Spec 031: su 80/20 y el análisis de la semana y del mes, por la ruta del mentor. También estable por persona. */
-  const cargarOchentaVeinte = useMemo<CargarOchentaVeinte | null>(
-    () => (grupoId ? (tipo, inicio) => obtenerOchentaVeinteDeUnAlumno(grupoId, alumno.participanteId, tipo, inicio) : null),
-    [grupoId, alumno.participanteId],
-  );
+  const avisarQueYaNoLoAcompana = onYaNoAcompana ?? ((motivo: string) => {
+    Alert.alert('Ya no acompañas a este aprendiz', motivo);
+    onVolver();
+  });
+  const semanas = useSemanasDelAprendiz(grupoId, aprendizId, avisarQueYaNoLoAcompana);
+  const colores = useDiasDelMes(grupoId, aprendizId);
+  const { motivoDelAviso } = useAvisosDelAprendiz(grupoId ? aprendizId : null);
+  const { escribiendoId, escribirle } = useEscribirleAlAprendiz();
+  const notas = useNotasDelAprendiz(grupoId ? { quien: 'mentor', grupoId, aprendizId } : null);
 
-  /* Al cambiar de semana se vuelve al día más reciente con contenido: hoy, en la semana en curso
-     (E-439; antes el primero, el lunes). Conservar el día anterior dejaría seleccionada una fecha
-     que ya no está en la lista y la pantalla quedaría vacía. */
+  const enCurso = semanas.semanaEnCurso;
+  const zona = enCurso?.zona ?? null;
+  const hoy = enCurso ? fechaEnZona(Date.now(), zona) : null;
+  const diaUno = enCurso?.diaUno ?? null;
+
+  const [elegido, setElegido] = useState<string | null>(null);
+  const [mesAbierto, setMesAbierto] = useState(false);
+  const [mesVisible, setMesVisible] = useState<Mes | null>(null);
+  const [notasAbiertas, setNotasAbiertas] = useState(false);
+  const [evidenciaAbierta, setEvidenciaAbierta] = useState<string | null>(null);
+
+  /* Al abrir, hoy (en la zona del aprendiz) queda elegido. */
   useEffect(() => {
-    setDiaElegido(diaInicialDelDetalle(diasConContenido));
-  }, [diasConContenido]);
+    if (hoy && elegido === null) setElegido(hoy);
+  }, [hoy, elegido]);
 
-  const detalleDelDia =
-    diasConContenido.find(d => d.fecha === diaElegido) ??
-    diasConContenido.find(d => d.fecha === diaInicialDelDetalle(diasConContenido)) ??
-    null;
-  const [abriendoChat, setAbriendoChat] = useState(false);
+  const diaElegido = elegido ?? hoy;
+  const viernes = diaElegido ? viernesDeLaSemana(diaElegido) : enCurso?.hasta ?? null;
+  const fechasDeLaSemana = useMemo(() => (viernes ? diasDeLaSemana(viernes) : []), [viernes]);
+  const semana = viernes ? semanas.semanaDe(viernes) : null;
+  const estadoDeLaSemanaElegida = viernes ? semanas.estadoDe(viernes) : 'sin_pedir';
 
-  /*
-   * Abre el 1 a 1 que ya existe con esta persona (o lo crea) y NO manda nada. El SDD es
-   * explícito: escribirle es una decisión del mentor, no un efecto de tocar un botón — así que
-   * acá termina en una conversación lista y vacía, y el mensaje lo escribe él.
-   */
-  /**
-   * Abre el chat PRIVADO con este aprendiz, no el del grupo: `POST /chat/conversations/direct`,
-   * que es idempotente — si ya existe, devuelve la misma.
-   *
-   * <p>Y lleva hasta ella. Antes creaba la conversación y mostraba un aviso que decía dónde
-   * buscarla; el mentor tenía que salir, entrar a Comunidad, elegir Miembros y encontrarla a mano.
-   * Se usa el mismo mecanismo con el que Training abre la Clase Diaria dentro de Comunidad
-   * (`irAPestana` con parámetros), en vez de inventar una ruta nueva para el chat.
-   *
-   * <p>No se envía ningún mensaje: el mentor escribe y manda él. Eso es a propósito y no una
-   * funcionalidad a medias — un botón que manda algo en nombre de alguien es otra cosa.
-   */
-  const escribirle = async () => {
-    setAbriendoChat(true);
-    try {
-      const conversacion = await abrirConversacionDirecta(alumno.participanteId);
-      const navego = irAPestana('Comunidad', { abrirChatConversacionId: conversacion.id });
-      if (!navego) {
-        /* `irAPestana` devuelve false cuando el navegador todavía no montó. Es raro, pero si
-           pasa hay que decir algo: la conversación SÍ quedó creada, y callarse dejaría al mentor
-           creyendo que el botón no hizo nada. */
-        Alert.alert(
-          'Conversación lista',
-          `Tu chat con ${nombre} está en Comunidad → Miembros. No se envió ningún mensaje.`,
-        );
-      }
-    } catch {
-      Alert.alert('No se pudo abrir el chat', 'Revisa tu conexión e inténtalo de nuevo.');
-    } finally {
-      setAbriendoChat(false);
+  /* Los colores de la semana a la vista, y del mes si está desplegado: un pedido por mes. */
+  const asegurarMes = colores.asegurarMes;
+  useEffect(() => {
+    if (fechasDeLaSemana.length > 0) {
+      asegurarMes(fechasDeLaSemana[0]);
+      asegurarMes(fechasDeLaSemana[6]);
     }
+  }, [fechasDeLaSemana, asegurarMes]);
+  useEffect(() => {
+    if (mesAbierto && mesVisible) asegurarMes(`${mesVisible.anio}-${String(mesVisible.mes).padStart(2, '0')}-01`);
+  }, [mesAbierto, mesVisible, asegurarMes]);
+
+  const colorDe = (fecha: string): ColorSemaforo | null => colores.diaDe(fecha)?.color ?? null;
+
+  const elegir = (fecha: string) => {
+    setElegido(fecha);
+    semanas.pedirFecha(fecha);
   };
+
+  const dentroDelPrograma = Boolean(diaElegido && hoy && sePuedeElegir(diaElegido, diaUno, hoy));
+  const dia = semana?.dias.find(d => d.fecha === diaElegido) ?? null;
+  const pilares = useMemo(() => agruparPorPilar(dia?.obligaciones ?? [], semana?.zona ?? zona), [dia, semana, zona]);
+  const totalDelDia = pilares.reduce((s, p) => s + p.total, 0);
+  const cumplidosDelDia = pilares.reduce((s, p) => s + p.cumplidos, 0);
+
+  /* La evidencia: los hábitos del día con evidencia, en el orden en que se ven, para ir al anterior y al siguiente sin cerrar. */
+  const conEvidencia = useMemo(() => pilares.flatMap(p => p.habitos.filter(h => h.conEvidencia).map(h => ({ ...h, pilar: p.titulo }))), [pilares]);
+  const posicionDeLaEvidencia = conEvidencia.findIndex(h => h.obligacion.registroId === evidenciaAbierta);
+  const habitoConEvidencia = posicionDeLaEvidencia >= 0 ? conEvidencia[posicionDeLaEvidencia] : null;
+
+  /* Cabecera: el color de la semana en curso, «Día N» y el motivo. */
+  const colorDeLaCabecera: ColorSemaforo = enCurso ? enCurso.color : 'SIN_DATOS';
+  const diasDeColorDeLaSemanaEnCurso = enCurso ? diasDeLaSemana(enCurso.hasta).flatMap(f => (colores.diaDe(f) ? [colores.diaDe(f) as { color: ColorSemaforo }] : [])) : [];
+  const diaDePrograma = enCurso?.dias.find(d => d.fecha === hoy)?.diaDePrograma ?? alumno.diaPrograma;
+  const motivo = !enCurso
+    ? null
+    : diaUno === null
+      ? 'Todavía no empieza su programa'
+      : motivoDelAviso ?? estadoDeLaSemana(colorDeLaCabecera, diasDeColorDeLaSemanaEnCurso, enCurso.etiqueta ?? null);
+  const subtituloDeLaCabecera = [diaDePrograma && diaDePrograma > 0 ? `Día ${diaDePrograma}` : null, motivo].filter(Boolean).join(' · ');
+
+  /* Las lecturas de las secciones del final (las de siempre, por la ruta del mentor): estables por persona. */
+  const cargarRadar = useMemo(() => (grupoId ? (cursor?: string | null) => obtenerRadarDeAlumno(grupoId, aprendizId, cursor) : null), [grupoId, aprendizId]);
+  const cargarHuecos = useMemo<CargarHuecos | null>(() => (grupoId ? (lunes?: string | null) => obtenerHuecosDeAlumno(grupoId, aprendizId, lunes) : null), [grupoId, aprendizId]);
+  const cargarCierres = useMemo<CargarCierres | null>(() => (grupoId ? (lunes?: string | null) => obtenerCierresDeAlumno(grupoId, aprendizId, lunes) : null), [grupoId, aprendizId]);
+  const cargarDiagnostico = useMemo<CargarLecturaDelDiagnostico | null>(() => (grupoId ? () => lecturaParaElMentor(grupoId, alumno.participanteId) : null), [grupoId, aprendizId]);
+  const cargarOchentaVeinte = useMemo<CargarOchentaVeinte | null>(
+    () => (grupoId ? (tipo, inicio) => obtenerOchentaVeinteDeUnAlumno(grupoId, aprendizId, tipo, inicio) : null),
+    [grupoId, aprendizId],
+  );
+
+  const falloDeLaSemana = viernes ? semanas.falloDe(viernes) : null;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
       <View style={[estilos.barra, { paddingHorizontal: horizontalPadding }]}>
-        <Pressable
-          onPress={onVolver}
-          hitSlop={12}
-          accessibilityRole="button"
-          accessibilityLabel="Volver a mi grupo"
-          style={estilos.volver}
-        >
+        <Presionable onPress={onVolver} hitSlop={12} accessibilityRole="button" accessibilityLabel={`Volver a ${rotuloDeVolver.toLowerCase()}`} style={estilos.volver}>
           <Icon name="arrowLeft" size={15} color={c.goldInk} />
-          <Text style={[t.body, { color: c.goldInk, fontFamily: fuentes.media, fontSize: 16 }]}>
-            Mi grupo
-          </Text>
-        </Pressable>
+          <Text style={[t.body, { color: c.goldInk, fontFamily: fuentes.media, fontSize: 16 }]}>{rotuloDeVolver}</Text>
+        </Presionable>
       </View>
 
       <ScrollView
@@ -181,291 +190,165 @@ export function AlumnoScreen({
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[
           estilos.contenido,
-          {
-            paddingHorizontal: horizontalPadding,
-            maxWidth: contentMaxWidth,
-            alignSelf: isTablet ? 'center' : 'stretch',
-            width: isTablet ? '100%' : undefined,
-          },
+          { paddingHorizontal: horizontalPadding, maxWidth: contentMaxWidth, alignSelf: isTablet ? 'center' : 'stretch', width: isTablet ? '100%' : undefined },
         ]}
       >
+        {/* 1. La cabecera. */}
         <Aparicion>
-          <Text style={[t.screenTitle, { color: c.text, fontSize: 24 }]} numberOfLines={2}>
-            {nombre}
-          </Text>
-          {/* Solo lo que se sabe. Antes decía «Día por confirmar» de todo el mundo: el día llega en
-              `null` desde la lista del grupo (26/09, S-1). */}
-          {subtitulo ? (
-            <Text style={[t.body, { color: c.textSoft, fontSize: 16, marginTop: 4 }]}>{subtitulo}</Text>
-          ) : null}
+          <View style={estilos.cabecera}>
+            <AvatarConSemaforo nombre={nombre} avatarUrl={enCurso?.avatarUrl ?? null} color={colorDeLaCabecera} size={56} />
+            <View style={estilos.quien}>
+              <Text style={[t.screenTitle, { color: c.text, fontSize: 21 }]} numberOfLines={2}>
+                {nombre}
+              </Text>
+              {subtituloDeLaCabecera ? (
+                <Text style={[t.body, { color: c.textSoft, fontSize: 14.5, lineHeight: 20 }]} numberOfLines={2}>
+                  {subtituloDeLaCabecera}
+                </Text>
+              ) : null}
+            </View>
+            <BotonDeNota nombre={nombre} conNotas={notas.hayNotas} onPress={() => setNotasAbiertas(true)} />
+            <BotonDeChat nombre={nombre} ocupado={escribiendoId !== null} onPress={() => void escribirle(aprendizId, alumno.nombre)} />
+          </View>
         </Aparicion>
 
-        {/* S-2 (26/09): el semáforo PRIMERO, con una sola palabra de estado. Lo mismo que ve la
-            persona, sin la pausa. Si el servidor no tiene la ruta (404) o ya no acompaña a esta
-            persona (403), no se dibuja. */}
-        <TarjetaSemaforoDeAprendiz
-          origen={grupoId ? { quien: 'mentor', grupoId, aprendizId: alumno.participanteId } : null}
-          retardo={40}
-          margenArriba={20}
-        />
-
-        {/* Caja Renaser (D-219): el estado de su caja, un chip. Antes del día 8 o sin permiso, nada. */}
-        <ChipDeCaja origen={{ quien: 'mentor', aprendizId: alumno.participanteId }} margenArriba={14} />
-
-        {/* La acción principal de esta pantalla: escribirle. Rellena, una sola (A-1). */}
-        <Aparicion retardo={80} style={{ marginTop: 18 }}>
-          <BotonPrincipal
-            etiqueta={abriendoChat ? 'Abriendo…' : 'Escribirle'}
-            icono="chat"
-            onPress={() => void escribirle()}
-            cargando={abriendoChat}
-            accessibilityLabel={`Escribirle a ${nombre}`}
-          />
-        </Aparicion>
-
-        {/* La semana de lunes a domingo, plegada: es detalle, no la decisión. Antes iba arriba de
-            todo con el rótulo «Semana» y competía con el semáforo (que va de sábado a viernes). */}
-        <Aparicion retardo={110} style={{ marginTop: 20 }}>
-          <SeccionPlegable
-            titulo="Detalle de hábitos (lunes a domingo)"
-            detalle={semana ? rangoLegible(semana.inicioDeSemana, semana.finDeSemana) : null}
-          >
-            {semana ? (
-              <View style={estilos.navegacion}>
-                <Pressable
-                  onPress={() => desplazar(-1)}
+        {/* La primera lectura: cargando o con su motivo, nunca un hueco. */}
+        {!enCurso ? (
+          semanas.falloDeLaPrimera ? (
+            <View style={{ marginTop: 18, gap: 10 }}>
+              <Text style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 23 }]}>{semanas.falloDeLaPrimera.mensaje}</Text>
+              <BotonSecundario etiqueta="Reintentar" onPress={semanas.reintentarLaPrimera} />
+            </View>
+          ) : (
+            <Text style={[t.body, { color: c.textSoft, fontSize: 16, marginTop: 18 }]}>Cargando la ficha…</Text>
+          )
+        ) : (
+          <>
+            {/* 2. La semana o el mes. */}
+            <Aparicion retardo={40} style={{ marginTop: 14 }}>
+              {mesAbierto && mesVisible && hoy ? (
+                <MesDeColores
+                  mes={mesVisible}
+                  hoy={hoy}
+                  diaUno={diaUno}
+                  elegido={diaElegido}
+                  colorDe={colorDe}
+                  onElegir={elegir}
+                  onCambiarMes={setMesVisible}
+                />
+              ) : hoy ? (
+                <SemanaDeCirculos fechas={fechasDeLaSemana} elegido={diaElegido} hoy={hoy} diaUno={diaUno} colorDe={colorDe} onElegir={elegir} />
+              ) : null}
+              {diaElegido ? (
+                <Presionable
+                  onPress={() => {
+                    setMesVisible(mesDeLaFecha(diaElegido));
+                    setMesAbierto(abierto => !abierto);
+                  }}
                   accessibilityRole="button"
-                  accessibilityLabel="Semana anterior"
-                  style={[estilos.flecha, { borderColor: c.border }]}
+                  accessibilityState={{ expanded: mesAbierto }}
+                  accessibilityLabel={mesAbierto ? 'Ver solo la semana' : `${nombreDelMesDe(diaElegido)}, ver el mes`}
+                  style={estilos.enlaceDelMes}
                 >
-                  <Icon name="arrowLeft" size={16} color={c.goldInk} />
-                  <Text style={[t.body, { color: c.goldInk, fontSize: 16 }]}>Anterior</Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => desplazar(1)}
-                  accessibilityRole="button"
-                  accessibilityLabel="Semana siguiente"
-                  style={[estilos.flecha, { borderColor: c.border }]}
-                >
-                  <Text style={[t.body, { color: c.goldInk, fontSize: 16 }]}>Siguiente</Text>
-                  <Icon name="arrow" size={16} color={c.goldInk} />
-                </Pressable>
+                  <Text style={[t.body, { color: c.goldInk, fontFamily: fuentes.media, fontSize: 16 }]}>
+                    {mesAbierto ? 'Ver solo la semana' : nombreDelMesDe(diaElegido)}
+                  </Text>
+                  <View style={{ transform: [{ rotate: mesAbierto ? '270deg' : '90deg' }] }}>
+                    <Icon name="chevron" size={14} color={c.goldInk} />
+                  </View>
+                </Presionable>
+              ) : null}
+            </Aparicion>
+
+            {/* 3. El día elegido, por pilares. */}
+            {diaElegido ? (
+              <View style={{ marginTop: 6, gap: 10 }}>
+                <View style={estilos.tituloDelDia}>
+                  <Text accessibilityRole="header" style={[t.cardTitle, { color: c.textStrong, flexShrink: 1 }]}>
+                    {tituloDelDia(diaElegido)}
+                  </Text>
+                  {dentroDelPrograma && semana && totalDelDia > 0 ? (
+                    <Text style={[t.body, { color: c.textSoft, fontSize: 15, fontVariant: ['tabular-nums'] }]}>
+                      {cumplidosDelDia} de {totalDelDia}
+                    </Text>
+                  ) : null}
+                </View>
+
+                {!dentroDelPrograma ? (
+                  <Text style={[t.body, { color: c.textSoft, fontSize: 15.5, lineHeight: 22 }]}>
+                    {diaUno === null ? `${nombre} todavía no empieza su programa.` : 'Este día queda fuera de su programa.'}
+                  </Text>
+                ) : semana ? (
+                  pilares.length === 0 ? (
+                    <Text style={[t.body, { color: c.textSoft, fontSize: 15.5 }]}>Sin hábitos programados este día.</Text>
+                  ) : (
+                    pilares.map(p => <PilarDeHabitos key={`${diaElegido}-${p.clave}`} pilar={p} onVerEvidencia={setEvidenciaAbierta} />)
+                  )
+                ) : falloDeLaSemana ? (
+                  <View style={{ gap: 10 }}>
+                    <Text style={[t.body, { color: c.textSoft, fontSize: 15.5, lineHeight: 22 }]}>{falloDeLaSemana.mensaje}</Text>
+                    {viernes ? <BotonSecundario etiqueta="Reintentar" onPress={() => semanas.reintentar(viernes)} /> : null}
+                  </View>
+                ) : (
+                  <Text style={[t.body, { color: c.textSoft, fontSize: 15.5 }]}>
+                    {estadoDeLaSemanaElegida === 'cargando' || estadoDeLaSemanaElegida === 'sin_pedir' ? 'Cargando los hábitos…' : 'No se pudo cargar este día.'}
+                  </Text>
+                )}
               </View>
             ) : null}
+          </>
+        )}
 
-            {cargando ? (
-              <Text style={[t.body, { color: c.textSoft, fontSize: 16 }]}>Cargando la semana…</Text>
-            ) : fallo ? (
-              <Text style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 23 }]}>
-                {fallo === 'sin_permiso'
-                  ? 'Ya no tienes acceso al avance de este aprendiz.'
-                  : fallo === 'sin_red'
-                    ? 'No se pudo conectar. Revisa tu conexión y vuelve a entrar.'
-                    : 'No se pudo cargar la semana de este aprendiz.'}
-              </Text>
-            ) : semana ? (
-              semana.cobertura === 'SIN_DATOS' ? (
-                /* No es "no cumplió nada": es que no hay registro de esa semana. */
-                <Text style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 23 }]}>
-                  Todavía sin actividad para medir en esta semana. No significa que no haya cumplido:
-                  no hay hábitos registrados para estos días.
-                </Text>
-              ) : (
-                <>
-                  <Text style={[t.body, { color: c.text, fontSize: 16, lineHeight: 23 }]}>
-                    {semana.resumen.cumplidas} cumplidos · {semana.resumen.sinCumplir} sin cumplir ·{' '}
-                    {semana.resumen.pendientes} pendientes · {semana.resumen.conEntrega} con evidencia
-                  </Text>
-
-                  {/* La rejilla da la vista de conjunto; debajo, el detalle del día con las acciones
-                      (abrir la evidencia, leer la revisión). */}
-                  <RejillaSemanal dias={semana.dias} />
-
-                  <View style={estilos.chips}>
-                    {diasConContenido.map(dia => {
-                      const activo = detalleDelDia?.fecha === dia.fecha;
-                      return (
-                        <Pressable
-                          key={dia.fecha}
-                          onPress={() => setDiaElegido(dia.fecha)}
-                          accessibilityRole="button"
-                          accessibilityState={{ selected: activo }}
-                          accessibilityLabel={diaLargo(dia.fecha)}
-                          style={[
-                            estilos.chip,
-                            {
-                              borderColor: activo ? c.goldInk : c.border,
-                              backgroundColor: activo ? c.goldWash : 'transparent',
-                            },
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              t.body,
-                              {
-                                color: activo ? c.goldInk : c.textSoft,
-                                fontSize: 16,
-                                fontFamily: activo ? fuentes.negrita : fuentes.regular,
-                              },
-                            ]}
-                          >
-                            {diaCorto(dia.fecha)}
-                          </Text>
-                        </Pressable>
-                      );
-                    })}
-                  </View>
-
-                  {detalleDelDia ? (
-                    <View style={estilos.detalleDia}>
-                      <Text style={[t.body, { color: c.text, fontSize: 17, fontFamily: fuentes.media }]}>
-                        {diaLargo(detalleDelDia.fecha)}
-                      </Text>
-                      {detalleDelDia.obligaciones.length === 0 ? (
-                        <Text style={[t.body, { color: c.textSoft, fontSize: 16, marginTop: 6 }]}>
-                          Sin hábitos programados este día.
-                        </Text>
-                      ) : (
-                        detalleDelDia.obligaciones.map(o => (
-                          <View key={o.registroId} style={[estilos.obligacion, { borderColor: c.border }]}>
-                            <Text style={[t.body, { color: c.text, fontSize: 16, flexShrink: 1 }]}>
-                              {tituloEnTipoOracion(o.titulo)}
-                            </Text>
-                            <View style={estilos.estados}>
-                              <Text
-                                style={[
-                                  t.body,
-                                  { color: colorDeEstado(o.estadoHabito, c), fontSize: 16,
-                                    fontFamily: fuentes.media },
-                                ]}
-                              >
-                                {etiquetaDeEstado(o.estadoHabito)}
-                              </Text>
-                              {/* Issue #134: con los km medidos por el teléfono no se dice «Evidencia sin entregar». */}
-                              {o.entrega !== 'NO_REQUERIDA' && !(o.entrega === 'SIN_ENTREGA' && seMidioSolo(medicionDeLaFichaDe(o.medicion))) ? (
-                                <Text style={[t.body, { color: c.textSoft, fontSize: 16 }]}>
-                                  {etiquetaDeEntrega(o.entrega, o.revision, o.publicacionId ?? null)}
-                                </Text>
-                              ) : null}
-                              {/* Spec 037 (D-310): los km del día, quién los midió y si quedaron por revisar. */}
-                              <LineaDeLaMedicionCruda crudo={o.medicion} />
-                              {/* La misma hoja que usa el líder: foto, audio, video y TEXTO se ven dentro de la app, sin
-                                  salir al navegador. El enlace se pide al abrirla (vence a los diez minutos) y el tipo se
-                                  averigua al abrir. El servidor deja leerla al mentor o la guía asignados a este aprendiz. */}
-                              {o.evidenciaId ? (
-                                <EvidenciaDeObligacion
-                                  titulo={tituloEnTipoOracion(o.titulo)}
-                                  evidencias={[{ id: o.evidenciaId, tipo: null, subidaEn: null }]}
-                                />
-                              ) : null}
-                              {/* Spec 005 (R-6): el post diario se cumple publicando en el Muro, y esa publicación es
-                                  su evidencia; antes decía «sin evidencia». */}
-                              {o.publicacionId ? <VerPublicacion publicacionId={o.publicacionId} titulo={tituloEnTipoOracion(o.titulo)} /> : null}
-                            </View>
-                          </View>
-                        ))
-                      )}
-                    </View>
-                  ) : null}
-                </>
-              )
-            ) : null}
-          </SeccionPlegable>
-        </Aparicion>
-
-        {/*
-          Las dos lecturas que explican lo de arriba, en el orden en que se necesitan: primero
-          CÓMO tiene armado su plan (horarios, recordatorios, desbloqueos), después QUÉ escribió
-          hora por hora en sus primeros días.
-
-          Cada una se dibuja sola o no se dibuja: piden sus datos por su cuenta y, mientras el
-          backend no las sirva, devuelven `null` sin tocar nada de lo que ya funciona en esta
-          pantalla. Van al final a propósito — son lectura larga, y lo que el mentor necesita
-          para decidir a quién escribirle ya está resuelto más arriba.
-        */}
-        <HabitosDelAlumno grupoId={grupoId} alumnoId={alumno.participanteId} />
+        {/* 4. Lo que ya existía, al final. Cada sección se dibuja sola o no se dibuja. */}
+        <ChipDeCaja origen={{ quien: 'mentor', aprendizId: alumno.participanteId }} margenArriba={18} />
         <CodigoRenaserDelAlumno cargar={cargarRadar} />
-        {/* Spec 015: lo que le queda libre entre lo que planificó, de lunes a domingo (solo lectura). */}
         <TiempoLibreDeLaSemana cargar={cargarHuecos} />
-        {/* Spec 017: lo que dijo al cerrar cada día, de lunes a domingo (solo lectura). */}
         <CierresDelDia cargar={cargarCierres} />
-        {/* Spec 031: su 80/20 y el análisis de SER, por semana y por mes (solo lectura). */}
         <OchentaVeinteDeLaFicha cargar={cargarOchentaVeinte} />
-        {/* Spec 026: lo que respondió en su diagnóstico inicial (solo lectura; no se dibuja si tiene la ficha estándar). */}
         <SeccionDelDiagnosticoDeLaPersona cargar={cargarDiagnostico} />
-
       </ScrollView>
+
+      {/* La evidencia de un hábito cumplido: foto, audio, video o texto, con anterior y siguiente dentro del día. */}
+      {habitoConEvidencia ? (
+        <EvidenciaDeObligacion
+          titulo={habitoConEvidencia.obligacion.titulo}
+          evidencias={habitoConEvidencia.obligacion.evidencias}
+          respuestaTexto={habitoConEvidencia.obligacion.respuestaTexto}
+          abierta
+          alCerrar={() => setEvidenciaAbierta(null)}
+          subtitulo={[habitoConEvidencia.hora, habitoConEvidencia.pilar].filter(Boolean).join(' · ') || 'Evidencia'}
+          publicacionId={habitoConEvidencia.obligacion.publicacionId}
+          navegacion={{
+            alAnterior: posicionDeLaEvidencia > 0 ? () => setEvidenciaAbierta(conEvidencia[posicionDeLaEvidencia - 1].obligacion.registroId) : undefined,
+            alSiguiente:
+              posicionDeLaEvidencia < conEvidencia.length - 1 ? () => setEvidenciaAbierta(conEvidencia[posicionDeLaEvidencia + 1].obligacion.registroId) : undefined,
+          }}
+        />
+      ) : null}
+
+      <HojaDeNotas
+        visible={notasAbiertas}
+        alCerrar={() => setNotasAbiertas(false)}
+        nombre={nombre}
+        soloLectura={false}
+        notas={notas.notas}
+        cargando={notas.cargando}
+        fallo={notas.fallo}
+        guardando={notas.guardando}
+        falloAlGuardar={notas.falloAlGuardar}
+        onGuardar={notas.guardar}
+        onCorregir={notas.corregir}
+      />
     </SafeAreaView>
   );
-}
-
-/* ── Formato de fechas ─────────────────────────────────────────────────────
-   Se construyen con UTC a mano y no con `toLocaleDateString` del dispositivo: las fechas
-   llegan como YYYY-MM-DD en la zona del ALUMNO, y dejar que el teléfono las interprete en su
-   propio huso corre el día una casilla para un mentor que viaja. */
-
-const DIAS_CORTOS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-const DIAS_LARGOS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto',
-  'septiembre', 'octubre', 'noviembre', 'diciembre'];
-
-function comoFecha(iso: string): Date {
-  return new Date(`${iso}T00:00:00Z`);
-}
-
-function diaCorto(iso: string): string {
-  const d = comoFecha(iso);
-  return `${DIAS_CORTOS[d.getUTCDay()]} ${d.getUTCDate()}`;
-}
-
-function diaLargo(iso: string): string {
-  const d = comoFecha(iso);
-  return `${DIAS_LARGOS[d.getUTCDay()]} ${d.getUTCDate()} de ${MESES[d.getUTCMonth()]}`;
-}
-
-function rangoLegible(desde: string, hasta: string): string {
-  const a = comoFecha(desde);
-  const b = comoFecha(hasta);
-  return a.getUTCMonth() === b.getUTCMonth()
-    ? `Del ${a.getUTCDate()} al ${b.getUTCDate()} de ${MESES[b.getUTCMonth()]}`
-    : `Del ${a.getUTCDate()} de ${MESES[a.getUTCMonth()]} al ${b.getUTCDate()} de ${MESES[b.getUTCMonth()]}`;
-}
-
-/** Palabras además de color: verde y rojo solos no alcanzan (AGENTS.md §4). */
-function etiquetaDeEstado(estado: string): string {
-  switch (estado) {
-    case 'COMPLETADO':
-      return 'Cumplido';
-    case 'FALLIDO':
-      return 'No cumplido';
-    case 'EXPIRADO':
-      return 'Venció';
-    case 'EN_CURSO':
-      return 'En curso';
-    default:
-      return 'Pendiente';
-  }
-}
-
-function colorDeEstado(estado: string, c: ReturnType<typeof useTheme>['c']): string {
-  if (estado === 'COMPLETADO') return c.success;
-  if (estado === 'FALLIDO' || estado === 'EXPIRADO') return c.danger;
-  return c.textSoft;
 }
 
 const estilos = StyleSheet.create({
   barra: { flexDirection: 'row', alignItems: 'center', paddingTop: 10, paddingBottom: 6 },
   volver: { flexDirection: 'row', alignItems: 'center', gap: 7, minHeight: 48 },
   contenido: { flexGrow: 1, paddingTop: 8, paddingBottom: ESPACIO_PARA_LANZADOR },
-  navegacion: { flexDirection: 'row', gap: 10, marginBottom: 12 },
-  // 48 px de alto, con palabra: una flecha sola no se entiende (A-1).
-  flecha: {
-    flex: 1, minHeight: 48, borderRadius: 12, borderWidth: 1,
-    flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center',
-  },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 14 },
-  chip: { minHeight: 48, justifyContent: 'center', paddingHorizontal: 14, borderRadius: 12, borderWidth: 1 },
-  detalleDia: { marginTop: 16 },
-  obligacion: { borderTopWidth: 1, paddingTop: 10, marginTop: 10, gap: 4 },
-  estados: { gap: 2 },
+  cabecera: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  quien: { flex: 1, minWidth: 0, gap: 2 },
+  enlaceDelMes: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 48, alignSelf: 'flex-start' },
+  tituloDelDia: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' },
 });

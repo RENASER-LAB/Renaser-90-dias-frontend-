@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { HojaDesdeAbajo } from '../../../components/hojaDesdeAbajo/HojaDesdeAbajo';
 import type { IconName } from '../../../components/Icon';
 import { BotonSecundario } from '../../../components/Legible';
+import { Presionable } from '../../../components/Presionable';
 import { useTheme } from '../../../theme/ThemeContext';
 import { LeccionVideoPlayer } from '../../academy/components/LeccionVideoPlayer';
 import { claveDeCacheDeLaFoto } from '../../evidence/utils/fotoDeEvidencia';
@@ -16,6 +17,7 @@ import { textoDelFalloDeEvidencia, tipoDeEvidenciaEnPalabras } from '../utils/pa
 import { respuestaYaLeidaComoEvidencia } from '../utils/respuestaRepetida';
 import { BotonDeEvidencia } from './BotonDeEvidencia';
 import { ReproductorDeAudio } from './ReproductorDeAudio';
+import { VerPublicacion } from './VisorDePublicacion';
 
 /**
  * Abrir lo que respalda un cumplimiento (spec 005, US2): el botón «Ver evidencia» de un hábito o de una
@@ -35,6 +37,11 @@ export function EvidenciaDeObligacion({
   respuestaTexto = null,
   etiqueta = 'Ver evidencia',
   icono = 'image',
+  abierta: abiertaDeFuera,
+  alCerrar,
+  subtitulo = 'Evidencia',
+  navegacion,
+  publicacionId = null,
 }: {
   /** El hábito o la acción: título de la hoja y nombre de lo que se abre. */
   titulo: string;
@@ -43,21 +50,39 @@ export function EvidenciaDeObligacion({
   respuestaTexto?: string | null;
   etiqueta?: string;
   icono?: IconName;
+  /**
+   * Spec 055 (el ojo de la ficha del mentor): si `abierta` viene, la hoja la maneja quien la usa —con `alCerrar`— y no se dibuja el
+   * botón «Ver evidencia». Sin ella, todo sigue como antes (líder y Administración).
+   */
+  abierta?: boolean;
+  alCerrar?: () => void;
+  /** Lo que va bajo el título de la hoja; por defecto «Evidencia». La ficha del mentor pone la hora y el pilar. */
+  subtitulo?: string;
+  /** «‹ anterior · siguiente ›» entre las evidencias de un mismo día, sin cerrar la hoja; `undefined` = no se pasa a otra. */
+  navegacion?: { alAnterior?: () => void; alSiguiente?: () => void };
+  /** Si la evidencia se publicó en el Muro, la hoja ofrece «Ver en el Muro». */
+  publicacionId?: string | null;
 }) {
-  const [abierta, setAbierta] = useState(false);
+  const [abiertaPropia, setAbiertaPropia] = useState(false);
+  const controlada = abiertaDeFuera !== undefined;
+  const abierta = controlada ? abiertaDeFuera : abiertaPropia;
+  const cerrar = () => (controlada ? alCerrar?.() : setAbiertaPropia(false));
 
   return (
     <>
-      <BotonDeEvidencia etiqueta={etiqueta} icono={icono} accessibilityLabel={`${etiqueta} de ${titulo}`} onPress={() => setAbierta(true)} />
-      <HojaDesdeAbajo
-        visible={abierta}
-        alCerrar={() => setAbierta(false)}
-        titulo={titulo}
-        subtitulo="Evidencia"
-        tamano="grande"
-        etiquetaCerrar="Cerrar la evidencia"
-      >
-        <CuerpoDeLaEvidencia titulo={titulo} evidencias={evidencias} respuestaTexto={respuestaTexto} />
+      {controlada ? null : (
+        <BotonDeEvidencia etiqueta={etiqueta} icono={icono} accessibilityLabel={`${etiqueta} de ${titulo}`} onPress={() => setAbiertaPropia(true)} />
+      )}
+      <HojaDesdeAbajo visible={abierta} alCerrar={cerrar} titulo={titulo} subtitulo={subtitulo} tamano="grande" etiquetaCerrar="Cerrar la evidencia">
+        {/* La `key` hace que al pasar al hábito anterior o siguiente cada evidencia pida SU enlace (vence a los diez minutos). */}
+        <CuerpoDeLaEvidencia
+          key={evidencias.map(e => e.id).join('|') || titulo}
+          titulo={titulo}
+          evidencias={evidencias}
+          respuestaTexto={respuestaTexto}
+          navegacion={navegacion}
+          publicacionId={publicacionId}
+        />
       </HojaDesdeAbajo>
     </>
   );
@@ -67,10 +92,14 @@ function CuerpoDeLaEvidencia({
   titulo,
   evidencias,
   respuestaTexto,
+  navegacion,
+  publicacionId,
 }: {
   titulo: string;
   evidencias: EvidenciaDeLaObligacion[];
   respuestaTexto: string | null;
+  navegacion?: { alAnterior?: () => void; alSiguiente?: () => void };
+  publicacionId?: string | null;
 }) {
   const { c, t } = useTheme();
   const insets = useSafeAreaInsets();
@@ -104,7 +133,35 @@ function CuerpoDeLaEvidencia({
           </Text>
         </View>
       ) : null}
+      {publicacionId || navegacion ? (
+        <View style={estilos.pie}>
+          {navegacion ? (
+            <BotonDeNavegacion etiqueta="‹ Anterior" disponible={Boolean(navegacion.alAnterior)} onPress={navegacion.alAnterior} />
+          ) : null}
+          {publicacionId ? <VerPublicacion publicacionId={publicacionId} titulo={titulo} etiqueta="Ver en el Muro" /> : null}
+          {navegacion ? (
+            <BotonDeNavegacion etiqueta="Siguiente ›" disponible={Boolean(navegacion.alSiguiente)} onPress={navegacion.alSiguiente} />
+          ) : null}
+        </View>
+      ) : null}
     </ScrollView>
+  );
+}
+
+/** «‹ Anterior» / «Siguiente ›»: 48 de alto; sin a dónde ir se ve apagado y no hace nada. */
+function BotonDeNavegacion({ etiqueta, disponible, onPress }: { etiqueta: string; disponible: boolean; onPress?: () => void }) {
+  const { c, t } = useTheme();
+  return (
+    <Presionable
+      onPress={onPress}
+      disabled={!disponible}
+      accessibilityRole="button"
+      accessibilityLabel={etiqueta.replace('‹ ', '').replace(' ›', '')}
+      accessibilityState={{ disabled: !disponible }}
+      style={[estilos.navegar, { opacity: disponible ? 1 : 0.35 }]}
+    >
+      <Text style={[t.body, { color: c.goldInk, fontFamily: fuentes.media, fontSize: 16 }]}>{etiqueta}</Text>
+    </Presionable>
   );
 }
 
@@ -216,5 +273,7 @@ function FotoDeLaEvidencia({ url, titulo }: { url: string; titulo: string }) {
 
 const estilos = StyleSheet.create({
   cuerpo: { paddingHorizontal: 20, paddingTop: 4, gap: 18 },
+  pie: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  navegar: { minHeight: 48, justifyContent: 'center', paddingHorizontal: 8 },
   cargando: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 48 },
 });

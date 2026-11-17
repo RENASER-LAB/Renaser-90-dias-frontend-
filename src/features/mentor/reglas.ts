@@ -138,15 +138,3 @@ export function resumenDe(alumnos: AlumnoConEstado[]) {
     evidenciasPendientes: alumnos.some(a => a.evidenciasPendientes !== null) ? evidencias : null,
   };
 }
-
-/** Texto corto para la cápsula de una fila. Sin emojis: el color no es el único portador. */
-export function etiquetaDeMotivo(motivo: MotivoSeguimiento): string {
-  switch (motivo.clase) {
-    case 'sin_actividad':
-      return motivo.dias === 1 ? '1 día sin actividad' : `${motivo.dias} días sin actividad`;
-    case 'habitos_pendientes':
-      return motivo.cantidad === 1 ? '1 hábito pendiente' : `${motivo.cantidad} hábitos pendientes`;
-    case 'evidencias_pendientes':
-      return motivo.cantidad === 1 ? '1 evidencia por revisar' : `${motivo.cantidad} evidencias por revisar`;
-  }
-}

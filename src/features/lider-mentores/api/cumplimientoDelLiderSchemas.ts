@@ -13,6 +13,7 @@ import type {
   AccionDeLaPersona,
   DiaDeLaPersona,
   EvidenciaDeLaObligacion,
+  PilarDelHabito,
   ObligacionDeLaPersona,
   PublicacionDelMuro,
   ResumenDeLaSemana,
@@ -59,6 +60,8 @@ const obligacionSchema = z
     respuestaTexto: z.string().nullish(),
     evidencias: z.array(evidenciaSchema).nullish(),
     publicacionId: z.string().nullish(),
+    // Spec 055 FR-013: tolerante, un valor raro se lee como «sin pilar».
+    pilar: z.string().nullish(),
     // Spec 037: tolerante, un valor raro pierde la línea de los km y no el día.
     medicion: z.unknown().optional(),
   })
@@ -220,6 +223,11 @@ function evidenciasDe(crudo: ObligacionCruda): EvidenciaDeLaObligacion[] {
   return lista;
 }
 
+function pilarDe(valor: string | null | undefined): PilarDelHabito | null {
+  const clave = valor?.trim().toUpperCase();
+  return clave === 'CUERPO' || clave === 'MENTE' || clave === 'ESPIRITU' || clave === 'EMOCIONES' ? clave : null;
+}
+
 function aObligacion(crudo: ObligacionCruda): ObligacionDeLaPersona {
   return {
     registroId: crudo.registroId,
@@ -233,6 +241,7 @@ function aObligacion(crudo: ObligacionCruda): ObligacionDeLaPersona {
     respuestaTexto: crudo.respuestaTexto?.trim() ? crudo.respuestaTexto : null,
     evidencias: evidenciasDe(crudo),
     publicacionId: crudo.publicacionId ?? null,
+    pilar: pilarDe(crudo.pilar),
     medicion: medicionDeLaFichaDe(crudo.medicion),
   };
 }

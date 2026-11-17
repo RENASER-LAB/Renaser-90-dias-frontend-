@@ -30,13 +30,13 @@ import { BotonDeEvidencia } from './BotonDeEvidencia';
  * fichas que ofrecen «Ver publicación» son de quienes sí pueden leerla, y mandar a otro lado a quien el servidor
  * acaba de rechazar solo escondería el rechazo.
  */
-export function VerPublicacion({ publicacionId, titulo }: { publicacionId: string; titulo: string }) {
+export function VerPublicacion({ publicacionId, titulo, etiqueta = 'Ver publicación' }: { publicacionId: string; titulo: string; etiqueta?: string }) {
   const [abierta, setAbierta] = useState(false);
 
   return (
     <>
       <BotonDeEvidencia
-        etiqueta="Ver publicación"
+        etiqueta={etiqueta}
         icono="newspaper"
         accessibilityLabel={`Ver la publicación de ${titulo}`}
         onPress={() => setAbierta(true)}

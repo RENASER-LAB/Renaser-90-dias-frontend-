@@ -99,6 +99,12 @@ export const aprendicesGrupoSchema = z
  * (qué pasó con el hábito), `entrega` (si mandó el archivo) y `revision` (qué dijo quien lo
  * miró). `revision` es null cuando no hay entrega — nunca se convierte en "rechazada".
  */
+/** Spec 055 FR-013: el pilar de un hábito; cualquier otro valor (o su ausencia) se lee como `null`. */
+export const pilarSchema = z
+  .enum(['CUERPO', 'MENTE', 'ESPIRITU', 'EMOCIONES'])
+  .nullish()
+  .catch(null);
+
 export const semanaAlumnoSchema = z
   .object({
     /**
@@ -138,6 +144,11 @@ export const semanaAlumnoSchema = z
                  */
                 publicacionId: z.string().nullish().catch(null),
                 /**
+                 * Spec 055 FR-013: el pilar del hábito (`CUERPO`, `MENTE`, `ESPIRITU`, `EMOCIONES`) o `null`. Opcional y
+                 * tolerante: un servidor anterior no lo manda y un valor raro se lee como «sin pilar», no rompe la semana.
+                 */
+                pilar: pilarSchema,
+                /**
                  * Spec 037 (D-310): los km del día y de dónde salieron (la captura o los pasos del teléfono, con su fuente y si
                  * quedó «por revisar»). Opcional y tolerante: un backend anterior no lo manda y un valor raro pierde la línea
                  * de los km, no la semana.
@@ -161,90 +172,6 @@ export const semanaAlumnoSchema = z
     /** COMPLETA | SIN_DATOS. Sin datos NO es "no cumplió". */
     cobertura: z.string(),
     actualizadoEn: z.string(),
-  })
-  .passthrough();
-
-/**
- * `HabitosDelAprendiz` — `GET /api/v1/mentor/groups/{g}/learners/{u}/habits`.
- *
- * Es la MISMA forma que devuelve `GET /api/v1/admin/trainees/{traineeId}/habits`: la lectura
- * administrativa mira a la persona y ésta mira al grupo, pero el cuerpo es idéntico. No hay
- * todavía ningún esquema para esa respuesta en la app —ninguna pantalla la consumía—, así que
- * éste es el primero; si mañana se conecta la vista de administración, se reusa desde acá en
- * vez de escribir un segundo.
- *
- * ## Qué es nullable y por qué
- *
- * `personalTitle`, `pendingScheduleChange`, `unlock`, `reminderEnabled`, `reminderMinutesBefore`
- * y `chosenWeeklyDate` los declara nulos el propio contrato.
- *
- * `triggerTime` y `limitTime` se aceptan nulos aunque el contrato los muestre con valor: el
- * endpoint hermano que la app ya consume (`GET /api/v1/habit-preferences`, ver
- * `habits/api/habitsSchemas.ts`) los devuelve `nullable`, y un hábito sin hora de cierre es un
- * caso real —no vence dentro del día—. Un esquema que los exigiera tiraría la sección entera
- * por un campo que la pantalla ya sabe mostrar como "—".
- */
-export const habitosDelAlumnoSchema = z
-  .object({
-    traineeId: z.string(),
-    /** Día de programa del APRENDIZ, calculado en su zona. No es el del mentor ni el del server. */
-    programDay: z.number(),
-    /** `yyyy-MM-dd`: qué día es hoy PARA ÉL. */
-    localDate: z.string(),
-    /** Zona IANA del aprendiz (`America/Lima`). Las horas de abajo se leen en ESA zona. */
-    timeZone: z.string(),
-    /** Cuántos cambios de horario le quedan en el período. `remaining` lo calcula el servidor. */
-    scheduleEdits: z
-      .object({
-        used: z.number(),
-        remaining: z.number(),
-        limit: z.number(),
-        /** DAY | WEEK | MONTH — el período sobre el que se cuenta el cupo. */
-        period: z.string(),
-      })
-      .passthrough(),
-    habits: z.array(
-      z
-        .object({
-          habitId: z.string(),
-          catalogTitle: z.string(),
-          /** El nombre que le puso el aprendiz. `null` = no lo renombró. */
-          personalTitle: z.string().nullish(),
-          isPersonal: z.boolean(),
-          /** CHECKBOX | JOURNALING | RATING | BLOCKING. Se valida; hoy no se muestra. */
-          habitType: z.string(),
-          /** BODY | MIND | SPIRIT | CONSCIENCE. */
-          category: z.string(),
-          triggerTime: z.string().nullish(),
-          limitTime: z.string().nullish(),
-          /** `true` = tiene horario propio; `false` = el del catálogo. */
-          customSchedule: z.boolean(),
-          reminderEnabled: z.boolean().nullish(),
-          reminderMinutesBefore: z.number().nullish(),
-          /**
-           * El horario nuevo que YA pidió y todavía no rige: cuando la ventana del día ya
-           * arrancó, el backend no rechaza el cambio, lo difiere ("no se improvisa el día").
-           */
-          pendingScheduleChange: z
-            .object({
-              triggerTime: z.string().nullish(),
-              limitTime: z.string().nullish(),
-              effectiveDate: z.string(),
-            })
-            .passthrough()
-            .nullish(),
-          /** En qué día de programa se le abre este hábito, y si ese día lo eligió él. */
-          unlock: z
-            .object({ programDay: z.number(), chosenByTrainee: z.boolean() })
-            .passthrough()
-            .nullish(),
-          /** `true` = es semanal y el día lo elige el aprendiz. */
-          weeklyDayChoice: z.boolean(),
-          /** `yyyy-MM-dd` del día que eligió, o `null` si todavía no eligió ninguno. */
-          chosenWeeklyDate: z.string().nullish(),
-        })
-        .passthrough(),
-    ),
   })
   .passthrough();
 
@@ -317,50 +244,24 @@ export const rankingGruposSchema = z
   })
   .passthrough();
 
-/** `CohorteResponse` — `GET /api/v1/admin/cohorts` (a un MENTOR le devuelve solo la suya). */
-export const cohorteSchema = z
+/**
+ * Spec 055: `GET /api/v1/mentor/groups/{g}/learners/{u}/dias?desde&hasta` — el color y el porcentaje del semáforo de cada día.
+ * Tolerante: un color o un estado que la app no conoce se lee como «sin datos» (nunca verde por falta de datos).
+ */
+export const diasDelAprendizSchema = z
   .object({
-    id: z.string(),
-    name: z.string(),
-    startDate: z.string().nullable(),
-    endDate: z.string().nullable(),
-    status: z.string(),
-    cellCount: z.number(),
-  })
-  .passthrough();
-
-/** `PerfilBasicoResponse` — lo que hay de cada persona: id, nombre y avatar. Nada más. */
-export const perfilBasicoSchema = z
-  .object({
-    id: z.string(),
-    fullName: z.string().nullable(),
-    avatarUrl: z.string().nullable(),
-  })
-  .passthrough();
-
-/** `CelulaResponse` — `GET /api/v1/admin/cells?cohortId=…` */
-export const celulaResumenSchema = z
-  .object({
-    id: z.string(),
-    name: z.string(),
-    cohortId: z.string(),
-    videoCallUrl: z.string().nullable(),
-    nextSessionAt: z.string().nullable(),
-    memberCount: z.number(),
-    mentor: perfilBasicoSchema.nullable(),
-  })
-  .passthrough();
-
-/** `CelulaDetalleResponse` — `GET /api/v1/admin/cells/{id}`. Este SÍ trae `members`. */
-export const celulaDetalleSchema = z
-  .object({
-    id: z.string(),
-    name: z.string(),
-    cohortId: z.string(),
-    videoCallUrl: z.string().nullable(),
-    nextSessionAt: z.string().nullable(),
-    mentor: perfilBasicoSchema.nullable(),
-    members: z.array(perfilBasicoSchema),
+    zona: z.string().nullish(),
+    diaUno: z.string().nullish(),
+    dias: z.array(
+      z
+        .object({
+          fecha: z.string(),
+          estado: z.string().nullish(),
+          color: z.string().nullish(),
+          porcentaje: z.number().nullish(),
+        })
+        .passthrough(),
+    ),
   })
   .passthrough();
 
@@ -368,15 +269,10 @@ export type ContextoMentorApi = z.infer<typeof contextoMentorSchema>;
 export type SemanaAlumnoApi = z.infer<typeof semanaAlumnoSchema>;
 export type DiaAlumnoApi = SemanaAlumnoApi['dias'][number];
 export type ObligacionDiaApi = DiaAlumnoApi['obligaciones'][number];
-export type HabitosAlumnoApi = z.infer<typeof habitosDelAlumnoSchema>;
-export type HabitoDelAlumnoApi = HabitosAlumnoApi['habits'][number];
 export type EvaluacionPropiaApi = z.infer<typeof evaluacionPropiaSchema>;
 export type RankingGruposApi = z.infer<typeof rankingGruposSchema>;
 export type AsignacionMentorApi = ContextoMentorApi['assignments'][number];
 export type AprendicesGrupoApi = z.infer<typeof aprendicesGrupoSchema>;
-export type CohorteApi = z.infer<typeof cohorteSchema>;
-export type CelulaResumenApi = z.infer<typeof celulaResumenSchema>;
-export type CelulaDetalleApi = z.infer<typeof celulaDetalleSchema>;
 
 export function validarRespuesta<T>(esquema: z.ZodType, datos: unknown, origen: string): T {
   const resultado = esquema.safeParse(datos);

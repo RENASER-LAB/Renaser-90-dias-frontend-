@@ -128,7 +128,7 @@ describe('las fichas del acompañamiento', () => {
   });
 
   it('las tres fichas dibujan la línea de los km', () => {
-    expect(fuente('src/features/mentor/screens/AlumnoScreen.tsx')).toMatch(/LineaDeLaMedicionCruda crudo=\{o\.medicion\}/);
+    expect(fuente('src/features/mentor/components/HabitoDelDia.tsx')).toMatch(/LineaDeLaMedicionCruda crudo=\{o\.medicion\}/);
     expect(fuente('src/features/lider-mentores/components/DiaDeLaPersona.tsx')).toMatch(/<LineaDeLaMedicion medicion=\{obligacion\.medicion\}/);
   });
 });

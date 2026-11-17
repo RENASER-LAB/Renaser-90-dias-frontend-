@@ -24,7 +24,7 @@ describe('dónde se pinta el nombre de un hábito', () => {
     ['Hoy (lo que dice el lector de pantalla)', 'screens/HoyScreen.tsx', /Abrir Entrenar: \$\{tituloEnTipoOracion\(habitoAhora\.titulo\)\}/],
     ['Yo → «+ Subir foto»', 'screens/YoScreen.tsx', /titulo: tituloParaMostrar\(\{ id: track\.habitoId, title: track\.tituloHabito \}/],
     ['el elegir hábito para la foto', 'features/habits/components/ElegirHabitoParaFotoModal.tsx', /tituloParaMostrar\(\{ id: track\.habitoId/],
-    ['la ficha del mentor (los 7 días)', 'features/mentor/screens/AlumnoScreen.tsx', /\{tituloEnTipoOracion\(o\.titulo\)\}/],
+    ['la ficha del mentor (los hábitos del día)', 'features/mentor/components/HabitoDelDia.tsx', /const titulo = tituloEnTipoOracion\(o\.titulo\)/],
     ['la rejilla semanal del mentor', 'features/mentor/components/RejillaSemanal.tsx', /\{tituloEnTipoOracion\(titulo\)\}/],
     ['la ficha del líder (los 7 días)', 'features/lider-mentores/components/DiaDeLaPersona.tsx', /\{tituloEnTipoOracion\(obligacion\.titulo\)\}/],
     ['la ficha de Administración («Detalle de hábitos»)', 'features/admin/screens/FichaAprendizScreen.tsx', /\{tituloEnTipoOracion\(o\.titulo\)\}/],
@@ -39,7 +39,7 @@ describe('dónde se pinta el nombre de un hábito', () => {
   });
 
   it('la ficha del mentor y Hoy, al menos, usan la misma función de habits/utils', () => {
-    for (const archivo of ['features/mentor/screens/AlumnoScreen.tsx', 'screens/HoyScreen.tsx']) {
+    for (const archivo of ['features/mentor/components/HabitoDelDia.tsx', 'screens/HoyScreen.tsx']) {
       expect(leer(archivo)).toMatch(/import \{[^}]*tituloEnTipoOracion[^}]*\} from '[^']*habits\/utils\/tituloEnTipoOracion'/);
     }
   });

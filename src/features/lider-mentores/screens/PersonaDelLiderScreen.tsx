@@ -1,5 +1,6 @@
 import { fuentes } from '../../../theme/fuentes';
 import React, { useMemo, useState } from 'react';
+import { NotasDeLectura } from '../../mentor/components/NotasDeLectura';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { ConfirmacionEnLinea } from '../../../components/ConfirmacionEnLinea';
@@ -218,6 +219,8 @@ export function PersonaDelLiderScreen({
   return (
     <MarcoDelLider titulo={nombreVisible} onVolver={onVolver}>
       {aviso ? <ConfirmacionEnLinea texto={aviso} onTerminar={() => setAviso(null)} /> : null}
+      {/* Spec 055 FR-024: el lápiz de las notas del acompañamiento, solo de lectura (no se dibuja si el servidor no las deja leer). */}
+      <NotasDeLectura origen={{ quien: 'lider', personaId }} nombre={nombreVisible} />
       <EncabezadoDeLaPersona
         nombre={nombreVisible}
         avatarUrl={datos?.avatarUrl ?? avatarUrl}

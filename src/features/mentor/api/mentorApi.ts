@@ -1,22 +1,24 @@
+import { z } from 'zod';
+
 import { ApiError, apiFetch } from '../../../services/http/apiClient';
 import type { HistorialRadarApi } from '../../radar/types/radar.types';
 import type { AlumnoCelula, MiCelula } from '../types/mentor.types';
+import { aSemanaDePersona, cumplimientoDelLiderSchemas } from '../../lider-mentores/api/cumplimientoDelLiderSchemas';
+import type { SemanaDePersona } from '../../lider-mentores/types/cumplimientoDelLider.types';
+import type { ColorSemaforo } from '../../semaforo/types/semaforo.types';
 import {
   aprendicesGrupoSchema,
+  diasDelAprendizSchema,
   contextoMentorSchema,
   evaluacionPropiaSchema,
-  habitosDelAlumnoSchema,
   radarDelAlumnoSchema,
   rankingGruposSchema,
-  semanaAlumnoSchema,
   validarRespuesta,
   type AprendicesGrupoApi,
   type AsignacionMentorApi,
   type ContextoMentorApi,
   type EvaluacionPropiaApi,
-  type HabitosAlumnoApi,
   type RankingGruposApi,
-  type SemanaAlumnoApi,
 } from './mentorSchemas';
 
 /** Tope por página. El backend además recorta a 100; esto solo evita ida y vuelta de más. */
@@ -162,53 +164,6 @@ export async function capacidadesDePrograma(): Promise<ContextoMentorApi['capabi
 }
 
 /**
- * La semana de un aprendiz. `inicio` en formato YYYY-MM-DD; sin él, el servidor devuelve la
- * semana en curso **en la zona del alumno** — que no es necesariamente la del mentor ni la del
- * teléfono, así que no se calcula acá.
- */
-export async function obtenerSemanaDeAlumno(
-  grupoId: string,
-  alumnoId: string,
-  inicio?: string,
-): Promise<SemanaAlumnoApi> {
-  const ruta =
-    `/api/v1/mentor/groups/${encodeURIComponent(grupoId)}/learners/${encodeURIComponent(alumnoId)}/progress` +
-    (inicio ? `?weekStart=${encodeURIComponent(inicio)}` : '');
-
-  return validarRespuesta<SemanaAlumnoApi>(
-    semanaAlumnoSchema,
-    await apiFetch<unknown>(ruta),
-    'GET /api/v1/mentor/groups/{g}/learners/{u}/progress',
-  );
-}
-
-/**
- * Cómo tiene configurados sus hábitos este aprendiz: horarios, recordatorios, desbloqueos y el
- * cupo de cambios de horario que le queda.
- *
- * Es la foto de su PLAN, no de su cumplimiento — eso lo dice `obtenerSemanaDeAlumno`. Las dos
- * cosas se miran juntas y significan distinto: un hábito sin cumplir a las 6 de la mañana no es
- * lo mismo si su hora de disparo son las 05:00 que si son las 22:00.
- *
- * Las horas vienen en la zona del APRENDIZ (`timeZone` de la respuesta), no en la del mentor.
- * Por eso la pantalla las muestra tal cual llegan y dice de quién es esa zona, en vez de
- * convertirlas al huso del teléfono y correrlas una o dos horas sin avisar.
- */
-export async function obtenerHabitosDeAlumno(
-  grupoId: string,
-  alumnoId: string,
-): Promise<HabitosAlumnoApi> {
-  const ruta =
-    `/api/v1/mentor/groups/${encodeURIComponent(grupoId)}/learners/${encodeURIComponent(alumnoId)}/habits`;
-
-  return validarRespuesta<HabitosAlumnoApi>(
-    habitosDelAlumnoSchema,
-    await apiFetch<unknown>(ruta),
-    'GET /api/v1/mentor/groups/{g}/learners/{u}/habits',
-  );
-}
-
-/**
  * El Código Renaser de un aprendiz: sus registros horarios (los días 1 a 7 y, desde el 8, los de Mi Radar).
  *
  * Paginado por cursor, de lo más nuevo a lo más viejo, igual que `/api/v1/radar/history`.
@@ -290,4 +245,145 @@ export async function obtenerRankingDeGrupos(cohorteId: string, mes: string): Pr
     ),
     'GET /api/v1/ranking/groups',
   );
+}
+
+/** Spec 055 FR-011: la semana del aprendiz (sábado a viernes) con `diaUno`, el primer día de su programa (`null` si no lo activó). */
+export type SemanaDelAprendiz = SemanaDePersona & { diaUno: string | null };
+
+const rutaDelAprendiz = (grupoId: string, aprendizId: string) =>
+  `/api/v1/mentor/groups/${encodeURIComponent(grupoId)}/learners/${encodeURIComponent(aprendizId)}`;
+
+/**
+ * `GET /mentor/groups/{g}/learners/{u}/semana?semanaHasta=` (spec 055, contrato `api.md`): la MISMA semana que arma la ficha del
+ * líder, con la puerta del mentor (acompañante vigente de ese grupo). `semanaHasta` es un viernes; sin él, la semana en curso en la
+ * zona del aprendiz —que no es la del teléfono, así que no se calcula acá—. 400 `SEMANA_INVALIDA` / `FUERA_DEL_PROGRAMA`,
+ * 403 `NO_ACOMPANA`: el `ApiError` trae el motivo del servidor.
+ */
+export async function obtenerSemanaDelAprendiz(grupoId: string, aprendizId: string, semanaHasta?: string | null): Promise<SemanaDelAprendiz> {
+  const ruta = `${rutaDelAprendiz(grupoId, aprendizId)}/semana${semanaHasta ? `?semanaHasta=${encodeURIComponent(semanaHasta)}` : ''}`;
+  const crudo = await apiFetch<unknown>(ruta);
+  const semana = aSemanaDePersona(
+    validarRespuesta(cumplimientoDelLiderSchemas.semana, crudo, 'GET /api/v1/mentor/groups/{g}/learners/{u}/semana'),
+  );
+  const diaUno = (crudo as { diaUno?: unknown } | null)?.diaUno;
+  return { ...semana, personaId: semana.personaId || aprendizId, diaUno: typeof diaUno === 'string' ? diaUno : null };
+}
+
+/** El color de un día del semáforo, tal como lo calculó el servidor (`/dias`). */
+export interface DiaDeColor {
+  fecha: string;
+  color: ColorSemaforo;
+  porcentaje: number | null;
+  /** `MEDIDO`, `SIN_DATOS`, `PAUSADO`, `CUENTA_SUSPENDIDA`, `PENDIENTE`; lo que no se conoce llega como `SIN_DATOS`. */
+  estado: string;
+}
+
+export interface DiasDelAprendiz {
+  zona: string | null;
+  diaUno: string | null;
+  dias: DiaDeColor[];
+}
+
+const COLORES_CONOCIDOS: readonly string[] = ['VERDE', 'AMARILLO', 'ROJO'];
+
+/** `GET /mentor/groups/{g}/learners/{u}/dias?desde&hasta` (spec 055 FR-012): máximo 62 días; 400 `RANGO_INVALIDO` si se pasa. */
+export async function obtenerDiasDelAprendiz(grupoId: string, aprendizId: string, desde: string, hasta: string): Promise<DiasDelAprendiz> {
+  const ruta = `${rutaDelAprendiz(grupoId, aprendizId)}/dias?desde=${encodeURIComponent(desde)}&hasta=${encodeURIComponent(hasta)}`;
+  const datos = validarRespuesta<{ zona?: string | null; diaUno?: string | null; dias: Array<{ fecha: string; estado?: string | null; color?: string | null; porcentaje?: number | null }> }>(
+    diasDelAprendizSchema,
+    await apiFetch<unknown>(ruta),
+    'GET /api/v1/mentor/groups/{g}/learners/{u}/dias',
+  );
+  return {
+    zona: datos.zona ?? null,
+    diaUno: datos.diaUno ?? null,
+    dias: datos.dias.map(d => {
+      const color = d.color?.trim().toUpperCase() ?? '';
+      return {
+        fecha: d.fecha,
+        color: COLORES_CONOCIDOS.includes(color) ? (color as ColorSemaforo) : 'SIN_DATOS',
+        porcentaje: typeof d.porcentaje === 'number' ? d.porcentaje : null,
+        estado: d.estado?.trim().toUpperCase() || 'SIN_DATOS',
+      };
+    }),
+  };
+}
+
+// ------------------------------------------------------------------------------------------
+// Spec 055, historia 4: la nota privada del mentor sobre un aprendiz
+// ------------------------------------------------------------------------------------------
+
+/** Una nota privada. `puedeCorregir` lo decide el servidor (solo su autor y solo el día en que la escribió); la app no lo recalcula. */
+export interface NotaDelMentor {
+  id: string;
+  texto: string;
+  autor: { id: string; nombre: string | null };
+  creadoEn: string;
+  corregidoEn: string | null;
+  puedeCorregir: boolean;
+}
+
+/** Quién lee: el mentor que lo acompaña hoy (y escribe), el líder de su formación o Administración (solo leen). */
+export type OrigenDeLasNotas =
+  | { quien: 'mentor'; grupoId: string; aprendizId: string }
+  | { quien: 'lider'; personaId: string }
+  | { quien: 'admin'; aprendizId: string };
+
+/** El largo máximo de una nota, sin contar los espacios de los extremos (FR-026). */
+export const LARGO_MAXIMO_DE_LA_NOTA = 2000;
+
+const notaSchema = z
+  .object({
+    id: z.string(),
+    texto: z.string(),
+    autor: z.object({ id: z.string(), nombre: z.string().nullish() }).passthrough(),
+    creadoEn: z.string(),
+    corregidoEn: z.string().nullish(),
+    puedeCorregir: z.boolean().nullish(),
+  })
+  .passthrough();
+const notasSchema = z.object({ notas: z.array(notaSchema) }).passthrough();
+
+function aNota(n: z.infer<typeof notaSchema>, soloLectura: boolean): NotaDelMentor {
+  return {
+    id: n.id,
+    texto: n.texto,
+    autor: { id: n.autor.id, nombre: n.autor.nombre?.trim() || null },
+    creadoEn: n.creadoEn,
+    corregidoEn: n.corregidoEn ?? null,
+    /* Quien solo lee nunca corrige, diga lo que diga el cuerpo: la regla es del servidor, pero la puerta de lectura también. */
+    puedeCorregir: !soloLectura && n.puedeCorregir === true,
+  };
+}
+
+function rutaDeLasNotas(origen: OrigenDeLasNotas): string {
+  switch (origen.quien) {
+    case 'mentor':
+      return `${rutaDelAprendiz(origen.grupoId, origen.aprendizId)}/notas`;
+    case 'lider':
+      return `/api/v1/leadership/people/${encodeURIComponent(origen.personaId)}/notas`;
+    case 'admin':
+      return `/api/v1/admin/trainees/${encodeURIComponent(origen.aprendizId)}/notas`;
+  }
+}
+
+/** `GET …/notas`: de la más nueva a la más vieja. Al líder y a Administración solo se les lee (FR-024). */
+export async function obtenerNotasDelAprendiz(origen: OrigenDeLasNotas): Promise<NotaDelMentor[]> {
+  const datos = validarRespuesta<z.infer<typeof notasSchema>>(notasSchema, await apiFetch<unknown>(rutaDeLasNotas(origen)), 'GET …/notas');
+  return datos.notas.map(n => aNota(n, origen.quien !== 'mentor'));
+}
+
+/** `POST /notas` `{ texto }` → 201 con la nota creada. 400 `NOTA_INVALIDA`, 403 `NO_ACOMPANA`. */
+export async function crearNotaDelAprendiz(grupoId: string, aprendizId: string, texto: string): Promise<NotaDelMentor> {
+  const crudo = await apiFetch<unknown>(`${rutaDelAprendiz(grupoId, aprendizId)}/notas`, { method: 'POST', body: { texto } });
+  return aNota(validarRespuesta<z.infer<typeof notaSchema>>(notaSchema, crudo, 'POST …/notas'), false);
+}
+
+/** `PATCH /notas/{id}` `{ texto }`. 403 `NO_ES_EL_AUTOR`, 409 `YA_NO_SE_PUEDE_CORREGIR`. */
+export async function corregirNotaDelAprendiz(grupoId: string, aprendizId: string, notaId: string, texto: string): Promise<NotaDelMentor> {
+  const crudo = await apiFetch<unknown>(`${rutaDelAprendiz(grupoId, aprendizId)}/notas/${encodeURIComponent(notaId)}`, {
+    method: 'PATCH',
+    body: { texto },
+  });
+  return aNota(validarRespuesta<z.infer<typeof notaSchema>>(notaSchema, crudo, 'PATCH …/notas/{id}'), false);
 }
