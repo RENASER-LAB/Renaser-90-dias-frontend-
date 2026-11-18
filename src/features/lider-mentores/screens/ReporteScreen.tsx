@@ -11,6 +11,7 @@ import { CargandoLectura } from '../../semaforo/components/EstadoDeLectura';
 import { obtenerReporte } from '../api/liderMentoresApi';
 import type { EntradaDelReporteApi, ReporteApi } from '../api/liderMentoresSchemas';
 import { AnilloDeProgreso } from '../components/AnilloDeCupo';
+import { EstadoConForma, estadoDelColor, etiquetaDelEstado } from '../components/EstadoConForma';
 import { LecturaFallida } from '../components/LecturaFallida';
 import { Linea, MarcoDelLider } from '../components/MarcoDelLider';
 import { useExportarReporte } from '../hooks/useDescargarSemana';
@@ -128,10 +129,12 @@ function Cuerpo({ reporte }: { reporte: ReporteApi }) {
 function Fila({ entrada, posicion, separador }: { entrada: EntradaDelReporteApi; posicion: number | null; separador: boolean }) {
   const { c, t } = useTheme();
   const linea = lineaDeLaEntrada(entrada);
+  // spec 056 SC-008: el estado del semáforo nunca solo con el borde de color; también su forma y su símbolo.
+  const estado = estadoDelColor(colorDeLaEntrada(entrada));
   return (
     <View
       accessible
-      accessibilityLabel={`${posicion ? `Puesto ${posicion}. ` : ''}${entrada.mentor.fullName}${linea ? `. ${linea}` : ''}`}
+      accessibilityLabel={`${posicion ? `Puesto ${posicion}. ` : ''}${entrada.mentor.fullName}. ${etiquetaDelEstado(estado)}${linea ? `. ${linea}` : ''}`}
       style={[estilos.fila, separador ? { borderTopWidth: 1, borderTopColor: c.border } : null]}
     >
       <AvatarConSemaforo nombre={entrada.mentor.fullName} avatarUrl={entrada.mentor.avatarUrl} color={colorDeLaEntrada(entrada)} size={40} />
@@ -145,6 +148,7 @@ function Fila({ entrada, posicion, separador }: { entrada: EntradaDelReporteApi;
           </Text>
         ) : null}
       </View>
+      <EstadoConForma estado={estado} />
       {posicion ? (
         <Text accessible={false} style={[t.body, { color: c.textSoft, fontFamily: fuentes.seminegrita, fontSize: 16, fontVariant: ['tabular-nums'] }]}>{`${posicion}°`}</Text>
       ) : null}
