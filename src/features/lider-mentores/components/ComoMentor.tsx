@@ -7,14 +7,14 @@ import { Presionable } from '../../../components/Presionable';
 import { fuentes } from '../../../theme/fuentes';
 import { useTheme } from '../../../theme/ThemeContext';
 import type { FichaApi, ObservacionApi } from '../api/liderMentoresSchemas';
-import { aprendicesEnPalabras, consultasSinResponder, evaluacionCorta, evaluacionesQueDebe } from '../utils/datosDelMentor';
+import { aprendicesEnPalabras, consultasSinResponder, evaluacionCorta } from '../utils/datosDelMentor';
 import { encabezadoDeLaObservacion } from '../utils/textoDeObservacion';
 import { BarraDeColores } from './BarraDeColores';
 import { ContadoresPorColor } from './ContadoresPorColor';
 
 /**
  * «Como mentor», debajo de la ficha de un mentor (spec 056 FR-024), con el mismo estilo plegable de los pilares: sus grupos, cada uno con su barra de
- * colores; su evaluación del mes; las evaluaciones que debe; sus consultas sin responder con los días; y «Lo que le dijiste». Cada fila es una cifra
+ * colores; su evaluación del mes; sus consultas sin responder con los días; y «Lo que le dijiste». Cada fila es una cifra
  * corta: sin párrafos. Se abre solo al llegar: el líder viene a ver esto.
  */
 export function ComoMentor({
@@ -32,7 +32,6 @@ export function ComoMentor({
   const { c, t } = useTheme();
   const mentor = ficha.mentor;
   const grupos = mentor.groups.source === 'OK' ? mentor.groups.items ?? [] : [];
-  const debe = evaluacionesQueDebe(mentor);
   const consultas = consultasSinResponder(mentor);
 
   return (
@@ -67,7 +66,6 @@ export function ComoMentor({
         })}
 
         <Dato titulo="Su evaluación" valor={evaluacionCorta(mentor)} />
-        {debe ? <Dato titulo="Evaluaciones que debe" valor={debe} /> : null}
         {consultas ? <Dato titulo="Consultas" valor={consultas} onPress={onAbrirConsultas} /> : null}
 
         <View style={estilos.dijiste}>

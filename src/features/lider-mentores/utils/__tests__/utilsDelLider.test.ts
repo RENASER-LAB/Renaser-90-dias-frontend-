@@ -3,7 +3,7 @@ import { describe, expect, it } from '@jest/globals';
 import type { EntradaDelReporteApi, FichaApi, IndicadoresApi, PorResolverApi } from '../../api/liderMentoresSchemas';
 import type { GrupoDelLider } from '../../types/gruposDelLider.types';
 import type { AprendizDelSemaforo } from '../../../semaforo/types/semaforo.types';
-import { consultasSinResponder, evaluacionCorta, evaluacionesQueDebe, subtituloDelMentor } from '../datosDelMentor';
+import { consultasSinResponder, evaluacionCorta, subtituloDelMentor } from '../datosDelMentor';
 import { haceCuantosDias, quienPregunta } from '../consultasDelLider';
 import { estadoDelGrupo, filasDelGrupo } from '../grupoDelLider';
 import { cohorteParaCrear, cuantosPorFiltro, estaLleno, estaSinMentor, filtroInicialDeGrupos, gruposDelFiltro, mentorConCupoLleno, nombreYaUsado } from '../gruposDelLider';
@@ -112,16 +112,13 @@ describe('la ficha de un mentor', () => {
   it('«Como mentor» dice cada cosa en una cifra corta y lo que no se pudo leer, «No se pudo leer»', () => { // spec 056 FR-024
     const m = mentor('m', 'M');
     expect(evaluacionCorta(m)).toBe('62 %');
-    expect(evaluacionesQueDebe(m)).toBe('3 pendientes');
     expect(consultasSinResponder(m)).toBe('2 · 3 días');
     const caido = mentor('m', 'M', { evaluation: { source: 'UNAVAILABLE', month: null, percentage: null, delivered: null, expected: null, traineesEvaluated: null, state: null }, attention: { source: 'UNAVAILABLE', open: null, oldestOpenDays: null, answered: null, medianResponseHours: null } });
     expect(evaluacionCorta(caido)).toBe('No se pudo leer');
-    expect(evaluacionesQueDebe(caido)).toBe('No se pudo leer');
     expect(consultasSinResponder(caido)).toBe('No se pudo leer');
   });
 
-  it('al día, sin consultas y el subtítulo con su nivel y desde cuándo', () => { // spec 056 FR-024
-    expect(evaluacionesQueDebe(mentor('m', 'M', { evaluation: { source: 'OK', month: 'x', percentage: 80, delivered: 4, expected: 4, traineesEvaluated: 1, state: 'CALCULADA' } }))).toBe('Al día');
+  it('sin consultas y el subtítulo con su nivel y desde cuándo', () => { // spec 056 FR-024
     expect(consultasSinResponder(mentor('m', 'M', { attention: { source: 'OK', open: 0, oldestOpenDays: null, answered: 0, medianResponseHours: null } }))).toBe('Ninguna');
     expect(subtituloDelMentor({ profile: { level: 'N1', operationalStatus: null, since: null } } as unknown as Pick<FichaApi, 'profile'>)).toBe('Mentor N1');
     expect(subtituloDelMentor({ profile: null } as unknown as Pick<FichaApi, 'profile'>)).toBe('Mentor');

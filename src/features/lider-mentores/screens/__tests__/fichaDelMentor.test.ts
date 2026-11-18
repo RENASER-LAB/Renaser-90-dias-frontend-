@@ -174,17 +174,28 @@ describe('«Como mentor»', () => {
     expect(alAbrirGrupo).toHaveBeenCalledWith('g-1', 'Cupo 1314');
   });
 
-  it('dice su evaluación del mes, las evaluaciones que debe, sus consultas sin responder con los días y «Lo que le dijiste»', async () => { // spec 056 FR-024
+  it('dice su evaluación del mes, sus consultas sin responder con los días y «Lo que le dijiste»', async () => { // spec 056 FR-024
     const r = await montar(pantalla());
     const texto = todoElTexto(r);
     expect(texto).toContain('Su evaluación');
     expect(texto).toContain('0 %');
-    expect(texto).toContain('Evaluaciones que debe');
-    expect(texto).toContain('3 pendientes');
     expect(texto).toContain('Consultas');
     expect(texto).toContain('1 · 5 días');
     expect(texto).toContain('Lo que le dijiste');
     expect(texto).toContain('Nada este mes');
+  });
+
+  it('no dice «Evaluaciones que debe»: el servidor cuenta las evidencias de los aprendices del mes, no lo que el mentor debe entregar, y esa cifra daba cientos de «pendientes»', async () => { // spec 056 FR-024
+    const base = fichaBase();
+    mockFicha = () => Promise.resolve(fichaBase({ mentor: { ...base.mentor, evaluation: { source: 'OK', month: '2026-11', percentage: 21.4, delivered: 245, expected: 1000, traineesEvaluated: 9, state: 'CALCULADA' } } }));
+    const r = await montar(pantalla());
+    const texto = todoElTexto(r);
+    expect(texto).not.toContain('Evaluaciones que debe');
+    expect(texto).not.toContain('pendientes');
+    expect(texto).not.toContain('755');
+    expect(texto).toContain('21 %');
+    /* Sin la fila no queda un hueco: lo que sigue (consultas) se ve pegado a su evaluación. */
+    expect(hayTocable(r, 'Consultas: 1 · 5 días')).toBe(true);
   });
 
   it('las consultas abren la bandeja de Consultas', async () => { // spec 056 FR-024

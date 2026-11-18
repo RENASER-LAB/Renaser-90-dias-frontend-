@@ -4,6 +4,10 @@ import { nombreDelMes } from './lecturaDeMentores';
 /**
  * Lo que la ficha de un mentor dice en su sección «Como mentor» (spec 056 FR-024), en una cifra corta. Un bloque que el servidor no pudo leer
  * se dice («No se pudo leer»), nunca como cero; lo que no llegó y no importa, no se dibuja (`null`).
+ *
+ * **No hay «evaluaciones que debe».** `evaluation.expected` y `evaluation.delivered` del servidor son las obligaciones de evidencia de los aprendices del
+ * mentor en el mes (`CalculoCumplimiento`: la base de su porcentaje), no lo que el mentor debe entregar: «esperadas − entregadas» daba cientos de
+ * «pendientes» para un mentor con 9 aprendices (E2E del 18/11). Sin un dato confiable de lo que de verdad debe, la fila no se muestra.
  */
 const NO_SE_PUDO = 'No se pudo leer';
 const plural = (n: number, uno: string, varios: string) => `${n} ${n === 1 ? uno : varios}`;
@@ -23,15 +27,6 @@ export function evaluacionCorta(m: IndicadoresApi): string {
   if (e.state === 'CALCULADA' && e.percentage !== null) return `${Math.round(e.percentage)} %`;
   if (e.state === 'SIN_MUESTRA') return 'Sin datos';
   return 'Sin grupo';
-}
-
-/** Las evaluaciones de aprendices que le faltan entregar: «3 pendientes», «Al día»; `null` si el servidor no dio las cifras. */
-export function evaluacionesQueDebe(m: IndicadoresApi): string | null {
-  const e = m.evaluation;
-  if (e.source !== 'OK') return NO_SE_PUDO;
-  if (e.expected === null || e.delivered === null) return null;
-  const faltan = Math.max(0, e.expected - e.delivered);
-  return faltan === 0 ? 'Al día' : plural(faltan, 'pendiente', 'pendientes');
 }
 
 /** Sus consultas sin responder con los días de la más vieja: «1 · 5 días», «2 · hoy», «Ninguna». */
