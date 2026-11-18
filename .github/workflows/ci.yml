@@ -25,9 +25,16 @@ permissions:
 
 jobs:
   verificar:
-    name: Tipos y pruebas
+    # Tres partes en paralelo (2026-11-18): el Jest completo corría en un solo proceso y era el paso más lento. Cada parte
+    # corre tipos y reglas igual que antes, y su tercio de Jest con `--shard`; sigue en un proceso por parte (las pruebas de
+    # carrera son inestables con varios procesos).
+    name: Tipos y pruebas (parte ${{ matrix.parte }}/3)
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        parte: [1, 2, 3]
 
     steps:
       - name: Descargar el codigo
@@ -54,4 +61,4 @@ jobs:
       # en vez de escribirlos y marca como «no aplica» la trazabilidad de specs, que corre el CI del backend contra
       # esta rama (trazabilidad.yml). Un solo camino: si cambia lo que se verifica, cambia en scripts/verificar.mjs.
       - name: Verificar (tipos, pruebas y reglas de código)
-        run: npm run verificar -- --ci
+        run: npm run verificar -- --ci --shard=${{ matrix.parte }}/3
