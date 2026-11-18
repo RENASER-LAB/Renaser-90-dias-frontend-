@@ -11,6 +11,7 @@ import { Presionable } from '../../../components/Presionable';
 import { useTheme } from '../../../theme/ThemeContext';
 import { LeccionVideoPlayer } from '../../academy/components/LeccionVideoPlayer';
 import { claveDeCacheDeLaFoto } from '../../evidence/utils/fotoDeEvidencia';
+import { tituloEnTipoOracion } from '../../habits/utils/tituloEnTipoOracion';
 import { EvidenciaNoSeAbrio, leerEvidencia, type EvidenciaLeida, type MotivoSinEvidencia } from '../api/cumplimientoDelLiderApi';
 import type { EvidenciaDeLaObligacion } from '../types/cumplimientoDelLider.types';
 import { textoDelFalloDeEvidencia, tipoDeEvidenciaEnPalabras } from '../utils/palabrasDeLaPersona';
@@ -32,7 +33,7 @@ import { VerPublicacion } from './VisorDePublicacion';
  * - Solo se monta lo que se ve: una semana trae decenas de hábitos y cada uno solo sabe cómo abrirse.
  */
 export function EvidenciaDeObligacion({
-  titulo,
+  titulo: tituloDelServidor,
   evidencias,
   respuestaTexto = null,
   etiqueta = 'Ver evidencia',
@@ -63,6 +64,8 @@ export function EvidenciaDeObligacion({
   /** Si la evidencia se publicó en el Muro, la hoja ofrece «Ver en el Muro». */
   publicacionId?: string | null;
 }) {
+  /* El catálogo manda casi todos los hábitos en MAYÚSCULAS: la hoja lo dice en tipo oración, como la lista (spec 056 FR-014). Solo cambia lo que se ve. */
+  const titulo = tituloEnTipoOracion(tituloDelServidor);
   const [abiertaPropia, setAbiertaPropia] = useState(false);
   const controlada = abiertaDeFuera !== undefined;
   const abierta = controlada ? abiertaDeFuera : abiertaPropia;
