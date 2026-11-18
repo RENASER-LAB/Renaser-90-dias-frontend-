@@ -22,6 +22,7 @@ import type { MentorDeLasConsultas } from '../utils/consultasDelLider';
 import { subtituloDelMentor } from '../utils/datosDelMentor';
 import { VERBO_DE_OBSERVACION } from '../utils/lecturaDeMentores';
 import { personaParaLaFicha } from '../utils/personaParaLaFicha';
+import { sesionProgramadaEnPalabras } from '../utils/sesionProgramada';
 
 const TIPOS: TipoObservacion[] = ['RECONOCIMIENTO', 'SUGERENCIA', 'ALERTA'];
 const AYUDA_DEL_CAMPO: Record<TipoObservacion, string> = {
@@ -43,6 +44,8 @@ const GUARDADA: Record<TipoObservacion, string> = {
  * - Si no sigue su programa, en lugar de la semana y los pilares va una línea que lo dice. Si su cuenta está suspendida, la ficha solo dice eso.
  * - Al pie: «Descargar semana», «Alertar» y «Programar sesión». Lo que se le dice le llega al mentor como aviso y como mensaje en su chat con el líder:
  *   lo manda el servidor, y «Lo que le dijiste» se relee al guardar.
+ * - Lo que se confirma («Alerta guardada.», «Sesión programada para el viernes 20 de noviembre a las 15:00.») va en la ranura fija `aviso` de la ficha, no al pie: los
+ *   botones están al final de una página larga y, al cerrarse la hoja, la confirmación quedaba fuera de pantalla.
  * - «Consultas» abre la bandeja filtrada a este mentor (`onAbrirConsultas` recibe su id, su nombre y los grupos que acompaña).
  */
 export function FichaDelMentorScreen({
@@ -107,6 +110,11 @@ export function FichaDelMentorScreen({
     return salio;
   };
 
+  const alProgramar = (sesion: { iniciaEn: string; zona: string | null }) => {
+    setConfirmacion(sesionProgramadaEnPalabras(sesion.iniciaEn, sesion.zona));
+    tacto.logro();
+  };
+
   return (
     <>
       <FichaDePersona
@@ -116,13 +124,13 @@ export function FichaDelMentorScreen({
         rotuloDeVolver={rotuloDeVolver}
         onYaNoAcompana={() => undefined}
         sinNotas
+        aviso={confirmacion ? <ConfirmacionEnLinea texto={confirmacion} onTerminar={() => setConfirmacion(null)} /> : null}
         subtitulo={subtituloDelMentor(ficha)}
         accionesDeCabecera={<BotonDeEstrella nombre={nombreVisible} onPress={() => setHoja({ tipo: 'RECONOCIMIENTO' })} />}
         sinSemana={ficha.haceSuPrograma === false ? <Linea>No sigue su propio programa.</Linea> : undefined}
         despues={<ComoMentor ficha={ficha} onAbrirGrupo={onAbrirGrupo} onAbrirConsultas={() => onAbrirConsultas({ id: mentorId, nombre: nombreVisible, grupoIds })} onDecirle={() => setHoja({ tipo: 'RECONOCIMIENTO' })} />}
         pie={({ semanaHasta }) => (
           <View style={estilos.botones}>
-            {confirmacion ? <ConfirmacionEnLinea texto={confirmacion} onTerminar={() => setConfirmacion(null)} /> : null}
             <BotonDescargarSemana documento={{ tipo: 'MENTOR', personaId: mentorId }} semanaHasta={semanaHasta} />
             <BotonSecundario etiqueta="Alertar" icono="alertTriangle" onPress={() => setHoja({ tipo: 'ALERTA' })} accessibilityLabel="Alertar" />
             <BotonSecundario etiqueta="Programar sesión" icono="calendar" onPress={() => setProgramando(true)} />
@@ -149,7 +157,7 @@ export function FichaDelMentorScreen({
           />
         }
       />
-      <HojaProgramarSesion visible={programando} alCerrar={() => setProgramando(false)} mentor={{ id: mentorId, nombre: nombreVisible }} onProgramada={() => setConfirmacion('Sesión programada.')} />
+      <HojaProgramarSesion visible={programando} alCerrar={() => setProgramando(false)} mentor={{ id: mentorId, nombre: nombreVisible }} onProgramada={alProgramar} />
     </>
   );
 }

@@ -9,6 +9,7 @@ import { estadoDelGrupo, filasDelGrupo } from '../grupoDelLider';
 import { cohorteParaCrear, cuantosPorFiltro, estaLleno, estaSinMentor, filtroInicialDeGrupos, gruposDelFiltro, mentorConCupoLleno, nombreYaUsado } from '../gruposDelLider';
 import { cuposLibresEnPalabras, filasPorResolver, ordenarPorUrgencia } from '../misMentores';
 import { colorDeLaEntrada, lineaDeLaEntrada, resumenDelReporte } from '../reporteDelMes';
+import { sesionProgramadaEnPalabras } from '../sesionProgramada';
 
 const grupo = (id: string, extra: Partial<GrupoDelLider> = {}): GrupoDelLider => ({
   id,
@@ -149,6 +150,18 @@ describe('Consultas', () => {
     expect(esDeLosAprendicesDe({ grupoId: 'g-9', mentorNombre: ' e2e mentor ' }, sinGrupos)).toBe(true);
     expect(esDeLosAprendicesDe({ grupoId: 'g-9', mentorNombre: 'Ana' }, sinGrupos)).toBe(false);
     expect(esDeLosAprendicesDe({ grupoId: 'g-9', mentorNombre: null }, sinGrupos)).toBe(false);
+  });
+});
+
+describe('«Sesión programada» (confirmación de la ficha del mentor)', () => {
+  it('dice el día y la hora en la zona de la sesión, en tipo oración', () => { // spec 056 FR-034
+    expect(sesionProgramadaEnPalabras('2026-11-20T20:00:00.000Z', 'America/Lima')).toBe('Sesión programada para el viernes 20 de noviembre a las 15:00.');
+    expect(sesionProgramadaEnPalabras('2026-11-21T02:30:00Z', 'America/Lima')).toBe('Sesión programada para el viernes 20 de noviembre a las 21:30.');
+  });
+
+  it('si la fecha no se lee, no inventa un día: dice solo que quedó programada', () => { // spec 056 FR-034
+    expect(sesionProgramadaEnPalabras('no es fecha', 'America/Lima')).toBe('Sesión programada.');
+    expect(sesionProgramadaEnPalabras(null, null)).toBe('Sesión programada.');
   });
 });
 

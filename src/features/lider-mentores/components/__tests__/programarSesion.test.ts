@@ -29,7 +29,7 @@ jest.mock('../../../../context/AuthContext', () => ({ useAuth: () => ({ user: { 
 
 let mockOpciones: { sabido: boolean; opciones: OpcionesDeAudiencia } = { sabido: true, opciones: SIN_OPCIONES };
 jest.mock('../../../eventos/hooks/useOpcionesDeAudiencia', () => ({ useOpcionesDeAudiencia: () => mockOpciones }));
-const mockCrear = jest.fn<(cuerpo: Record<string, unknown>, formation?: string | null) => Promise<{ id: string }>>();
+const mockCrear = jest.fn<(cuerpo: Record<string, unknown>, formation?: string | null) => Promise<{ id: string; iniciaEn?: string; zona?: string | null }>>();
 jest.mock('../../../eventos/api/eventosApi', () => ({ crearEvento: (...a: [Record<string, unknown>, string | null | undefined]) => mockCrear(...a) }));
 jest.mock('../../../eventos/utils/portadaDelEvento', () => ({ subirPortada: jest.fn(), elegirPortada: async () => null }));
 
@@ -117,6 +117,19 @@ describe('«Programar sesión» desde la ficha de un mentor', () => {
     expect(cuerpo.title ?? cuerpo.titulo).toBeTruthy();
     expect(alProgramar).toHaveBeenCalledTimes(1);
     expect(alCerrar).toHaveBeenCalledTimes(1);
+  });
+
+  it('le dice a quien abrió la hoja cuándo quedó la sesión: lo que confirmó el servidor, y si no lo trae, lo que se mandó', async () => { // spec 056 FR-034
+    mockCrear.mockResolvedValueOnce({ id: 'e-1', iniciaEn: '2099-01-01T20:00:00.000Z', zona: 'America/Lima' });
+    await montar(hoja());
+    await act(async () => formulario!.onGuardar(form(), null, audienciaConElMentor()));
+    expect(alProgramar).toHaveBeenLastCalledWith({ iniciaEn: '2099-01-01T20:00:00.000Z', zona: 'America/Lima' });
+
+    alProgramar.mockReset();
+    mockCrear.mockResolvedValueOnce({ id: 'e-2' });
+    await act(async () => formulario!.onGuardar(form(), null, audienciaConElMentor()));
+    const mandado = mockCrear.mock.calls[1][0];
+    expect(alProgramar).toHaveBeenLastCalledWith({ iniciaEn: mandado.startsAt, zona: mandado.timezone });
   });
 
   it('un toque, un pedido: dos guardados seguidos crean una sola sesión', async () => { // spec 056 FR-034

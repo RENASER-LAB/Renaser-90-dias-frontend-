@@ -60,6 +60,11 @@ export interface PropsDeFichaDePersona {
   accionesDeCabecera?: React.ReactNode;
   /** Contenido propio de quien abre la ficha, DESPUÉS de las secciones del final (por ejemplo, «Como mentor»). Sin contenido no deja hueco. */
   despues?: React.ReactNode;
+  /**
+   * Spec 056 FR-034: una línea de confirmación (`ConfirmacionEnLinea`) que queda FIJA entre la flecha y el scroll, a la vista en cualquier parte de la página. Los botones
+   * van al final de una ficha larga: una confirmación puesta ahí (en `pie`) quedaba fuera de pantalla al cerrarse la hoja. Sin contenido no deja hueco.
+   */
+  aviso?: React.ReactNode;
   /** Lo último de la ficha, para los botones («Descargar semana», «Avisar a su mentor»). Con función, recibe la semana a la vista. Sin contenido no deja hueco. */
   pie?: React.ReactNode | ((contexto: ContextoDeLaFicha) => React.ReactNode);
   /**
@@ -102,6 +107,7 @@ export function FichaDePersona({
   accionesDeCabecera,
   despues,
   pie,
+  aviso,
   sinSemana,
   sinNotas = false,
   subtitulo,
@@ -211,6 +217,8 @@ export function FichaDePersona({
           <Text style={[t.body, { color: c.goldInk, fontFamily: fuentes.media, fontSize: 16 }]}>{rotuloDeVolver}</Text>
         </Presionable>
       </View>
+
+      {aviso ? <View style={[estilos.aviso, { paddingHorizontal: horizontalPadding, maxWidth: contentMaxWidth, alignSelf: isTablet ? 'center' : 'stretch', width: isTablet ? '100%' : undefined }]}>{aviso}</View> : null}
 
       <ScrollView
         {...barraAlDesplazar}
@@ -381,6 +389,7 @@ export function FichaDePersona({
 
 const estilos = StyleSheet.create({
   barra: { flexDirection: 'row', alignItems: 'center', paddingTop: 10, paddingBottom: 6 },
+  aviso: { paddingBottom: 6 },
   volver: { flexDirection: 'row', alignItems: 'center', gap: 7, minHeight: 48 },
   contenido: { flexGrow: 1, paddingTop: 8, paddingBottom: ESPACIO_PARA_LANZADOR },
   cabecera: { flexDirection: 'row', alignItems: 'center', gap: 10 },

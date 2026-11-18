@@ -32,8 +32,8 @@ export function HojaProgramarSesion({
   visible: boolean;
   alCerrar: () => void;
   mentor: { id: string; nombre: string };
-  /** La sesión quedó creada: quien abre la hoja lo dice en su pantalla. */
-  onProgramada?: () => void;
+  /** La sesión quedó creada, con el instante y la zona que confirmó el servidor: quien abre la hoja lo dice en su pantalla. */
+  onProgramada?: (sesion: { iniciaEn: string; zona: string | null }) => void;
 }) {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
@@ -69,7 +69,7 @@ export function HojaProgramarSesion({
           /* Se puede cambiar editando el evento desde Eventos. */
         }
       }
-      onProgramada?.();
+      onProgramada?.({ iniciaEn: creado.iniciaEn || String(armado.cuerpo.startsAt), zona: creado.zona ?? form.zona });
       alCerrar();
     } catch (e) {
       setError(

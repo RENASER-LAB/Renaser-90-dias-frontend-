@@ -42,7 +42,7 @@ jest.mock('../../../mentor/components/FichaDePersona', () => {
     FichaDePersona: (p: PropsDeFichaDePersona) => {
       props = p;
       const pie = typeof p.pie === 'function' ? p.pie({ semanaHasta: null }) : p.pie;
-      return R.createElement(View, { testID: 'ficha-de-persona' }, p.accionesDeCabecera, p.sinSemana, p.despues, pie);
+      return R.createElement(View, { testID: 'ficha-de-persona' }, p.accionesDeCabecera, p.aviso, p.sinSemana, p.despues, pie);
     },
   };
 });
@@ -59,9 +59,11 @@ const mockRegistrar = jest.fn<(id: string, nueva: { tipo: string; texto: string;
 jest.mock('../../api/liderMentoresApi', () => ({ obtenerFicha: () => mockFicha(), registrarObservacion: (...a: [string, never]) => mockRegistrar(...a) }));
 /* «Programar sesión» se prueba en su propio archivo: acá solo se comprueba que el botón abre la hoja con ese mentor. */
 const mockProgramar = jest.fn();
+let mockAlProgramar: (sesion: { iniciaEn: string; zona: string | null }) => void = () => undefined;
 jest.mock('../../components/HojaProgramarSesion', () => ({
-  HojaProgramarSesion: (p: { visible: boolean; mentor: { id: string; nombre: string } }) => {
+  HojaProgramarSesion: (p: { visible: boolean; mentor: { id: string; nombre: string }; onProgramada: (sesion: { iniciaEn: string; zona: string | null }) => void }) => {
     mockProgramar(p.visible, p.mentor);
+    mockAlProgramar = p.onProgramada;
     return null;
   },
 }));
@@ -292,6 +294,31 @@ describe('Alertar, Descargar semana y Programar sesión', () => {
     const r = await montar(pantalla());
     await tocar(r, 'Programar sesión');
     expect(mockProgramar).toHaveBeenLastCalledWith(true, { id: 'm-1', nombre: 'E2E Mentor' });
+  });
+
+  it('al programar la sesión dice para cuándo quedó, en una línea fija a la vista y no al fondo del scroll', async () => { // spec 056 FR-034
+    const r = await montar(pantalla());
+    await tocar(r, 'Programar sesión');
+    await act(async () => mockAlProgramar({ iniciaEn: '2026-11-20T20:00:00.000Z', zona: 'America/Lima' }));
+    expect(todoElTexto(r)).toContain('Sesión programada para el viernes 20 de noviembre a las 15:00.');
+    /* La confirmación va en la ranura `aviso` de la ficha (siempre a la vista), no en el pie: el pie queda al final de una página larga y, al cerrarse la hoja, nadie lo veía. */
+    expect(props?.aviso).toBeTruthy();
+    const pie = (props?.pie as (c: { semanaHasta: string | null }) => React.ReactNode)({ semanaHasta: null });
+    expect(JSON.stringify(pie)).not.toContain('Sesión programada');
+  });
+
+  it('«Alerta guardada.» también va en la ranura fija de la ficha', async () => { // spec 056 FR-025
+    const r = await montar(pantalla());
+    await tocar(r, 'Alertar');
+    await act(async () => campo(r).props.onChangeText('Escribe a tus 5 en rojo.'));
+    await act(async () => exacto(r, 'Guardar').props.onPress());
+    expect(todoElTexto(r)).toContain('Alerta guardada.');
+    expect(props?.aviso).toBeTruthy();
+  });
+
+  it('sin nada que confirmar, la ranura queda vacía y no deja un hueco', async () => { // spec 056 FR-034
+    await montar(pantalla());
+    expect(props?.aviso).toBeFalsy();
   });
 });
 
