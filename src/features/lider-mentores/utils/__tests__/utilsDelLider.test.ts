@@ -4,7 +4,7 @@ import type { EntradaDelReporteApi, FichaApi, IndicadoresApi, PorResolverApi } f
 import type { GrupoDelLider } from '../../types/gruposDelLider.types';
 import type { AprendizDelSemaforo } from '../../../semaforo/types/semaforo.types';
 import { consultasSinResponder, evaluacionCorta, subtituloDelMentor } from '../datosDelMentor';
-import { haceCuantosDias, quienPregunta } from '../consultasDelLider';
+import { esDeLosAprendicesDe, haceCuantosDias, quienPregunta } from '../consultasDelLider';
 import { estadoDelGrupo, filasDelGrupo } from '../grupoDelLider';
 import { cohorteParaCrear, cuantosPorFiltro, estaLleno, estaSinMentor, filtroInicialDeGrupos, gruposDelFiltro, mentorConCupoLleno, nombreYaUsado } from '../gruposDelLider';
 import { cuposLibresEnPalabras, filasPorResolver, ordenarPorUrgencia } from '../misMentores';
@@ -137,6 +137,18 @@ describe('Consultas', () => {
   it('dice quién pregunta y a qué mentor le toca, y lo que no se sabe no se inventa', () => { // spec 056 FR-028
     expect(quienPregunta('Ana López', 'E2E Mentor')).toBe('Ana López → su mentor E2E Mentor');
     expect(quienPregunta(null, null)).toBe('Un aprendiz → su mentor');
+  });
+
+  it('una consulta es de un mentor si quien pregunta está en uno de sus grupos; sin grupos conocidos, si su mentor se llama igual', () => { // spec 056 FR-028
+    const mentor = { id: 'm-1', nombre: 'E2E Mentor', grupoIds: ['g-1', 'g-2'] };
+    expect(esDeLosAprendicesDe({ grupoId: 'g-2', mentorNombre: 'E2E Mentor' }, mentor)).toBe(true);
+    expect(esDeLosAprendicesDe({ grupoId: 'g-9', mentorNombre: 'E2E Mentor' }, mentor)).toBe(false); // otro grupo, aunque el nombre coincida
+    expect(esDeLosAprendicesDe({ grupoId: null, mentorNombre: 'E2E Mentor' }, mentor)).toBe(false);
+    expect(esDeLosAprendicesDe(null, mentor)).toBe(false);
+    const sinGrupos = { ...mentor, grupoIds: [] };
+    expect(esDeLosAprendicesDe({ grupoId: 'g-9', mentorNombre: ' e2e mentor ' }, sinGrupos)).toBe(true);
+    expect(esDeLosAprendicesDe({ grupoId: 'g-9', mentorNombre: 'Ana' }, sinGrupos)).toBe(false);
+    expect(esDeLosAprendicesDe({ grupoId: 'g-9', mentorNombre: null }, sinGrupos)).toBe(false);
   });
 });
 

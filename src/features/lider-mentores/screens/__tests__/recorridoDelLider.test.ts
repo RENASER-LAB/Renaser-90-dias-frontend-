@@ -43,7 +43,10 @@ jest.mock('../MisMentoresScreen', () => ({
 jest.mock('../FichaDelMentorScreen', () => ({
   FichaDelMentorScreen: (p: Props) => {
     mockPropsDe.fichaMentor = p;
-    return mockDoble('ficha del mentor', [['Abrir grupo', q => (q.onAbrirGrupo as unknown as AbrirConNombre)('g-1', 'Cupo 1314')], ['Consultas del mentor', q => q.onAbrirConsultas()]])(p);
+    return mockDoble('ficha del mentor', [
+      ['Abrir grupo', q => (q.onAbrirGrupo as unknown as AbrirConNombre)('g-1', 'Cupo 1314')],
+      ['Consultas del mentor', q => (q.onAbrirConsultas as unknown as AbrirAlgo)({ id: 'm-1', nombre: 'E2E Mentor', grupoIds: ['g-1'] })],
+    ])(p);
   },
 }));
 jest.mock('../GruposDelLiderScreen', () => ({
@@ -76,7 +79,12 @@ jest.mock('../FichaDelAprendizDelLider', () => ({
     return mockDoble('ficha del aprendiz', [])(p);
   },
 }));
-jest.mock('../ConsultasDelLiderScreen', () => ({ ConsultasDelLiderScreen: (p: Props) => mockDoble('Consultas', [])(p) }));
+jest.mock('../ConsultasDelLiderScreen', () => ({
+  ConsultasDelLiderScreen: (p: Props) => {
+    mockPropsDe.consultas = p;
+    return mockDoble('Consultas', [])(p);
+  },
+}));
 jest.mock('../ReporteScreen', () => ({ ReporteScreen: (p: Props) => mockDoble('Reporte', [])(p) }));
 
 import { LiderMentoresScreen } from '../LiderMentoresScreen';
@@ -178,6 +186,16 @@ describe('el recorrido del líder', () => {
     await tocar(r, 'Consultas del mentor');
     await volverDe(r, 'Consultas');
     expect(todoElTexto(r)).toContain('PANTALLA ficha del mentor');
+  });
+
+  it('las consultas de la ficha de un mentor se abren filtradas a ese mentor; las de Mis mentores, de todos', async () => { // spec 056 FR-028
+    const r = await montar(pantalla());
+    await tocar(r, 'Consultas');
+    expect((mockPropsDe.consultas as { mentor?: unknown }).mentor).toBeUndefined();
+    await volverDe(r, 'Consultas');
+    await tocar(r, 'Abrir mentor');
+    await tocar(r, 'Consultas del mentor');
+    expect((mockPropsDe.consultas as { mentor?: unknown }).mentor).toEqual({ id: 'm-1', nombre: 'E2E Mentor', grupoIds: ['g-1'] });
   });
 
   it('al cambiar el mentor del grupo, la ficha del aprendiz y el grupo al volver dicen el mentor nuevo', async () => { // spec 056 FR-009

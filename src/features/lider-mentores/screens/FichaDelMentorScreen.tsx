@@ -18,6 +18,7 @@ import { HojaProgramarSesion } from '../components/HojaProgramarSesion';
 import { Linea, MarcoDelLider } from '../components/MarcoDelLider';
 import { useLecturaDelLider } from '../hooks/useLecturaDelLider';
 import { useObservarAlMentor } from '../hooks/useObservarAlMentor';
+import type { MentorDeLasConsultas } from '../utils/consultasDelLider';
 import { subtituloDelMentor } from '../utils/datosDelMentor';
 import { VERBO_DE_OBSERVACION } from '../utils/lecturaDeMentores';
 import { personaParaLaFicha } from '../utils/personaParaLaFicha';
@@ -42,6 +43,7 @@ const GUARDADA: Record<TipoObservacion, string> = {
  * - Si no sigue su programa, en lugar de la semana y los pilares va una línea que lo dice. Si su cuenta está suspendida, la ficha solo dice eso.
  * - Al pie: «Descargar semana», «Alertar» y «Programar sesión». Lo que se le dice le llega al mentor como aviso y como mensaje en su chat con el líder:
  *   lo manda el servidor, y «Lo que le dijiste» se relee al guardar.
+ * - «Consultas» abre la bandeja filtrada a este mentor (`onAbrirConsultas` recibe su id, su nombre y los grupos que acompaña).
  */
 export function FichaDelMentorScreen({
   mentorId,
@@ -57,7 +59,7 @@ export function FichaDelMentorScreen({
   rotuloDeVolver?: string;
   onVolver: () => void;
   onAbrirGrupo: (grupoId: string, nombre: string) => void;
-  onAbrirConsultas: () => void;
+  onAbrirConsultas: (mentor: MentorDeLasConsultas) => void;
 }) {
   const pedir = useCallback(() => obtenerFicha(mentorId), [mentorId]);
   const lectura = useLecturaDelLider(pedir, mentorId);
@@ -70,6 +72,8 @@ export function FichaDelMentorScreen({
   const origen = useMemo<OrigenDeLaFicha>(() => ({ quien: 'lider', grupoId: null }), []);
   const nombreVisible = ficha?.mentor.fullName ?? nombre;
   const alumno = useMemo(() => personaParaLaFicha(mentorId, nombreVisible), [mentorId, nombreVisible]);
+  /* Los grupos que el servidor dice que acompaña: con ellos la bandeja reconoce a sus aprendices. Si no se pudieron leer, vacío (se filtra por su nombre). */
+  const grupoIds = useMemo(() => (ficha?.mentor.groups.source === 'OK' ? (ficha.mentor.groups.items ?? []).map(g => g.id) : []), [ficha]);
 
   if (!ficha) {
     return (
@@ -115,7 +119,7 @@ export function FichaDelMentorScreen({
         subtitulo={subtituloDelMentor(ficha)}
         accionesDeCabecera={<BotonDeEstrella nombre={nombreVisible} onPress={() => setHoja({ tipo: 'RECONOCIMIENTO' })} />}
         sinSemana={ficha.haceSuPrograma === false ? <Linea>No sigue su propio programa.</Linea> : undefined}
-        despues={<ComoMentor ficha={ficha} onAbrirGrupo={onAbrirGrupo} onAbrirConsultas={onAbrirConsultas} onDecirle={() => setHoja({ tipo: 'RECONOCIMIENTO' })} />}
+        despues={<ComoMentor ficha={ficha} onAbrirGrupo={onAbrirGrupo} onAbrirConsultas={() => onAbrirConsultas({ id: mentorId, nombre: nombreVisible, grupoIds })} onDecirle={() => setHoja({ tipo: 'RECONOCIMIENTO' })} />}
         pie={({ semanaHasta }) => (
           <View style={estilos.botones}>
             {confirmacion ? <ConfirmacionEnLinea texto={confirmacion} onTerminar={() => setConfirmacion(null)} /> : null}

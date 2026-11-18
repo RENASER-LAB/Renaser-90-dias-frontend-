@@ -102,7 +102,7 @@ const fichaBase = (extra: Record<string, unknown> = {}): FichaApi =>
 
 const alVolver = jest.fn();
 const alAbrirGrupo = jest.fn<(id: string, nombre: string) => void>();
-const alAbrirConsultas = jest.fn();
+const alAbrirConsultas = jest.fn<(mentor: { id: string; nombre: string; grupoIds: string[] }) => void>();
 const pantalla = () => React.createElement(FichaDelMentorScreen, { mentorId: 'm-1', nombre: 'E2E Mentor', onVolver: alVolver, onAbrirGrupo: alAbrirGrupo, onAbrirConsultas: alAbrirConsultas } as never);
 
 const exacto = (r: Awaited<ReturnType<typeof montar>>, etiqueta: string) => {
@@ -198,10 +198,19 @@ describe('«Como mentor»', () => {
     expect(hayTocable(r, 'Consultas: 1 · 5 días')).toBe(true);
   });
 
-  it('las consultas abren la bandeja de Consultas', async () => { // spec 056 FR-024
+  it('las consultas abren la bandeja de Consultas filtrada a este mentor, con sus grupos para reconocer a sus aprendices', async () => { // spec 056 FR-028
     const r = await montar(pantalla());
     await tocar(r, 'Consultas: 1 · 5 días');
     expect(alAbrirConsultas).toHaveBeenCalledTimes(1);
+    expect(alAbrirConsultas).toHaveBeenCalledWith({ id: 'm-1', nombre: 'E2E Mentor', grupoIds: ['g-1', 'g-2'] });
+  });
+
+  it('si no se pudieron leer sus grupos, la bandeja se filtra solo por su nombre y no inventa grupos', async () => { // spec 056 FR-028
+    const base = fichaBase();
+    mockFicha = () => Promise.resolve(fichaBase({ mentor: { ...base.mentor, groups: { source: 'UNAVAILABLE', items: null } } }));
+    const r = await montar(pantalla());
+    await tocar(r, 'Consultas: 1 · 5 días');
+    expect(alAbrirConsultas).toHaveBeenCalledWith({ id: 'm-1', nombre: 'E2E Mentor', grupoIds: [] });
   });
 
   it('lo que el servidor no pudo leer se dice, no se vuelve un cero', async () => { // spec 056 FR-024

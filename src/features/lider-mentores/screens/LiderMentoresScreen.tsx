@@ -77,7 +77,7 @@ export function LiderMentoresScreen({
           rotuloDeVolver={rotulo}
           onVolver={atras}
           onAbrirGrupo={(grupoId, nombre) => ir({ tipo: 'grupo', grupoId, nombre, mentorNombre: vista.nombre })}
-          onAbrirConsultas={() => ir({ tipo: 'consultas' })}
+          onAbrirConsultas={mentor => ir({ tipo: 'consultas', mentor })}
         />
       );
 
@@ -127,7 +127,7 @@ export function LiderMentoresScreen({
       );
 
     case 'consultas':
-      return <ConsultasDelLiderScreen onVolver={atras} />;
+      return <ConsultasDelLiderScreen onVolver={atras} mentor={vista.mentor} />;
 
     case 'reporte':
       return <ReporteScreen onVolver={atras} />;

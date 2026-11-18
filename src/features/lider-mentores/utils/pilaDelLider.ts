@@ -1,4 +1,5 @@
 import type { FiltroDeGrupos } from '../types/gruposDelLider.types';
+import type { MentorDeLasConsultas } from './consultasDelLider';
 
 /**
  * Las pantallas del líder dentro de «Mis mentores» (spec 056 FR-046): Mis mentores → mentor → grupo → aprendiz, y Grupos, Crear grupo, Consultas y el
@@ -12,7 +13,8 @@ export type VistaDelLider =
   | { tipo: 'crearGrupo' }
   | { tipo: 'grupo'; grupoId: string; nombre: string; mentorNombre: string | null }
   | { tipo: 'fichaAprendiz'; personaId: string; nombre: string; grupoId: string | null; mentorNombre: string | null }
-  | { tipo: 'consultas' }
+  /** Con `mentor`, las consultas de sus aprendices (se abre desde su ficha); sin él, las de todos los mentores (se abre desde Mis mentores). */
+  | { tipo: 'consultas'; mentor?: MentorDeLasConsultas }
   | { tipo: 'reporte' };
 
 export const PILA_INICIAL: readonly VistaDelLider[] = [{ tipo: 'misMentores' }];

@@ -15,7 +15,7 @@ import { LecturaFallida } from '../components/LecturaFallida';
 import { Linea, MarcoDelLider } from '../components/MarcoDelLider';
 import { useAtenderConsultas } from '../hooks/useAtenderConsultas';
 import { useQuienesPreguntan } from '../hooks/useQuienesPreguntan';
-import { haceCuantosDias, quienPregunta } from '../utils/consultasDelLider';
+import { esDeLosAprendicesDe, haceCuantosDias, quienPregunta, type MentorDeLasConsultas } from '../utils/consultasDelLider';
 
 type Pestana = 'sinResponder' | 'respondidas';
 
@@ -26,21 +26,29 @@ type Pestana = 'sinResponder' | 'respondidas';
  * «Respondidas»). Las respondidas dicen quién respondió.
  *
  * El listado trae a todos los de la plataforma, primero lo que lleva más tiempo esperando; las cifras de las pestañas son de lo ya descargado (con «+» si hay más).
+ *
+ * Desde la ficha de un mentor (`mentor`) se abre ya filtrada a las consultas de sus aprendices, con «Ver las de todos» para quitar el filtro. El servidor no filtra por
+ * mentor: se reconoce a quien pregunta por su grupo (`esDeLosAprendicesDe`). Lo que no se pudo ubicar no se esconde: se dice cuántas consultas faltan por saber de quién son.
  */
-export function ConsultasDelLiderScreen({ onVolver }: { onVolver: () => void }) {
+export function ConsultasDelLiderScreen({ onVolver, mentor }: { onVolver: () => void; mentor?: MentorDeLasConsultas }) {
   const bandeja = useBandejaDeTickets(true);
-  const quienes = useQuienesPreguntan(useMemo(() => bandeja.tickets.map(t => t.traineeProfileId), [bandeja.tickets]));
+  const { conocidos: quienes, buscando } = useQuienesPreguntan(useMemo(() => bandeja.tickets.map(t => t.traineeProfileId), [bandeja.tickets]));
   const { ocupadas, recordar, responder } = useAtenderConsultas();
   const [pestana, setPestana] = useState<Pestana>('sinResponder');
   const [respondiendo, setRespondiendo] = useState<WireTicketMentor | null>(null);
   const [confirmacion, setConfirmacion] = useState<string | null>(null);
+  /* El filtro viene de quien abrió la pantalla; «Ver las de todos» lo quita aquí. */
+  const [filtrando, setFiltrando] = useState(true);
+  const delMentor = mentor && filtrando ? mentor : null;
 
-  const abiertas = bandeja.tickets.filter(t => t.status === 'OPEN');
-  const respondidas = bandeja.tickets.filter(t => t.status === 'ANSWERED');
+  const { c, t: tipos } = useTheme();
+  const quien = (t: WireTicketMentor) => quienes.get(t.traineeProfileId) ?? null;
+  const tickets = delMentor ? bandeja.tickets.filter(t => esDeLosAprendicesDe(quien(t), delMentor)) : bandeja.tickets;
+  const sinUbicar = delMentor && !buscando ? bandeja.tickets.filter(t => !quienes.has(t.traineeProfileId)).length : 0;
+  const abiertas = tickets.filter(t => t.status === 'OPEN');
+  const respondidas = tickets.filter(t => t.status === 'ANSWERED');
   const visibles = pestana === 'sinResponder' ? abiertas : respondidas;
   const mas = bandeja.hayMas ? '+' : '';
-
-  const quien = (t: WireTicketMentor) => quienes.get(t.traineeProfileId) ?? null;
 
   const alRecordar = async (t: WireTicketMentor) => {
     const salio = await recordar(t.id);
@@ -72,6 +80,14 @@ export function ConsultasDelLiderScreen({ onVolver }: { onVolver: () => void }) 
           <LecturaFallida fallo={bandeja.fallo} detalle={bandeja.detalle} que="las consultas" onReintentar={bandeja.recargar} />
         ) : (
           <>
+            {delMentor ? (
+              <View style={estilos.filtro}>
+                <Text accessibilityRole="header" style={[tipos.body, { color: c.textStrong, fontFamily: fuentes.seminegrita, fontSize: 16, flexShrink: 1 }]}>
+                  {`Consultas de ${delMentor.nombre}`}
+                </Text>
+                <BotonSecundario etiqueta="Ver las de todos" onPress={() => setFiltrando(false)} accessibilityLabel="Ver las consultas de todos los mentores" estilo={estilos.quitarFiltro} />
+              </View>
+            ) : null}
             <ControlSegmentado<Pestana>
               opciones={[
                 { valor: 'sinResponder', etiqueta: `Sin responder · ${abiertas.length}${mas}` },
@@ -83,7 +99,9 @@ export function ConsultasDelLiderScreen({ onVolver }: { onVolver: () => void }) 
               achicarTexto
               accessibilityLabel="Filtrar las consultas"
             />
-            {visibles.length === 0 ? <Linea>{pestana === 'sinResponder' ? 'No hay consultas sin responder.' : 'Todavía no hay consultas respondidas.'}</Linea> : null}
+            {delMentor && buscando ? <Linea>{`Buscando las consultas de ${delMentor.nombre}…`}</Linea> : null}
+            {visibles.length === 0 && !(delMentor && buscando) ? <Linea>{lineaSinConsultas(pestana, delMentor)}</Linea> : null}
+            {sinUbicar > 0 ? <Linea>{`No se pudo saber de quién son ${sinUbicar} ${sinUbicar === 1 ? 'consulta más' : 'consultas más'}.`}</Linea> : null}
             <View style={estilos.lista}>
               {visibles.map(t => (
                 <Consulta
@@ -113,6 +131,12 @@ export function ConsultasDelLiderScreen({ onVolver }: { onVolver: () => void }) 
       />
     </>
   );
+}
+
+/** Lo que dice una pestaña sin consultas: de todos, o de ese mentor. */
+function lineaSinConsultas(pestana: Pestana, mentor: MentorDeLasConsultas | null): string {
+  if (mentor) return pestana === 'sinResponder' ? `${mentor.nombre} no tiene consultas sin responder.` : `${mentor.nombre} todavía no tiene consultas respondidas.`;
+  return pestana === 'sinResponder' ? 'No hay consultas sin responder.' : 'Todavía no hay consultas respondidas.';
 }
 
 function Consulta({
@@ -159,6 +183,8 @@ function Consulta({
 }
 
 const estilos = StyleSheet.create({
+  filtro: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
+  quitarFiltro: { flexGrow: 0 },
   lista: { gap: 10 },
   tarjeta: { gap: 8, borderWidth: 1, borderRadius: 16, padding: 14 },
   cabecera: { flexDirection: 'row', alignItems: 'baseline', gap: 10 },

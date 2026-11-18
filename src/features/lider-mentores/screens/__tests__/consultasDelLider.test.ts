@@ -37,7 +37,7 @@ jest.mock('../../../../components/Alerta', () => ({ Alert: { alert: (...a: unkno
 const mockRecargar = jest.fn();
 let mockBandeja: Record<string, unknown>;
 jest.mock('../../../tickets/hooks/useBandejaDeTickets', () => ({ useBandejaDeTickets: () => mockBandeja }));
-const mockPaginaDePersonas = jest.fn<() => Promise<{ items: Array<{ personaId: string; nombre: string; mentorNombre: string | null }>; hayMas: boolean }>>();
+const mockPaginaDePersonas = jest.fn<() => Promise<{ items: Array<{ personaId: string; nombre: string; mentorNombre: string | null; grupoId?: string | null }>; hayMas: boolean }>>();
 jest.mock('../../api/aprendicesDelLiderApi', () => ({ obtenerAprendicesDelLider: () => mockPaginaDePersonas() }));
 const mockRecordar = jest.fn<(id: string, clave: string) => Promise<void>>();
 jest.mock('../../api/accionesDelLiderApi', () => ({ recordarConsulta: (...a: [string, string]) => mockRecordar(...a), avisarAlMentor: jest.fn() }));
@@ -76,7 +76,7 @@ const bandejaCon = (tickets: WireTicketMentor[], extra: Record<string, unknown> 
 });
 
 const alVolver = jest.fn();
-const pantalla = () => React.createElement(ConsultasDelLiderScreen, { onVolver: alVolver } as never);
+const pantalla = (extra: object = {}) => React.createElement(ConsultasDelLiderScreen, { onVolver: alVolver, ...extra } as never);
 const campo = (r: Awaited<ReturnType<typeof montar>>) => r.root.findAll(n => n.props.accessibilityLabel === 'Tu respuesta' && typeof n.props.onChangeText === 'function')[0];
 const exacto = (r: Awaited<ReturnType<typeof montar>>, etiqueta: string) => {
   const nodo = tocables(r).find(n => n.props.accessibilityLabel === etiqueta);
@@ -92,9 +92,9 @@ beforeEach(() => {
   ]);
   mockPaginaDePersonas.mockReset().mockResolvedValue({
     items: [
-      { personaId: 'p-1', nombre: 'E2E Aprendiz', mentorNombre: 'E2E Mentor' },
-      { personaId: 'p-2', nombre: 'Ana López', mentorNombre: 'E2E Mentor' },
-      { personaId: 'p-3', nombre: 'Beto Pérez', mentorNombre: 'Ricardo Palomino' },
+      { personaId: 'p-1', nombre: 'E2E Aprendiz', mentorNombre: 'E2E Mentor', grupoId: 'g-1' },
+      { personaId: 'p-2', nombre: 'Ana López', mentorNombre: 'E2E Mentor', grupoId: 'g-2' },
+      { personaId: 'p-3', nombre: 'Beto Pérez', mentorNombre: 'Ricardo Palomino', grupoId: 'g-9' },
     ],
     hayMas: false,
   });
@@ -152,6 +152,84 @@ describe('Consultas del líder: la bandeja', () => {
     const r = await montar(pantalla());
     expect(todoElTexto(r)).toContain('Sin responder · 1+');
     expect(hayTocable(r, 'Ver más consultas')).toBe(true);
+  });
+});
+
+describe('Consultas del líder: abiertas desde la ficha de un mentor (filtradas a sus aprendices)', () => {
+  const MENTOR = { id: 'm-1', nombre: 'E2E Mentor', grupoIds: ['g-1', 'g-2'] };
+
+  it('muestra solo las consultas de los aprendices de sus grupos, y las cifras de las pestañas son de ellas', async () => { // spec 056 FR-028
+    mockBandeja = bandejaCon([
+      ...(mockBandeja.tickets as WireTicketMentor[]),
+      ticket('t-4', 'p-3', 'Bloqueo de otro mentor', 3),
+    ]);
+    const r = await montar(pantalla({ mentor: MENTOR }));
+    const texto = todoElTexto(r);
+    expect(texto).toContain('Bloqueo de prueba E2E');
+    expect(texto).toContain('Bloqueo del grupo Fénix');
+    expect(texto).not.toContain('Bloqueo de otro mentor');
+    expect(texto).toContain('Sin responder · 2');
+    expect(texto).toContain('Respondidas · 0');
+    await tocar(r, 'Respondidas');
+    expect(todoElTexto(r)).not.toContain('No logro madrugar');
+  });
+
+  it('reconoce a sus aprendices por el grupo y no se confunde con un mentor de su mismo nombre', async () => { // spec 056 FR-028
+    mockPaginaDePersonas.mockResolvedValue({
+      items: [
+        { personaId: 'p-1', nombre: 'E2E Aprendiz', mentorNombre: 'E2E Mentor', grupoId: 'g-1' },
+        { personaId: 'p-2', nombre: 'Ana López', mentorNombre: 'E2E Mentor', grupoId: 'g-77' }, // otro mentor que se llama igual
+        { personaId: 'p-3', nombre: 'Beto Pérez', mentorNombre: 'Ricardo Palomino', grupoId: 'g-9' },
+      ],
+      hayMas: false,
+    });
+    const r = await montar(pantalla({ mentor: MENTOR }));
+    expect(todoElTexto(r)).toContain('Sin responder · 1');
+    expect(todoElTexto(r)).toContain('Bloqueo de prueba E2E');
+    expect(todoElTexto(r)).not.toContain('Bloqueo del grupo Fénix');
+  });
+
+  it('si no se sabe en qué grupos está el mentor, filtra por el nombre de su mentor', async () => { // spec 056 FR-028
+    const r = await montar(pantalla({ mentor: { ...MENTOR, grupoIds: [] } }));
+    expect(todoElTexto(r)).toContain('Sin responder · 2');
+    await tocar(r, 'Respondidas');
+    expect(todoElTexto(r)).not.toContain('No logro madrugar');
+  });
+
+  it('dice de quién son las consultas y deja ver las de todos con un botón de 44 o más', async () => { // spec 056 FR-028
+    const r = await montar(pantalla({ mentor: { id: 'm-3', nombre: 'Ricardo Palomino', grupoIds: ['g-9'] } }));
+    expect(todoElTexto(r)).toContain('Consultas de Ricardo Palomino');
+    expect(todoElTexto(r)).toContain('Sin responder · 0');
+    expect(todoElTexto(r)).toContain('Respondidas · 1');
+    await tocar(r, 'Ver las consultas de todos los mentores');
+    expect(todoElTexto(r)).not.toContain('Consultas de Ricardo Palomino');
+    expect(todoElTexto(r)).toContain('Sin responder · 2');
+    expect(todoElTexto(r)).toContain('Respondidas · 1');
+  });
+
+  it('abierta desde Mis mentores no filtra nada ni dice «Consultas de»', async () => { // spec 056 FR-028
+    const r = await montar(pantalla());
+    expect(todoElTexto(r)).not.toContain('Consultas de');
+    expect(hayTocable(r, 'Ver las consultas de todos los mentores')).toBe(false);
+    expect(todoElTexto(r)).toContain('Sin responder · 2');
+  });
+
+  it('su pestaña vacía lo dice con su nombre, sin una lista en blanco', async () => { // spec 056 FR-028
+    const r = await montar(pantalla({ mentor: { id: 'm-3', nombre: 'Ricardo Palomino', grupoIds: ['g-9'] } }));
+    expect(todoElTexto(r)).toContain('Ricardo Palomino no tiene consultas sin responder.');
+  });
+
+  it('una consulta de alguien a quien no se pudo ubicar no se esconde: se dice cuántas faltan por saber de quién son', async () => { // spec 056 FR-028
+    mockPaginaDePersonas.mockResolvedValue({ items: [{ personaId: 'p-1', nombre: 'E2E Aprendiz', mentorNombre: 'E2E Mentor', grupoId: 'g-1' }], hayMas: false });
+    const r = await montar(pantalla({ mentor: MENTOR }));
+    expect(todoElTexto(r)).toContain('Sin responder · 1');
+    expect(todoElTexto(r)).toContain('No se pudo saber de quién son 2 consultas más.');
+  });
+
+  it('con un mentor puesto, «Recordar» y «Responder yo» siguen sobre la consulta que se toca', async () => { // spec 056 FR-029
+    const r = await montar(pantalla({ mentor: MENTOR }));
+    await tocar(r, 'Recordar al mentor la consulta de E2E Aprendiz');
+    expect(mockRecordar.mock.calls[0][0]).toBe('t-1');
   });
 });
 
