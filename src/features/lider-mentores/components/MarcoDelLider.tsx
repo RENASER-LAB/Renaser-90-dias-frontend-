@@ -1,5 +1,5 @@
 import React from 'react';
-import { ScrollView, Text } from 'react-native';
+import { ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CabeceraAdmin } from '../../admin/components/CabeceraAdmin';
@@ -8,6 +8,7 @@ import { useResponsive } from '../../../theme/responsive';
 import { useTheme } from '../../../theme/ThemeContext';
 import { ESPACIO_PARA_LANZADOR } from '../../renasia/components/RenasiaLauncher';
 import { useOcultarBarraAlDesplazar } from '../../../navigation/barraAlDesplazar/BarraInferior';
+import { Linea } from './Linea';
 
 /**
  * El marco de cada pantalla del líder: «‹ Título» arriba y UN solo scroll (AGENTS.md §2), igual
@@ -74,10 +75,4 @@ export function BarraDelLider({ titulo, onVolver }: { titulo: string; onVolver: 
   return <CabeceraAdmin titulo={titulo} onVolver={onVolver} />;
 }
 
-/** Un texto de lectura: 16 px (SDD 002, RL-30). */
-export function Linea({ children, fuerte = false }: { children: React.ReactNode; fuerte?: boolean }) {
-  const { c, t } = useTheme();
-  return (
-    <Text style={[t.body, { color: fuerte ? c.textStrong : c.textSoft, fontSize: 16, lineHeight: 23 }]}>{children}</Text>
-  );
-}
+export { Linea };
