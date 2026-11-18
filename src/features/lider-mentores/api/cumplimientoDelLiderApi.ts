@@ -2,10 +2,12 @@ import { z } from 'zod';
 
 import { ApiError, apiFetch } from '../../../services/http/apiClient';
 import { urlDeEvidencia } from '../../evidence/api/evidenceApi';
+import { aDiasDelAprendiz, aSemanaDelAprendiz, type DiasDelAprendiz, type SemanaDelAprendiz } from '../../mentor/api/mentorApi';
 import { radarSchemas, validarRespuesta as validarRespuestaDelRadar } from '../../radar/api/radarSchemas';
 import type { HistorialRadarApi } from '../../radar/types/radar.types';
 import type { SemaforoDelGrupo } from '../../semaforo/types/semaforo.types';
 import type { PublicacionDelMuro, SemanaDePersona } from '../types/cumplimientoDelLider.types';
+import type { ObjetivosDeLaPersona } from '../types/objetivosDeLaPersona.types';
 import {
   aPublicacionDelMuro,
   aSemanaDePersona,
@@ -13,6 +15,7 @@ import {
   cumplimientoDelLiderSchemas,
   validarRespuesta,
 } from './cumplimientoDelLiderSchemas';
+import { leerObjetivosDeLaPersona } from './objetivosDeLaPersonaSchemas';
 
 /**
  * Las lecturas del cumplimiento por persona para el líder de mentores (spec 005, contrato
@@ -106,6 +109,41 @@ export async function obtenerSemanaDePersona(
   );
   /* Si el servidor no repitió quién es, es a quien se pidió. */
   return semana.personaId ? semana : { ...semana, personaId };
+}
+
+// ------------------------------------------------------------------------------------------
+// Spec 056: lo que el líder lee para la ficha compartida con el mentor (FichaDePersona)
+// ------------------------------------------------------------------------------------------
+
+/**
+ * `GET /leadership/people/{p}/semana?semanaHasta=` (spec 056, contrato `api.md`): la MISMA semana que la del mentor (sábado a
+ * viernes, con `diaUno` y el pilar de cada hábito), sin puerta de grupo: el líder ve a cualquier persona de sus formaciones. A
+ * diferencia de `/week`, no registra la consulta. 404 `SIN_PROGRAMA` si la persona no sigue su programa.
+ */
+export function rutaDeLaSemanaDeLaFicha(personaId: string, semanaHasta?: string | null): string {
+  return conSemana(`${BASE}/people/${tramo(personaId)}/semana`, semanaHasta);
+}
+
+export async function obtenerSemanaDeLaFicha(personaId: string, semanaHasta?: string | null): Promise<SemanaDelAprendiz> {
+  return aSemanaDelAprendiz(await apiFetch<unknown>(rutaDeLaSemanaDeLaFicha(personaId, semanaHasta)), personaId, 'GET /leadership/people/{p}/semana');
+}
+
+/** `GET /leadership/people/{p}/dias?desde&hasta`: máximo 62 días, recortado a [Día 1, hoy]; el color del día es el mismo que ve el mentor. */
+export function rutaDeLosDiasDeLaPersona(personaId: string, desde: string, hasta: string): string {
+  return `${BASE}/people/${tramo(personaId)}/dias?desde=${tramo(desde)}&hasta=${tramo(hasta)}`;
+}
+
+export async function obtenerDiasDeLaPersona(personaId: string, desde: string, hasta: string): Promise<DiasDelAprendiz> {
+  return aDiasDelAprendiz(await apiFetch<unknown>(rutaDeLosDiasDeLaPersona(personaId, desde, hasta)), 'GET /leadership/people/{p}/dias');
+}
+
+/** `GET /leadership/people/{p}/objetivos`: los objetivos y su avance, solo lectura. 404 o 403 = esa ficha no dibuja la sección. */
+export function rutaDeLosObjetivosDeLaPersona(personaId: string): string {
+  return `${BASE}/people/${tramo(personaId)}/objetivos`;
+}
+
+export async function obtenerObjetivosDeLaPersona(personaId: string): Promise<ObjetivosDeLaPersona> {
+  return leerObjetivosDeLaPersona(await apiFetch<unknown>(rutaDeLosObjetivosDeLaPersona(personaId)), 'GET /leadership/people/{p}/objetivos');
 }
 
 /**
