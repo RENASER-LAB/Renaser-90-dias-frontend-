@@ -1,97 +1,134 @@
-import React, { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
 
-import type { TipoObservacion } from '../api/liderMentoresSchemas';
-import { FichaMentorScreen } from './FichaMentorScreen';
-import { ObservarScreen } from './ObservarScreen';
-import { PadronScreen } from './PadronScreen';
-import { PersonaDelLiderScreen } from './PersonaDelLiderScreen';
+import type { GrupoDelResumen } from '../../semaforo/types/semaforo.types';
+import type { EntradasDelLider } from '../utils/misMentores';
+import { PILA_INICIAL, abrir, alCrearUnGrupo, rotuloDeVolver, volver, type VistaDelLider } from '../utils/pilaDelLider';
+import { ConsultasDelLiderScreen } from './ConsultasDelLiderScreen';
+import { CrearGrupoScreen } from './CrearGrupoScreen';
+import { FichaDelAprendizDelLider } from './FichaDelAprendizDelLider';
+import { FichaDelMentorScreen } from './FichaDelMentorScreen';
+import { GrupoDelLiderScreen } from './GrupoDelLiderScreen';
+import { GruposDelLiderScreen } from './GruposDelLiderScreen';
+import { MisMentoresScreen } from './MisMentoresScreen';
 import { ReporteScreen } from './ReporteScreen';
 
-/** Lo que dice la pantalla si el servidor ya no abre sus días (404): dejó su programa, o el servidor es anterior a la ruta. */
-export const AVISO_SI_NO_SE_ABREN_SUS_DIAS = 'Sus días ya no están disponibles para ver.';
-
-type Vista =
-  | { tipo: 'padron' }
-  | { tipo: 'reporte' }
-  | { tipo: 'ficha'; mentorId: string; aviso: string | null }
-  /** D-318: los 7 días del mentor (o de la guía) con programa propio; la ficha sigue montada, oculta, debajo. */
-  | { tipo: 'dias'; mentorId: string; nombre: string; avatarUrl: string | null; aviso: string | null }
-  | { tipo: 'observar'; mentorId: string; nombre: string; observacion: TipoObservacion };
-
 /**
- * «Mis mentores», la gestión del Líder de Mentores (SDD 002; backend D-241). Es estado de Hoy, como la
- * bandeja de tickets y el semáforo por grupos: sin sexta pestaña (RL-28). Cada nivel registra su
- * retroceso del sistema y vuelve al anterior: padrón ← ficha ← observar, padrón ← ficha ← sus días, padrón ← reporte.
+ * «Mis mentores» y todo lo que cuelga de él (spec 056): Mis mentores → ficha del mentor → grupo → ficha del aprendiz, y Grupos, Crear grupo, Consultas y
+ * el reporte del mes. Es una pila (`pilaDelLider`): solo la pantalla de arriba está montada, y cada una pone su flecha y su gesto de volver, que suben un
+ * nivel por vez hasta «Mis mentores» y de ahí a Yo (`onSalir`). Al volver, la pantalla de abajo se relee: lo que se cambió arriba se ve.
  *
- * **Sus días y evidencias (D-318):** desde la ficha de un mentor que hace su propio programa se abre `PersonaDelLiderScreen` por la
- * puerta sin grupo (`/leadership/people/{id}/…`), sin «Avisar a su mentor» (él es el mentor). La ficha queda montada, oculta, como la
- * lista de «Todos los aprendices» bajo la persona: al volver conserva su lugar sin releerse.
+ * «Todos los aprendices» y «Hábitos de todos» siguen siendo de Yo (`onAbrirTodos`, `onAbrirHabitos`): solo existen si el servidor los ofrece.
  */
-export function LiderMentoresScreen({ onSalir }: { onSalir: () => void }) {
-  const [vista, setVista] = useState<Vista>({ tipo: 'padron' });
-  const alPadron = () => setVista({ tipo: 'padron' });
+export function LiderMentoresScreen({
+  resumenPorGrupos,
+  onSalir,
+  onAbrirTodos,
+  onAbrirHabitos,
+  entradas,
+  volverAVigente,
+}: {
+  /** Al abrirse, el resumen por grupos vuelve a los últimos 7 días: las cifras de los grupos dicen «en 7 días» y no deben ser de otra semana. */
+  volverAVigente?: () => void;
+  /** Qué entradas le tocan a la cuenta (interruptores de Soporte TI de siempre); sin decirlo, todas. */
+  entradas?: EntradasDelLider;
+  /** Lo que el resumen por grupos dice de cada grupo (el color de su promedio y sus aprendices por estado). Vacío si no se pudo leer. */
+  resumenPorGrupos: readonly GrupoDelResumen[];
+  onSalir: () => void;
+  onAbrirTodos?: () => void;
+  onAbrirHabitos?: () => void;
+}) {
+  const [pila, setPila] = useState<VistaDelLider[]>([...PILA_INICIAL]);
+  /* Solo al abrir: la función cambia en cada render y no tiene que volver a correr. */
+  const volver$ = useRef(volverAVigente);
+  volver$.current = volverAVigente;
+  useEffect(() => {
+    volver$.current?.();
+  }, []);
+  const vista = pila[pila.length - 1];
+  const ir = (siguiente: VistaDelLider) => setPila(actual => abrir(actual, siguiente));
+  const atras = () => {
+    const anterior = volver(pila);
+    if (anterior) setPila(anterior);
+    else onSalir();
+  };
+  const rotulo = rotuloDeVolver(pila);
 
   switch (vista.tipo) {
-    case 'reporte':
-      return <ReporteScreen onVolver={alPadron} />;
-    case 'ficha':
-    case 'dias': {
-      const verSusDias = vista.tipo === 'dias';
+    case 'misMentores':
       return (
-        <>
-          <View style={verSusDias ? estilos.oculta : estilos.visible}>
-            <FichaMentorScreen
-              mentorId={vista.mentorId}
-              aviso={vista.aviso}
-              onVolver={alPadron}
-              enSegundoPlano={verSusDias}
-              onObservar={(observacion, nombre) => setVista({ tipo: 'observar', mentorId: vista.mentorId, nombre, observacion })}
-              onAbrirDias={mentor =>
-                setVista({ tipo: 'dias', mentorId: mentor.userId, nombre: mentor.nombre, avatarUrl: mentor.avatarUrl, aviso: vista.aviso })
-              }
-            />
-          </View>
-          {vista.tipo === 'dias' ? (
-            <PersonaDelLiderScreen
-              key={vista.mentorId}
-              grupoId={null}
-              /* En lugar del grupo: de qué son estos días. «Mentor · No se mide en el semáforo» lo dice el encabezado. */
-              grupoNombre="Su propio programa"
-              personaId={vista.mentorId}
-              nombre={vista.nombre}
-              avatarUrl={vista.avatarUrl}
-              desdeTodos
-              avisarAlMentor={false}
-              avisoSiNoSeAbre={AVISO_SI_NO_SE_ABREN_SUS_DIAS}
-              onVolver={() => setVista({ tipo: 'ficha', mentorId: vista.mentorId, aviso: vista.aviso })}
-            />
-          ) : null}
-        </>
+        <MisMentoresScreen
+          onVolver={onSalir}
+          onAbrirMentor={(mentorId, nombre) => ir({ tipo: 'fichaMentor', mentorId, nombre })}
+          onAbrirGrupos={filtro => ir({ tipo: 'grupos', filtro })}
+          onAbrirConsultas={() => ir({ tipo: 'consultas' })}
+          onAbrirReporte={() => ir({ tipo: 'reporte' })}
+          onAbrirTodos={onAbrirTodos}
+          onAbrirHabitos={onAbrirHabitos}
+          entradas={entradas}
+        />
       );
-    }
-    case 'observar':
+
+    case 'fichaMentor':
       return (
-        <ObservarScreen
+        <FichaDelMentorScreen
+          key={vista.mentorId}
           mentorId={vista.mentorId}
           nombre={vista.nombre}
-          tipo={vista.observacion}
-          onVolver={() => setVista({ tipo: 'ficha', mentorId: vista.mentorId, aviso: null })}
-          onGuardada={aviso => setVista({ tipo: 'ficha', mentorId: vista.mentorId, aviso })}
+          rotuloDeVolver={rotulo}
+          onVolver={atras}
+          onAbrirGrupo={(grupoId, nombre) => ir({ tipo: 'grupo', grupoId, nombre, mentorNombre: vista.nombre })}
+          onAbrirConsultas={() => ir({ tipo: 'consultas' })}
         />
       );
-    default:
+
+    case 'grupos':
       return (
-        <PadronScreen
-          onVolver={onSalir}
-          onAbrirMentor={mentorId => setVista({ tipo: 'ficha', mentorId, aviso: null })}
-          onAbrirReporte={() => setVista({ tipo: 'reporte' })}
+        <GruposDelLiderScreen
+          key={`grupos-${vista.filtro ?? ''}-${pila.length}`}
+          filtroInicial={vista.filtro}
+          resumenes={resumenPorGrupos}
+          onVolver={atras}
+          onAbrirGrupo={g => ir({ tipo: 'grupo', grupoId: g.id, nombre: g.nombre, mentorNombre: g.mentorNombre })}
+          onCrear={() => ir({ tipo: 'crearGrupo' })}
         />
       );
+
+    case 'crearGrupo':
+      return <CrearGrupoScreen onVolver={atras} onCreado={() => setPila(actual => alCrearUnGrupo(actual))} />;
+
+    case 'grupo':
+      return (
+        <GrupoDelLiderScreen
+          key={vista.grupoId}
+          grupoId={vista.grupoId}
+          nombre={vista.nombre}
+          mentorId={null}
+          mentorNombre={vista.mentorNombre}
+          resumen={resumenPorGrupos.find(g => g.grupoId === vista.grupoId) ?? null}
+          onVolver={atras}
+          onAbrirPersona={persona =>
+            ir({ tipo: 'fichaAprendiz', personaId: persona.aprendizId, nombre: persona.nombre?.trim() || 'Aprendiz sin nombre', grupoId: vista.grupoId, mentorNombre: vista.mentorNombre })
+          }
+        />
+      );
+
+    case 'fichaAprendiz':
+      return (
+        <FichaDelAprendizDelLider
+          key={vista.personaId}
+          personaId={vista.personaId}
+          nombre={vista.nombre}
+          grupoId={vista.grupoId}
+          mentorNombre={vista.mentorNombre}
+          rotuloDeVolver={rotulo}
+          onVolver={atras}
+        />
+      );
+
+    case 'consultas':
+      return <ConsultasDelLiderScreen onVolver={atras} />;
+
+    case 'reporte':
+      return <ReporteScreen onVolver={atras} />;
   }
 }
-
-const estilos = StyleSheet.create({
-  visible: { flex: 1 },
-  oculta: { display: 'none' },
-});

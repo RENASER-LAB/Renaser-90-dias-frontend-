@@ -677,3 +677,27 @@ su vista en `Comunidad` → Tribu**, que son lo único de los cinco tabs que se 
 * **Hace falta un APK nuevo** (solo JavaScript) **y el backend de la spec 055 antes** (`/semana`, `/dias`, `/notas` y el campo `pilar`): contra uno anterior la ficha dice que no se
   pudo cargar y el resto de la app sigue igual.
 
+## Cambio por pedido del dueño — 2026-11-18 — el rol de líder de mentores rediseñado: Mis mentores, la ficha del mentor y del aprendiz, grupos, consultas, reporte y sesión (spec 056)
+
+Pedido del dueño: «hacer la parte del líder de mentores como lo hicimos del mentor», más estricto, con más datos, con poco texto, accesible y reutilizando la 055. Aprobó la propuesta
+del 18/11 (https://claude.ai/artifact/VuRujB92TKLSG84Csqwo1B) y **autorizó el cambio de las pantallas del líder dentro del tab `Yo`** («Mis mentores»), que es lo único de los
+cinco tabs que se toca. Lo que cambia y nada más:
+* **«Mis mentores»** (sin la insignia del rol): arriba «Por resolver», con hasta tres filas de símbolo + cifra corta + un botón (grupos sin mentor → «Asignar», consultas con los
+  días de la más vieja → «Recordar», el mentor que peor va → «Ver»; lo que no hay que resolver no aparece). Debajo, cada mentor con el anillo de su cupo («9/10» escrito), su
+  nombre, sus aprendices por estado con su forma y una barra de colores, por urgencia; sin grupo dice «Sin grupo»; suspendido, apagado. Al pie: Grupos, Consultas con su cantidad,
+  Reporte del mes y Todos los aprendices (y «Hábitos de todos» si el servidor la ofrece, como hasta hoy).
+* **El semáforo nunca va solo con color** (FR-043): × en cuadrado rojo, ! en triángulo ámbar, ✓ en círculo verde, · en círculo vacío gris, con etiqueta para el lector de pantalla.
+* **La ficha de un aprendiz y la de un mentor son la de la 055** (`FichaDePersona`, origen líder): semana, mes, pilares, evidencia, objetivos, notas de solo lectura. La del mentor
+  lleva en la cabecera una estrella («Reconocer, sugerir o alertar») en lugar del lápiz y, debajo, «Como mentor» (sus grupos con barra de colores, su evaluación, las que debe,
+  sus consultas, «Lo que le dijiste»). Si no sigue su programa, una línea lo dice; suspendido, solo dice eso. Al pie: «Descargar semana», «Avisar a su mentor» / «Alertar» y
+  «Programar sesión» (hoja con ese mentor ya elegido). Lo que el líder le dice al mentor le llega como aviso y como mensaje: lo manda el servidor, la app no lo reenvía.
+* **Grupos que el líder crea y reparte** (cambia CL-04 del backend): lista con «Sin mentor», «Activos» y «Llenos»; asistente de 3 pasos con resumen (nombre, mentor con cupo,
+  aprendices sin grupo); «+ Aprendices» y «Cambiar mentor» en cada grupo. El grupo, la lista de aprendices por riesgo y los contadores con forma reemplazan a la tabla del semáforo.
+* **Consultas** con «Sin responder» y «Respondidas», quién pregunta, a qué mentor le toca y hace cuántos días; «Recordar al mentor» y «Responder yo». **Reporte del mes** con el
+  promedio en un anillo, el ranking con el borde de cada color y «Exportar el reporte».
+* **No cambian:** los cinco tabs, el semáforo y sus colores, «Todos los aprendices» y «Hábitos de todos» (su lista), Administración y su ficha de la persona
+  (`PersonaDelLiderScreen`), ni los permisos (los decide el servidor).
+* **Pruebas:** `piezasDelLider`, `misMentores`, `fichaDelAprendizDelLider`, `fichaDelMentor`, `grupoDelLider`, `gruposDelLider`, `crearGrupo`, `consultasDelLider`, `reporteDelMes`,
+  `programarSesion`, `hojasDeGrupos`, `audienciaPreviaDelFormulario`, `pilaDelLider`, `utilsDelLider`, `lecturasYAccionesDelLider` y la guarda `pantallasDelLiderSinRelleno`.
+* **Hace falta un APK nuevo** (solo JavaScript) **y el backend de la spec 056 antes** (`/leadership/mentors/por-resolver`, cupo y colores en el padrón, permisos de grupos, responder
+  consultas, avisar al mentor, documento semanal): contra uno anterior las filas que no cargan lo dicen y el resto sigue.
