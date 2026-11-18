@@ -3,7 +3,7 @@ import { Linking } from 'react-native';
 
 import { Alert } from '../../../components/Alerta';
 import { mensajeDeError } from '../../../services/http/apiClient';
-import { pedirElDocumento, type DocumentoQueSeDescarga } from '../api/documentoSemanalApi';
+import { pedirElDocumento, pedirElReporteDelMes, type DocumentoPedido, type DocumentoQueSeDescarga } from '../api/documentoSemanalApi';
 
 export type { DocumentoQueSeDescarga } from '../api/documentoSemanalApi';
 
@@ -22,10 +22,23 @@ const NO_SE_GENERO = 'No se pudo generar el documento. Inténtalo de nuevo.';
  * - `semanaHasta` (un viernes) pide esa semana; sin él, la que está en curso en la zona de la persona.
  */
 export function useDescargarSemana(documento: DocumentoQueSeDescarga) {
+  const { tipo, personaId } = documento;
+  const pedir = useCallback((semanaHasta?: string | null) => pedirElDocumento({ tipo, personaId }, semanaHasta), [tipo, personaId]);
+  return useAbrirDocumento(pedir, 'No se pudo descargar la semana');
+}
+
+/** «Exportar el reporte» (spec 056 FR-032): el documento del mes, con la misma regla de un toque, un pedido y el motivo del servidor. */
+export function useExportarReporte(mes: string) {
+  const pedir = useCallback(() => pedirElReporteDelMes(mes), [mes]);
+  const { descargando, descargar } = useAbrirDocumento(pedir, 'No se pudo exportar el reporte');
+  return { exportando: descargando, exportar: useCallback(() => descargar(), [descargar]) };
+}
+
+/** Lo común: pide el documento, abre su enlace de la red y dice por qué no pudo. `pedir` cambia solo cuando cambia de qué es el documento. */
+function useAbrirDocumento(pedir: (semanaHasta?: string | null) => Promise<DocumentoPedido>, tituloDelFallo: string) {
   const [descargando, setDescargando] = useState(false);
   const enCurso = useRef(false);
   const vivo = useRef(true);
-  const { tipo, personaId } = documento;
 
   useEffect(() => {
     vivo.current = true;
@@ -40,7 +53,7 @@ export function useDescargarSemana(documento: DocumentoQueSeDescarga) {
       enCurso.current = true;
       setDescargando(true);
       try {
-        const pedido = await pedirElDocumento({ tipo, personaId }, semanaHasta);
+        const pedido = await pedir(semanaHasta);
         /* Si la pantalla ya se cerró mientras se generaba, no se abre un navegador de la nada. */
         if (!vivo.current) return;
         if (!ENLACE_DE_LA_RED.test(pedido.url)) throw new Error(SIN_ENLACE);
@@ -50,13 +63,13 @@ export function useDescargarSemana(documento: DocumentoQueSeDescarga) {
           Alert.alert('No se pudo abrir el documento', 'Tu teléfono no pudo abrir el enlace. Inténtalo de nuevo.');
         }
       } catch (e) {
-        if (vivo.current) Alert.alert('No se pudo descargar la semana', e instanceof Error && e.message === SIN_ENLACE ? SIN_ENLACE : mensajeDeError(e, NO_SE_GENERO));
+        if (vivo.current) Alert.alert(tituloDelFallo, e instanceof Error && e.message === SIN_ENLACE ? SIN_ENLACE : mensajeDeError(e, NO_SE_GENERO));
       } finally {
         enCurso.current = false;
         if (vivo.current) setDescargando(false);
       }
     },
-    [tipo, personaId],
+    [pedir, tituloDelFallo],
   );
 
   return { descargando, descargar };

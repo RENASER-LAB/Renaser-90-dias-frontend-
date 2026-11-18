@@ -12,6 +12,7 @@ export const wireTicketMentorSchema = z
     answeredAt: z.string().nullable().optional(),
     savedToLibrary: z.boolean().optional().default(false),
     createdAt: z.string(),
+    respondidoPor: z.object({ id: z.string(), nombre: z.string().nullish() }).passthrough().nullish().catch(null),
   })
   .passthrough();
 

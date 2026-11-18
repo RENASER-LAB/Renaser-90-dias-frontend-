@@ -53,3 +53,13 @@ export async function pedirElDocumento(documento: DocumentoQueSeDescarga, semana
   const r = validarRespuesta(respuestaSchema, crudo, `POST ${documento.tipo === 'MENTOR' ? '/leadership/mentors/{id}' : '/leadership/people/{p}'}/documento`);
   return { url: r.url, venceEn: r.venceEn ?? null, reutilizado: r.reutilizado === true, semana: r.semana ?? null };
 }
+
+/**
+ * `POST /leadership/report/documento` `{ month: 'AAAA-MM' }` (spec 056 FR-032): el documento del reporte del mes, con el mismo mecanismo
+ * (se guarda, enlace de 10 minutos, se reutiliza si los datos no cambiaron). Solo el liderazgo y Administración.
+ */
+export async function pedirElReporteDelMes(mes: string): Promise<DocumentoPedido> {
+  const crudo = await apiFetch<unknown>('/api/v1/leadership/report/documento', { method: 'POST', body: { month: mes } });
+  const r = validarRespuesta(respuestaSchema, crudo, 'POST /leadership/report/documento');
+  return { url: r.url, venceEn: r.venceEn ?? null, reutilizado: r.reutilizado === true, semana: r.semana ?? null };
+}

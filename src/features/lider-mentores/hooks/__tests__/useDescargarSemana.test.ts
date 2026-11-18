@@ -12,7 +12,7 @@ const mockAlerta = jest.fn();
 jest.mock('../../../../components/Alerta', () => ({ Alert: { alert: (...a: unknown[]) => mockAlerta(...a) } }));
 
 import { ApiError } from '../../../../services/http/apiClient';
-import { useDescargarSemana, type DocumentoQueSeDescarga } from '../useDescargarSemana';
+import { useDescargarSemana, useExportarReporte, type DocumentoQueSeDescarga } from '../useDescargarSemana';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -141,5 +141,49 @@ describe('cuando no se puede', () => {
     await act(async () => api.descargar());
     expect(abrir).not.toHaveBeenCalled();
     expect(mockAlerta).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('«Exportar el reporte» (spec 056 FR-032)', () => {
+  let exporta!: ReturnType<typeof useExportarReporte>;
+  function ProbadorDelReporte({ mes }: { mes: string }) {
+    exporta = useExportarReporte(mes);
+    return null;
+  }
+  async function montarReporte(mes = '2026-11'): Promise<ReactTestRenderer> {
+    let r!: ReactTestRenderer;
+    await act(async () => {
+      r = TestRenderer.create(React.createElement(ProbadorDelReporte, { mes }));
+    });
+    return r;
+  }
+
+  it('pide el documento del mes a la ruta del reporte y abre el enlace', async () => { // spec 056 FR-032
+    await montarReporte();
+    await act(async () => exporta.exportar());
+    expect(mockApiFetch).toHaveBeenCalledWith('/api/v1/leadership/report/documento', { method: 'POST', body: { month: '2026-11' } });
+    expect(abrir).toHaveBeenCalledWith(ENLACE);
+  });
+
+  it('un toque, un pedido: mientras se genera queda ocupado y otro toque no pide otro', async () => { // spec 056 FR-032
+    let terminar!: (v: unknown) => void;
+    mockApiFetch.mockImplementation(() => new Promise(resolver => (terminar = resolver)));
+    await montarReporte();
+    await act(async () => {
+      void exporta.exportar();
+      void exporta.exportar();
+    });
+    expect(mockApiFetch).toHaveBeenCalledTimes(1);
+    expect(exporta.exportando).toBe(true);
+    await act(async () => terminar(respuesta));
+    expect(exporta.exportando).toBe(false);
+  });
+
+  it('el motivo del servidor se dice con su título propio', async () => { // spec 056 FR-042
+    mockApiFetch.mockRejectedValue(new ApiError(403, 'Tu cuenta no puede exportar el reporte.', { codigo: 'FUERA_DE_SU_ALCANCE' }));
+    await montarReporte();
+    await act(async () => exporta.exportar());
+    expect(mockAlerta).toHaveBeenCalledWith('No se pudo exportar el reporte', 'Tu cuenta no puede exportar el reporte.');
+    expect(abrir).not.toHaveBeenCalled();
   });
 });

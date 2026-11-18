@@ -4,10 +4,12 @@ import {
   fichaSchema,
   observacionSchema,
   padronSchema,
+  porResolverSchema,
   reporteSchema,
   type FichaApi,
   type ObservacionApi,
   type PadronApi,
+  type PorResolverApi,
   type ReporteApi,
   type TipoObservacion,
 } from './liderMentoresSchemas';
@@ -27,6 +29,15 @@ export async function obtenerFicha(mentorId: string): Promise<FichaApi> {
     fichaSchema,
     await apiFetch<unknown>(`${BASE}/mentors/${encodeURIComponent(mentorId)}`),
     'GET /leadership/mentors/{id}',
+  );
+}
+
+/** `GET /leadership/mentors/por-resolver` (spec 056 FR-002): grupos sin mentor, consultas sin responder y el mentor que peor va. */
+export async function obtenerPorResolver(): Promise<PorResolverApi> {
+  return validarRespuesta<PorResolverApi>(
+    porResolverSchema,
+    await apiFetch<unknown>(`${BASE}/mentors/por-resolver`),
+    'GET /leadership/mentors/por-resolver',
   );
 }
 
