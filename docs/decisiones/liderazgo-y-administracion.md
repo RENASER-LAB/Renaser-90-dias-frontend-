@@ -688,16 +688,27 @@ cinco tabs que se toca. Lo que cambia y nada más:
   Reporte del mes y Todos los aprendices (y «Hábitos de todos» si el servidor la ofrece, como hasta hoy).
 * **El semáforo nunca va solo con color** (FR-043): × en cuadrado rojo, ! en triángulo ámbar, ✓ en círculo verde, · en círculo vacío gris, con etiqueta para el lector de pantalla.
 * **La ficha de un aprendiz y la de un mentor son la de la 055** (`FichaDePersona`, origen líder): semana, mes, pilares, evidencia, objetivos, notas de solo lectura. La del mentor
-  lleva en la cabecera una estrella («Reconocer, sugerir o alertar») en lugar del lápiz y, debajo, «Como mentor» (sus grupos con barra de colores, su evaluación, las que debe,
-  sus consultas, «Lo que le dijiste»). Si no sigue su programa, una línea lo dice; suspendido, solo dice eso. Al pie: «Descargar semana», «Avisar a su mentor» / «Alertar» y
+  lleva en la cabecera una estrella («Reconocer, sugerir o alertar») en lugar del lápiz y, debajo, «Como mentor» (sus grupos con barra de colores, su evaluación, sus consultas
+  —abren la bandeja filtrada a ese mentor—, «Lo que le dijiste»). Si no sigue su programa, una línea lo dice; suspendido, solo dice eso. Al pie: «Descargar semana», «Avisar a su mentor» / «Alertar» y
   «Programar sesión» (hoja con ese mentor ya elegido). Lo que el líder le dice al mentor le llega como aviso y como mensaje: lo manda el servidor, la app no lo reenvía.
 * **Grupos que el líder crea y reparte** (cambia CL-04 del backend): lista con «Sin mentor», «Activos» y «Llenos»; asistente de 3 pasos con resumen (nombre, mentor con cupo,
   aprendices sin grupo); «+ Aprendices» y «Cambiar mentor» en cada grupo. El grupo, la lista de aprendices por riesgo y los contadores con forma reemplazan a la tabla del semáforo.
 * **Consultas** con «Sin responder» y «Respondidas», quién pregunta, a qué mentor le toca y hace cuántos días; «Recordar al mentor» y «Responder yo». **Reporte del mes** con el
   promedio en un anillo, el ranking con el borde de cada color y «Exportar el reporte».
+* **Correcciones tras el E2E del 18/11** (mismo cambio, mismas pantallas):
+  * **Sin «Evaluaciones que debe».** `evaluation.expected` y `delivered` del servidor son las evidencias que debían entregar los aprendices del mentor en el mes (la base de su
+    porcentaje), no lo que el mentor debe entregar: «esperadas − entregadas» daba «755 pendientes». No hay un dato confiable de lo que de verdad debe, así que la fila no existe.
+  * **Cambiar el mentor de un grupo** actualiza la cabecera («Mentor: …») y lo recuerda la pila: al volver de la ficha de un aprendiz no sale el anterior.
+  * **«Sesión programada para el viernes 20 de noviembre a las 15:00.»** se confirma en una línea fija bajo la flecha de la ficha, no al pie de la página (ahí quedaba fuera de pantalla).
+  * **«Consultas» de la ficha de un mentor** abre la bandeja solo con las de sus aprendices («Consultas de …», con «Ver las de todos»). El servidor no filtra por mentor: se reconoce a quien
+    pregunta por su grupo (y por el nombre de su mentor si no se leyeron sus grupos); lo que no se pudo ubicar se cuenta aparte, no se esconde.
+  * **«Avisar a su mentor» en el chat del mentor:** la última línea `Ficha de <nombre>: /mentor/groups/<g>/learners/<p>` se ve como «Abrir la ficha de <nombre>» (toque de 48) y abre la ficha
+    con la navegación de los avisos de acompañamiento. Solo esa forma exacta; el líder, que lo escribió, ve «Ficha de <nombre>» sin ruta.
+  * **La hoja de la evidencia** dice el título en tipo oración («Agua tibia con limón»), como la lista.
 * **No cambian:** los cinco tabs, el semáforo y sus colores, «Todos los aprendices» y «Hábitos de todos» (su lista), Administración y su ficha de la persona
   (`PersonaDelLiderScreen`), ni los permisos (los decide el servidor).
 * **Pruebas:** `piezasDelLider`, `misMentores`, `fichaDelAprendizDelLider`, `fichaDelMentor`, `grupoDelLider`, `gruposDelLider`, `crearGrupo`, `consultasDelLider`, `reporteDelMes`,
-  `programarSesion`, `hojasDeGrupos`, `audienciaPreviaDelFormulario`, `pilaDelLider`, `utilsDelLider`, `lecturasYAccionesDelLider` y la guarda `pantallasDelLiderSinRelleno`.
+  `programarSesion`, `hojasDeGrupos`, `audienciaPreviaDelFormulario`, `pilaDelLider`, `utilsDelLider`, `lecturasYAccionesDelLider`, `recorridoDelLider`, `evidenciasDeLaPersona`, `fichaEnElMensaje`,
+  `fichaDelAprendizEnElChat` y la guarda `pantallasDelLiderSinRelleno`.
 * **Hace falta un APK nuevo** (solo JavaScript) **y el backend de la spec 056 antes** (`/leadership/mentors/por-resolver`, cupo y colores en el padrón, permisos de grupos, responder
   consultas, avisar al mentor, documento semanal): contra uno anterior las filas que no cargan lo dicen y el resto sigue.
