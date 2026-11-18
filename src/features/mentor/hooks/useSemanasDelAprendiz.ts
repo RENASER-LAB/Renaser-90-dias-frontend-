@@ -18,6 +18,8 @@ export type EstadoDeSemana = 'lista' | 'cargando' | 'fallo' | 'sin_pedir';
 
 const SIN_RED = 'Hace falta conexión para ver esta semana. Lo que ya cargaste se sigue viendo.';
 const CODIGO_NO_ACOMPANA = 'NO_ACOMPANA';
+/** Spec 056: una persona de otra formación (o que ya no existe) es un 404 SIN código para el líder: se dice «no disponible», sin dar más datos y sin hueco. Un 404 con código (`SIN_PROGRAMA`…) dice su motivo. */
+export const PERSONA_NO_DISPONIBLE = 'Esta persona ya no está disponible para ver.';
 
 /**
  * Las semanas de un aprendiz mientras su ficha está abierta (spec 055 FR-016, SC-004): una caché por semana (el viernes que la cierra)
@@ -89,7 +91,14 @@ export function useSemanasDelAprendiz(
             aviso.current?.(e.message);
             return;
           }
-          fallos.current.set(clave, e instanceof ApiError && e.status === 0 ? { tipo: 'sin_red', mensaje: SIN_RED } : { tipo: 'servidor', mensaje: mensajeDeCargaEnLinea(e, 'No se pudo cargar la semana.') });
+          fallos.current.set(
+            clave,
+            e instanceof ApiError && e.status === 0
+              ? { tipo: 'sin_red', mensaje: SIN_RED }
+              : e instanceof ApiError && e.status === 404 && e.codigo === null
+                ? { tipo: 'servidor', mensaje: PERSONA_NO_DISPONIBLE }
+                : { tipo: 'servidor', mensaje: mensajeDeCargaEnLinea(e, 'No se pudo cargar la semana.') },
+          );
         })
         .finally(() => {
           enVuelo.current.delete(clave);

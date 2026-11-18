@@ -36,7 +36,7 @@ import { useNotasDelAprendiz } from '../hooks/useNotasDelAprendiz';
 import { useSemanasDelAprendiz } from '../hooks/useSemanasDelAprendiz';
 import { diasDeLaSemana, nombreDelMesDe, sePuedeElegir, tituloDelDia, viernesDeLaSemana } from '../utils/fechasDeLaFicha';
 import { agruparPorPilar } from '../utils/habitosDelDia';
-import { lecturasDeLaFicha, type OrigenDeLaFicha } from '../utils/lecturasDeLaFicha';
+import { lecturasDeLaFicha, type LecturasDeLaFicha, type OrigenDeLaFicha } from '../utils/lecturasDeLaFicha';
 import { estadoDeLaSemana, motivoCorto } from '../utils/motivoDeLaFila';
 import type { AlumnoConEstado } from '../types/mentor.types';
 import { useOcultarBarraAlDesplazar } from '../../../navigation/barraAlDesplazar/BarraInferior';
@@ -62,7 +62,29 @@ export interface PropsDeFichaDePersona {
   despues?: React.ReactNode;
   /** Lo último de la ficha, para los botones («Descargar semana», «Avisar a su mentor»). Con función, recibe la semana a la vista. Sin contenido no deja hueco. */
   pie?: React.ReactNode | ((contexto: ContextoDeLaFicha) => React.ReactNode);
+  /**
+   * Spec 056 FR-022: la persona no sigue su programa (un mentor que no lo activó). En lugar de la semana y los pilares va este contenido (una línea que lo
+   * dice) y no se pide ni la semana ni nada que dependa del programa. Sin esto, la ficha es la de siempre.
+   */
+  sinSemana?: React.ReactNode;
+  /** Spec 056 FR-023: sin el lápiz de las notas (las notas privadas son sobre aprendices; la ficha de un mentor lleva la estrella en su lugar). */
+  sinNotas?: boolean;
+  /** La línea bajo el nombre, si no es «Día N · motivo» (la ficha de un mentor dice su nivel). */
+  subtitulo?: string | null;
 }
+
+/** Las lecturas de una persona que no sigue su programa: no hay semana, días ni nada que pedirle al servidor. */
+const SIN_LECTURAS_DEL_PROGRAMA: LecturasDeLaFicha = {
+  cargarSemana: null,
+  cargarDias: null,
+  cargarRadar: null,
+  cargarHuecos: null,
+  cargarCierres: null,
+  cargarDiagnostico: null,
+  cargarOchentaVeinte: null,
+  cargarObjetivos: null,
+  origenDeLasNotas: null,
+};
 
 /**
  * La ficha de una persona (spec 055, historia 2; bocetos aprobados por el dueño el 17/11) para quien la acompaña: su mentor o, desde la
@@ -84,7 +106,19 @@ export interface PropsDeFichaDePersona {
  *
  * Las ranuras (`accionesDeCabecera`, `despues`, `pie`) son de quien la abre: `AlumnoScreen` es el envoltorio del mentor.
  */
-export function FichaDePersona({ origen, alumno, onVolver, onYaNoAcompana, rotuloDeVolver = 'Mi grupo', accionesDeCabecera, despues, pie }: PropsDeFichaDePersona) {
+export function FichaDePersona({
+  origen,
+  alumno,
+  onVolver,
+  onYaNoAcompana,
+  rotuloDeVolver = 'Mi grupo',
+  accionesDeCabecera,
+  despues,
+  pie,
+  sinSemana,
+  sinNotas = false,
+  subtitulo,
+}: PropsDeFichaDePersona) {
   const barraAlDesplazar = useOcultarBarraAlDesplazar();
   const { c, t } = useTheme();
   const { horizontalPadding, contentMaxWidth, isTablet } = useResponsive();
@@ -103,13 +137,14 @@ export function FichaDePersona({ origen, alumno, onVolver, onYaNoAcompana, rotul
   });
   /* Las lecturas son de este origen y esta persona, y estables: las secciones del final las usan como llave de lo que guardan. */
   const { quien, grupoId } = origen;
-  const lecturas = useMemo(() => lecturasDeLaFicha({ quien, grupoId }, aprendizId), [quien, grupoId, aprendizId]);
+  const sinPrograma = sinSemana !== undefined && sinSemana !== null && sinSemana !== false;
+  const lecturas = useMemo(() => (sinPrograma ? SIN_LECTURAS_DEL_PROGRAMA : lecturasDeLaFicha({ quien, grupoId }, aprendizId)), [sinPrograma, quien, grupoId, aprendizId]);
   const semanas = useSemanasDelAprendiz(lecturas.cargarSemana, aprendizId, avisarQueYaNoLoAcompana);
   const colores = useDiasDelMes(lecturas.cargarDias, aprendizId);
   /* Los avisos de acompañamiento son del mentor: abrir la ficha los deja leídos. El líder no los recibe. */
   const { motivoDelAviso } = useAvisosDelAprendiz(quien === 'mentor' && grupoId ? aprendizId : null);
   const { escribiendoId, escribirle } = useEscribirleAlAprendiz();
-  const notas = useNotasDelAprendiz(lecturas.origenDeLasNotas);
+  const notas = useNotasDelAprendiz(sinNotas ? null : lecturas.origenDeLasNotas);
 
   const enCurso = semanas.semanaEnCurso;
   const zona = enCurso?.zona ?? null;
@@ -172,13 +207,13 @@ export function FichaDePersona({ origen, alumno, onVolver, onYaNoAcompana, rotul
     : diaUno === null
       ? 'Todavía no empieza su programa'
       : (motivoDelAviso ? motivoCorto(motivoDelAviso, nombre) : null) ?? estadoDeLaSemana(colorDeLaCabecera, diasDeColorDeLaSemanaEnCurso, enCurso.etiqueta ?? null);
-  const subtituloDeLaCabecera = [diaDePrograma && diaDePrograma > 0 ? `Día ${diaDePrograma}` : null, motivo].filter(Boolean).join(' · ');
+  const subtituloDeLaCabecera = subtitulo ?? [diaDePrograma && diaDePrograma > 0 ? `Día ${diaDePrograma}` : null, motivo].filter(Boolean).join(' · ');
 
   const falloDeLaSemana = viernes ? semanas.falloDe(viernes) : null;
 
   /* El pie sabe qué semana se está viendo: la en curso se pide sin fecha; una anterior, por su viernes. */
   const semanaHasta = viernes && enCurso && viernes !== enCurso.hasta ? viernes : null;
-  const contenidoDelPie = enCurso ? (typeof pie === 'function' ? pie({ semanaHasta }) : pie) : null;
+  const contenidoDelPie = enCurso || sinPrograma ? (typeof pie === 'function' ? pie({ semanaHasta }) : pie) : null;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
@@ -212,14 +247,16 @@ export function FichaDePersona({ origen, alumno, onVolver, onYaNoAcompana, rotul
                 </Text>
               ) : null}
             </View>
-            <BotonDeNota nombre={nombre} conNotas={notas.hayNotas} onPress={() => setNotasAbiertas(true)} />
+            {sinNotas ? null : <BotonDeNota nombre={nombre} conNotas={notas.hayNotas} onPress={() => setNotasAbiertas(true)} />}
             {accionesDeCabecera}
             <BotonDeChat nombre={nombre} ocupado={escribiendoId !== null} onPress={() => void escribirle(aprendizId, alumno.nombre)} />
           </View>
         </Aparicion>
 
-        {/* La primera lectura: cargando o con su motivo, nunca un hueco. */}
-        {!enCurso ? (
+        {/* La primera lectura: cargando o con su motivo, nunca un hueco. Sin programa (un mentor que no lo sigue) va su línea en lugar de la semana y los pilares. */}
+        {sinPrograma ? (
+          <View style={{ marginTop: 18 }}>{sinSemana}</View>
+        ) : !enCurso ? (
           semanas.falloDeLaPrimera ? (
             <View style={{ marginTop: 18, gap: 10 }}>
               <Text style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 23 }]}>{semanas.falloDeLaPrimera.mensaje}</Text>
@@ -337,7 +374,7 @@ export function FichaDePersona({ origen, alumno, onVolver, onYaNoAcompana, rotul
         />
       ) : null}
 
-      <HojaDeNotas
+      {sinNotas ? null : <HojaDeNotas
         visible={notasAbiertas}
         alCerrar={() => setNotasAbiertas(false)}
         nombre={nombre}
@@ -349,7 +386,7 @@ export function FichaDePersona({ origen, alumno, onVolver, onYaNoAcompana, rotul
         falloAlGuardar={notas.falloAlGuardar}
         onGuardar={notas.guardar}
         onCorregir={notas.corregir}
-      />
+      />}
     </SafeAreaView>
   );
 }

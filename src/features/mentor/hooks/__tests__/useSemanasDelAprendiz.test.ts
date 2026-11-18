@@ -117,4 +117,21 @@ describe('las semanas de la ficha', () => {
     expect(api.semanaDe('2026-11-20')).toBeNull();
     expect(api.semanaEnCurso).toBeNull();
   });
+
+  it('un 404 (una persona de otra formación o que ya no existe) dice «no disponible», sin dar más datos y sin hueco', async () => { // spec 056 FR-042
+    mockObtener.mockImplementation(async () => {
+      throw new ApiError(404, 'Error 404');
+    });
+    await montar();
+    expect(api.falloDeLaPrimera?.mensaje).toBe('Esta persona ya no está disponible para ver.');
+    expect(api.semanaEnCurso).toBeNull();
+  });
+
+  it('un 404 con código (SIN_PROGRAMA) dice el motivo que mandó el servidor', async () => { // spec 056 FR-022
+    mockObtener.mockImplementation(async () => {
+      throw new ApiError(404, 'Esta persona no sigue su propio programa.', { codigo: 'SIN_PROGRAMA', message: 'Esta persona no sigue su propio programa.' });
+    });
+    await montar();
+    expect(api.falloDeLaPrimera?.mensaje).toBe('Esta persona no sigue su propio programa.');
+  });
 });
