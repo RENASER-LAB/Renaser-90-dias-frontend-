@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 import React from 'react';
+import { act } from 'react-test-renderer';
 
 import { hayTocable, montar, porTestID, tocar, todoElTexto } from '../../../mentor/__tests__/ayudasDeLasPantallas';
 import type { AprendizDelSemaforo } from '../../../semaforo/types/semaforo.types';
@@ -25,7 +26,7 @@ jest.mock('../../hooks/useGrupoDelLider', () => ({ useGrupoDelLider: () => mockL
 /* Las hojas se prueban en su propio archivo: acá solo importa cuál se abre y con qué grupo. */
 const mockHojas = jest.fn<(cual: string, grupo: unknown) => void>();
 jest.mock('../../components/HojaElegirMentor', () => ({
-  HojaElegirMentor: (p: { grupo: unknown; onAsignado: () => void }) => {
+  HojaElegirMentor: (p: { grupo: unknown; onAsignado: (mentor: { id: string; nombre: string }) => void }) => {
     mockHojas('mentor', p.grupo);
     mockAsignado = p.onAsignado;
     return null;
@@ -38,7 +39,7 @@ jest.mock('../../components/HojaSumarAprendices', () => ({
     return null;
   },
 }));
-let mockAsignado: () => void = () => undefined;
+let mockAsignado: (mentor: { id: string; nombre: string }) => void = () => undefined;
 let mockSumados: () => void = () => undefined;
 
 import { GrupoDelLiderScreen } from '../GrupoDelLiderScreen';
@@ -48,6 +49,7 @@ import { GrupoDelLiderScreen } from '../GrupoDelLiderScreen';
 const alVolver = jest.fn();
 const alAbrirPersona = jest.fn<(p: AprendizDelSemaforo) => void>();
 const alCambiar = jest.fn();
+const alCambiarElMentor = jest.fn<(mentor: { id: string; nombre: string }) => void>();
 const pantalla = (extra: object = {}) =>
   React.createElement(GrupoDelLiderScreen, {
     grupoId: 'g-1',
@@ -58,6 +60,7 @@ const pantalla = (extra: object = {}) =>
     onVolver: alVolver,
     onAbrirPersona: alAbrirPersona,
     onCambiado: alCambiar,
+    onMentorCambiado: alCambiarElMentor,
     ...extra,
   } as never);
 
@@ -74,6 +77,8 @@ const semaforo = (aprendices: AprendizDelSemaforo[], resumen: unknown = { verde:
 beforeEach(() => {
   mockRecargar.mockReset();
   mockHojas.mockReset();
+  alCambiar.mockReset();
+  alCambiarElMentor.mockReset();
   mockLectura = {
     datos: semaforo([
       aprendiz('a-v', 'Verónica Verde', 'VERDE', 92),
@@ -175,11 +180,35 @@ describe('el grupo para el líder: «+ Aprendices» y «Cambiar mentor»', () =>
 
   it('al cambiar el mentor o sumar aprendices el grupo se relee y quien lo abrió se entera', async () => { // spec 056 FR-009
     await montar(pantalla());
-    mockAsignado();
+    await act(async () => mockAsignado({ id: 'm-2', nombre: 'Mentor Dos' }));
     expect(mockRecargar).toHaveBeenCalledTimes(1);
-    mockSumados();
+    await act(async () => mockSumados());
     expect(mockRecargar).toHaveBeenCalledTimes(2);
     expect(alCambiar).toHaveBeenCalledTimes(2);
+  });
+
+  it('tras cambiar el mentor la cabecera dice el mentor nuevo, el que el servidor acaba de aceptar, y no el anterior', async () => { // spec 056 FR-009
+    const r = await montar(pantalla());
+    expect(todoElTexto(r)).toContain('Mentor: E2E Mentor');
+    await act(async () => mockAsignado({ id: 'm-2', nombre: 'Mentor Dos' }));
+    expect(todoElTexto(r)).toContain('Mentor: Mentor Dos');
+    expect(todoElTexto(r)).not.toContain('Mentor: E2E Mentor');
+    expect(alCambiarElMentor).toHaveBeenCalledTimes(1);
+    expect(alCambiarElMentor).toHaveBeenCalledWith({ id: 'm-2', nombre: 'Mentor Dos' });
+  });
+
+  it('un grupo que no tenía mentor lo muestra en la cabecera en cuanto se le asigna uno', async () => { // spec 056 FR-009
+    const r = await montar(pantalla({ mentorId: null, mentorNombre: null }));
+    expect(todoElTexto(r)).not.toContain('Mentor:');
+    await act(async () => mockAsignado({ id: 'm-2', nombre: 'Mentor Dos' }));
+    expect(todoElTexto(r)).toContain('Mentor: Mentor Dos');
+  });
+
+  it('la hoja de «Cambiar mentor» ya sabe quién es el mentor nuevo (no ofrece de nuevo al anterior como el actual)', async () => { // spec 056 FR-009
+    const r = await montar(pantalla());
+    await act(async () => mockAsignado({ id: 'm-2', nombre: 'Mentor Dos' }));
+    await tocar(r, 'Cambiar mentor');
+    expect(mockHojas).toHaveBeenLastCalledWith('mentor', { id: 'g-1', nombre: 'Cupo 1314', mentorId: 'm-2' });
   });
 
   it('cada botón mide 44 o más de alto', async () => { // spec 056 FR-044

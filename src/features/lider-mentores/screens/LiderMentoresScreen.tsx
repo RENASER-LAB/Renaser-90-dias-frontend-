@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 
 import type { GrupoDelResumen } from '../../semaforo/types/semaforo.types';
 import type { EntradasDelLider } from '../utils/misMentores';
-import { PILA_INICIAL, abrir, alCrearUnGrupo, rotuloDeVolver, volver, type VistaDelLider } from '../utils/pilaDelLider';
+import { PILA_INICIAL, abrir, alCambiarElMentorDelGrupo, alCrearUnGrupo, rotuloDeVolver, volver, type VistaDelLider } from '../utils/pilaDelLider';
 import { ConsultasDelLiderScreen } from './ConsultasDelLiderScreen';
 import { CrearGrupoScreen } from './CrearGrupoScreen';
 import { FichaDelAprendizDelLider } from './FichaDelAprendizDelLider';
@@ -106,6 +106,7 @@ export function LiderMentoresScreen({
           mentorNombre={vista.mentorNombre}
           resumen={resumenPorGrupos.find(g => g.grupoId === vista.grupoId) ?? null}
           onVolver={atras}
+          onMentorCambiado={mentor => setPila(actual => alCambiarElMentorDelGrupo(actual, vista.grupoId, mentor.nombre))}
           onAbrirPersona={persona =>
             ir({ tipo: 'fichaAprendiz', personaId: persona.aprendizId, nombre: persona.nombre?.trim() || 'Aprendiz sin nombre', grupoId: vista.grupoId, mentorNombre: vista.mentorNombre })
           }

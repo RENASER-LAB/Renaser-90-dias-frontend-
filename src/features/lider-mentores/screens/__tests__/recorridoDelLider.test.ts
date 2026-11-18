@@ -64,7 +64,10 @@ jest.mock('../CrearGrupoScreen', () => ({
 jest.mock('../GrupoDelLiderScreen', () => ({
   GrupoDelLiderScreen: (p: Props) => {
     mockPropsDe.grupo = p;
-    return mockDoble('el grupo', [['Abrir aprendiz', q => (q.onAbrirPersona as unknown as AbrirAlgo)({ aprendizId: 'a-1', nombre: 'Ana López' })]])(p);
+    return mockDoble('el grupo', [
+      ['Abrir aprendiz', q => (q.onAbrirPersona as unknown as AbrirAlgo)({ aprendizId: 'a-1', nombre: 'Ana López' })],
+      ['Cambió el mentor', q => (q.onMentorCambiado as unknown as AbrirAlgo)({ id: 'm-2', nombre: 'Mentor Dos' })],
+    ])(p);
   },
 }));
 jest.mock('../FichaDelAprendizDelLider', () => ({
@@ -175,6 +178,17 @@ describe('el recorrido del líder', () => {
     await tocar(r, 'Consultas del mentor');
     await volverDe(r, 'Consultas');
     expect(todoElTexto(r)).toContain('PANTALLA ficha del mentor');
+  });
+
+  it('al cambiar el mentor del grupo, la ficha del aprendiz y el grupo al volver dicen el mentor nuevo', async () => { // spec 056 FR-009
+    const r = await montar(pantalla());
+    await tocar(r, 'Abrir mentor');
+    await tocar(r, 'Abrir grupo');
+    await tocar(r, 'Cambió el mentor');
+    await tocar(r, 'Abrir aprendiz');
+    expect(mockPropsDe.aprendiz).toMatchObject({ personaId: 'a-1', mentorNombre: 'Mentor Dos' });
+    await volverDe(r, 'ficha del aprendiz');
+    expect((mockPropsDe.grupo as { mentorNombre: string }).mentorNombre).toBe('Mentor Dos');
   });
 
   it('«Todos los aprendices» y «Hábitos de todos» siguen siendo de Yo: se piden hacia arriba', async () => { // spec 056 FR-005

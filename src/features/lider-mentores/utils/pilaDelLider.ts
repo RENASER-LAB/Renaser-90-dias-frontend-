@@ -31,6 +31,18 @@ export function alCrearUnGrupo(pila: readonly VistaDelLider[]): VistaDelLider[] 
   return [...base, { tipo: 'grupos', filtro: 'activos' }];
 }
 
+/**
+ * Al cambiar el mentor de un grupo con el grupo abierto, la pila recuerda al mentor nuevo: el grupo y las fichas de sus aprendices que están debajo vuelven a
+ * dibujarse con lo que dice la pila, y sin esto la cabecera volvería a decir el mentor anterior (spec 056 FR-009, «lo que cambia se ve»).
+ */
+export function alCambiarElMentorDelGrupo(pila: readonly VistaDelLider[], grupoId: string, mentorNombre: string): VistaDelLider[] {
+  return pila.map(vista => {
+    if (vista.tipo === 'grupo' && vista.grupoId === grupoId) return { ...vista, mentorNombre };
+    if (vista.tipo === 'fichaAprendiz' && vista.grupoId === grupoId) return { ...vista, mentorNombre };
+    return vista;
+  });
+}
+
 /** Lo que dice la flecha de una ficha: a qué pantalla vuelve («Mis mentores», «Grupos», el nombre del grupo o del mentor). */
 export function rotuloDeVolver(pila: readonly VistaDelLider[]): string {
   const anterior = pila.length > 1 ? pila[pila.length - 2] : null;

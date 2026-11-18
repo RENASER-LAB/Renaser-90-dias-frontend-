@@ -26,7 +26,16 @@ export interface GrupoParaAsignar {
  * con su cupo (los de cupo lleno, apagados) y el botón dice el cambio que se va a guardar —«Asignar a Ana»—: ese toque es la confirmación. **Un toque, un
  * pedido.** Si el servidor lo rechaza (otro líder asignó antes, el grupo es de otra formación) se dice su motivo y la lista se relee.
  */
-export function HojaElegirMentor({ grupo, alCerrar, onAsignado }: { grupo: GrupoParaAsignar | null; alCerrar: () => void; onAsignado: () => void }) {
+export function HojaElegirMentor({
+  grupo,
+  alCerrar,
+  onAsignado,
+}: {
+  grupo: GrupoParaAsignar | null;
+  alCerrar: () => void;
+  /** El servidor aceptó el cambio: el mentor que el grupo tiene ahora, para que quien abrió la hoja lo diga sin esperar a releer. */
+  onAsignado: (mentor: { id: string; nombre: string }) => void;
+}) {
   const insets = useSafeAreaInsets();
   const visible = grupo !== null;
   const pedir = useCallback(async () => (visible ? await obtenerPadron() : null), [visible]);
@@ -51,7 +60,7 @@ export function HojaElegirMentor({ grupo, alCerrar, onAsignado }: { grupo: Grupo
       const grupos = (elegido.groups.items ?? []).map(g => g.id);
       const resultado = await asignarMentorDelLider({ ...grupo, mentorId: mentorActualId }, { userId: elegido.userId, fullName: elegido.fullName, grupos });
       if (resultado === 'nada') Alert.alert('Ya es su mentor', `${elegido.fullName} ya acompaña a ${grupo.nombre}.`);
-      onAsignado();
+      onAsignado({ id: elegido.userId, nombre: elegido.fullName });
       alCerrar();
     } catch (e) {
       Alert.alert('No se pudo asignar', e instanceof Error && !('status' in e) ? e.message : mensajeDeError(e, 'Revisa tu conexión e inténtalo de nuevo.'));

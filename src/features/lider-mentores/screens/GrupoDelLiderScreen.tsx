@@ -38,6 +38,7 @@ export function GrupoDelLiderScreen({
   onVolver,
   onAbrirPersona,
   onCambiado,
+  onMentorCambiado,
 }: {
   grupoId: string;
   /** El de la fila que se tocó: está a la vista antes de que llegue la lista. */
@@ -52,10 +53,14 @@ export function GrupoDelLiderScreen({
   onAbrirPersona: (persona: AprendizDelSemaforo) => void;
   /** El mentor o los aprendices del grupo cambiaron: quien lo abrió relee sus listas. */
   onCambiado?: () => void;
+  /** El grupo tiene otro mentor (el que el servidor acaba de aceptar): quien lo abrió lo recuerda, para que al volver a esta pantalla no se lea el anterior. */
+  onMentorCambiado?: (mentor: { id: string; nombre: string }) => void;
 }) {
   const { c } = useTheme();
   const lectura = useGrupoDelLider(grupoId, inicio);
   const [hoja, setHoja] = useState<'mentor' | 'aprendices' | null>(null);
+  /* Lo que se dice del mentor: lo que trajo quien abrió el grupo hasta que se le asigna otro; entonces, el que el servidor confirmó (la cabecera no vuelve al anterior). */
+  const [mentor, setMentor] = useState<{ id: string | null; nombre: string | null }>({ id: mentorId, nombre: mentorNombre });
   const datos = lectura.datos;
   const filas = datos ? filasDelGrupo(datos.aprendices) : [];
   const { estado, frase } = estadoDelGrupo(resumen);
@@ -65,11 +70,16 @@ export function GrupoDelLiderScreen({
     lectura.recargar();
     onCambiado?.();
   };
+  const cambioElMentor = (nuevo: { id: string; nombre: string }) => {
+    setMentor(nuevo);
+    onMentorCambiado?.(nuevo);
+    cambio();
+  };
 
   return (
     <>
       <MarcoDelLider titulo={datos?.grupoNombre?.trim() || nombre} onVolver={onVolver}>
-        {mentorNombre ? <Linea>{`Mentor: ${mentorNombre}`}</Linea> : null}
+        {mentor.nombre ? <Linea>{`Mentor: ${mentor.nombre}`}</Linea> : null}
         <View style={estilos.estado} accessible accessibilityLabel={frase}>
           <EstadoConForma estado={estado} tamano={20} />
           <Text style={[estilos.frase, { color: c.textStrong }]}>{frase}</Text>
@@ -99,7 +109,7 @@ export function GrupoDelLiderScreen({
         </View>
       </MarcoDelLider>
       <HojaSumarAprendices grupo={hoja === 'aprendices' ? { id: grupoId, nombre } : null} alCerrar={() => setHoja(null)} onSumados={cambio} />
-      <HojaElegirMentor grupo={hoja === 'mentor' ? { id: grupoId, nombre, mentorId } : null} alCerrar={() => setHoja(null)} onAsignado={cambio} />
+      <HojaElegirMentor grupo={hoja === 'mentor' ? { id: grupoId, nombre, mentorId: mentor.id } : null} alCerrar={() => setHoja(null)} onAsignado={cambioElMentor} />
     </>
   );
 }

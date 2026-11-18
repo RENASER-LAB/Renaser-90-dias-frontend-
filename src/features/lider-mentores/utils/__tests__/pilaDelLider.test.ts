@@ -1,6 +1,6 @@
 import { describe, expect, it } from '@jest/globals';
 
-import { PILA_INICIAL, abrir, alCrearUnGrupo, rotuloDeVolver, volver, type VistaDelLider } from '../pilaDelLider';
+import { PILA_INICIAL, abrir, alCambiarElMentorDelGrupo, alCrearUnGrupo, rotuloDeVolver, volver, type VistaDelLider } from '../pilaDelLider';
 
 const mentor: VistaDelLider = { tipo: 'fichaMentor', mentorId: 'm-1', nombre: 'E2E Mentor' };
 const grupo: VistaDelLider = { tipo: 'grupo', grupoId: 'g-1', nombre: 'Cupo 1314', mentorNombre: 'E2E Mentor' };
@@ -35,3 +35,20 @@ describe('el recorrido del líder: un nivel atrás por vez (FR-046)', () => {
     expect(volver(despues)).toEqual([{ tipo: 'misMentores' }]);
   });
 });
+
+describe('cambiar el mentor de un grupo con el grupo abierto (FR-009)', () => {
+  it('el grupo de la pila recuerda al mentor nuevo: al volver de la ficha de un aprendiz la cabecera no vuelve al anterior', () => { // spec 056 FR-009
+    const pila = abrir(abrir(abrir([...PILA_INICIAL], mentor), grupo), aprendiz);
+    const nueva = alCambiarElMentorDelGrupo(pila, 'g-1', 'Mentor Dos');
+    expect(nueva.find(v => v.tipo === 'grupo')).toMatchObject({ grupoId: 'g-1', mentorNombre: 'Mentor Dos' });
+    expect(nueva.find(v => v.tipo === 'fichaAprendiz')).toMatchObject({ mentorNombre: 'Mentor Dos' });
+    expect(pila.find(v => v.tipo === 'grupo')).toMatchObject({ mentorNombre: 'E2E Mentor' });
+  });
+
+  it('solo cambia las vistas de ese grupo y deja el resto como estaba', () => { // spec 056 FR-009
+    const otro: VistaDelLider = { tipo: 'grupo', grupoId: 'g-2', nombre: 'Fénix', mentorNombre: 'Ana' };
+    const pila = abrir(abrir([...PILA_INICIAL], otro), { tipo: 'fichaAprendiz', personaId: 'p-9', nombre: 'Beto', grupoId: 'g-2', mentorNombre: 'Ana' });
+    expect(alCambiarElMentorDelGrupo(pila, 'g-1', 'Mentor Dos')).toEqual(pila);
+  });
+});
+
