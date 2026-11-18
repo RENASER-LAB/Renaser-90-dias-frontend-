@@ -13,7 +13,8 @@ import { describe, expect, it } from '@jest/globals';
  * las guardas de que la ficha no vuelve a sacar la evidencia al navegador.
  */
 describe('la ficha del mentor no vuelve a sacar la evidencia al navegador', () => {
-  const fuente = readFileSync(join(__dirname, '..', 'AlumnoScreen.tsx'), 'utf8');
+  // Spec 056: AlumnoScreen envuelve a FichaDePersona; la guarda mira las dos.
+  const fuente = readFileSync(join(__dirname, '..', 'AlumnoScreen.tsx'), 'utf8') + readFileSync(join(__dirname, '..', '..', 'components', 'FichaDePersona.tsx'), 'utf8');
 
   it('no usa Linking ni pide el enlace por su cuenta: lo hace la hoja de la evidencia', () => {
     expect(fuente).not.toMatch(/Linking/);

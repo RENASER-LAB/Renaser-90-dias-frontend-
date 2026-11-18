@@ -53,7 +53,7 @@ const PANTALLAS: Record<string, number> = {
   // Mentor y Líder de Mentores
   'src/features/mentor/screens/MiCelulaScreen.tsx': 1,
   'src/features/mentor/screens/MisGruposScreen.tsx': 1,
-  'src/features/mentor/screens/AlumnoScreen.tsx': 1,
+  'src/features/mentor/components/FichaDePersona.tsx': 1, // spec 056: el cuerpo de AlumnoScreen
   'src/features/lider-mentores/components/MarcoDelLider.tsx': 1,
   // «Hábitos de todos» del líder (spec 029): los hábitos del día y las personas de un hábito.
   'src/features/lider-mentores/screens/HabitosDeTodosScreen.tsx': 1,

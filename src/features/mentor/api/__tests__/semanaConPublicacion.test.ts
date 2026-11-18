@@ -72,7 +72,7 @@ describe('las dos fichas ofrecen «Ver publicación» solo con `publicacionId`',
   });
 
   it('la del mentor (AlumnoScreen, spec 055) lo ofrece como «Ver en el Muro» dentro de la hoja de la evidencia', () => {
-    const fuente = leer('mentor/screens/AlumnoScreen.tsx');
+    const fuente = leer('mentor/components/FichaDePersona.tsx'); // spec 056: el cuerpo de AlumnoScreen
     expect(fuente).toContain('publicacionId={habitoConEvidencia.obligacion.publicacionId}');
     expect(leer('lider-mentores/components/EvidenciaDeObligacion.tsx')).toMatch(/\{publicacionId \? <VerPublicacion publicacionId=\{publicacionId\}[^>]*etiqueta="Ver en el Muro"/);
   });
