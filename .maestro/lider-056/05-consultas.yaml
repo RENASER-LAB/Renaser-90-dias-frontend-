@@ -1,0 +1,49 @@
+# Spec 056, historia 6 (FR-028): Consultas. «Recordar» de «Por resolver» la abre; «Sin responder · N» y «Respondidas · N»; cada consulta dice quién pregunta, a qué mentor
+# le toca y hace cuántos días, y las que esperan respuesta traen «Recordar al mentor» y «Responder yo». Desde la ficha de un mentor se abre ya filtrada a las consultas de
+# sus aprendices («Consultas de <mentor>») y «Ver las de todos» quita el filtro. NO recuerda ni responde nada (FR-029 y FR-030 mandan mensajes: se prueban con Jest y a mano).
+# cuenta: LÍDER (e2e-lider@renaser.test). Precondición: al menos una consulta sin responder de un aprendiz de «E2E Mentor».
+# spec 056 FR-028
+# corrido: 2026-11-18
+appId: com.renaser.app
+---
+- runFlow: ../comun/abrir-mis-mentores.yaml
+- extendedWaitUntil:
+    visible: "Por resolver"
+    timeout: 30000
+# «Recordar» (la fila de consultas) abre Consultas con todas.
+- tapOn: "Recordar"
+- extendedWaitUntil:
+    visible: "Sin responder · \\d+"
+    timeout: 30000
+- assertVisible: "Respondidas · \\d+"
+- assertVisible: ".* → su mentor.*"
+- assertVisible: "hace \\d+ días?|hoy"
+- assertVisible: "Recordar al mentor"
+- assertVisible: "Responder yo"
+- takeScreenshot: L05a-consultas-de-todos
+- back
+- extendedWaitUntil:
+    visible: "Mentores"
+    timeout: 30000
+# Desde la ficha de un mentor: solo las de sus aprendices.
+- tapOn: "E2E Mentor. Cupo \\d+ de \\d+.*"
+- extendedWaitUntil:
+    visible: "Reconocer, sugerir o alertar a E2E Mentor"
+    timeout: 30000
+- scrollUntilVisible:
+    element: "Consultas: .*"
+    direction: DOWN
+    timeout: 40000
+- tapOn: "Consultas: .*"
+- extendedWaitUntil:
+    visible: "Consultas de E2E Mentor"
+    timeout: 30000
+- assertVisible: ".* → su mentor E2E Mentor"
+- takeScreenshot: L05b-consultas-del-mentor
+# «Ver las de todos» quita el filtro.
+- tapOn: "Ver las de todos"
+- extendedWaitUntil:
+    notVisible: "Consultas de E2E Mentor"
+    timeout: 20000
+- assertVisible: "Sin responder · \\d+"
+- takeScreenshot: L05c-consultas-de-todos-otra-vez

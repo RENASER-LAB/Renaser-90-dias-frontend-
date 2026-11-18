@@ -1,0 +1,14 @@
+# Punto de partida de los flujos del líder (spec 056): Yo → fila «Mis mentores» → la pantalla con sus mentores a la vista. Parte de Hoy o de la raíz de Yo.
+appId: com.renaser.app
+---
+- runFlow: ya-adentro.yaml
+- tapOn: "YO"
+- scrollUntilVisible:
+    element: "Abrir Mis mentores"
+    direction: DOWN
+    timeout: 40000
+- tapOn: "Abrir Mis mentores"
+# «Mentores» es el título de la lista (el de la pantalla es «Mis mentores»: no coincide con este patrón exacto).
+- extendedWaitUntil:
+    visible: "Mentores"
+    timeout: 30000

@@ -1,0 +1,41 @@
+# Spec 056, historia 6 (FR-031): el reporte del mes. El promedio de los mentores en un anillo con su número, cuántos quedan debajo del 60 %, el ranking con el puesto de
+# cada mentor y su línea (la evaluación y sus consultas respondidas), el mes anterior y, al pie, «Exportar el reporte». NO exporta (FR-032 genera un documento en el servidor).
+# cuenta: LÍDER (e2e-lider@renaser.test). Precondición: mentores con evaluación del mes.
+# spec 056 FR-031
+# corrido: 2026-11-18
+appId: com.renaser.app
+---
+- runFlow: ../comun/abrir-mis-mentores.yaml
+- scrollUntilVisible:
+    element: "Reporte del mes"
+    direction: DOWN
+    timeout: 30000
+- tapOn: "Reporte del mes"
+- extendedWaitUntil:
+    visible: "Mes anterior"
+    timeout: 30000
+- assertVisible: "Promedio de tus mentores"
+- assertVisible: "\\d+ de \\d+ debajo de 60 %"
+- assertVisible: "\\d+ %"
+- assertVisible: "Mentores"
+- takeScreenshot: L06a-reporte
+# El ranking: el puesto de cada mentor y su línea con la evaluación y las consultas respondidas.
+- assertVisible: "Puesto 1\\. .*"
+- assertVisible: "\\d+ % · .*consulta.*"
+- assertVisible: "1°"
+- scrollUntilVisible:
+    element: "Exportar el reporte"
+    direction: DOWN
+    timeout: 30000
+- takeScreenshot: L06b-exportar-el-reporte
+# Los meses se cambian con las flechas: en un mes ya cerrado aparece «Mes siguiente» (en el mes en curso no).
+- assertNotVisible: "Mes siguiente"
+- scrollUntilVisible:
+    element: "Mes anterior"
+    direction: UP
+    timeout: 30000
+- tapOn: "Mes anterior"
+- extendedWaitUntil:
+    visible: "Mes siguiente"
+    timeout: 30000
+- takeScreenshot: L06c-mes-anterior

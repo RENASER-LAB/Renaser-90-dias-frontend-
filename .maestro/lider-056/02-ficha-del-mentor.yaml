@@ -1,0 +1,86 @@
+# Spec 056, historia 2 (FR-021 a FR-026, y la hoja de FR-033): la ficha de un mentor. «Ver» de «Por resolver» abre la ficha del mentor que peor va (con 0 % de todos, cuál es depende del desempate: el flujo no lo fija); un mentor que
+# no sigue su programa lo dice en una línea y su «Como mentor» se ve completa (FR-022). La ficha de uno que sí lo sigue es la del aprendiz con SUS datos:
+# la semana en círculos, el día por pilares, sin el lápiz de notas, con la estrella y el chat en la cabecera (FR-021, FR-023); debajo «Como mentor»
+# (sus grupos con su barra, su evaluación, «Lo que le dijiste») y los botones «Descargar semana», «Alertar» y «Programar sesión» (FR-024, FR-026).
+# Las dos hojas se abren y se cierran con el gesto de volver, SIN guardar nada (FR-025 se prueba con Jest y a mano: guardar le manda un mensaje al mentor).
+# cuenta: LÍDER (e2e-lider@renaser.test). Precondición: `siembra.sql`; «E2E Mentor» sigue su programa y «Mentor Dos E2E» no.
+# La cuenta suspendida de FR-022 no se alcanza por la pantalla: el servidor deja fuera de la lista a los mentores suspendidos (la cubre `fichaDelMentor.test.ts`).
+# spec 056 FR-021, FR-022, FR-023, FR-024, FR-026, FR-033
+# corrido: 2026-11-18
+appId: com.renaser.app
+---
+- runFlow: ../comun/abrir-mis-mentores.yaml
+- extendedWaitUntil:
+    visible: "Ver"
+    timeout: 30000
+- tapOn: "Ver"
+- extendedWaitUntil:
+    visible: "Reconocer, sugerir o alertar a .*"
+    timeout: 30000
+- back
+- extendedWaitUntil:
+    visible: "Mentores"
+    timeout: 30000
+# Un mentor que no sigue su programa.
+- tapOn: "Mentor Dos E2E. Cupo \\d+ de \\d+.*"
+- extendedWaitUntil:
+    visible: "Reconocer, sugerir o alertar a Mentor Dos E2E"
+    timeout: 30000
+# FR-022: no sigue su programa → una línea en lugar de la semana y los pilares; «Como mentor» se ve completa.
+- assertVisible: "No sigue su propio programa."
+- assertNotVisible: "(Sábado|Domingo|Lunes|Martes|Miércoles|Jueves|Viernes) \\d+ de .*"
+- assertVisible: "Como mentor"
+- takeScreenshot: L02a-mentor-que-no-sigue-su-programa
+- back
+- extendedWaitUntil:
+    visible: "Mentores"
+    timeout: 30000
+# El mentor que sí sigue su programa.
+- tapOn: "E2E Mentor. Cupo \\d+ de \\d+.*"
+- extendedWaitUntil:
+    visible: "Reconocer, sugerir o alertar a E2E Mentor"
+    timeout: 30000
+# FR-021: la misma ficha del aprendiz con los datos del mentor (semana en círculos, día por pilares) y su nivel bajo el nombre.
+- assertVisible: "(Sábado|Domingo|Lunes|Martes|Miércoles|Jueves|Viernes) \\d+ de .*"
+- assertVisible: "Cuerpo"
+- assertVisible: "Mentor N\\d+ · .*"
+# FR-023: en la cabecera, la estrella y el chat, y no el lápiz de las notas.
+- assertVisible: "Escribirle a E2E Mentor"
+- assertNotVisible: "Notas sobre .*"
+- takeScreenshot: L02b-ficha-del-mentor
+# FR-024: «Como mentor» con el mismo estilo plegable: sus grupos, su evaluación y lo que el líder le dijo.
+- scrollUntilVisible:
+    element: "Como mentor"
+    direction: DOWN
+    timeout: 30000
+- assertVisible: "Abrir el grupo .*"
+- scrollUntilVisible:
+    element: "Lo que le dijiste"
+    direction: DOWN
+    timeout: 30000
+- assertVisible: "Su evaluación"
+- takeScreenshot: L02c-como-mentor
+# FR-026: los tres botones del pie.
+- scrollUntilVisible:
+    element: "Programar sesión"
+    direction: DOWN
+    timeout: 30000
+- assertVisible: "Descargar semana"
+- assertVisible: "Alertar"
+# FR-033: «Programar sesión» abre la hoja con ESE mentor ya elegido; el gesto de volver la cierra.
+- tapOn: "Programar sesión"
+- extendedWaitUntil:
+    visible: "Con E2E Mentor"
+    timeout: 20000
+- takeScreenshot: L02d-programar-sesion
+- back
+- assertNotVisible: "Con E2E Mentor"
+# «Alertar» abre la hoja de reconocer, sugerir o alertar, dirigida a ese mentor; se cierra sin guardar.
+- tapOn: "Alertar"
+- extendedWaitUntil:
+    visible: "A E2E Mentor"
+    timeout: 20000
+- assertVisible: "Guardar"
+- takeScreenshot: L02e-alertar
+- back
+- assertNotVisible: "A E2E Mentor"
