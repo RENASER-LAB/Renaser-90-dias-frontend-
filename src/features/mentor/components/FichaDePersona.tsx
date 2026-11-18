@@ -36,7 +36,7 @@ import { useNotasDelAprendiz } from '../hooks/useNotasDelAprendiz';
 import { useSemanasDelAprendiz } from '../hooks/useSemanasDelAprendiz';
 import { diasDeLaSemana, nombreDelMesDe, sePuedeElegir, tituloDelDia, viernesDeLaSemana } from '../utils/fechasDeLaFicha';
 import { agruparPorPilar } from '../utils/habitosDelDia';
-import { lecturasDeLaFicha, type LecturasDeLaFicha, type OrigenDeLaFicha } from '../utils/lecturasDeLaFicha';
+import { lecturasDeLaFicha, type OrigenDeLaFicha } from '../utils/lecturasDeLaFicha';
 import { estadoDeLaSemana, motivoCorto } from '../utils/motivoDeLaFila';
 import type { AlumnoConEstado } from '../types/mentor.types';
 import { useOcultarBarraAlDesplazar } from '../../../navigation/barraAlDesplazar/BarraInferior';
@@ -72,19 +72,6 @@ export interface PropsDeFichaDePersona {
   /** La línea bajo el nombre, si no es «Día N · motivo» (la ficha de un mentor dice su nivel). */
   subtitulo?: string | null;
 }
-
-/** Las lecturas de una persona que no sigue su programa: no hay semana, días ni nada que pedirle al servidor. */
-const SIN_LECTURAS_DEL_PROGRAMA: LecturasDeLaFicha = {
-  cargarSemana: null,
-  cargarDias: null,
-  cargarRadar: null,
-  cargarHuecos: null,
-  cargarCierres: null,
-  cargarDiagnostico: null,
-  cargarOchentaVeinte: null,
-  cargarObjetivos: null,
-  origenDeLasNotas: null,
-};
 
 /**
  * La ficha de una persona (spec 055, historia 2; bocetos aprobados por el dueño el 17/11) para quien la acompaña: su mentor o, desde la
@@ -138,7 +125,8 @@ export function FichaDePersona({
   /* Las lecturas son de este origen y esta persona, y estables: las secciones del final las usan como llave de lo que guardan. */
   const { quien, grupoId } = origen;
   const sinPrograma = sinSemana !== undefined && sinSemana !== null && sinSemana !== false;
-  const lecturas = useMemo(() => (sinPrograma ? SIN_LECTURAS_DEL_PROGRAMA : lecturasDeLaFicha({ quien, grupoId }, aprendizId)), [sinPrograma, quien, grupoId, aprendizId]);
+  /* Una persona que no sigue su programa (`sinPrograma`) no tiene nada que pedirle al servidor: `lecturasDeLaFicha` no le da ninguna lectura. */
+  const lecturas = useMemo(() => lecturasDeLaFicha({ quien, grupoId }, aprendizId, { sinPrograma }), [quien, grupoId, aprendizId, sinPrograma]);
   const semanas = useSemanasDelAprendiz(lecturas.cargarSemana, aprendizId, avisarQueYaNoLoAcompana);
   const colores = useDiasDelMes(lecturas.cargarDias, aprendizId);
   /* Los avisos de acompañamiento son del mentor: abrir la ficha los deja leídos. El líder no los recibe. */

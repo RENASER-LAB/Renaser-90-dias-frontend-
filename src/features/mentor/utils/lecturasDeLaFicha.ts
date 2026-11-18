@@ -71,9 +71,12 @@ const SIN_LECTURAS: LecturasDeLaFicha = {
 
 /**
  * Las lecturas de la ficha de `personaId` para ese origen. Una función nueva por llamada: quien la usa la memoriza por origen y
- * persona. Lo que ve el mentor no cambia: son las mismas rutas que ya leía su ficha (spec 055).
+ * persona. Lo que ve el mentor no cambia: son las mismas rutas que ya leía su ficha (spec 055). Con `sinPrograma` (spec 056, un mentor que no
+ * sigue su programa) no hay nada que pedirle al servidor: todas las lecturas van en `null`.
  */
-export function lecturasDeLaFicha(origen: OrigenDeLaFicha, personaId: string): LecturasDeLaFicha {
+export function lecturasDeLaFicha(origen: OrigenDeLaFicha, personaId: string, opciones: { sinPrograma?: boolean } = {}): LecturasDeLaFicha {
+  /* Spec 056 FR-022: una persona que no sigue su programa (un mentor que no lo activó) no tiene semana, días ni nada que leer del programa. */
+  if (opciones.sinPrograma) return SIN_LECTURAS;
   const grupoId = origen.grupoId;
 
   if (origen.quien === 'mentor') {

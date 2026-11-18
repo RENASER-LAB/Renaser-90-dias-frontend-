@@ -114,3 +114,19 @@ describe('la ficha abierta por el líder, sin grupo (un aprendiz sin grupo o des
     expect(await rutaDe(() => ficha.cargarObjetivos!())).toBe('/api/v1/leadership/people/a%2Fb%25c/objetivos');
   });
 });
+
+describe('una persona que no sigue su programa (un mentor sin su programa activado)', () => {
+  it('no tiene ninguna lectura que pedirle al servidor, con cualquier origen', () => { // spec 056 FR-022
+    for (const origen of [{ quien: 'lider' as const, grupoId: null }, { quien: 'lider' as const, grupoId: 'g-1' }, { quien: 'mentor' as const, grupoId: 'g-1' }]) {
+      const lecturas = lecturasDeLaFicha(origen, 'p-1', { sinPrograma: true });
+      for (const clave of LECTURAS) expect(lecturas[clave]).toBeNull();
+      expect(lecturas.origenDeLasNotas).toBeNull();
+    }
+  });
+
+  it('sin la opción, la ficha sigue leyendo por su puerta de siempre', () => { // spec 056 FR-014
+    expect(lecturasDeLaFicha({ quien: 'lider', grupoId: null }, 'p-1').cargarSemana).not.toBeNull();
+    expect(lecturasDeLaFicha({ quien: 'lider', grupoId: null }, 'p-1', { sinPrograma: false }).cargarSemana).not.toBeNull();
+  });
+});
+
