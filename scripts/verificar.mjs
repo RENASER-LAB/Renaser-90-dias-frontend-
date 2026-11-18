@@ -6,6 +6,7 @@
 //   npm run verificar -- --ci             lo que corre el CI: sin detección de máquina ocupada; lo que no aplica en el
 //                                         CI (la trazabilidad, que corre en el CI del backend) no cuenta como pendiente
 //   --forzar                              corre lo pesado aunque parezca que otra sesión tiene la máquina
+//   --shard=N/M                           el Jest completo corre solo su parte N de M (el CI lo parte en 3 trabajos paralelos)
 //
 // Por qué existe: cada sesión verificaba a su manera, y varios PR explicaron a mano el mismo falso rojo (al
 // `node_modules` compartido le faltaba un parche de postinstall). Acá los parches se aplican primero; los scripts son
@@ -27,6 +28,8 @@ const E2E = opcion('--e2e');
 const CI = opcion('--ci') || process.env.CI === 'true';
 const FORZAR = opcion('--forzar') || CI;
 const flujos = args.filter((a) => !a.startsWith('--'));
+// Parte del Jest completo que corre este proceso (2026-11-18): el CI corre 3 trabajos en paralelo, cada uno con su parte.
+const SHARD = (args.find((a) => /^--shard=\d+\/\d+$/.test(a)) ?? '').replace('--shard=', '') || null;
 
 /** ok: true (pasó), false (falló), null (sin correr: impide el verde), 'na' (no aplica aquí: neutro), 'info'. */
 const resultados = [];
@@ -107,7 +110,8 @@ if (RAPIDO) {
   correr('Jest: reglas de código', 'node', [...jest, 'src/__tests__/reglas']);
   anotar('Jest completo', null, 'sin correr: --rapido no cierra nada');
 } else if (puedeCorrerLoPesado('Jest completo')) {
-  correr('Jest completo', 'node', jest);
+  if (SHARD) correr(`Jest completo (parte ${SHARD})`, 'node', [...jest, `--shard=${SHARD}`]);
+  else correr('Jest completo', 'node', jest);
 }
 
 // 4. Trazabilidad de specs: el script vive en el backend y lee las pruebas de esta app.
