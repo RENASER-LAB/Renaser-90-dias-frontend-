@@ -174,7 +174,21 @@ export function useDetalleDelCentro(): DetalleDelCentro {
 
 type ModuloUbicacion = typeof import('expo-location');
 
+/** Solo para las pruebas: el módulo de ubicación que se usa en vez de `require('expo-location')` (ver `usarUbicacionParaPruebas`). */
+let ubicacionParaPruebas: ModuloUbicacion | null = null;
+
+/**
+ * Solo para las pruebas: da el módulo de ubicación sin pasar por `require('expo-location')`. Jest recuerda, por archivo y por proceso,
+ * cómo resolvió ese `require`: si una prueba anterior lo corrió con el módulo de verdad, otra que lo simula con `jest.mock` en el mismo
+ * proceso recibe igual el de verdad (visto en `centroDelMapaNoSeMide`, `carreraEnIos` y `gpsTrasMorirElProceso`, que fallan a ratos).
+ * `null` lo quita.
+ */
+export function usarUbicacionParaPruebas(modulo: ModuloUbicacion | null): void {
+  ubicacionParaPruebas = modulo;
+}
+
 function cargarUbicacion(): ModuloUbicacion | null {
+  if (ubicacionParaPruebas) return ubicacionParaPruebas;
   if (!laCarreraCorreEn(Platform.OS)) return null;
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports

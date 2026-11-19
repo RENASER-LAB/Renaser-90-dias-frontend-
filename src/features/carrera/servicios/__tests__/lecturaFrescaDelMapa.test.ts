@@ -17,24 +17,31 @@ const mockUbicacion = {
   }),
   Accuracy: { Balanced: 3, BestForNavigation: 6 },
 };
-jest.mock('expo-location', () => mockUbicacion, { virtual: true });
-const mockTareas: { fn: ((x: unknown) => Promise<void>) | null } = { fn: null };
-jest.mock('expo-task-manager', () => ({ defineTask: (_: string, fn: (x: unknown) => Promise<void>) => (mockTareas.fn = fn) }), { virtual: true });
 jest.mock('../notificacionDeCarrera', () => ({ mostrarNotificacionDeCarrera: jest.fn(async () => undefined), quitarNotificacionDeCarrera: jest.fn() }));
 
-import { afterEach, beforeAll, beforeEach, describe, expect, it, jest } from '@jest/globals';
-import { Platform } from 'react-native';
+import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 
 import { distanciaM, puntoDestino } from '../../utils/geo';
 import { ESPERA_DE_LA_LECTURA_FRESCA_MS } from '../../utils/lecturaDelMapa';
-import { carreraActual, empezarCarrera, pausarCarrera, reiniciarParaPruebas } from '../carreraEnVivo';
-import { centroDelMapa, detalleDelCentro, olvidarCentroDelMapa, olvidarLoAdelantadoParaPruebas, prepararCentroDelMapa } from '../centroDelMapa';
-import { definirTareaDeLaCarrera } from '../tareaDeUbicacion';
+import { puntosDeLaUbicacion } from '../../utils/puntosDeLaUbicacion';
+import { carreraActual, empezarCarrera, pausarCarrera, recibirPuntos, reiniciarParaPruebas } from '../carreraEnVivo';
+import {
+  centroDelMapa,
+  detalleDelCentro,
+  olvidarCentroDelMapa,
+  olvidarLoAdelantadoParaPruebas,
+  ponerLecturaDelMapa,
+  prepararCentroDelMapa,
+  usarUbicacionParaPruebas,
+} from '../centroDelMapa';
 
 /**
  * Spec 042, lectura fresca, promedio y motor intacto (#236: «estoy en mi casa y me pone al frente o en otra casa»): antes de arrancar se busca una lectura
  * fresca y buena de verdad en vez de fiarse de la última conocida, y las lecturas frescas se promedian para el punto que se dibuja.
  * Todo es solo para mirar: la ruta y la distancia siguen siendo del motor.
+ *
+ * El módulo de ubicación entra por `usarUbicacionParaPruebas` y no por `jest.mock('expo-location')`: Jest recuerda cómo resolvió ese
+ * `require` en el proceso, y una prueba anterior que lo corrió con el módulo de verdad hacía fallar a esta a ratos.
  */
 const CASA = { lat: -12.1219, lng: -77.0312 };
 const lectura = (dx: number, dy: number, precision: number | null, extra: { timestamp?: number; speed?: number | null } = {}): Lectura => {
@@ -47,11 +54,8 @@ const lectura = (dx: number, dy: number, precision: number | null, extra: { time
 const llega = (l: Lectura): void => mockWatch.alLlegar!(l);
 const alCentro = (): number => distanciaM(centroDelMapa()!.pos, CASA);
 
-beforeAll(() => {
-  Object.defineProperty(Platform, 'OS', { get: () => 'android', configurable: true });
-  definirTareaDeLaCarrera();
-});
 beforeEach(() => {
+  usarUbicacionParaPruebas(mockUbicacion as never);
   reiniciarParaPruebas();
   olvidarCentroDelMapa();
   olvidarLoAdelantadoParaPruebas();
@@ -62,7 +66,15 @@ beforeEach(() => {
 });
 afterEach(() => {
   jest.useRealTimers();
+  usarUbicacionParaPruebas(null);
 });
+
+/** Lo que hace la tarea del GPS con cada lote: las lecturas al mapa y los puntos al motor (que, en la cuenta, los descarta). */
+function llegaDelGps(l: Lectura): void {
+  const [punto] = puntosDeLaUbicacion([l]);
+  ponerLecturaDelMapa(punto, 'gps');
+  recibirPuntos([punto]);
+}
 
 /** Abre la carrera en la cuenta 3, 2, 1 (en pausa), prepara el centro del mapa como el anfitrión y deja correr lo que quedó pendiente. */
 async function prepararEnLaCuenta(): Promise<void> {
@@ -182,7 +194,7 @@ describe('las lecturas frescas se promedian para el punto que se dibuja', () => 
     for (const [dx, dy, precision] of oscilacion) {
       const l = lectura(dx, dy, precision, { speed: 0 });
       ultimaLejos = distanciaM(CASA, { lat: l.coords.latitude, lng: l.coords.longitude });
-      await mockTareas.fn!({ data: { locations: [l] }, error: null });
+      llegaDelGps(l);
     }
     expect(centroDelMapa()!.fuente).toBe('gps');
     expect(detalleDelCentro()).toEqual({ precisionM: 16, promediado: true });
@@ -195,10 +207,10 @@ describe('las lecturas frescas se promedian para el punto que se dibuja', () => 
   it('al moverse, el punto vuelve a seguir a la lectura real y deja de ser un promedio', async () => {
     empezarCarrera({ carreraId: 'c', cuentaId: 'cuenta', pesoKg: 70, conPasos: false });
     pausarCarrera();
-    for (const [dx, dy] of [[0, 0], [2, 1], [1, 2]]) await mockTareas.fn!({ data: { locations: [lectura(dx, dy, 8, { speed: 0 })] }, error: null });
+    for (const [dx, dy] of [[0, 0], [2, 1], [1, 2]]) llegaDelGps(lectura(dx, dy, 8, { speed: 0 }));
     expect(detalleDelCentro().promediado).toBe(true);
     const lejos = lectura(70, 0, 6, { speed: 3 });
-    await mockTareas.fn!({ data: { locations: [lejos] }, error: null });
+    llegaDelGps(lejos);
     expect(detalleDelCentro()).toEqual({ precisionM: 6, promediado: false });
     expect(distanciaM(centroDelMapa()!.pos, { lat: lejos.coords.latitude, lng: lejos.coords.longitude })).toBeLessThan(0.01);
   });
@@ -207,7 +219,7 @@ describe('las lecturas frescas se promedian para el punto que se dibuja', () => 
   it('nada de esto entra a la ruta ni a la distancia: el motor sigue con lo suyo', async () => {
     await prepararEnLaCuenta();
     llega(lectura(0, 0, 10));
-    for (const [dx, dy] of [[0, 0], [1, 1], [2, 0]]) await mockTareas.fn!({ data: { locations: [lectura(dx, dy, 12, { speed: 0 })] }, error: null });
+    for (const [dx, dy] of [[0, 0], [1, 1], [2, 0]]) llegaDelGps(lectura(dx, dy, 12, { speed: 0 }));
     expect(detalleDelCentro().promediado).toBe(true);
     // La carrera está en la cuenta 3, 2, 1 (en pausa): el motor descarta los puntos, y ni el promedio ni la búsqueda cambian eso.
     expect(carreraActual()!.ruta).toHaveLength(0);
