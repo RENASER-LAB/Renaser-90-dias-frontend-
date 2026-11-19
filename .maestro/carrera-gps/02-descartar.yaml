@@ -1,12 +1,33 @@
 # C02 — Descartar una carrera: pide confirmación, se borra del teléfono y no se envía (spec 042). Precondición: README.
 # cuenta: aprendiz
 # spec 042 FR-013
+# corrido: 2026-11-19
 appId: com.renaser.app
 ---
 - runFlow: ../comun/ya-adentro.yaml
 - runFlow: ../comun/abrir-training.yaml
-- tapOn: "Correr con GPS"
-- tapOn: "Empezar ya"
+# «Kilómetros diarios» puede quedar abajo (en «Se te pasó la hora» según la hora): se baja hasta el botón.
+- scrollUntilVisible:
+    element: "Correr con GPS.*"
+    direction: DOWN
+    timeout: 30000
+- tapOn: "Correr con GPS.*"
+- runFlow:
+    when:
+      visible: "Mientras se usa la app|While using the app"
+    commands:
+      - tapOn: "Mientras se usa la app|While using the app"
+- runFlow:
+    when:
+      visible: "Permitir|Allow"
+    commands:
+      - tapOn: "Permitir|Allow"
+# Si la cuenta regresiva (3 s) todavía se ve, se salta; si no, la carrera ya empezó sola.
+- runFlow:
+    when:
+      visible: "Empezar ya"
+    commands:
+      - tapOn: "Empezar ya"
 - extendedWaitUntil:
     visible: "Pausar la carrera"
     timeout: 8000
@@ -17,8 +38,10 @@ appId: com.renaser.app
 - tapOn: "Descartar esta carrera"
 - assertVisible: "¿Descartar esta carrera\\?"
 - tapOn: "Descartar"
-- extendedWaitUntil:
-    visible: "Correr con GPS"
-    timeout: 8000
+# Vuelve a Entrenar arriba de la lista: se baja hasta «Kilómetros diarios».
+- scrollUntilVisible:
+    element: "Correr con GPS.*"
+    direction: DOWN
+    timeout: 30000
 - assertNotVisible: "Carrera en curso.*"
 - takeScreenshot: C02-descartada
