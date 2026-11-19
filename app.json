@@ -10,6 +10,7 @@
     "ios": {
       "supportsTablet": false,
       "config": { "usesNonExemptEncryption": false },
+      "infoPlist": { "NSHealthShareUsageDescription": "NaSer lee tus pasos, sueno y actividad de la app Salud para mostrar tu progreso diario en el programa RENASER.", "NSHealthUpdateUsageDescription": "NaSer registra en la app Salud la actividad que completas dentro del programa RENASER." },
       "bundleIdentifier": "com.renaser.app"
     },
     "android": {
