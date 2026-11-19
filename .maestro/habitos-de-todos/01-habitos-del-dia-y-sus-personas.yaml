@@ -1,23 +1,17 @@
 # «Hábitos de todos» (2026-10-31, spec 029, pedido del dueño: «el líder ve todos los hábitos, quién los cumplió y quién no»).
-# ESCRITO Y SIN CORRER: necesita el backend con `GET /leadership/habits` y un emulador libre.
+# Necesita el backend con `GET /leadership/habits` y un emulador libre.
+# corrido: 2026-11-18 (con `-e HABITO=Despertar -e PERSONA=Aprendiz`).
+# Spec 056 (2026-11-18): «Mis mentores» es la pantalla nueva del líder (anclas «Mentores» y «Hábitos de todos» al pie); «Resultado por grupo» ya no existe.
 # El líder → Yo → «Mis mentores» → «Hábitos de todos» (un día, hoy) → un hábito → sus personas (primero las que no cumplieron)
 # → la ficha de una persona, abierta en ese mismo día → atrás (personas, con la búsqueda) → atrás (hábitos del día) → atrás
 # («Mis mentores»).
 # cuenta: admin (la ranura E2E_ADMIN_* apunta al LÍDER DE MENTORES).
-# HABITO = parte del nombre de un hábito de hoy. PERSONA = parte del nombre de una persona que lo tenía.
+# HABITO = parte del nombre de un hábito de hoy. PERSONA = parte del nombre de una persona que lo tenía (de hasta ~9 letras: `inputText` de Maestro tarda ~10 s por letra y
+# se corta a los 120 s; con «E2E Aprendiz», 12 letras, el flujo se cortaba).
 # Precondición: el líder ya entró y el servidor ofrece la lectura.
 appId: com.renaser.app
 ---
-- runFlow: ../comun/ya-adentro.yaml
-- tapOn: "YO"
-- scrollUntilVisible:
-    element: "Mis mentores"
-    direction: DOWN
-    timeout: 40000
-- tapOn: "Mis mentores"
-- extendedWaitUntil:
-    visible: "Resultado por grupo"
-    timeout: 30000
+- runFlow: ../comun/abrir-mis-mentores.yaml
 - scrollUntilVisible:
     element: "Hábitos de todos"
     direction: DOWN
@@ -47,10 +41,13 @@ appId: com.renaser.app
 - extendedWaitUntil:
     visible: ".*${PERSONA}.*"
     timeout: 30000
-# Su ficha de siempre, abierta en el MISMO día (hoy).
-- tapOn: ".*${PERSONA}.*"
-- extendedWaitUntil:
-    visible: ".*Escribirle.*"
+# Su ficha de siempre, abierta en el MISMO día (hoy). El patrón también coincide con el texto escrito en el buscador (el primero, arriba): se toca el segundo, la primera fila.
+- tapOn:
+    text: ".*${PERSONA}.*"
+    index: 1
+- scrollUntilVisible:
+    element: ".*Escribirle.*"
+    direction: DOWN
     timeout: 60000
 - takeScreenshot: H01d-ficha-de-la-persona
 # Atrás: ficha → personas del hábito (con la búsqueda) → hábitos del día → «Mis mentores».
@@ -65,6 +62,6 @@ appId: com.renaser.app
     timeout: 20000
 - back
 - extendedWaitUntil:
-    visible: "Resultado por grupo"
+    visible: "Mentores"
     timeout: 20000
 - takeScreenshot: H01e-de-vuelta-en-mis-mentores

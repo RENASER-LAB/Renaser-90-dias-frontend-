@@ -1,26 +1,20 @@
 # «Todos los aprendices» (2026-10-31, pedido del dueño: «el líder de mentores puede ver la ficha de todos los aprendices sin
-# necesidad de estar en grupo, solo para este rol»). ESCRITO Y SIN CORRER: necesita el backend con `GET /leadership/people` y
-# un emulador libre.
+# necesidad de estar en grupo, solo para este rol»). Necesita el backend con `GET /leadership/people` y un emulador libre.
+# corrido: 2026-11-18 (con `-e PERSONA_SIN_GRUPO="Ajeno Dos"`, una persona sin grupo de la base `renaser_e2e_056`).
 # El líder → Yo → «Mis mentores» → «Todos los aprendices» → buscar a una persona SIN grupo → se ven sus días → atrás (vuelve
 # a la lista con la búsqueda) → atrás (vuelve a «Mis mentores»).
 # Corregido 2026-10-31: «Mis mentores» ya no es una pestaña de Hoy; es una fila de Yo, junto a Administración.
 # cuenta: admin (la ranura E2E_ADMIN_* apunta al LÍDER DE MENTORES, como en `mi-radar/12`).
 # PERSONA_SIN_GRUPO = parte del nombre de una persona que no está en ningún grupo (la búsqueda es del servidor, sin tildes).
 # Precondición: el líder ya entró, el servidor ofrece la lista y esa persona existe sin grupo.
+# Spec 056 (2026-11-18): «Mis mentores» es la pantalla nueva del líder («Resultado por grupo», «Consultas de mentores» y «Mentores y reporte del mes» ya no existen) y la ficha de la
+# persona es la de la 055 con lo del líder (FR-017: la lee desde su día 1 sin estar en un grupo; FR-019: sin mentor, no hay «Avisar a su mentor»).
+# spec 056 FR-017, FR-019
 appId: com.renaser.app
 ---
-- runFlow: ../comun/ya-adentro.yaml
 # Yo del líder: «Mis mentores» es una fila de la lista, junto a Administración.
-- tapOn: "YO"
-- scrollUntilVisible:
-    element: "Mis mentores"
-    direction: DOWN
-    timeout: 40000
-- tapOn: "Mis mentores"
-- extendedWaitUntil:
-    visible: "Resultado por grupo"
-    timeout: 30000
-# La fila nueva está junto a «Consultas de mentores» y «Mentores y reporte del mes».
+- runFlow: ../comun/abrir-mis-mentores.yaml
+# «Todos los aprendices» es un acceso del pie, junto a «Grupos», «Consultas» y «Reporte del mes».
 - scrollUntilVisible:
     element: "Todos los aprendices"
     direction: DOWN
@@ -38,14 +32,15 @@ appId: com.renaser.app
     visible: ".*${PERSONA_SIN_GRUPO}.*Sin grupo.*"
     timeout: 30000
 - takeScreenshot: L01b-busqueda-persona-sin-grupo
-# Su ficha de siempre, leída sin grupo: sus días, y «Escribirle» sin «Avisar a su mentor» (no tiene grupo).
+# Su ficha de la 055, leída sin grupo: la semana en círculos y el día por pilares (FR-017), y «Descargar semana» sin «Avisar a su mentor» (no tiene mentor).
 - tapOn: ".*${PERSONA_SIN_GRUPO}.*Ver su ficha.*"
 - extendedWaitUntil:
-    visible: "Últimos 7 días.*"
+    visible: "Escribirle a .*"
     timeout: 30000
-- assertVisible: "Sin grupo"
+- assertVisible: "(Sábado|Domingo|Lunes|Martes|Miércoles|Jueves|Viernes) \\d+ de .*"
+- assertVisible: "Cuerpo"
 - scrollUntilVisible:
-    element: "Escribirle a .*"
+    element: "Descargar semana"
     direction: DOWN
     timeout: 60000
 - assertNotVisible: "Avisar a su mentor.*"
@@ -59,6 +54,6 @@ appId: com.renaser.app
 # …y de la lista a «Mis mentores».
 - back
 - extendedWaitUntil:
-    visible: "Resultado por grupo"
+    visible: "Mentores"
     timeout: 20000
 - takeScreenshot: L01d-de-vuelta-en-mis-mentores
