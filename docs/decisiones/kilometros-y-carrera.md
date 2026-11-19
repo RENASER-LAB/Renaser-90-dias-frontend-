@@ -365,3 +365,36 @@ No cambian: Android, la web, el servidor, los cinco tabs ni el mapa (su clave de
 Pruebas: `servicios/__tests__/carreraEnIos.test.ts`, `components/__tests__/anfitrionEnIos.test.ts` y `src/__tests__/reglas/carreraEnIosPermisos.test.ts`.
 Hace falta un build nuevo de iOS (cambia el `Info.plist`). **Sin comprobar en un iPhone:** que el recorrido siga sumando con la pantalla apagada, la barra
 azul y los pasos del podómetro; lo corre la sesión principal.
+
+## Cambio por pedido del dueño — 2026-11-19 — Carrera con GPS: el punto del mapa ya no cae en la casa de al lado (lectura fresca, promedio quieto, círculo de precisión y aviso de ubicación aproximada; spec 042 FR-053 a FR-057, #236)
+
+Pedido del dueño, textual: «estoy en mi casa y me pone al frente o en otra casa». **Causa:** bajo techo el GPS tiene de 10 a 30 m de error y salta de casa en casa. El
+motor acepta puntos hasta `PRECISION_MAXIMA_M = 20` y, antes del primer punto del motor, el mapa se centraba en el centro guardado, la última conocida o la aproximada: lecturas
+viejas o gruesas. No existe un servicio de Google Cloud más preciso (la Geolocation API da de 20 a 100 m y Android ya usa el proveedor combinado), así que el dueño aprobó cuatro
+mejoras **solo de lo que se ve**.
+
+Lo que cambia y nada más:
+* **Una lectura buena antes de centrar (FR-053).** Al tocar «Correr», además de lo de siempre, `prepararCentroDelMapa` abre `watchPositionAsync` (`BestForNavigation`,
+  `mayShowUserSettingsDialog: false`) y muestra cada lectura fresca a medida que llega; se detiene en la primera de **15 m o menos** o a los **10 s**, y se queda con lo que llegó (el
+  promedio pesa más a la mejor). Una lectura de hace más de 5 s no cuenta (iPhone entrega primero la última guardada). **La cuenta 3, 2, 1 no espera:** el mapa sigue apareciendo al
+  instante con lo que haya (la regla del 2026-11-05) y se afina solo. Fuente nueva `fresca` en `servicios/centroDelMapa.ts`.
+* **Promedio de la persona quieta (FR-054).** `utils/lecturaDelMapa.ts` (pura): el punto que se dibuja es el promedio de las lecturas de los últimos **15 s**, ponderado por 1 / precisión² (el
+  mismo peso del motor). Se reinicia con la lectura real si la persona se movió: velocidad de caminata (`VELOCIDAD_CAMINANDO_MS`) en dos lecturas seguidas, o una lectura más lejos del promedio que
+  **25 m más su propio error** (una de 25 m de precisión a 40 m cabe en su error y casi no mueve nada). Durante la carrera, con el motor ya con punto, manda el promedio solo si la persona
+  está **quieta** (`estaQuieta` del motor: sin pasos recientes y sin avance del GPS) y hay 3 lecturas o más; al moverse, el punto del motor. Lo alimentan la búsqueda de antes de arrancar,
+  la lectura aproximada y los puntos crudos de la tarea del GPS (`ponerLecturaDelMapa`).
+* **Círculo de precisión (FR-055).** `Circle` de `react-native-maps` alrededor del punto: radio = la mejor precisión de esas lecturas (tope de dibujo 150 m), relleno `ring3` y borde `gold` del tema
+  (no depende solo del color; el avatar sigue a la vista), debajo de la ruta. Arriba a la izquierda (abajo va el logo de Google, que no se tapa), una chapa «Precisión de 18 m» que el
+  lector de pantalla dice «Precisión de 18 metros» (el mapa en sí sigue oculto para él). Sin lectura fresca (centro guardado, última conocida) y en «Terminaste», no hay círculo.
+* **Aviso de ubicación aproximada (FR-056).** Si el permiso está concedido pero es aproximado (`android.accuracy === 'coarse'`, Android 12 o más; `ios.accuracy === 'reduced'`), la pantalla de
+  correr muestra una línea («Tu ubicación es aproximada y el punto puede salir desviado.») y el botón «Abrir ajustes» (48 px, `Linking.openSettings()`); si no abren, un `Alert` de
+  `components/Alerta` dice el camino de cada sistema. Se vuelve a leer al volver al frente de la app, así que desaparece al activar la ubicación precisa. No aparece en la pausa manual
+  ni con la ubicación precisa. Archivos: `servicios/ubicacionAproximada.ts`, `components/AvisoDeUbicacionAproximada.tsx`.
+
+No cambian: las reglas del motor (`PRECISION_MAXIMA_M = 20`, el filtro de saltos, la quietud, la distancia, la ruta y el cuerpo de la carrera; **nada de esto entra a la ruta ni a la distancia**,
+FR-057), el GPS de la tarea (`BestForNavigation`), el servidor, `MapaDeCarrera.web.tsx` (en la web no hay carrera), los cinco tabs.
+**Límite conocido:** al empezar a moverse, el punto vuelve a seguir al motor, cuyo primer punto puede tener hasta 20 m de error; el promedio estabiliza el punto parado, no corrige el primer
+punto de la ruta (eso sería tocar las reglas del motor).
+Pruebas: `utils/__tests__/lecturaDelMapa.test.ts`, `servicios/__tests__/lecturaFrescaDelMapa.test.ts`, `components/__tests__/circuloDePrecision.test.ts` y `components/__tests__/avisoDeUbicacionAproximada.test.ts`.
+Solo JavaScript: no hace falta un build nativo nuevo. **Sin comprobar en el emulador ni en un teléfono:** la lectura con ubicación simulada, el círculo sobre Google Maps y el aviso en Android 12 o más
+con permiso «Aproximada» (cambiarlo en Ajustes puede reiniciar la app; la carrera se retoma sola); lo corre la sesión principal.
