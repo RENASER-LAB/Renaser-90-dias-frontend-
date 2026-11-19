@@ -2,22 +2,46 @@
 # de 1 minuto (si no, la carrera es «Muy corta para guardarla»). El flujo cierra el hábito de hoy si estaba pendiente.
 # cuenta: aprendiz
 # spec 042 FR-014, FR-016, FR-018
+# corrido: 2026-11-19
 appId: com.renaser.app
 ---
 - runFlow: ../comun/ya-adentro.yaml
 - runFlow: ../comun/abrir-training.yaml
-- tapOn: "Correr con GPS"
-- tapOn: "Empezar ya"
+# «Kilómetros diarios» puede quedar abajo (en «Se te pasó la hora» según la hora): se baja hasta el botón.
+- scrollUntilVisible:
+    element: "Correr con GPS.*"
+    direction: DOWN
+    timeout: 30000
+- tapOn: "Correr con GPS.*"
+- runFlow:
+    when:
+      visible: "Mientras se usa la app|While using the app"
+    commands:
+      - tapOn: "Mientras se usa la app|While using the app"
+- runFlow:
+    when:
+      visible: "Permitir|Allow"
+    commands:
+      - tapOn: "Permitir|Allow"
+# Si la cuenta regresiva (3 s) todavía se ve, se salta; si no, la carrera ya empezó sola.
+- runFlow:
+    when:
+      visible: "Empezar ya"
+    commands:
+      - tapOn: "Empezar ya"
 - extendedWaitUntil:
     visible: "Pausar la carrera"
     timeout: 8000
-# Dejar correr la ruta simulada.
-- waitForAnimationToEnd:
-    timeout: 75000
+# Dejar correr la ruta simulada hasta pasar el mínimo para guardar (100 m y 1 minuto): se espera la chapa del tramo con
+# 0,20 km o más y 1:00 o más. (waitForAnimationToEnd no espera: el mapa no anima y vuelve al toque.)
+- extendedWaitUntil:
+    visible: "Km 1 · 0,[2-9]\\d en [1-9]:\\d\\d"
+    timeout: 120000
+# Se arrastra la perilla de punta a punta (el deslizador pide llegar al final; un swipe corto no pausa).
 - swipe:
-    from: "Pausar la carrera"
-    direction: RIGHT
-    duration: 400
+    start: "10%, 93%"
+    end: "97%, 93%"
+    duration: 1500
 - tapOn: "Terminar"
 - extendedWaitUntil:
     visible: "¡Carrera terminada!"

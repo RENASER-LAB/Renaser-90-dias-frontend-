@@ -2,14 +2,18 @@
 # local, GPS simulado caminando). La ubicación ya concedida; si el sistema la pide, se concede «Mientras se usa la app».
 # cuenta: aprendiz
 # spec 042 FR-001, FR-003, FR-007, FR-012
+# corrido: 2026-11-19
 appId: com.renaser.app
 ---
 - runFlow: ../comun/ya-adentro.yaml
 - runFlow: ../comun/abrir-training.yaml
-- extendedWaitUntil:
-    visible: "Kilómetros diarios"
-    timeout: 20000
-- tapOn: "Correr con GPS"
+# «Kilómetros diarios» puede quedar abajo (en «Se te pasó la hora» según la hora): se baja hasta el botón.
+- scrollUntilVisible:
+    element: "Correr con GPS.*"
+    direction: DOWN
+    timeout: 30000
+- assertVisible: "Kilómetros diarios"
+- tapOn: "Correr con GPS.*"
 - runFlow:
     when:
       visible: "Mientras se usa la app|While using the app"
@@ -20,14 +24,15 @@ appId: com.renaser.app
       visible: "Permitir|Allow"
     commands:
       - tapOn: "Permitir|Allow"
-- extendedWaitUntil:
-    visible: "Empieza en .*"
-    timeout: 10000
-- assertVisible: "Empezar ya"
-- takeScreenshot: C01a-cuenta-regresiva
+# La cuenta regresiva dura 3 s y cada paso de Maestro tarda ~10 s (ver correr.sh): se captura solo si todavía se ve.
+- runFlow:
+    when:
+      visible: "Empieza en .*"
+    commands:
+      - takeScreenshot: C01a-cuenta-regresiva
 - extendedWaitUntil:
     visible: "Duración"
-    timeout: 8000
+    timeout: 20000
 - assertVisible: "Distancia km.*"
 - assertVisible: "Ritmo min/km.*"
 - assertVisible: "Calorías.*"
@@ -38,10 +43,11 @@ appId: com.renaser.app
 - takeScreenshot: C01b-corriendo
 
 # Pausar deslizando (o con la acción accesible del botón).
+# Se arrastra la perilla de punta a punta (el deslizador pide llegar al final; un swipe corto no pausa).
 - swipe:
-    from: "Pausar la carrera"
-    direction: RIGHT
-    duration: 400
+    start: "10%, 93%"
+    end: "97%, 93%"
+    duration: 1500
 - extendedWaitUntil:
     visible: "En pausa"
     timeout: 5000

@@ -1,6 +1,6 @@
 # Carrera con GPS (spec 042) — flujos de Maestro
 
-**Escritos y sin correr** (la entrega no usó el emulador). Necesitan:
+**Corridos en verde el 2026-11-19** (emulador Pixel 6, backend local con base clonada, cuenta `e2e-t-dia40`, ruta simulada con `adb emu geo fix` a ~3 m/s; antes de cada flujo se limpió el freno de ingresos del Redis local). Necesitan:
 
 - Un APK de depuración NUEVO (código nativo: `react-native-maps`, `expo-location` + `expo-task-manager`, `expo-sensors`,
   `expo-keep-awake`). Con la clave de Maps en la variable `GOOGLE_MAPS_ANDROID_KEY` se ve el mapa; sin ella, el fondo neutro (igual
