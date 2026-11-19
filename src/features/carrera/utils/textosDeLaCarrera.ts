@@ -45,6 +45,13 @@ export const TEXTOS_DE_LA_CARRERA = {
   sinGpsActivo: 'Activa la ubicación de tu teléfono para empezar la carrera.',
   retomar: 'Tienes una carrera sin terminar',
   mapaSinClave: 'El mapa todavía no está disponible. Tu carrera se cuenta igual.',
+  /** Spec 042 FR-056: el permiso de ubicación está dado, pero solo aproximado. */
+  ubicacionAproximada: 'Tu ubicación es aproximada y el punto puede salir desviado.',
+  abrirAjustes: 'Abrir ajustes',
+  abrirAjustesAccesible: 'Abrir los ajustes de Renaser para activar la ubicación precisa',
+  sinAjustesTitulo: 'No se pudo abrir',
+  sinAjustesAndroid: 'Abre los Ajustes del teléfono, entra a Apps, Renaser, Permisos, Ubicación y activa «Usar ubicación precisa».',
+  sinAjustesIos: 'Abre Ajustes, entra a Renaser, Ubicación y activa «Ubicación exacta».',
   pestanas: { mapa: 'Mapa', estadisticas: 'Estadísticas', tramos: 'Tramos', voz: 'Voz' },
 } as const;
 
@@ -77,6 +84,15 @@ export function tituloDeLaNotificacion(metros: number, enPausa: boolean): string
 export function cuerpoDeLaNotificacion(duracion: string, ritmoSeg: number | null, enPausa: boolean): string {
   const ritmo = `Ritmo ${formatoRitmo(ritmoSeg)} min/km`;
   return enPausa ? `${duracion} · ${ritmo}` : ritmo;
+}
+
+/**
+ * La precisión del punto en el mapa (spec 042 FR-055): lo que se ve («Precisión de 18 m») y lo que dice el lector de pantalla
+ * («Precisión de 18 metros»), siempre en metros enteros.
+ */
+export function precisionDelPunto(metros: number): { visible: string; accesible: string } {
+  const m = Math.max(1, Math.round(metros));
+  return { visible: `Precisión de ${m} m`, accesible: `Precisión de ${m} ${m === 1 ? 'metro' : 'metros'}` };
 }
 
 /** La chapita del mapa: «Km 3 · 0,47 en 2:44». */

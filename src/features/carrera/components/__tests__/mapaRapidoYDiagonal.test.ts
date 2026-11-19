@@ -39,6 +39,10 @@ jest.mock('../../hooks/useCarreraEnVivo', () => ({
   useCarreraEnVivo: () => null,
   usePreferenciasDeLaCarrera: () => null,
 }));
+// El aviso de «ubicación aproximada» lee el permiso con `require('expo-location')`: aquí no se prueba (ver `avisoDeUbicacionAproximada.test.ts`).
+// Sin este mock, esa lectura corre con el módulo de verdad y, en un mismo proceso de Jest, deja la resolución de `expo-location` fijada
+// para otros archivos que lo simulan (visto: el aviso no veía el permiso simulado).
+jest.mock('../../servicios/ubicacionAproximada', () => ({ useUbicacionAproximada: () => false, abrirAjustesDeLaUbicacion: jest.fn() }));
 
 import { PREFERENCIAS_POR_DEFECTO } from '../../types/carrera.types';
 import { crearCarrera, pausar } from '../../utils/motorDeCarrera';

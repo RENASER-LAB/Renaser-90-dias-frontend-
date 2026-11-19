@@ -13,7 +13,7 @@ import { beforeAll, beforeEach, describe, expect, it, jest } from '@jest/globals
 import { Platform } from 'react-native';
 
 import { carreraActual, empezarCarrera, pausarCarrera, reiniciarParaPruebas, seguirCarrera } from '../carreraEnVivo';
-import { centroDelMapa, olvidarCentroDelMapa, ponerCentroDelMapa, prepararCentroDelMapa } from '../centroDelMapa';
+import { centroDelMapa, detalleDelCentro, olvidarCentroDelMapa, ponerCentroDelMapa, prepararCentroDelMapa } from '../centroDelMapa';
 import { definirTareaDeLaCarrera } from '../tareaDeUbicacion';
 
 /**
@@ -53,6 +53,26 @@ describe('el centro del mapa no se mide', () => {
       error: null,
     });
     expect(centroDelMapa()).toEqual({ pos: { lat: -12.13, lng: -77.04 }, fuente: 'gps' });
+    expect(carreraActual()!.ruta).toHaveLength(0);
+    expect(carreraActual()!.distanciaM).toBe(0);
+  });
+
+  // spec 042 FR-054, FR-057
+  it('las lecturas que entrega la tarea del GPS entran al promedio del mapa (con su precisión) y la carrera en la cuenta no cuenta nada', async () => {
+    empezarCarrera({ carreraId: 'c', cuentaId: 'cuenta', pesoKg: 70, conPasos: false });
+    pausarCarrera();
+    const ahora = Date.now();
+    const lectura = (dLat: number, dLng: number, accuracy: number, seg: number) => ({
+      timestamp: ahora + seg * 1000,
+      coords: { latitude: -12.13 + dLat, longitude: -77.04 + dLng, accuracy, altitude: null, speed: 0 },
+    });
+    // Un lote de tres lecturas, como las entrega el sistema cuando la tarea se despierta tarde.
+    await mockTareas.fn!({
+      data: { locations: [lectura(0.00004, 0, 18, 0), lectura(-0.00004, 0.00003, 9, 1), lectura(0, -0.00003, 14, 2)] },
+      error: null,
+    });
+    expect(centroDelMapa()!.fuente).toBe('gps');
+    expect(detalleDelCentro()).toEqual({ precisionM: 9, promediado: true });
     expect(carreraActual()!.ruta).toHaveLength(0);
     expect(carreraActual()!.distanciaM).toBe(0);
   });

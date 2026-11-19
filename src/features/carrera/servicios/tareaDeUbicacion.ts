@@ -1,12 +1,12 @@
 import { Platform } from 'react-native';
 
 import { laCarreraCorreEn } from '../utils/plataformaDeLaCarrera';
-import type { PuntoGps } from '../types/carrera.types';
 import { cargarCarrera, carreraActual, recibirPuntos, resumenParaLaNotificacion } from './carreraEnVivo';
-import { borrarCentroGuardadoDelMapa, ponerCentroDelMapa } from './centroDelMapa';
+import { borrarCentroGuardadoDelMapa, ponerLecturaDelMapa } from './centroDelMapa';
 import { leerCarreraEnCurso } from './almacenCarrera';
 import { mostrarNotificacionDeCarrera, quitarNotificacionDeCarrera } from './notificacionDeCarrera';
 import { laCarreraYaEmpezo } from '../utils/notificacionUnica';
+import { puntosDeLaUbicacion } from '../utils/puntosDeLaUbicacion';
 import { TEXTOS_DE_LA_NOTIFICACION } from '../utils/textosDeLaCarrera';
 
 /**
@@ -42,22 +42,6 @@ function cargar(): { Location: ModuloUbicacion; TaskManager: ModuloTareas } | nu
   }
 }
 
-/** Lo que llega de `expo-location` a la tarea, reducido a lo que usa el motor. */
-export function puntosDeLaUbicacion(
-  locations: ReadonlyArray<{ timestamp: number; coords: { latitude: number; longitude: number; accuracy: number | null; altitude: number | null; speed: number | null } }>,
-): PuntoGps[] {
-  return locations
-    .filter(l => Number.isFinite(l.coords.latitude) && Number.isFinite(l.coords.longitude))
-    .map(l => ({
-      lat: l.coords.latitude,
-      lng: l.coords.longitude,
-      t: l.timestamp,
-      precision: l.coords.accuracy ?? null,
-      altitud: l.coords.altitude ?? null,
-      velocidad: l.coords.speed ?? null,
-    }));
-}
-
 let definida = false;
 
 /** Define la tarea del GPS. Se llama UNA vez al cargar la app; nunca lanza. */
@@ -78,8 +62,9 @@ export function definirTareaDeLaCarrera(): void {
         await cargarCarrera(guardada.cuentaId, Date.now(), { desdeLaTareaDelGps: true });
       }
       const puntos = puntosDeLaUbicacion(locations);
-      // Solo para dónde mira el mapa (también en la cuenta 3, 2, 1, cuando el motor descarta el punto por estar en pausa).
-      if (puntos.length > 0) ponerCentroDelMapa(puntos[puntos.length - 1], 'gps');
+      // Solo para dónde mira el mapa y su círculo de precisión (también en la cuenta 3, 2, 1, cuando el motor descarta el punto por
+      // estar en pausa). Todas las lecturas del lote entran al promedio de la persona quieta; el motor las filtra aparte.
+      for (const p of puntos) ponerLecturaDelMapa(p, 'gps');
       recibirPuntos(puntos);
       // La notificación única (FR-011) se pone al día también con la app abierta: es la que se ve en la barra.
       const r = resumenParaLaNotificacion();

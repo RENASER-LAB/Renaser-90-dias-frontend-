@@ -12,8 +12,9 @@ import { marcarMapaCalentado } from '../servicios/calentarLaCarrera';
 import { useVistaDelMapa, type VistaDelMapa } from '../servicios/vistaDelMapa';
 import { distanciaM, type Coordenada } from '../utils/geo';
 import type { FiguraDelAvatar } from '../utils/fusionDelAvatar';
+import { puntoDelMapa, radioDelCirculoM } from '../utils/lecturaDelMapa';
 import { segmentosDeLaRuta, type PuntoConCorte } from '../utils/segmentosDeLaRuta';
-import { TEXTOS_DE_LA_CARRERA } from '../utils/textosDeLaCarrera';
+import { precisionDelPunto, TEXTOS_DE_LA_CARRERA } from '../utils/textosDeLaCarrera';
 import { AvatarCaminante } from './AvatarCaminante';
 
 /**
@@ -30,6 +31,12 @@ import { AvatarCaminante } from './AvatarCaminante';
  * **Aparece sin esperar el primer punto** (2026-11-05: tardaba de 5 a 30 s): con `centroDeVista` (la última posición conocida, la
  * aproximada o el primer punto crudo del GPS, ver `centroDelMapa`) se monta ya en la cuenta 3, 2, 1, y cuando llega la `posicion`
  * del motor la cámara va hasta ella. El centro de vista nunca se dibuja en la ruta ni se mide.
+ *
+ * **Con GPS malo** (#236, spec 042 FR-054 y FR-055; el dueño en su casa: «me pone al frente o en otra casa»): el punto donde se dibuja a la
+ * persona es el de `puntoDelMapa`: con la persona quieta y varias lecturas juntas, su promedio ponderado por precisión; al moverse, el
+ * punto del motor. Alrededor va el círculo de precisión (`Circle`, radio = la precisión en metros, con el borde dorado para no depender
+ * solo del color) y, arriba a la izquierda (abajo va el logo de Google, que no se tapa), la precisión dicha en palabras: es lo que lee el
+ * lector de pantalla, porque el mapa en sí está oculto para él. Todo es solo para mirar.
  *
  * **Mientras Google Maps dibuja las calles** (2026-11-06) no se ve su gris de carga: encima va un velo del color de la tarjeta, con el
  * avatar ya en su lugar, que se funde (`DURACION_DEL_VELO_MS`) cuando Google Maps avisa que cargó, o a los `TOPE_DEL_VELO_MS` aunque
@@ -109,6 +116,9 @@ export function MapaDeCarrera({
   chapa,
   alto,
   centroDeVista = null,
+  precisionM = null,
+  promediado = false,
+  quieta = false,
   modo = 'navegacion',
   cuentaId = null,
 }: {
@@ -118,6 +128,12 @@ export function MapaDeCarrera({
   posicion: Coordenada | null;
   /** Dónde mirar mientras el motor no tiene `posicion`. Solo para mirar: no entra a la ruta. */
   centroDeVista?: Coordenada | null;
+  /** La precisión de las lecturas de `centroDeVista` (radio, en metros): da el círculo. `null`: sin círculo. */
+  precisionM?: number | null;
+  /** `centroDeVista` ya es el promedio de varias lecturas: con la persona quieta, se dibuja ahí y no en el punto del motor. */
+  promediado?: boolean;
+  /** El motor dice que la persona está quieta. */
+  quieta?: boolean;
   modo?: ModoDelMapa;
   rumbo: number;
   duracionMs: number;
@@ -157,7 +173,9 @@ export function MapaDeCarrera({
   const [calles, setCalles] = useState(false);
   const [veloQuitado, setVeloQuitado] = useState(false);
   const velo = useSharedValue(1);
-  const hayMapa = Mapas != null && (posicion ?? centroDeVista) != null;
+  const punto = puntoDelMapa({ posicion, centroDeVista, precisionM, promediado, quieta });
+  const centro = punto.centro;
+  const hayMapa = Mapas != null && centro != null;
   useEffect(() => {
     if (!hayMapa || calles) return;
     const id = setTimeout(() => setCalles(true), TOPE_DEL_VELO_MS);
@@ -175,7 +193,6 @@ export function MapaDeCarrera({
     return () => clearTimeout(id);
   }, [calles, reducir, velo]);
   const estiloDelVelo = useAnimatedStyle(() => ({ opacity: velo.get() }));
-  const centro = posicion ?? centroDeVista;
   const dibujada = useMemo(() => segmentosDeLaRuta(ruta.slice(-PUNTOS_DIBUJADOS)), [ruta]);
   /** El último centro al que se llevó la cámara, y si era el de vista (todavía sin punto del motor). */
   const anterior = useRef<{ pos: Coordenada; deVista: boolean } | null>(null);
@@ -244,8 +261,20 @@ export function MapaDeCarrera({
           accessibilityElementsHidden
           importantForAccessibility="no-hide-descendants"
         >
+          {punto.precisionM != null && modo === 'navegacion' ? (
+            // Debajo de la ruta (zIndex 0 contra 1): el círculo es un halo, no tapa la línea dorada.
+            <Mapas.Circle
+              testID="circulo-de-precision"
+              center={{ latitude: centro.lat, longitude: centro.lng }}
+              radius={radioDelCirculoM(punto.precisionM)}
+              fillColor={c.ring3}
+              strokeColor={c.gold}
+              strokeWidth={2}
+              zIndex={0}
+            />
+          ) : null}
           {dibujada.segmentos.map((coordenadas, i) => (
-            <Mapas.Polyline key={`seg-${i}`} testID="ruta-dorada" coordinates={coordenadas} strokeColor="#B2924F" strokeWidth={6} />
+            <Mapas.Polyline key={`seg-${i}`} testID="ruta-dorada" coordinates={coordenadas} strokeColor="#B2924F" strokeWidth={6} zIndex={1} />
           ))}
           {dibujada.conectores.map((coordenadas, i) => (
             <Mapas.Polyline
@@ -255,6 +284,7 @@ export function MapaDeCarrera({
               strokeColor="rgba(178,146,79,0.5)"
               strokeWidth={3}
               lineDashPattern={[6, 8]}
+              zIndex={1}
             />
           ))}
         </Mapas.default>
@@ -284,9 +314,24 @@ export function MapaDeCarrera({
           <Text style={[estilos.textoVista, { color: c.textStrong }]}>{vista === '3d' ? '2D' : '3D'}</Text>
         </Presionable>
       ) : null}
-      {chapa ? (
-        <View style={[estilos.chapa, { backgroundColor: c.cardBgAlt, borderColor: c.borderStrong }]}>
-          <Text style={[t.small, { color: c.textStrong, fontVariant: ['tabular-nums'] }]}>{chapa}</Text>
+      {chapa || (Mapas && centro && modo === 'navegacion' && punto.precisionM != null) ? (
+        // Arriba a la izquierda y no abajo: abajo a la izquierda va el logo de Google, que no se puede tapar.
+        <View pointerEvents="none" style={estilos.chapas}>
+          {chapa ? (
+            <View style={[estilos.chapa, { backgroundColor: c.cardBgAlt, borderColor: c.borderStrong }]}>
+              <Text style={[t.small, { color: c.textStrong, fontVariant: ['tabular-nums'] }]}>{chapa}</Text>
+            </View>
+          ) : null}
+          {Mapas && centro && modo === 'navegacion' && punto.precisionM != null ? (
+            <View
+              testID="precision-del-punto"
+              accessible
+              accessibilityLabel={precisionDelPunto(punto.precisionM).accesible}
+              style={[estilos.chapa, { backgroundColor: c.cardBgAlt, borderColor: c.borderStrong }]}
+            >
+              <Text style={[t.small, { color: c.textStrong, fontVariant: ['tabular-nums'] }]}>{precisionDelPunto(punto.precisionM).visible}</Text>
+            </View>
+          ) : null}
         </View>
       ) : null}
     </View>
@@ -310,5 +355,6 @@ const estilos = StyleSheet.create({
     justifyContent: 'center',
   },
   textoVista: { fontFamily: fuentes.negrita, fontSize: 15, fontVariant: ['tabular-nums'] },
-  chapa: { position: 'absolute', top: 12, left: 12, borderRadius: 14, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 6 },
+  chapas: { position: 'absolute', top: 12, left: 12, gap: 6, alignItems: 'flex-start' },
+  chapa: { borderRadius: 14, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 6 },
 });
