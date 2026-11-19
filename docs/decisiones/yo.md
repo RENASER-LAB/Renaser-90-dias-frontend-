@@ -338,3 +338,10 @@ recuperación prefiere el confirmado y, sin él, usa el de la ficha). No se pued
 **Pruebas:** `whatsappConfirmado` (textos, número, motivo del servidor), `hojaDelWhatsapp` (pasos, código incorrecto, 429, un toque un pedido, cambiar número), `useWhatsappConfirmado` (esconde la fila
 sin servidor, relee, una lectura vieja no pisa), `whatsappConfirmadoEnYo` (la fila en el grupo «Perfil» sin condición de rol) y los textos de la recuperación (`codigoPorWhatsApp`,
 `loginCodigoPorWhatsApp`). Maestro: `.maestro/whatsapp-en-yo/`. **Hace falta backend** (V192, `cuenta.whatsapp`); **APK nuevo no**: solo JavaScript.
+
+## Cambio por pedido del dueño — 2026-11-19 — tab `Yo` → Política de privacidad: Salud de Apple y sin «usar mi ubicación»
+
+* Para enviar la app de iPhone a la App Store, la Política de Privacidad (`public/privacidad/index.html`) dice qué lee de **Salud de
+  Apple (HealthKit)**: solo el total diario de pasos y distancia, de solo lectura, sin otros datos de salud, sin publicidad y cómo quitar el
+  permiso (norma 5.1.3 de Apple). Se quita la frase de «usar mi ubicación» en la web: la ficha ya no detecta la ubicación (issue #235).
+  Lo comprueba `paginaPoliticaDePrivacidad.test.ts`.

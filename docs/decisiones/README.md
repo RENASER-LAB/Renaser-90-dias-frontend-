@@ -42,13 +42,14 @@ también en el texto (`grep -n "Plan" docs/decisiones/*.md`). Si dos entradas ch
 | [soporte-ti.md](soporte-ti.md) | Soporte TI: interruptores, despliegue, roles personalizados y «ver como» (spec 002) | 2 |
 | [training.md](training.md) | Training: lista por hora, hábitos, evidencias y el editor Planificar | 19 |
 | [transversal.md](transversal.md) | Lo que tocó varios tabs a la vez: diseño, fuentes, barra de pestañas, velocidad, CI y arreglos de E2E | 24 |
-| [yo.md](yo.md) | Yo: Ajustes, fase, evidencias, Caja, emergencia, perfil, cuenta y privacidad | 13 |
+| [yo.md](yo.md) | Yo: Ajustes, fase, evidencias, Caja, emergencia, perfil, cuenta y privacidad | 14 |
 | [reglas-historial.md](reglas-historial.md) | Las reglas de `AGENTS.md` tal como estaban, con sus notas «Corregido» | — |
 
 ## Entradas (la más nueva primero)
 
 | Fecha | Tabs | Tipo | Entrada | Archivo | Corregida |
 |---|---|---|---|---|---|
+| 2026-11-19 | Yo | Cambio | Yo → Política de privacidad: dice qué lee de Salud de Apple en iPhone y ya no menciona «usar mi ubicación» | [yo.md](yo.md) |  |
 | 2026-11-19 | Training | Cambio | Carrera con GPS: el punto del mapa ya no cae en la casa de al lado (lectura fresca, promedio quieto, círculo de precisión y aviso de ubicación aproximada; spec 042 FR-053 a FR-057, #236) | [kilometros-y-carrera.md](kilometros-y-carrera.md) |  |
 | 2026-11-19 | ninguno | Decisión del dueño | La Ficha Inicial ya no «detecta» la ubicación: sin «Usar mi ubicación», y departamento, ciudad y distrito los elige la persona (issue #235) | [ingreso-y-onboarding.md](ingreso-y-onboarding.md) |  |
 | 2026-11-18 | Yo | Cambio | El rol de líder de mentores rediseñado: Mis mentores con «Por resolver» y cupo, la ficha del mentor y del aprendiz de la 055, grupos que el líder crea y reparte, consultas, reporte y sesión (spec 056) | [liderazgo-y-administracion.md](liderazgo-y-administracion.md) |  |
