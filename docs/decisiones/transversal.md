@@ -950,3 +950,15 @@ Reporte del dueño en el simulador de iPhone: en el Código Renaser «sobresale 
 * Las ventanas `Modal` que usan `SafeAreaView` se abren con `ModalConZonaSegura` (`src/components/ModalConZonaSegura.tsx`), que les pone su propio `SafeAreaProvider`. En iOS un `Modal` es una ventana nativa aparte y el proveedor de la raíz no llega ahí. Son el Código Renaser, el registro con foto, la nueva publicación, SER y las dos de Comunidad.
 * **No cambian** el contenido de las ventanas, los cinco tabs ni Android: allí la ventana ya recibía los márgenes.
 * **Pruebas:** la guarda `modalesConZonaSegura.test.ts` exige el componente compartido. Hace falta un build nuevo de iOS para verlo en iPhone.
+
+## Decisión del dueño — 2026-11-19 — El E2E corre los flujos de Maestro de lo tocado y de lo relacionado
+
+Pedido del dueño: «anota esa regla para el arnés de correr la e2e de lo siguiente, […] de la funcionalidad que se tocó y la cual se relaciona». Salió de
+que #238 (mapa de la carrera) y #239 (ficha sin ubicación inventada) se fusionaron con E2E solo de mobile-mcp, sin Maestro. Lo que cambia y nada más:
+
+* «Cuándo algo está terminado», punto 2, de `AGENTS.md`: ya no dice «la suite de Maestro» entera (nadie la corría: casi 200 flujos), sino **los flujos de
+  la funcionalidad tocada y de las relacionadas**, elegidas con la carpeta de esa funcionalidad en `.maestro/` y lo que `graphify query` / `path` muestra
+  pegado a los archivos cambiados. Si la funcionalidad no tiene flujo, se escribe desde uno parecido. mobile-mcp solo no reemplaza a Maestro.
+* La plantilla del PR pide la lista de flujos corridos con su resultado.
+* **No cambian:** la regla de no probar contra producción, mobile-mcp para los casos de la spec, el `# corrido:` en la cabecera y los logs revisados.
+* **Pruebas:** ninguna nueva; es una regla de proceso. Sin APK ni backend.
