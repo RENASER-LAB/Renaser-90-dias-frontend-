@@ -45,3 +45,15 @@ export async function abrirTicketMentor(payload: AbrirTicketMentorPayload): Prom
   });
   return validarRespuesta<WireTicketMentor>(wireTicketMentorSchema, r, 'POST /api/v1/tickets');
 }
+
+/**
+ * `POST /api/v1/tickets/{id}/answer` `{ mentorAnswer }`: responde la consulta. Desde la spec 056 también la responde el líder de la formación del aprendiz
+ * (`respondidoPor` dice quién): el aprendiz recibe la respuesta con su nombre y el mentor la ve en su bandeja.
+ */
+export async function responderTicketMentor(ticketId: string, respuesta: string): Promise<WireTicketMentor> {
+  const r = await apiFetch<unknown>(`/api/v1/tickets/${encodeURIComponent(ticketId)}/answer`, {
+    method: 'POST',
+    body: { mentorAnswer: respuesta.trim() },
+  });
+  return validarRespuesta<WireTicketMentor>(wireTicketMentorSchema, r, 'POST /api/v1/tickets/{id}/answer');
+}

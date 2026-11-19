@@ -33,6 +33,14 @@ const grupoSchema = z
   })
   .passthrough();
 
+/**
+ * Spec 056 (contrato `api.md`): los aprendices que acompaña sobre la suma de los cupos de sus grupos. `null` si la fuente cayó: nunca un
+ * cero que parezca «sin aprendices». `.catch(null)` y no un error: una forma rara de estas dos cifras no tumba el padrón entero.
+ */
+const cupoSchema = z.object({ acompanados: z.number(), maximo: z.number() }).passthrough();
+/** Spec 056: sus aprendices en cada color del semáforo. `ambar` es el amarillo. */
+const porColorSchema = z.object({ rojo: z.number(), ambar: z.number(), verde: z.number(), sinDatos: z.number() }).passthrough();
+
 export const indicadoresSchema = z
   .object({
     userId: z.string(),
@@ -40,6 +48,10 @@ export const indicadoresSchema = z
     avatarUrl: z.string().nullable().optional(),
     groups: z.object({ source: fuente, items: z.array(grupoSchema).nullable() }).passthrough(),
     traineeCount: z.number().nullable(),
+    cupo: cupoSchema.nullish().catch(null),
+    porColor: porColorSchema.nullish().catch(null),
+    /** Opcional: si el padrón dice que la cuenta está suspendida, la fila se ve apagada y sin acciones (spec 056 FR-004). */
+    accountActive: z.boolean().nullish(),
     semaforo: z.object({ source: fuente, summary: semaforoResumenSchema.nullable() }).passthrough(),
     attention: z
       .object({
@@ -62,6 +74,18 @@ export const indicadoresSchema = z
         formulaVersion: z.string().nullable().optional(),
       })
       .passthrough(),
+  })
+  .passthrough();
+
+/**
+ * `GET /leadership/mentors/por-resolver` (spec 056 FR-002): lo que el líder tiene que resolver hoy. Cada parte es `null` si su fuente
+ * no respondió (no es «nada que resolver»); sin consultas, `diasDeLaMasVieja` es `null`. Solo cantidades y un mentor: ningún aprendiz.
+ */
+export const porResolverSchema = z
+  .object({
+    gruposSinMentor: z.number().nullish(),
+    consultas: z.object({ cantidad: z.number(), diasDeLaMasVieja: z.number().nullish() }).passthrough().nullish(),
+    peorMentor: z.object({ id: z.string(), nombre: z.string().nullish(), evaluacion: z.number() }).passthrough().nullish(),
   })
   .passthrough();
 
@@ -141,6 +165,9 @@ export const reporteSchema = z
   })
   .passthrough();
 
+export type CupoDelMentor = { acompanados: number; maximo: number };
+export type MentorPorColor = { rojo: number; ambar: number; verde: number; sinDatos: number };
+export type PorResolverApi = z.infer<typeof porResolverSchema>;
 export type SemaforoResumenApi = z.infer<typeof semaforoResumenSchema>;
 export type IndicadoresApi = z.infer<typeof indicadoresSchema>;
 export type PadronApi = z.infer<typeof padronSchema>;

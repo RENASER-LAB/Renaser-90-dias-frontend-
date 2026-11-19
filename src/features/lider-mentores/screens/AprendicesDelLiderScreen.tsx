@@ -17,14 +17,12 @@ import { useAprendicesDelLider } from '../hooks/useAprendicesDelLider';
 import type { AprendizDeLaLista } from '../types/aprendicesDelLider.types';
 import {
   dichoDelAprendiz,
-  grupoEnPalabras,
   lineaDelAprendiz,
   textoSinFilas,
-  urlDeLaFoto,
 } from '../utils/aprendicesDelLider';
-import { PersonaDelLiderScreen } from './PersonaDelLiderScreen';
+import { FichaDelAprendizDelLider } from './FichaDelAprendizDelLider';
 
-/** Lo que dice la ficha si el servidor no abre a la persona (404): ya no se muestra, o el servidor es anterior a la ruta. */
+/** Lo que dice la ficha de una persona si el servidor no la abre (404): ya no se muestra, o el servidor es anterior a la ruta (la usa también «Hábitos de todos»). */
 export const AVISO_SI_NO_SE_ABRE = 'Esta persona ya no está disponible para ver.';
 
 /**
@@ -35,8 +33,8 @@ export const AVISO_SI_NO_SE_ABRE = 'Esta persona ya no está disponible para ver
  * - **El buscador** pide al servidor (`GET /leadership/people?q=`, sin tildes) 300 ms después de la última tecla, y la
  *   lista se lee de a 30: la página siguiente se pide al acercarse al final.
  * - **Cada fila** lleva la foto o las iniciales, el nombre y una línea con su grupo o «Sin grupo» y su día del programa.
- * - **Tocar a una persona abre su ficha de siempre** (`PersonaDelLiderScreen`, con sus días, evidencias, Radar, tiempo
- *   libre y cierres) leyendo por `/leadership/people/{p}/…`, con grupo o sin él.
+ * - **Tocar a una persona abre su ficha** (`FichaDelAprendizDelLider`: la de la 055 con lo del líder, spec 056) leyendo por
+ *   `/leadership/people/{p}/…`, con grupo o sin él; «Avisar a su mentor» solo si tiene.
  * - **El atrás del sistema y la flecha** suben un nivel: persona → lista → Hoy. La lista sigue montada (oculta) mientras se
  *   mira a una persona, así que al volver conserva lo buscado, lo leído y la posición, sin releerse.
  * - Un único scroll: la lista. Sin animaciones propias; las filas responden al dedo con `Presionable`.
@@ -58,15 +56,13 @@ export function AprendicesDelLiderScreen({ onSalir }: { onSalir: () => void }) {
       </View>
       {persona ? (
         /* `key`: otra persona es otra ficha, desde cero. */
-        <PersonaDelLiderScreen
+        <FichaDelAprendizDelLider
           key={persona.personaId}
-          grupoId={persona.grupoId}
-          grupoNombre={grupoEnPalabras(persona)}
           personaId={persona.personaId}
           nombre={persona.nombre}
-          avatarUrl={urlDeLaFoto(persona.fotoPath)}
-          desdeTodos
-          avisoSiNoSeAbre={AVISO_SI_NO_SE_ABRE}
+          grupoId={null}
+          mentorNombre={persona.grupoId ? persona.mentorNombre : null}
+          rotuloDeVolver="Todos los aprendices"
           onVolver={() => setPersona(null)}
         />
       ) : null}

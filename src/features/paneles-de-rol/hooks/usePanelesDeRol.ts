@@ -84,7 +84,7 @@ export function usePanelesDeRol({
     setVista(actual => {
       const delGrupo = actual.tipo === 'miGrupo' || actual.tipo === 'misGrupos' || actual.tipo === 'alumno';
       if (delGrupo && !esMentor) return SIN_VISTA;
-      const delLider = ['misMentores', 'consultas', 'mentores', 'todos', 'habitosDeTodos', 'cumplimiento'].includes(actual.tipo);
+      const delLider = ['misMentores', 'todos', 'habitosDeTodos', 'cumplimiento'].includes(actual.tipo);
       if (delLider && !esLider) return SIN_VISTA;
       return actual;
     });

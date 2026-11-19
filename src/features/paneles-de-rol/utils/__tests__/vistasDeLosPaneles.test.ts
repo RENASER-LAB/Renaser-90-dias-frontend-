@@ -31,7 +31,7 @@ describe('«Mi grupo»', () => {
 });
 
 describe('«Mis mentores»', () => {
-  it.each(['consultas', 'mentores', 'todos', 'habitosDeTodos'] as const)('«%s» vuelve a «Mis mentores» y de ahí a Yo', tipo => {
+  it.each(['todos', 'habitosDeTodos'] as const)('«%s» vuelve a «Mis mentores» y de ahí a Yo', tipo => {
     expect(recorrido({ tipo })).toEqual([tipo, 'misMentores', 'ninguna']);
   });
 
@@ -52,8 +52,6 @@ describe('Yo', () => {
       { tipo: 'miGrupo', enfocarSemaforo: true },
       { tipo: 'alumno', alumno },
       { tipo: 'misMentores' },
-      { tipo: 'consultas' },
-      { tipo: 'mentores' },
       { tipo: 'todos' },
       { tipo: 'habitosDeTodos' },
       { tipo: 'cumplimiento', grupo: null },

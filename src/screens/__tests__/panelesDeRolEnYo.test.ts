@@ -156,38 +156,37 @@ describe('la pantalla del panel', () => {
   it('«Mi grupo» abre `MiCelulaScreen` con la cabecera «‹ Mi grupo»; «Mis mentores», la suya con «‹ Mis mentores»', () => {
     expect(PANTALLA).toMatch(/<MiCelulaScreen\s+rotuloDeVolver=\{\(celula\.vista\?\.grupos\.length \?\? 0\) > 1 \? 'Mis grupos' : 'Mi grupo'\}/);
     expect(PANTALLA).toMatch(/<MisGruposScreen\s+rotuloDeVolver="Yo"/);
-    expect(PANTALLA).toMatch(/<MisMentoresEnYo/);
-    expect(leer('features/paneles-de-rol/screens/MisMentoresEnYo.tsx')).toContain('titulo="Mis mentores"');
+    expect(PANTALLA).toMatch(/<LiderMentoresScreen/);
+    expect(leer('features/lider-mentores/screens/MisMentoresScreen.tsx')).toContain('titulo="Mis mentores"');
   });
 
   it('todo lo que cuelga de ellos vuelve con `volver` (un nivel por vez)', () => {
     expect(PANTALLA).toContain('onSalir={volver}');
     expect(PANTALLA).toMatch(/<AlumnoScreen\s+alumno=\{vista\.alumno\}\s+grupoId=\{celula\.vista\?\.celula\.id \?\? null\}\s+onVolver=\{volver\}/);
-    expect(PANTALLA).toContain('<BandejaTicketsScreen onVolver={volver} />');
-    expect(PANTALLA).toContain('<LiderMentoresScreen onSalir={volver} />');
+    /* Spec 056: «Mis mentores» y lo que cuelga de él (mentor, grupos, grupo, aprendiz, consultas, reporte) es una pila propia con su atrás de un nivel por vez. */
+    expect(PANTALLA).toMatch(/<LiderMentoresScreen[^>]*onSalir=\{volver\}/);
     expect(PANTALLA).toContain('<AprendicesDelLiderScreen onSalir={volver} />');
     expect(PANTALLA).toMatch(/<CumplimientoDelLiderScreen[^>]*onSalir=\{volver\}/);
   });
 
-  it('una fila de grupo abre la pantalla del líder DIRECTO en ese grupo', () => {
-    expect(PANTALLA).toMatch(/ir\(\{ tipo: 'cumplimiento', grupo: \{ grupoId: grupo\.grupoId, nombre: grupo\.grupoNombre\?\.trim\(\) \|\| 'Grupo sin nombre', inicio \} \}\)/);
+  it('una fila de grupo abre el grupo del líder DIRECTO, dentro de la pila de «Mis mentores» (spec 056); el aviso del sábado sigue abriendo el resumen', () => {
+    expect(leer('features/lider-mentores/screens/LiderMentoresScreen.tsx')).toMatch(/ir\(\{ tipo: 'grupo', grupoId: g\.id, nombre: g\.nombre/);
     expect(PANTALLA).toContain('grupoInicial={vista.grupo ?? undefined}');
   });
 
   it('«Todos los aprendices» solo se ofrece con un 200 del servidor (`=== true`: ni pendiente ni caído)', () => {
-    expect(PANTALLA).toContain('verTodos={paneles.aprendicesDisponibles === true}');
+    expect(PANTALLA).toContain("onAbrirTodos={paneles.aprendicesDisponibles === true ? () => ir({ tipo: 'todos' }) : undefined}");
   });
 
   it('«Hábitos de todos» (spec 029) solo se ofrece con un 200 del servidor y vuelve a «Mis mentores»', () => {
-    expect(PANTALLA).toContain('verHabitos={paneles.habitosDisponibles === true}');
-    expect(PANTALLA).toContain("onAbrirHabitos={() => ir({ tipo: 'habitosDeTodos' })}");
+    expect(PANTALLA).toContain("onAbrirHabitos={paneles.habitosDisponibles === true ? () => ir({ tipo: 'habitosDeTodos' }) : undefined}");
     expect(PANTALLA).toContain('<HabitosDeTodosScreen grupos={semaforoGrupos.datos?.grupos ?? []} onSalir={volver} />');
   });
 
   it('«Mi grupo» y «Mis mentores» mantienen las entradas de Soporte TI de siempre', () => {
-    expect(PANTALLA).toContain('verGrupos={esDisponible(CLAVES.semaforo)}');
-    expect(PANTALLA).toContain('verConsultas={esDisponible(CLAVES.tickets)}');
-    expect(PANTALLA).toContain('verMentores={esDisponible(CLAVES.lider)}');
+    expect(PANTALLA).toContain('grupos: esDisponible(CLAVES.semaforo)');
+    expect(PANTALLA).toContain('consultas: esDisponible(CLAVES.tickets)');
+    expect(PANTALLA).toContain('mentores: esDisponible(CLAVES.lider)');
   });
 });
 

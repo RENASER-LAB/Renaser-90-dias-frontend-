@@ -1,0 +1,36 @@
+# Spec 056, historia 3 (FR-019): lo que el líder le avisa a un mentor llega a su chat con el líder con el enlace «Abrir la ficha de <aprendiz>», y tocarlo abre la ficha de
+# ese aprendiz (la del mentor, con su flecha «‹ Mi grupo»). Mentor → Comunidad → Tribu → el chat 1 a 1 con el líder → el enlace → la ficha.
+# cuenta: MENTOR (e2e-mentor@renaser.test). Precondición: el flujo 03 corrió antes con el líder (su «Avisar a su mentor» dejó el mensaje en este chat).
+# El aviso al teléfono (el «único aviso» de FR-019) no se ve desde Maestro: se mira con el E2E del backend.
+# spec 056 FR-019
+# corrido: 2026-11-18
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "COMUNIDAD"
+# Comunidad recuerda dónde se quedó: si venía dentro de un chat, se sale a la lista.
+- runFlow:
+    when:
+      visible: "Volver a la lista de chats"
+    commands:
+      - tapOn: "Volver a la lista de chats"
+- tapOn: "Tribu"
+# El chat con el líder está entre los chats de la tribu: «Líder de Mentores · 1 a 1».
+- scrollUntilVisible:
+    element: "Lider Mentores E2E"
+    direction: DOWN
+    timeout: 60000
+- tapOn: "Lider Mentores E2E"
+- extendedWaitUntil:
+    visible: "Abrir la ficha de E2E Aprendiz"
+    timeout: 30000
+- assertVisible: ".*necesita tu apoyo esta semana.*"
+- takeScreenshot: L07a-el-aviso-en-el-chat
+# El enlace abre la ficha de ESE aprendiz (la misma de siempre del mentor).
+- tapOn: "Abrir la ficha de E2E Aprendiz"
+- extendedWaitUntil:
+    visible: "Escribirle a E2E Aprendiz"
+    timeout: 30000
+- assertVisible: "(Sábado|Domingo|Lunes|Martes|Miércoles|Jueves|Viernes) \\d+ de .*"
+- assertVisible: "Cuerpo"
+- takeScreenshot: L07b-la-ficha-abierta-desde-el-chat

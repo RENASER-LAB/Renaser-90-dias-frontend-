@@ -1,0 +1,43 @@
+# Spec 056, historia 1 (FR-001 a FR-005, SC-001): «Mis mentores», la entrada del líder. Sin la insignia del rol; arriba «Por resolver» con
+# una fila por cosa (grupos sin mentor → Asignar, consultas con los días de la más vieja → Recordar, el mentor que peor va → Ver); cada mentor con su
+# anillo de cupo «n/máx», sus aprendices por color con su forma y la barra; «Sin grupo» con su cupo; y al pie los accesos.
+# cuenta: LÍDER (e2e-lider@renaser.test). Precondición: la base con grupos sin mentor, consultas sin responder y un mentor por debajo del 60 %.
+# La mitad «suspendido» de FR-004 NO se prueba aquí: el servidor deja fuera de la lista a los mentores suspendidos, así que su fila apagada no llega a verse (lo cubre `misMentores.test.ts`).
+# SC-001: «Por resolver» y al menos 3 mentores están a la vista SIN desplazarse (todos los `assertVisible` de abajo van antes del primer scroll).
+# spec 056 FR-001, FR-002, FR-003, FR-004, FR-005, SC-001
+# corrido: 2026-11-18
+appId: com.renaser.app
+---
+- runFlow: ../comun/abrir-mis-mentores.yaml
+- extendedWaitUntil:
+    visible: "Por resolver"
+    timeout: 30000
+# FR-001: ni la insignia del rol ni su nombre en la cabecera.
+- assertNotVisible: "(?i).*l[ií]der.*"
+# FR-002: las tres filas de «Por resolver», cada una con su botón (un verbo).
+- assertVisible: "\\d+ grupos? sin mentor"
+- assertVisible: "Asignar"
+- assertVisible: "\\d+ consultas? · .*"
+- assertVisible: "Recordar"
+- assertVisible: ".* · \\d+ %"
+- assertVisible: "Ver"
+# FR-003 y SC-001: tres mentores a la vista sin desplazarse, cada uno con su anillo «n/máx» y sus contadores con forma.
+- assertVisible: "E2E Mentor. Cupo \\d+ de \\d+.*"
+- assertVisible: "Mentor Dos E2E. Cupo \\d+ de \\d+.*"
+- assertVisible: "Mentor Suspendido E2E. Cupo \\d+ de \\d+.*"
+- assertVisible: "\\d+/\\d+"
+- assertVisible: "\\d+ en rojo"
+- assertVisible: "\\d+ sin datos"
+- takeScreenshot: L01a-mis-mentores
+# FR-004: un mentor sin grupo lo dice y muestra su cupo libre.
+- assertVisible: "Sin grupo"
+- assertVisible: "0/\\d+"
+# FR-005: los accesos del pie.
+- scrollUntilVisible:
+    element: "Reporte del mes"
+    direction: DOWN
+    timeout: 20000
+- assertVisible: "Grupos"
+- assertVisible: "Consultas · \\d+"
+- assertVisible: "Todos los aprendices"
+- takeScreenshot: L01b-accesos-del-pie

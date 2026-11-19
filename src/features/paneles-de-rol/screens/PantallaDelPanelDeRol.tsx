@@ -9,10 +9,8 @@ import { AlumnoScreen } from '../../mentor/screens/AlumnoScreen';
 import { MiCelulaScreen } from '../../mentor/screens/MiCelulaScreen';
 import { MisGruposScreen } from '../../mentor/screens/MisGruposScreen';
 import { Alert } from '../../../components/Alerta';
-import { BandejaTicketsScreen } from '../../tickets/screens/BandejaTicketsScreen';
 import type { PanelesDeRol } from '../hooks/usePanelesDeRol';
 import { vistaDeEntradaAlGrupo } from '../utils/vistasDeLosPaneles';
-import { MisMentoresEnYo } from './MisMentoresEnYo';
 
 /**
  * La pantalla del panel de rol que está abierto (2026-10-31). Yo la devuelve a pantalla completa, como la Caja y Administración,
@@ -73,30 +71,17 @@ export function PantallaDelPanelDeRol({ paneles }: { paneles: PanelesDeRol }) {
       );
 
     case 'misMentores':
+      /* Spec 056: «Mis mentores» y lo que cuelga de él (ficha del mentor, grupos, grupo, ficha del aprendiz, consultas, reporte) es una pila propia. */
       return (
-        <MisMentoresEnYo
-          lectura={semaforoGrupos}
-          verGrupos={esDisponible(CLAVES.semaforo)}
-          verConsultas={esDisponible(CLAVES.tickets)}
-          verMentores={esDisponible(CLAVES.lider)}
-          verTodos={paneles.aprendicesDisponibles === true}
-          verHabitos={paneles.habitosDisponibles === true}
-          onVolver={volver}
-          onAbrirGrupo={(grupo, inicio) =>
-            ir({ tipo: 'cumplimiento', grupo: { grupoId: grupo.grupoId, nombre: grupo.grupoNombre?.trim() || 'Grupo sin nombre', inicio } })
-          }
-          onAbrirConsultas={() => ir({ tipo: 'consultas' })}
-          onAbrirMentores={() => ir({ tipo: 'mentores' })}
-          onAbrirTodos={() => ir({ tipo: 'todos' })}
-          onAbrirHabitos={() => ir({ tipo: 'habitosDeTodos' })}
+        <LiderMentoresScreen
+          resumenPorGrupos={semaforoGrupos.datos?.grupos ?? []}
+          volverAVigente={semaforoGrupos.volverAVigente}
+          onSalir={volver}
+          entradas={{ grupos: esDisponible(CLAVES.semaforo), consultas: esDisponible(CLAVES.tickets), mentores: esDisponible(CLAVES.lider) }}
+          onAbrirTodos={paneles.aprendicesDisponibles === true ? () => ir({ tipo: 'todos' }) : undefined}
+          onAbrirHabitos={paneles.habitosDisponibles === true ? () => ir({ tipo: 'habitosDeTodos' }) : undefined}
         />
       );
-
-    case 'consultas':
-      return <BandejaTicketsScreen onVolver={volver} />;
-
-    case 'mentores':
-      return <LiderMentoresScreen onSalir={volver} />;
 
     case 'todos':
       return <AprendicesDelLiderScreen onSalir={volver} />;

@@ -1,12 +1,13 @@
 # «Hábitos de todos» (spec 029): solo para el líder de mentores (y la administración). Un mentor no tiene «Mis mentores» en Yo, y
 # por tanto tampoco la fila nueva; el servidor responde 403 a su lectura.
-# ESCRITO Y SIN CORRER. cuenta: mentor (la ranura E2E_MENTOR_*).
+# cuenta: mentor (la ranura E2E_MENTOR_*).
+# corrido: 2026-11-18. El ancla es su propia fila («Abrir Mis grupos» o «Abrir Mi grupo»): «Tuve una emergencia» solo existe para quien puede pedirla y el mentor de la base no.
 appId: com.renaser.app
 ---
 - runFlow: ../comun/ya-adentro.yaml
 - tapOn: "YO"
 - scrollUntilVisible:
-    element: "Tuve una emergencia"
+    element: "Abrir Mis grupos|Abrir Mi grupo"
     direction: DOWN
     timeout: 40000
 - assertNotVisible: "Mis mentores"

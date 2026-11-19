@@ -1,0 +1,87 @@
+# Spec 056, historia 4 (FR-006 a FR-008, SC-003): «Asignar» de «Por resolver» abre Grupos ya en «Sin mentor» (FR-006), cada grupo con el anillo de su cupo y, sin
+# mentor, el botón «Asignar» (FR-007); «Crear grupo» recorre tres pasos con una decisión por pantalla (nombre, mentor con su cupo, aprendices sin grupo) y un resumen
+# antes de crear (FR-008), y el grupo nuevo aparece en «Activos». SC-003: un grupo con su mentor y 2 aprendices en tres pantallas más el resumen (el «menos de 1 minuto»
+# no se mide aquí: cada toque de Maestro tarda ~10 s).
+# ESTE FLUJO CREA UN GRUPO «E2E 056 M» (mentor «Mentor Dos E2E», aprendices «E2E Libre 20» y «E2E Libre 01»). Para repetirlo: `limpiar.sql` (borra ese grupo y devuelve a
+# los dos aprendices a «sin grupo»); el nombre no puede repetirse.
+# cuenta: LÍDER (e2e-lider@renaser.test). Precondición: `siembra.sql`, al menos un grupo sin mentor y 2 aprendices sin grupo; «Mentor Dos E2E» con cupo libre.
+# El «cupo lleno, apagado y sin poder elegirse» de FR-008 no se alcanza: ningún mentor de la base tiene el cupo lleno (lo cubre `crearGrupo.test.ts`).
+# spec 056 FR-006, FR-007, FR-008, SC-003
+# corrido: 2026-11-18
+appId: com.renaser.app
+---
+- runFlow: ../comun/abrir-mis-mentores.yaml
+- extendedWaitUntil:
+    visible: "Por resolver"
+    timeout: 30000
+# FR-006: el botón de la fila de grupos sin mentor abre Grupos ya filtrado en «Sin mentor».
+- tapOn: "Asignar"
+- extendedWaitUntil:
+    visible: "Crear grupo"
+    timeout: 30000
+- assertVisible: "Sin mentor · \\d+"
+- assertVisible: "Activos · \\d+"
+- assertVisible: "Llenos · \\d+"
+# FR-007: cada grupo sin mentor lleva el anillo de su cupo y su botón «Asignar».
+- assertVisible: "Asignar mentor a .*"
+- assertVisible: "\\d+/\\d+"
+- takeScreenshot: L04a-grupos-sin-mentor
+# «Activos»: los que ya tienen mentor, con sus aprendices por color y sin botón de asignar.
+- tapOn: "Activos · \\d+"
+- assertVisible: "Abrir el grupo .*"
+- assertVisible: "\\d+ en rojo"
+- assertNotVisible: "Asignar mentor a .*"
+- takeScreenshot: L04b-grupos-activos
+# FR-008, paso 1 de 3: el nombre es obligatorio y el campo dice qué falta antes de avanzar.
+- scrollUntilVisible:
+    element: "Crear grupo"
+    direction: UP
+    timeout: 20000
+- tapOn: "Crear grupo"
+- extendedWaitUntil:
+    visible: "Paso 1 de 3"
+    timeout: 20000
+- tapOn: "Siguiente"
+- assertVisible: "Pon un nombre para el grupo."
+- tapOn: "Nombre del grupo"
+- inputText: "E2E 056 M"
+- hideKeyboard
+- tapOn: "Siguiente"
+# Paso 2 de 3: el mentor, cada uno con su cupo.
+- extendedWaitUntil:
+    visible: "Paso 2 de 3"
+    timeout: 20000
+- assertVisible: "¿Quién lo acompaña?"
+- assertVisible: "Mentor Dos E2E. Cupo \\d+ de \\d+"
+- takeScreenshot: L04c-paso-del-mentor
+- tapOn: "Mentor Dos E2E. Cupo \\d+ de \\d+"
+- tapOn: "Siguiente"
+# Paso 3 de 3: los aprendices sin grupo, con su buscador y sus casillas.
+- extendedWaitUntil:
+    visible: "Paso 3 de 3"
+    timeout: 20000
+- assertVisible: "Buscar por nombre"
+- tapOn: "E2E Libre 20"
+- tapOn: "E2E Libre 01"
+- scrollUntilVisible:
+    element: "Revisar"
+    direction: DOWN
+    timeout: 40000
+- tapOn: "Revisar"
+# El resumen antes de crear: nombre, mentor y aprendices.
+- extendedWaitUntil:
+    visible: "Resumen"
+    timeout: 20000
+- assertVisible: "Nombre: E2E 056 M"
+- assertVisible: "Mentor: Mentor Dos E2E"
+- assertVisible: "Aprendices: 2: .*"
+- takeScreenshot: L04d-resumen
+# SC-003: al aceptar, el grupo queda creado y aparece en «Activos» (el botón es el segundo «Crear grupo»: el primero es el título de la pantalla).
+- tapOn:
+    text: "Crear grupo"
+    index: 1
+- extendedWaitUntil:
+    visible: "Abrir el grupo E2E 056 M"
+    timeout: 60000
+- assertVisible: "Mentor Dos E2E"
+- takeScreenshot: L04e-el-grupo-creado-en-activos

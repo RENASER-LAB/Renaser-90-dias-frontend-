@@ -261,10 +261,15 @@ const rutaDelAprendiz = (grupoId: string, aprendizId: string) =>
  */
 export async function obtenerSemanaDelAprendiz(grupoId: string, aprendizId: string, semanaHasta?: string | null): Promise<SemanaDelAprendiz> {
   const ruta = `${rutaDelAprendiz(grupoId, aprendizId)}/semana${semanaHasta ? `?semanaHasta=${encodeURIComponent(semanaHasta)}` : ''}`;
-  const crudo = await apiFetch<unknown>(ruta);
-  const semana = aSemanaDePersona(
-    validarRespuesta(cumplimientoDelLiderSchemas.semana, crudo, 'GET /api/v1/mentor/groups/{g}/learners/{u}/semana'),
-  );
+  return aSemanaDelAprendiz(await apiFetch<unknown>(ruta), aprendizId, 'GET /api/v1/mentor/groups/{g}/learners/{u}/semana');
+}
+
+/**
+ * Valida y normaliza una respuesta de `…/semana`. Es la misma forma por la puerta del mentor y por la del líder (spec 056: `GET
+ * /leadership/people/{p}/semana`), así que las dos pasan por acá. Si el servidor no repitió quién es, es a quien se pidió.
+ */
+export function aSemanaDelAprendiz(crudo: unknown, aprendizId: string, origen: string): SemanaDelAprendiz {
+  const semana = aSemanaDePersona(validarRespuesta(cumplimientoDelLiderSchemas.semana, crudo, origen));
   const diaUno = (crudo as { diaUno?: unknown } | null)?.diaUno;
   return { ...semana, personaId: semana.personaId || aprendizId, diaUno: typeof diaUno === 'string' ? diaUno : null };
 }
@@ -289,10 +294,15 @@ const COLORES_CONOCIDOS: readonly string[] = ['VERDE', 'AMARILLO', 'ROJO'];
 /** `GET /mentor/groups/{g}/learners/{u}/dias?desde&hasta` (spec 055 FR-012): máximo 62 días; 400 `RANGO_INVALIDO` si se pasa. */
 export async function obtenerDiasDelAprendiz(grupoId: string, aprendizId: string, desde: string, hasta: string): Promise<DiasDelAprendiz> {
   const ruta = `${rutaDelAprendiz(grupoId, aprendizId)}/dias?desde=${encodeURIComponent(desde)}&hasta=${encodeURIComponent(hasta)}`;
+  return aDiasDelAprendiz(await apiFetch<unknown>(ruta), 'GET /api/v1/mentor/groups/{g}/learners/{u}/dias');
+}
+
+/** Valida y normaliza una respuesta de `…/dias`: la misma forma por la puerta del mentor y por la del líder (spec 056). */
+export function aDiasDelAprendiz(crudo: unknown, origen: string): DiasDelAprendiz {
   const datos = validarRespuesta<{ zona?: string | null; diaUno?: string | null; dias: Array<{ fecha: string; estado?: string | null; color?: string | null; porcentaje?: number | null }> }>(
     diasDelAprendizSchema,
-    await apiFetch<unknown>(ruta),
-    'GET /api/v1/mentor/groups/{g}/learners/{u}/dias',
+    crudo,
+    origen,
   );
   return {
     zona: datos.zona ?? null,

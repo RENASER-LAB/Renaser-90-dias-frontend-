@@ -35,7 +35,7 @@ también en el texto (`grep -n "Plan" docs/decisiones/*.md`). Si dos entradas ch
 | [hoy.md](hoy.md) | Hoy: tarjetas, frase del día, semáforo y lo que Hoy muestra | 8 |
 | [ingreso-y-onboarding.md](ingreso-y-onboarding.md) | Login, onboarding, ficha, diagnóstico, términos y el Día 1 | 11 |
 | [kilometros-y-carrera.md](kilometros-y-carrera.md) | Kilómetros diarios: captura, pasos (Health Connect y Salud de Apple) y la carrera con GPS | 9 |
-| [liderazgo-y-administracion.md](liderazgo-y-administracion.md) | Mentor, líder de mentores, Administración, Alquimista y sus fichas | 18 |
+| [liderazgo-y-administracion.md](liderazgo-y-administracion.md) | Mentor, líder de mentores, Administración, Alquimista y sus fichas | 19 |
 | [pagos.md](pagos.md) | Cronograma de pagos y «Mi ingreso» (spec 032) | 2 |
 | [plan.md](plan.md) | Plan: objetivos, semana, mes, 80/20, Cierra tu día y el Mapa (retirado) | 12 |
 | [ser-y-fenix.md](ser-y-fenix.md) | SER (el acompañante), el orbe, el fénix y las celebraciones | 9 |
@@ -49,6 +49,7 @@ también en el texto (`grep -n "Plan" docs/decisiones/*.md`). Si dos entradas ch
 
 | Fecha | Tabs | Tipo | Entrada | Archivo | Corregida |
 |---|---|---|---|---|---|
+| 2026-11-18 | Yo | Cambio | El rol de líder de mentores rediseñado: Mis mentores con «Por resolver» y cupo, la ficha del mentor y del aprendiz de la 055, grupos que el líder crea y reparte, consultas, reporte y sesión (spec 056) | [liderazgo-y-administracion.md](liderazgo-y-administracion.md) |  |
 | 2026-11-17 | Yo, Comunidad | Cambio | El rol de mentor rediseñado: Mis grupos, Mi grupo, la ficha con la semana y el mes, la evidencia y las notas privadas (spec 055, fase 1) | [liderazgo-y-administracion.md](liderazgo-y-administracion.md) |  |
 | 2026-11-16 | Training | Decisión del dueño | La carrera con GPS también en iPhone, y sin permiso de Face ID | [kilometros-y-carrera.md](kilometros-y-carrera.md) |  |
 | 2026-11-16 | Training | Cambio | Kilómetros diarios: en iPhone los pasos y la distancia salen de la app Salud de Apple (spec 037 FR-016 a FR-025, D-362) | [kilometros-y-carrera.md](kilometros-y-carrera.md) |  |

@@ -88,7 +88,34 @@ jest.mock('../../api/aprendicesDelLiderApi', () => ({
   obtenerAprendicesDelLider: (o?: { q?: string; pagina?: number; tamano?: number }) => mockLista(o),
 }));
 
+/* Spec 056: desde «Todos los aprendices» se abre la ficha de la 055 con lo del líder. La ficha compartida se prueba en su archivo; acá importa con qué
+   origen se abre, si ofrece «Avisar a su mentor» y que el atrás suba un nivel. */
+type PieDeLaFicha = (contexto: { semanaHasta: null }) => React.ReactNode;
+let ultimasPropsDeLaFicha: { origen: { quien: string; grupoId: string | null }; alumno: { participanteId: string }; rotuloDeVolver?: string } | null = null;
+jest.mock('../../../mentor/components/FichaDePersona', () => {
+  const R = jest.requireActual<typeof import('react')>('react');
+  const { Pressable, View } = jest.requireActual<typeof import('react-native')>('react-native');
+  const { useSystemBackHandler } = jest.requireMock<{ useSystemBackHandler: (f: () => boolean, h?: boolean) => void }>('../../../../hooks/useSystemBackHandler');
+  return {
+    FichaDePersona: (props: { origen: { quien: string; grupoId: string | null }; alumno: { participanteId: string }; rotuloDeVolver?: string; onVolver: () => void; pie?: unknown }) => {
+      ultimasPropsDeLaFicha = props;
+      useSystemBackHandler(() => {
+        props.onVolver();
+        return true;
+      });
+      const pie = typeof props.pie === 'function' ? (props.pie as PieDeLaFicha)({ semanaHasta: null }) : (props.pie as React.ReactNode);
+      return R.createElement(
+        View,
+        { testID: 'ficha-de-persona' },
+        R.createElement(Pressable, { accessibilityLabel: `Volver a ${(props.rotuloDeVolver ?? '').toLowerCase()}`, onPress: props.onVolver }),
+        pie,
+      );
+    },
+  };
+});
+
 import { AprendicesDelLiderScreen } from '../AprendicesDelLiderScreen';
+import { FichaDelAprendizDelLider } from '../FichaDelAprendizDelLider';
 import { PersonaDelLiderScreen } from '../PersonaDelLiderScreen';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -298,73 +325,47 @@ describe('la lista de todos los aprendices', () => {
 });
 
 describe('la ficha de una persona abierta desde la lista', () => {
-  it('una persona SIN grupo carga su semana de /leadership/people/{p}/week (grupo en null) y dice «Sin grupo»', async () => {
+  it('es la ficha de la 055 con origen líder, por la puerta de la persona (sin grupo), con grupo o sin él', async () => { // spec 056 FR-017
     const r = await montarLista();
     await tocar(r, 'Beto Ríos');
-    expect(mockSemana).toHaveBeenCalledWith(null, 'u2', null);
-    expect(textos(r)).toContain('Sin grupo');
-    expect(botones(r)).toContain('Escribirle a Beto Ríos');
-  });
-
-  it('una persona CON grupo también usa la ruta nueva para sus cuatro lecturas', async () => {
-    mockSemana.mockResolvedValue(semana({ personaId: 'u1', nombre: 'Ana Pérez', mentor: { id: 'm1', nombre: 'Luisa' } }));
-    const r = await montarLista();
+    expect(ultimasPropsDeLaFicha?.origen).toEqual({ quien: 'lider', grupoId: null });
+    expect(ultimasPropsDeLaFicha?.alumno.participanteId).toBe('u2');
+    await atras();
     await tocar(r, 'Ana Pérez');
-    expect(mockSemana).toHaveBeenCalledWith(null, 'u1', null);
-    await cargas.radar?.('c1');
-    await cargas.huecos?.('2026-10-26');
-    await cargas.cierres?.('2026-10-26');
-    expect(mockRadar).toHaveBeenLastCalledWith(null, 'u1', 'c1');
-    expect(mockHuecos).toHaveBeenLastCalledWith(null, 'u1', '2026-10-26');
-    expect(mockCierres).toHaveBeenLastCalledWith(null, 'u1', '2026-10-26');
-    /* Con grupo, el rótulo es el de su grupo. */
-    expect(textos(r)).toContain('Grupo Fénix · Mentor: Luisa');
+    expect(ultimasPropsDeLaFicha?.origen).toEqual({ quien: 'lider', grupoId: null });
+    expect(ultimasPropsDeLaFicha?.alumno.participanteId).toBe('u1');
   });
 
-  it('«Avisar a su mentor» se esconde sin grupo aunque el servidor mande un mentor, y «Escribirle» está siempre', async () => {
-    mockSemana.mockResolvedValue(semana({ mentor: { id: 'm1', nombre: 'Luisa' }, puedeAvisarAlMentor: true }));
+  it('«Avisar a su mentor» se esconde sin grupo y sin mentor, y «Descargar semana» está siempre', async () => { // spec 056 FR-019
     const r = await montarLista();
     await tocar(r, 'Beto Ríos');
     expect(botones(r).some(b => b.startsWith('Avisar a su mentor'))).toBe(false);
-    expect(botones(r)).toContain('Escribirle a Beto Ríos');
+    expect(botones(r)).toContain('Descargar semana');
   });
 
-  it('«Avisar a su mentor» se esconde cuando la persona tiene grupo pero el grupo no tiene mentor', async () => {
-    mockSemana.mockResolvedValue(semana({ personaId: 'u1', mentor: null, puedeAvisarAlMentor: true }));
+  it('«Avisar a su mentor» se esconde cuando la persona tiene grupo pero el grupo no tiene mentor', async () => { // spec 056 FR-019
+    mockLista.mockResolvedValue(pagina([{ ...ANA, mentorNombre: null }]));
     const r = await montarLista();
     await tocar(r, 'Ana Pérez');
     expect(botones(r).some(b => b.startsWith('Avisar a su mentor'))).toBe(false);
   });
 
-  it('«Avisar a su mentor» aparece con grupo y mentor cuando el servidor lo permite, y también cuando no dice nada (la regla de hoy)', async () => {
-    for (const puede of [true, null, undefined]) {
-      mockSemana.mockResolvedValue(semana({ personaId: 'u1', mentor: { id: 'm1', nombre: 'Luisa' }, puedeAvisarAlMentor: puede }));
-      const r = await montarLista();
-      await tocar(r, 'Ana Pérez');
-      expect(botones(r).some(b => b.startsWith('Avisar a su mentor'))).toBe(true);
-      await act(async () => r.unmount());
-      retrocesos.length = 0;
-    }
-  });
-
-  it('si el servidor dice que no se puede avisar (`puedeAvisarAlMentor: false`), no se ofrece aunque haya mentor', async () => {
-    mockSemana.mockResolvedValue(semana({ personaId: 'u1', mentor: { id: 'm1', nombre: 'Luisa' }, puedeAvisarAlMentor: false }));
+  it('«Avisar a su mentor» aparece con grupo y mentor', async () => { // spec 056 FR-019
     const r = await montarLista();
     await tocar(r, 'Ana Pérez');
-    expect(botones(r).some(b => b.startsWith('Avisar a su mentor'))).toBe(false);
+    expect(botones(r).some(b => b.startsWith('Avisar a su mentor'))).toBe(true);
   });
 
-  it('un 404 de la ficha dice que la persona ya no está disponible', async () => {
-    const { ApiError } = jest.requireActual<typeof import('../../../../services/http/apiClient')>('../../../../services/http/apiClient');
-    mockSemana.mockRejectedValue(new ApiError(404, 'no'));
+  it('la flecha de la ficha dice «Todos los aprendices»', async () => { // spec 056 FR-046
     const r = await montarLista();
     await tocar(r, 'Beto Ríos');
-    expect(textos(r)).toContain('Esta persona ya no está disponible para ver.');
+    expect(ultimasPropsDeLaFicha?.rotuloDeVolver).toBe('Todos los aprendices');
+    expect(botones(r)).toContain('Volver a todos los aprendices');
   });
 });
 
 describe('el atrás: persona → lista → Hoy', () => {
-  it('desde la ficha vuelve a la lista con la búsqueda y lo leído, sin releer; desde la lista, a Hoy', async () => {
+  it('desde la ficha vuelve a la lista con la búsqueda y lo leído, sin releer; desde la lista, a Hoy', async () => { // spec 056 FR-046
     const onSalir = jest.fn();
     const r = await montarLista(onSalir);
     await escribirEnElBuscador(r, 'be');
@@ -380,29 +381,25 @@ describe('el atrás: persona → lista → Hoy', () => {
     expect(unico(r, TextInput).props.value).toBe('be');
     expect(mockLista).not.toHaveBeenCalled();
     expect(onSalir).not.toHaveBeenCalled();
-    expect(r.root.findAll(n => (n.type as unknown) === PersonaDelLiderScreen)).toHaveLength(0);
+    expect(r.root.findAll(n => (n.type as unknown) === FichaDelAprendizDelLider)).toHaveLength(0);
 
     await atras();
     expect(onSalir).toHaveBeenCalledTimes(1);
   });
 
-  it('la flecha «Volver» de la ficha también vuelve a la lista, y la de la lista a Hoy', async () => {
+  it('la flecha de la ficha también vuelve a la lista, y la de la lista a Hoy', async () => { // spec 056 FR-046
     const onSalir = jest.fn();
     const r = await montarLista(onSalir);
     await tocar(r, 'Beto Ríos');
-    const volver = botonesTocables(r).filter(n => n.props.accessibilityLabel === 'Volver');
-    /* La de la lista (oculta) y la de la ficha: la última es la de la ficha. */
-    await act(async () => {
-      volver[volver.length - 1].props.onPress();
-    });
-    expect(r.root.findAll(n => (n.type as unknown) === PersonaDelLiderScreen)).toHaveLength(0);
+    await tocar(r, 'Volver a todos los aprendices');
+    expect(r.root.findAll(n => (n.type as unknown) === FichaDelAprendizDelLider)).toHaveLength(0);
     expect(onSalir).not.toHaveBeenCalled();
     await tocar(r, 'Volver');
     expect(onSalir).toHaveBeenCalledTimes(1);
   });
 });
 
-describe('desde un grupo (o Administración) la ficha sigue pidiendo las rutas de siempre', () => {
+describe('desde Administración la ficha de la persona sigue pidiendo las rutas de siempre', () => {
   async function montarDesdeElGrupo(): Promise<ReactTestRenderer> {
     mockSemana.mockResolvedValue(semana({ grupoId: 'g1', personaId: 'u1', mentor: { id: 'm1', nombre: 'Luisa' } }));
     let r!: ReactTestRenderer;

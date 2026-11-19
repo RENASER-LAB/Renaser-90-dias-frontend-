@@ -1,7 +1,10 @@
 # Los paneles de rol en Yo, no en Hoy (2026-10-31, pedido del dueño: «debe ir dentro de Administración, lo mismo de cada uno, no en
-# Hoy de cada rol»). ESCRITO Y SIN CORRER: necesita un emulador libre.
-# cuenta: LÍDER DE MENTORES con un grupo que acompaña (la ranura E2E_ADMIN_* apunta al líder, como en `mi-radar/12`). Con otra
-# cuenta, las filas cambian: el mentor o la guía ve solo «Mi grupo»; el aprendiz, ninguna.
+# Hoy de cada rol»). Necesita un emulador libre.
+# corrido: 2026-11-18 (el líder de `renaser_e2e_056`: sin grupo propio, así que la parte de «Mi grupo» se salta).
+# cuenta: LÍDER DE MENTORES (la ranura E2E_ADMIN_* apunta al líder, como en `mi-radar/12`). Con otra cuenta, las filas cambian: el mentor o la guía ve solo
+# «Mi grupo» o «Mis grupos»; el aprendiz, ninguna. Si el líder además acompaña un grupo, el flujo recorre también su fila (si no, esa parte se salta).
+# Spec 056 (2026-11-18): «Mis mentores» ya no trae «Resultado por grupo», «Mentores y reporte del mes» ni «Consultas de mentores»: ahora es «Por resolver», «Mentores» y los
+# accesos «Grupos», «Consultas», «Reporte del mes» y «Todos los aprendices» (ver `lider-056/`).
 #
 # El ancla de Yo es «Coherencia» (siempre está): «Tu evolución» solo existe con el programa en marcha (issue #102: antes del Día 1 y sin programa no se
 # dibuja), y el líder de la base puede estar en cualquiera de los dos casos.
@@ -20,47 +23,51 @@ appId: com.renaser.app
 # Yo: las filas, una debajo de otra.
 - tapOn: "YO"
 - scrollUntilVisible:
-    element: "Mis mentores"
+    element: "Abrir Mis mentores"
     direction: DOWN
     timeout: 40000
-- assertVisible: "Mi grupo"
 - takeScreenshot: Y06b-yo-con-las-filas-de-rol
-# «Mis mentores»: resultado por grupo, consultas, mentores y reporte del mes, todos los aprendices.
-- tapOn: "Mis mentores"
+# «Mis mentores» (spec 056): lo que hay que resolver, los mentores con su cupo y los accesos al pie.
+- tapOn: "Abrir Mis mentores"
 - extendedWaitUntil:
-    visible: "Resultado por grupo"
+    visible: "Mentores"
     timeout: 30000
 - assertVisible: "Mis mentores"
 - takeScreenshot: Y06c-mis-mentores
 # Un nivel más adentro y de vuelta: el atrás sube un nivel, no sale de golpe a Yo.
 - scrollUntilVisible:
-    element: "Mentores y reporte del mes"
+    element: "Reporte del mes"
     direction: DOWN
     timeout: 40000
-- tapOn: "Mentores y reporte del mes"
+- tapOn: "Reporte del mes"
 - extendedWaitUntil:
-    visible: ".*Mentores.*"
+    visible: "Mes anterior"
     timeout: 30000
 - back
 - extendedWaitUntil:
-    visible: "Resultado por grupo"
+    visible: "Mentores"
     timeout: 20000
 # Del panel a Yo.
 - back
 - extendedWaitUntil:
     visible: "Coherencia"
     timeout: 20000
-# «Mi grupo»: su pantalla con la cabecera «‹ Mi grupo»; el atrás vuelve a Yo.
+# «Mi grupo» (solo si este líder también acompaña un grupo): su pantalla con la cabecera «‹ Mi grupo»; el atrás vuelve a Yo.
 - scrollUntilVisible:
-    element: "Mi grupo"
+    element: "Abrir Mi grupo|Abrir Mis grupos"
     direction: DOWN
-    timeout: 40000
-- tapOn: "Mi grupo"
-- extendedWaitUntil:
-    visible: ".*(Mi grupo|aprendices).*"
-    timeout: 30000
-- takeScreenshot: Y06d-mi-grupo
-- back
-- extendedWaitUntil:
-    visible: "Coherencia"
-    timeout: 20000
+    timeout: 10000
+    optional: true
+- runFlow:
+    when:
+      visible: "Abrir Mi grupo|Abrir Mis grupos"
+    commands:
+      - tapOn: "Abrir Mi grupo|Abrir Mis grupos"
+      - extendedWaitUntil:
+          visible: ".*(Mi grupo|Mis grupos|aprendices).*"
+          timeout: 30000
+      - takeScreenshot: Y06d-mi-grupo
+      - back
+      - extendedWaitUntil:
+          visible: "Coherencia"
+          timeout: 20000

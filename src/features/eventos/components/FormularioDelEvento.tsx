@@ -61,6 +61,8 @@ export function FormularioDelEvento({
   onGuardar,
   opciones,
   formation = null,
+  audienciaPrevia,
+  sinCabecera = false,
 }: {
   inicial: FormularioDeEvento;
   original: Evento | null;
@@ -72,6 +74,14 @@ export function FormularioDelEvento({
   /** Spec 044: lo que el servidor deja elegir a esta cuenta. Sin partes, el formulario es el de siempre (para todos). */
   opciones?: OpcionesDeAudiencia;
   formation?: string | null;
+  /**
+   * Spec 056 FR-033: la audiencia ya elegida al abrir un evento NUEVO (la hoja «Programar sesión» de la ficha de un mentor abre con ese mentor). Se mezcla
+   * sobre la de siempre y no cambia lo que el servidor deja elegir: la persona puede quitarlo o sumar a otros. Solo vale si el formulario ofrece
+   * «¿Para quién es?» desde que se monta (quien lo usa espera a saber las opciones del servidor). Sin esto, todo es como antes.
+   */
+  audienciaPrevia?: Partial<AudienciaDelFormulario>;
+  /** Sin el «Volver sin guardar» ni el título de arriba, para cuando el formulario va dentro de una hoja que ya los tiene. */
+  sinCabecera?: boolean;
 }) {
   const { c } = useTheme();
   const [form, setForm] = useState<FormularioDeEvento>(inicial);
@@ -101,6 +111,7 @@ export function FormularioDelEvento({
     if (!conAudiencia || !opciones) return null;
     if (original?.audienciaElegida) return audienciaDesdeElResumen(original.audienciaElegida);
     if (original) return { ...audienciaInicial(opciones), todos: original.audiencia !== 'SELECTION' && opciones.todos };
+    if (audienciaPrevia) return { ...audienciaInicial(opciones), ...audienciaPrevia, todos: false };
     return audienciaInicial(opciones);
   });
   /* Un error que se dijo antes (p. ej. «Elige para quién es el evento.») no queda a la vista después de cambiar a quién va: vuelve a decirse, si
@@ -128,10 +139,14 @@ export function FormularioDelEvento({
 
   return (
     <View style={{ gap: 18 }}>
-      <BotonVolver etiqueta="Volver sin guardar" onPress={onVolver} />
-      <Text accessibilityRole="header" style={[estilos.titulo, { color: c.textStrong }]}>
-        {original ? 'Editar evento' : 'Nuevo evento'}
-      </Text>
+      {sinCabecera ? null : (
+        <>
+          <BotonVolver etiqueta="Volver sin guardar" onPress={onVolver} />
+          <Text accessibilityRole="header" style={[estilos.titulo, { color: c.textStrong }]}>
+            {original ? 'Editar evento' : 'Nuevo evento'}
+          </Text>
+        </>
+      )}
 
       {/* Spec 053 FR-013: el líder no escribe el título de «Sesión personalizada»; lo arma la app según a quién va. */}
       {!original && personalizada ? (

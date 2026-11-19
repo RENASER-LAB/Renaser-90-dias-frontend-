@@ -150,3 +150,9 @@ Corrida contra la base local `renaser_e2e_final` (resultados en `~/Imágenes/e2e
   foto, la ficha con la semana en 7 círculos y el mes desplegable, el ojo de la evidencia y la nota privada. **Escritos y sin correr**; piden la
   cuenta del mentor con 3 grupos y `siembra.sql` en la base local clonada (lo dice arriba de cada archivo). Se corren de a uno con
   `.maestro/correr.sh .maestro/rediseno-del-mentor/<flujo>.yaml` o juntos con `npm run verificar -- --e2e .maestro/rediseno-del-mentor/`.
+- `lider-056/` (spec 056, 2026-11-18): el rediseño del rol de líder de mentores — «Mis mentores» con «Por resolver» y el cupo de cada mentor, la ficha del mentor y su «Como mentor»,
+  el grupo y la ficha del aprendiz, Grupos y «Crear grupo», Consultas, el reporte del mes y asignar un grupo sin mentor en cuatro toques; más, con la cuenta del mentor, abrir la ficha
+  desde el aviso del líder. Con `comun/abrir-mis-mentores.yaml` como punto de partida. **Los que dicen `# corrido:` pasaron en el emulador**; piden `siembra.sql` en la base local; `04` y
+  `08` cambian datos y `limpiar.sql` los devuelve. Ver su `README.md`. Desde esta spec «Mis mentores» ya no trae «Resultado por grupo», «Mentores y reporte del mes» ni «Consultas de mentores»:
+  `diseno-31/06`, `habitos-de-todos/01` y `02`, `lider-ve-a-todos/01` y `mi-radar/12` se actualizaron a «Por resolver», «Mentores» y los accesos «Grupos», «Consultas», «Reporte del mes»
+  y «Todos los aprendices».

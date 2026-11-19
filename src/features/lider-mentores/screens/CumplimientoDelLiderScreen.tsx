@@ -3,9 +3,8 @@ import React, { useRef, useState } from 'react';
 import type { InicioSemanal, LecturaDeGrupos } from '../../semaforo/hooks/useLecturaPorSemana';
 import { SemaforoGruposScreen } from '../../semaforo/screens/SemaforoGruposScreen';
 import type { AprendizDelSemaforo, GrupoDelResumen } from '../../semaforo/types/semaforo.types';
-import { useGrupoDelLider } from '../hooks/useGrupoDelLider';
+import { FichaDelAprendizDelLider } from './FichaDelAprendizDelLider';
 import { GrupoDelLiderScreen } from './GrupoDelLiderScreen';
-import { PersonaDelLiderScreen } from './PersonaDelLiderScreen';
 
 /**
  * Del semáforo por grupos a la semana de una persona (spec 005): resumen por grupos → los grupos → una
@@ -60,7 +59,12 @@ export function CumplimientoDelLiderScreen({
   }
   /* `key`: otro grupo es otra cosa que mirar, con su lista y sus personas desde cero. */
   return (
-    <FlujoDelGrupo key={grupo.grupoId} grupo={grupo} onVolver={grupoInicial ? onSalir : () => setGrupo(null)} />
+    <FlujoDelGrupo
+      key={grupo.grupoId}
+      grupo={grupo}
+      resumen={lectura.datos?.grupos.find(g => g.grupoId === grupo.grupoId) ?? null}
+      onVolver={grupoInicial ? onSalir : () => setGrupo(null)}
+    />
   );
 }
 
@@ -72,36 +76,36 @@ export interface GrupoAbierto {
 }
 
 /**
- * Un grupo y las personas que se abren desde él. La lista del grupo vive acá, un nivel arriba de la persona:
- * al volver de una persona la lista sigue ahí, en la semana en que estaba, sin releerse.
+ * Un grupo y las personas que se abren desde él. Desde la spec 056 es el grupo del líder (cabecera con su estado, contadores y aprendices por riesgo) y la
+ * ficha de la 055 de cada persona. El grupo abre en los mismos 7 días que mostraba el resumen; al volver de una persona, la lista sigue ahí.
  */
-function FlujoDelGrupo({ grupo, onVolver }: { grupo: GrupoAbierto; onVolver: () => void }) {
-  const lista = useGrupoDelLider(grupo.grupoId, grupo.inicio);
-  const [persona, setPersona] = useState<{ fila: AprendizDelSemaforo; inicio: InicioSemanal } | null>(null);
+function FlujoDelGrupo({ grupo, resumen, onVolver }: { grupo: GrupoAbierto; resumen: GrupoDelResumen | null; onVolver: () => void }) {
+  const [persona, setPersona] = useState<AprendizDelSemaforo | null>(null);
+  const mentorNombre = resumen && !resumen.sinMentor ? resumen.mentorNombre : null;
 
   if (persona) {
     return (
-      <PersonaDelLiderScreen
-        key={persona.fila.aprendizId}
+      <FichaDelAprendizDelLider
+        key={persona.aprendizId}
+        personaId={persona.aprendizId}
+        nombre={persona.nombre?.trim() || 'Aprendiz sin nombre'}
         grupoId={grupo.grupoId}
-        grupoNombre={lista.datos?.grupoNombre?.trim() || grupo.nombre}
-        personaId={persona.fila.aprendizId}
-        nombre={persona.fila.nombre?.trim() || 'Persona sin nombre'}
-        avatarUrl={persona.fila.avatarUrl}
-        inicio={persona.inicio}
+        mentorNombre={mentorNombre}
+        rotuloDeVolver={grupo.nombre}
         onVolver={() => setPersona(null)}
       />
     );
   }
   return (
     <GrupoDelLiderScreen
+      grupoId={grupo.grupoId}
       nombre={grupo.nombre}
-      lectura={lista}
+      mentorId={null}
+      mentorNombre={mentorNombre}
+      resumen={resumen}
+      inicio={grupo.inicio}
       onVolver={onVolver}
-      onAbrirPersona={fila =>
-        /* La ficha abre en la ventana que la lista está mirando ahora (la del resumen, o la que se eligió con ‹ ›). */
-        setPersona({ fila, inicio: lista.inicio })
-      }
+      onAbrirPersona={setPersona}
     />
   );
 }

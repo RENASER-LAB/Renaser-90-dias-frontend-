@@ -7,8 +7,10 @@ import Animated, { ReduceMotion, useAnimatedStyle, useSharedValue, withTiming } 
 import type { ChatMessage } from '../../../screens/ComunidadScreen';
 import { Icon } from '../../../components/Icon';
 import { TextoConEnlaces } from '../../academy/components/TextoConEnlaces';
+import { anotarRutaDeAviso } from '../../mentor/notificaciones/rutaDeAviso';
 import { useTheme } from '../../../theme/ThemeContext';
 import { CURVA_SALIDA } from '../../../theme/movimiento';
+import { fichaEnElMensaje } from '../utils/fichaEnElMensaje';
 import { colorDeRemitente } from '../utils/formatoChat';
 import { fuenteDeImagenDelChat } from '../utils/fuenteDeImagenDelChat';
 import { altoDeLaFotoDelChat } from '../utils/altoDeLaFotoDelChat';
@@ -110,6 +112,8 @@ export const BurbujaDeMensaje = memo(function BurbujaDeMensaje({
   const fuente = fuenteDeImagenDelChat(mensaje.mediaUrl, mensaje.mediaPath);
   const conFoto = mensaje.type === 'image_grid' && !!fuente && !sticker;
   const texto = mensaje.text?.trim() ? mensaje.text : null;
+  /* Spec 056 FR-019: el «Avisar a su mentor» del líder termina con la ficha del aprendiz; se ve como enlace (al mentor que lo recibe) y no como una ruta cruda. */
+  const ficha = texto && mensaje.type !== 'audio' ? fichaEnElMensaje(texto) : null;
   const leido = llevaDobleMarca(mensaje);
   /* El texto de la marca ya no se dibuja (son íconos), pero sigue midiendo el hueco de la hora: un
      ícono de 16 px ocupa lo mismo que «✓✓» a 12,5 px. */
@@ -269,11 +273,34 @@ export const BurbujaDeMensaje = memo(function BurbujaDeMensaje({
 
         {/* El texto lleva al final un hueco invisible del ancho de la hora: así la hora se sienta
             en la esquina de abajo sin tapar la última palabra, como en WhatsApp. */}
-        {texto && mensaje.type !== 'audio' && (
+        {texto && mensaje.type !== 'audio' && !ficha && (
           // #209: los `http(s)://` se tocan (el recordatorio de un evento trae «Entra aquí: https://meet.google.com/…»).
           <TextoConEnlaces texto={texto} colorDelEnlace={colores.texto} style={[styles.texto, { color: colores.texto }, conFoto && styles.pieDeFoto]}>
             <Text style={styles.huecoDeHora}>{huecoParaLaHora(pie)}</Text>
           </TextoConEnlaces>
+        )}
+
+        {ficha && (
+          <>
+            {ficha.antes ? <TextoConEnlaces texto={ficha.antes} colorDelEnlace={colores.texto} style={[styles.texto, { color: colores.texto }]} /> : null}
+            {propio ? (
+              /* El líder lo escribió: la ficha del aprendiz no es suya para abrir desde el chat del mentor, así que se lee el nombre y no la ruta. */
+              <Text style={[styles.texto, { color: colores.texto }, !!ficha.antes && styles.fichaSeparada]}>
+                {`Ficha de ${ficha.nombre}`}
+                <Text style={styles.huecoDeHora}>{huecoParaLaHora(pie)}</Text>
+              </Text>
+            ) : (
+              <Pressable
+                onPress={() => anotarRutaDeAviso(ficha.ruta)}
+                accessibilityRole="link"
+                accessibilityLabel={`Abrir la ficha de ${ficha.nombre}`}
+                style={[styles.abrirFicha, !!ficha.antes && styles.fichaSeparada]}
+              >
+                <Text style={[styles.textoDeLaFicha, { color: colores.texto }]}>{`Abrir la ficha de ${ficha.nombre}`}</Text>
+                <Icon name="chevron" size={14} color={colores.texto} />
+              </Pressable>
+            )}
+          </>
         )}
 
         {(!conFoto || texto) && (
@@ -408,6 +435,22 @@ const styles = StyleSheet.create({
   pieDeFoto: {
     paddingHorizontal: 7,
     paddingTop: 5,
+  },
+  /* La ficha del aprendiz de un «Avisar a su mentor»: un toque de 48, con lugar a la derecha para la hora (que va flotando en la esquina de abajo). */
+  abrirFicha: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    minHeight: 48,
+    paddingRight: 56,
+  },
+  fichaSeparada: { marginTop: 8 },
+  textoDeLaFicha: {
+    fontFamily: fuentes.seminegrita,
+    fontSize: 17,
+    lineHeight: 24,
+    textDecorationLine: 'underline',
+    flexShrink: 1,
   },
   /* Solo reserva el lugar de la hora: son espacios, no dibujan nada. */
   huecoDeHora: {

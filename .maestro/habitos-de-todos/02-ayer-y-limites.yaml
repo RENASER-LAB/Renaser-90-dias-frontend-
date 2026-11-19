@@ -1,33 +1,31 @@
 # «Hábitos de todos» (spec 029): un día a la vez. ‹ lleva a ayer (con un rótulo distinto de «Hoy»), › vuelve a hoy y se apaga ahí;
 # en el día más antiguo (7 atrás) ‹ se apaga. Nada se anima: cambiar de día es instantáneo.
-# ESCRITO Y SIN CORRER. cuenta: admin (el LÍDER DE MENTORES).
+# cuenta: admin (el LÍDER DE MENTORES).
+# Los rótulos se buscan por el nombre accesible del centro del encabezado («Hoy. miércoles 18 de noviembre», «Ayer. …»): el texto suelto «Hoy» también es el de la pestaña «HOY» de
+# la barra de abajo (Maestro no distingue mayúsculas), y una comprobación sobre él nunca podía fallar.
+# corrido: 2026-11-18
 appId: com.renaser.app
 ---
-- runFlow: ../comun/ya-adentro.yaml
-- tapOn: "YO"
-- scrollUntilVisible:
-    element: "Mis mentores"
-    direction: DOWN
-    timeout: 40000
-- tapOn: "Mis mentores"
+# Spec 056 (2026-11-18): «Mis mentores» es la pantalla nueva del líder; «Hábitos de todos» sigue siendo su acceso del pie.
+- runFlow: ../comun/abrir-mis-mentores.yaml
 - scrollUntilVisible:
     element: "Hábitos de todos"
     direction: DOWN
     timeout: 60000
 - tapOn: "Hábitos de todos"
 - extendedWaitUntil:
-    visible: "Hoy"
+    visible: "Hoy\\. .*"
     timeout: 30000
 # Ayer: el rótulo cambia y la flecha de «Día siguiente» se enciende.
 - tapOn: "Día anterior"
 - extendedWaitUntil:
-    visible: "Ayer"
+    visible: "Ayer\\. .*"
     timeout: 30000
 - takeScreenshot: H02a-ayer
 # De vuelta a hoy.
 - tapOn: "Día siguiente"
 - extendedWaitUntil:
-    visible: "Hoy"
+    visible: "Hoy\\. .*"
     timeout: 30000
 # Siete días atrás (el límite que dice el servidor): después de la séptima, ‹ no hace nada y el rótulo no cambia.
 - repeat:
@@ -35,8 +33,8 @@ appId: com.renaser.app
     commands:
       - tapOn: "Día anterior"
 - takeScreenshot: H02b-el-dia-mas-antiguo
-- assertNotVisible: "Hoy"
+- assertNotVisible: "Hoy\\. .*"
 - back
 - extendedWaitUntil:
-    visible: "Resultado por grupo"
+    visible: "Mentores"
     timeout: 20000

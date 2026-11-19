@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useReducer, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react';
 
 import { ApiError } from '../../../services/http/apiClient';
 import { useRecargarAlVolverLaSenal } from '../../sinRed/useRecargarAlVolverLaSenal';
@@ -6,6 +6,7 @@ import { mensajeDeCargaEnLinea } from '../../sinRed/utils/sinSenal';
 import { sumarDiasIso } from '../../eventos/utils/zonaHoraria';
 import { obtenerSemanaDelAprendiz, type SemanaDelAprendiz } from '../api/mentorApi';
 import { viernesDeLaSemana } from '../utils/fechasDeLaFicha';
+import type { CargarSemanaDeLaFicha } from '../utils/lecturasDeLaFicha';
 
 /** Por qué no se pudo cargar una semana. `sin_red` pide conexión; `servidor` trae el motivo que dio el servidor. */
 export interface FalloDeSemana {
@@ -17,6 +18,8 @@ export type EstadoDeSemana = 'lista' | 'cargando' | 'fallo' | 'sin_pedir';
 
 const SIN_RED = 'Hace falta conexión para ver esta semana. Lo que ya cargaste se sigue viendo.';
 const CODIGO_NO_ACOMPANA = 'NO_ACOMPANA';
+/** Spec 056: una persona de otra formación (o que ya no existe) es un 404 SIN código para el líder: se dice «no disponible», sin dar más datos y sin hueco. Un 404 con código (`SIN_PROGRAMA`…) dice su motivo. */
+export const PERSONA_NO_DISPONIBLE = 'Esta persona ya no está disponible para ver.';
 
 /**
  * Las semanas de un aprendiz mientras su ficha está abierta (spec 055 FR-016, SC-004): una caché por semana (el viernes que la cierra)
@@ -28,8 +31,20 @@ const CODIGO_NO_ACOMPANA = 'NO_ACOMPANA';
  * - La caché vive en este hook: al cerrar la ficha se descarta (nada de datos de otro aprendiz ni de otro día).
  * - Sin internet, una semana no cargada dice que hace falta conexión; lo cargado se sigue viendo.
  * - Si el servidor responde `NO_ACOMPANA` (ya no lo acompaña), se vacía todo y se avisa con su motivo: sin datos viejos.
+ *
+ * **De dónde lee** (spec 056): la ficha compartida le pasa su función `cargar` (`lecturasDeLaFicha`: la puerta del mentor o la del
+ * líder, que no tiene grupo), estable por persona. La forma de siempre, `(grupoId, aprendizId)`, sigue valiendo para el mentor y lee
+ * por su ruta. Si cambia la función (otra persona, otra puerta), se descarta la caché y se vuelve a empezar; `null` = nada que pedir.
  */
-export function useSemanasDelAprendiz(grupoId: string | null, aprendizId: string | null, onYaNoAcompana?: (motivo: string) => void) {
+export function useSemanasDelAprendiz(
+  fuente: string | null | CargarSemanaDeLaFicha,
+  aprendizId: string | null,
+  onYaNoAcompana?: (motivo: string) => void,
+) {
+  const cargarSemana = useMemo<CargarSemanaDeLaFicha | null>(() => {
+    if (typeof fuente === 'function') return fuente;
+    return fuente && aprendizId ? semanaHasta => obtenerSemanaDelAprendiz(fuente, aprendizId, semanaHasta) : null;
+  }, [fuente, aprendizId]);
   const cache = useRef(new Map<string, SemanaDelAprendiz>());
   const enVuelo = useRef(new Set<string>());
   const fallos = useRef(new Map<string, FalloDeSemana>());
@@ -49,7 +64,7 @@ export function useSemanasDelAprendiz(grupoId: string | null, aprendizId: string
 
   const cargar = useCallback(
     (viernes: string | null, adelantar: boolean, silencioso = false) => {
-      if (!grupoId || !aprendizId) return;
+      if (!cargarSemana) return;
       const clave = viernes ?? 'en-curso';
       /* Ya la tiene: no la pide de nuevo, pero la anterior sí se adelanta si todavía no está. */
       const yaVista = viernes !== null ? cache.current.get(viernes) : undefined;
@@ -61,7 +76,7 @@ export function useSemanasDelAprendiz(grupoId: string | null, aprendizId: string
       if (viernes === null && enCurso.current && cache.current.has(enCurso.current)) return;
       enVuelo.current.add(clave);
       if (!silencioso) fallos.current.delete(clave);
-      void obtenerSemanaDelAprendiz(grupoId, aprendizId, viernes)
+      void cargarSemana(viernes)
         .then(semana => {
           if (!vivo.current) return;
           cache.current.set(semana.hasta, semana);
@@ -76,7 +91,14 @@ export function useSemanasDelAprendiz(grupoId: string | null, aprendizId: string
             aviso.current?.(e.message);
             return;
           }
-          fallos.current.set(clave, e instanceof ApiError && e.status === 0 ? { tipo: 'sin_red', mensaje: SIN_RED } : { tipo: 'servidor', mensaje: mensajeDeCargaEnLinea(e, 'No se pudo cargar la semana.') });
+          fallos.current.set(
+            clave,
+            e instanceof ApiError && e.status === 0
+              ? { tipo: 'sin_red', mensaje: SIN_RED }
+              : e instanceof ApiError && e.status === 404 && e.codigo === null
+                ? { tipo: 'servidor', mensaje: PERSONA_NO_DISPONIBLE }
+                : { tipo: 'servidor', mensaje: mensajeDeCargaEnLinea(e, 'No se pudo cargar la semana.') },
+          );
         })
         .finally(() => {
           enVuelo.current.delete(clave);
@@ -84,7 +106,7 @@ export function useSemanasDelAprendiz(grupoId: string | null, aprendizId: string
         });
       if (!silencioso) redibujar();
     },
-    [grupoId, aprendizId, adelantarLaAnterior],
+    [cargarSemana, adelantarLaAnterior],
   );
   cargarRef.current = cargar;
 

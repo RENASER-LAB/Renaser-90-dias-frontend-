@@ -8,7 +8,8 @@ import type { AlumnoConEstado } from '../../mentor/types/mentor.types';
  * Pura, para probar el recorrido sin montar nada.
  *
  *   Yo ← Mis grupos (si acompaña a más de uno) ← Mi grupo ← ficha del aprendiz   (con un solo grupo: Yo ← Mi grupo ← ficha)
- *   Yo ← Mis mentores ← consultas | mentores y reporte del mes | todos los aprendices | hábitos de todos (← un hábito ← persona) | resultado por grupo (← su grupo ← persona)
+ *   Yo ← Mis mentores ← todos los aprendices | hábitos de todos (← un hábito ← persona) | resultado por grupo (← su grupo ← persona)
+ *   Yo ← Mis mentores (la pila de la spec 056: `LiderMentoresScreen`, con su propio atrás de un nivel por vez: mentor, grupos, grupo, aprendiz, consultas, reporte)
  */
 export type VistaDelPanel =
   | { tipo: 'ninguna' }
@@ -16,9 +17,8 @@ export type VistaDelPanel =
   | { tipo: 'misGrupos' }
   | { tipo: 'miGrupo'; enfocarSemaforo: boolean }
   | { tipo: 'alumno'; alumno: AlumnoConEstado }
+  /** Spec 056: «Mis mentores» y todo lo que cuelga de él (`LiderMentoresScreen`) vive adentro de esta vista. */
   | { tipo: 'misMentores' }
-  | { tipo: 'consultas' }
-  | { tipo: 'mentores' }
   | { tipo: 'todos' }
   /** «Hábitos de todos» (spec 029): un día, hábito por hábito, con sus personas y su ficha. Los niveles de adentro los lleva la pantalla. */
   | { tipo: 'habitosDeTodos' }
@@ -40,8 +40,6 @@ export function vistaDeRegreso(vista: VistaDelPanel, variosGrupos = false): Vist
   switch (vista.tipo) {
     case 'alumno':
       return { tipo: 'miGrupo', enfocarSemaforo: false };
-    case 'consultas':
-    case 'mentores':
     case 'todos':
     case 'habitosDeTodos':
     case 'cumplimiento':

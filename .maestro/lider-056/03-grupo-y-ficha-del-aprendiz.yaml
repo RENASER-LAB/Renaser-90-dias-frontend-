@@ -1,0 +1,104 @@
+# Spec 056, historia 3 (FR-011 a FR-016, FR-019, FR-020): Mis mentores → Grupos → un grupo → la ficha de un aprendiz. El grupo: cabecera con su estado y su
+# frase corta («Grupo en rojo · 1 % en 7 días»), el mentor, los cuatro contadores con forma y los aprendices en el orden de la 055, cada uno con su estado y su línea
+# (FR-011, FR-012); «+ Aprendices» y «Cambiar mentor» (FR-013). La ficha del aprendiz es la de la 055 con el origen del líder: la semana en círculos, el día por
+# pilares, el ojo de la evidencia y su hoja, las notas de solo lectura, 80/20 y cierres debajo, y al pie «Descargar semana» y «Avisar a su mentor» (FR-014, FR-015,
+# FR-016, FR-020). «Avisar a su mentor» abre la hoja con el mensaje sugerido y lo ENVÍA (FR-019): le deja un mensaje en el chat de «E2E Mentor» (lo lee el flujo 07).
+# «Descargar semana» no se toca: genera un documento en el servidor (FR-039, se prueba aparte).
+# cuenta: LÍDER (e2e-lider@renaser.test). Precondición: `siembra.sql` (la evidencia de hoy de «E2E Aprendiz») y el grupo «Cupo [e2e-piso-1314]» con mentor.
+# spec 056 FR-011, FR-012, FR-013, FR-014, FR-015, FR-016, FR-019, FR-020
+# corrido: 2026-11-18
+appId: com.renaser.app
+---
+- runFlow: ../comun/abrir-mis-mentores.yaml
+- scrollUntilVisible:
+    element: "Grupos"
+    direction: DOWN
+    timeout: 30000
+- tapOn: "Grupos"
+- extendedWaitUntil:
+    visible: "Crear grupo"
+    timeout: 30000
+- tapOn: "Activos · \\d+"
+- tapOn: "Abrir el grupo Cupo \\[e2e-piso-1314\\]"
+- extendedWaitUntil:
+    visible: "Grupo en .*"
+    timeout: 30000
+# FR-011: su estado con forma y la frase corta; el mentor.
+- assertVisible: "Grupo en (rojo|ámbar|verde|sin datos).* · .* en 7 días"
+- assertVisible: "Mentor: E2E Mentor"
+# FR-012: los cuatro contadores y los aprendices con su estado y su motivo.
+- assertVisible: "\\d+ en rojo"
+- assertVisible: "\\d+ en ámbar"
+- assertVisible: "\\d+ en verde"
+- assertVisible: "\\d+ sin datos"
+- assertVisible: "Abrir la ficha de E2E Libre 02.*"
+- assertVisible: "En rojo"
+- takeScreenshot: L03a-grupo
+# FR-013: los dos botones del grupo.
+- scrollUntilVisible:
+    element: "Cambiar mentor"
+    direction: DOWN
+    timeout: 30000
+- assertVisible: "\\+ Aprendices"
+- scrollUntilVisible:
+    element: "Abrir la ficha de E2E Aprendiz.*"
+    direction: UP
+    timeout: 30000
+- tapOn: "Abrir la ficha de E2E Aprendiz.*"
+- extendedWaitUntil:
+    visible: "Escribirle a E2E Aprendiz"
+    timeout: 30000
+# FR-014: la ficha de la 055: semana en círculos, el día por pilares, el ojo de la evidencia sembrada de hoy.
+- assertVisible: "(Sábado|Domingo|Lunes|Martes|Miércoles|Jueves|Viernes) \\d+ de .*"
+- assertVisible: "Cuerpo"
+- assertVisible: "Día \\d+ · .*"
+- takeScreenshot: L03b-ficha-del-aprendiz
+- scrollUntilVisible:
+    element: "Ver la evidencia de .*"
+    direction: DOWN
+    timeout: 30000
+- tapOn: "Ver la evidencia de .*"
+- extendedWaitUntil:
+    visible: "Cerrar la evidencia"
+    timeout: 20000
+- takeScreenshot: L03c-la-evidencia
+- back
+- assertNotVisible: "Cerrar la evidencia"
+# FR-015: las notas del mentor, solo para leer (sin campo ni botón de guardar).
+- scrollUntilVisible:
+    element: "Notas sobre E2E Aprendiz.*"
+    direction: UP
+    timeout: 30000
+- tapOn: "Notas sobre E2E Aprendiz.*"
+- extendedWaitUntil:
+    visible: "Nota sobre E2E Aprendiz"
+    timeout: 20000
+- assertNotVisible: "Guardar nota"
+- takeScreenshot: L03d-notas-de-solo-lectura
+- back
+# FR-016 y FR-020: lo de debajo de los pilares y el pie con los dos botones.
+- scrollUntilVisible:
+    element: "Su 80/20"
+    direction: DOWN
+    timeout: 40000
+- scrollUntilVisible:
+    element: "Descargar semana"
+    direction: DOWN
+    timeout: 40000
+- assertVisible: "Avisar a su mentor"
+- takeScreenshot: L03e-el-pie-de-la-ficha
+# FR-019: la hoja con el mensaje sugerido (editable) y el envío; el aviso queda a la vista.
+- tapOn: "Avisar a su mentor"
+- extendedWaitUntil:
+    visible: "Avisar a E2E Mentor"
+    timeout: 20000
+- assertVisible: ".*necesita tu apoyo esta semana.*"
+- takeScreenshot: L03f-avisar-a-su-mentor
+- tapOn: "Avisar"
+# La hoja solo se cierra si el servidor aceptó el aviso (si no, sigue abierta y un diálogo dice el motivo). La línea «Le avisaste a E2E Mentor.» dura 4 s y Maestro no
+# llega a verla (cada toque tarda ~10 s): el mensaje en el chat del mentor lo comprueba el flujo 07.
+- extendedWaitUntil:
+    notVisible: "Avisar a E2E Mentor"
+    timeout: 40000
+- assertNotVisible: "No se pudo.*"
+- takeScreenshot: L03g-avisado

@@ -152,7 +152,7 @@ describe('la hoja de la evidencia', () => {
   });
 
   it('cerrarla (deslizando, con el gesto de volver del sistema o con la ✕) llama al cierre y la ficha queda en el mismo día', async () => { // spec 055 FR-022
-    const fuente = readFileSync(join(__dirname, '..', '..', 'screens', 'AlumnoScreen.tsx'), 'utf8');
+    const fuente = readFileSync(join(__dirname, '..', 'FichaDePersona.tsx'), 'utf8'); // spec 056: el cuerpo de AlumnoScreen
     expect(fuente).toMatch(/alCerrar=\{\(\) => setEvidenciaAbierta\(null\)\}/);
     /* La hoja es `HojaDesdeAbajo`, que cierra con el atrás del sistema (`onRequestClose`), el fondo y la ✕: ver su propia prueba. */
     const hojaFuente = readFileSync(join(__dirname, '..', '..', '..', 'lider-mentores', 'components', 'EvidenciaDeObligacion.tsx'), 'utf8');

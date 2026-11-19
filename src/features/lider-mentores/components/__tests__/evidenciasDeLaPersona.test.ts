@@ -125,6 +125,23 @@ describe('la evidencia de un hábito', () => {
     expect(textos(r)).toContain('Me sentí con energía');
   });
 
+  it('el título de la hoja sale en tipo oración aunque el catálogo lo mande en mayúsculas, como lo muestra la lista', async () => { // spec 056 FR-014
+    mockLeer.mockResolvedValue({ tipo: 'FOTO', url: 'https://s3/foto.jpg?firma=1' });
+    const r = await montar(
+      React.createElement(EvidenciaDeObligacion, { titulo: 'AGUA TIBIA CON LIMÓN', evidencias: [FOTO], abierta: true, alCerrar: () => undefined, subtitulo: '06:30 · Cuerpo' }),
+    );
+    expect(textos(r)).toContain('HOJA: Agua tibia con limón');
+    expect(textos(r)).not.toContain('AGUA TIBIA');
+    /* El nombre que lee el lector de pantalla también: la foto dice «Foto de Agua tibia con limón». */
+    expect(r.root.findAll(n => n.props.accessibilityLabel === 'Foto de Agua tibia con limón').length).toBeGreaterThan(0);
+  });
+
+  it('un título que ya viene bien escrito no se toca', async () => { // spec 056 FR-014
+    mockLeer.mockResolvedValue({ tipo: 'FOTO', url: 'https://s3/foto.jpg?firma=1' });
+    const r = await montar(React.createElement(EvidenciaDeObligacion, { titulo: 'Pastilla Renacer', evidencias: [FOTO], abierta: true, alCerrar: () => undefined }));
+    expect(textos(r)).toContain('HOJA: Pastilla Renacer');
+  });
+
   it('un texto (la Audioterapia) se lee en la hoja', async () => {
     mockLeer.mockResolvedValue({ tipo: 'TEXTO', texto: 'Lo que escuché me hizo pensar en mi familia.' });
     const r = await montar(

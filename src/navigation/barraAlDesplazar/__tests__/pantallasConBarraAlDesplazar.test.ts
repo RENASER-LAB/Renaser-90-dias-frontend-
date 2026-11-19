@@ -29,8 +29,7 @@ const PANTALLAS: Record<string, number> = {
   'src/features/eventos/components/SeccionEventos.tsx': 1,
   // 12: la lista de Yo, Ajustes, Mi onboarding… y «Términos y condiciones» (spec 027, releer lo aceptado).
   'src/screens/YoScreen.tsx': 11, // 03/11: se borró la sub-vista «Información» y su lista
-  // «Mis mentores» del líder, una fila de Yo (2026-10-31).
-  'src/features/paneles-de-rol/screens/MisMentoresEnYo.tsx': 1,
+  // «Mis mentores» del líder y todo lo que cuelga de él (spec 056) van en `MarcoDelLider` (arriba) y en la ficha compartida (`FichaDePersona`).
   // Administración
   'src/features/admin/screens/AdminInicioScreen.tsx': 1,
   'src/features/admin/screens/BienvenidaAdminScreen.tsx': 1,
@@ -53,14 +52,13 @@ const PANTALLAS: Record<string, number> = {
   // Mentor y Líder de Mentores
   'src/features/mentor/screens/MiCelulaScreen.tsx': 1,
   'src/features/mentor/screens/MisGruposScreen.tsx': 1,
-  'src/features/mentor/screens/AlumnoScreen.tsx': 1,
+  'src/features/mentor/components/FichaDePersona.tsx': 1, // spec 056: el cuerpo de AlumnoScreen
   'src/features/lider-mentores/components/MarcoDelLider.tsx': 1,
   // «Hábitos de todos» del líder (spec 029): los hábitos del día y las personas de un hábito.
   'src/features/lider-mentores/screens/HabitosDeTodosScreen.tsx': 1,
   'src/features/lider-mentores/screens/PersonasDeUnHabitoScreen.tsx': 1,
   'src/features/semaforo/screens/SemaforoScreen.tsx': 1,
   'src/features/semaforo/screens/SemaforoGruposScreen.tsx': 1,
-  'src/features/tickets/screens/BandejaTicketsScreen.tsx': 1,
 };
 
 describe('pantallas con «ocultar la barra al desplazar»', () => {

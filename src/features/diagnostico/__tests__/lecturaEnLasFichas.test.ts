@@ -14,10 +14,12 @@ const leer = (ruta: string) => readFileSync(join(raiz, ruta), 'utf8');
 
 describe('la sección del diagnóstico en las fichas', () => {
   it('el mentor (AlumnoScreen) la lee por su puerta, solo si tiene grupo', () => {
-    const f = leer('mentor/screens/AlumnoScreen.tsx');
-    expect(f).toContain('<SeccionDelDiagnosticoDeLaPersona cargar={cargarDiagnostico} />');
-    expect(f).toContain('lecturaParaElMentor(grupoId, alumno.participanteId)');
-    expect(f).toMatch(/grupoId \? \(\) => lecturaParaElMentor/);
+    // Spec 056: el cuerpo de AlumnoScreen es FichaDePersona y la puerta la elige lecturasDeLaFicha (origen mentor).
+    const f = leer('mentor/components/FichaDePersona.tsx');
+    const l = leer('mentor/utils/lecturasDeLaFicha.ts');
+    expect(f).toContain('<SeccionDelDiagnosticoDeLaPersona cargar={lecturas.cargarDiagnostico} />');
+    expect(l).toContain('cargarDiagnostico: () => lecturaParaElMentor(grupoId, personaId)');
+    expect(l).toMatch(/if \(origen\.quien === 'mentor'\) \{\s*if \(grupoId === null\) return SIN_LECTURAS;/);
   });
 
   it('el líder (PersonaDelLiderScreen) la lee por la puerta del grupo o, sin grupo / desde «Todos», por la de la persona', () => {
@@ -33,7 +35,7 @@ describe('la sección del diagnóstico en las fichas', () => {
   });
 
   it('va debajo de lo último que muestra cada ficha (los cierres del día)', () => {
-    for (const ruta of ['mentor/screens/AlumnoScreen.tsx', 'lider-mentores/screens/PersonaDelLiderScreen.tsx', 'admin/screens/FichaAprendizScreen.tsx']) {
+    for (const ruta of ['mentor/components/FichaDePersona.tsx', 'lider-mentores/screens/PersonaDelLiderScreen.tsx', 'admin/screens/FichaAprendizScreen.tsx']) {
       const f = leer(ruta);
       expect(f.indexOf('<CierresDelDia')).toBeGreaterThan(-1);
       expect(f.indexOf('<SeccionDelDiagnosticoDeLaPersona')).toBeGreaterThan(f.indexOf('<CierresDelDia'));

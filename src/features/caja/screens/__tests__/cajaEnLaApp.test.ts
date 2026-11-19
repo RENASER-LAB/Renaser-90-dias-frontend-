@@ -27,7 +27,7 @@ describe('la Caja Renaser en la app', () => {
     const ficha = leer('features/admin/screens/FichaAprendizScreen.tsx');
     expect(ficha).toMatch(/<ChipDeCaja\s+origen=\{\{ quien: 'admin'/);
     expect(ficha).toMatch(/onAbrirCaja\(aprendiz\.id\)/);
-    const alumno = leer('features/mentor/screens/AlumnoScreen.tsx');
+    const alumno = leer('features/mentor/components/FichaDePersona.tsx'); // desde la spec 056 el cuerpo de AlumnoScreen vive en FichaDePersona
     expect(alumno).toMatch(/<ChipDeCaja origen=\{\{ quien: 'mentor', aprendizId: alumno\.participanteId \}\}/);
   });
 

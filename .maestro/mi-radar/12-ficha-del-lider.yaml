@@ -2,29 +2,31 @@
 # con el estado de Mi Radar y sus registros (escenario 11, rama del líder).
 # cuenta: admin (la ranura E2E_ADMIN_* apunta al LÍDER). E2E_PERSONA = parte del nombre del aprendiz y E2E_GRUPO = parte
 # del nombre de su grupo («Grupo Radar E2E»). Precondición: igual que el flujo 10.
+# escrito y sin correr completo: la ruta nueva se probó el 2026-11-18 y llega a la ficha de la persona; el bloque «CÓDIGO RENASER» pide el interruptor de la spec 034 encendido y una
+# respuesta de Radar de esa persona, que la base `renaser_e2e_056` no tiene.
+# Spec 056 (2026-11-18): el camino cambió: Yo → «Mis mentores» → «Grupos» → «Activos» → el grupo → la ficha de la persona (la de la 055, con el bloque «CÓDIGO RENASER» debajo).
 appId: com.renaser.app
 ---
-- runFlow: ../comun/ya-adentro.yaml
-# Spec 018 → 2026-10-31: el resultado por grupo está en «Mis mentores», que ya no es una pestaña de Hoy sino una fila de Yo
-# (ya no hay una tarjeta «Semáforo por grupos» ni la línea «Toca un grupo para ver a sus personas.»).
-- tapOn: "YO"
+# Spec 018 → 2026-10-31: «Mis mentores» es una fila de Yo. Spec 056: los grupos están en el acceso «Grupos» (con «Activos» si ya tienen mentor).
+- runFlow: ../comun/abrir-mis-mentores.yaml
 - scrollUntilVisible:
-    element: "Mis mentores"
+    element: "Grupos"
     direction: DOWN
     timeout: 40000
-- tapOn: "Mis mentores"
+- tapOn: "Grupos"
 - extendedWaitUntil:
-    visible: "Resultado por grupo"
+    visible: "Crear grupo"
     timeout: 30000
+- tapOn: "Activos · \\d+"
 - scrollUntilVisible:
-    element: ".*${GRUPO}.*"
+    element: "Abrir el grupo .*${GRUPO}.*"
     direction: DOWN
     timeout: 60000
-- tapOn: ".*${GRUPO}.*"
+- tapOn: "Abrir el grupo .*${GRUPO}.*"
 - extendedWaitUntil:
-    visible: ".*${PERSONA}.*Abrir su detalle.*"
+    visible: "Abrir la ficha de .*${PERSONA}.*"
     timeout: 30000
-- tapOn: ".*${PERSONA}.*Abrir su detalle.*"
+- tapOn: "Abrir la ficha de .*${PERSONA}.*"
 - scrollUntilVisible:
     element: "CÓDIGO RENASER"
     direction: DOWN

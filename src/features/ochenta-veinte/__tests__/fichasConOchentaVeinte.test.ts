@@ -11,14 +11,16 @@ import path from 'path';
 const RAIZ = path.resolve(__dirname, '../../..');
 const leer = (relativa: string) => fs.readFileSync(path.join(RAIZ, relativa), 'utf8');
 
-const FICHAS: ReadonlyArray<{ nombre: string; archivo: string; api: string }> = [
-  { nombre: 'mentor o guía (AlumnoScreen)', archivo: 'features/mentor/screens/AlumnoScreen.tsx', api: 'obtenerOchentaVeinteDeUnAlumno(' },
+const FICHAS: ReadonlyArray<{ nombre: string; archivo: string; api: string; lecturas?: string }> = [
+  { nombre: 'mentor o guía (AlumnoScreen → FichaDePersona)', archivo: 'features/mentor/components/FichaDePersona.tsx', api: 'obtenerOchentaVeinteDeUnAlumno(', lecturas: 'features/mentor/utils/lecturasDeLaFicha.ts' },
   { nombre: 'líder (PersonaDelLiderScreen)', archivo: 'features/lider-mentores/screens/PersonaDelLiderScreen.tsx', api: 'obtenerOchentaVeinteDeUnaPersona(' },
   { nombre: 'Administración y Alquimista (FichaAprendizScreen)', archivo: 'features/admin/screens/FichaAprendizScreen.tsx', api: 'obtenerOchentaVeinteDeUnaPersona(' },
 ];
 
-describe.each(FICHAS)('la ficha de $nombre', ({ archivo, api }) => {
+describe.each(FICHAS)('la ficha de $nombre', ({ archivo, api, lecturas }) => {
   const fuente = leer(archivo);
+  /* Spec 056: la ficha del mentor elige su puerta en lecturasDeLaFicha y la memoriza por origen y persona. */
+  const puerta = lecturas ? leer(lecturas) : fuente;
 
   it('monta «Tu 80/20» debajo de «Cierres del día»', () => {
     const cierres = fuente.indexOf('<CierresDelDia');
@@ -28,8 +30,8 @@ describe.each(FICHAS)('la ficha de $nombre', ({ archivo, api }) => {
   });
 
   it('lee por su puerta, con una función estable por persona', () => {
-    expect(fuente).toContain(api);
-    expect(fuente).toMatch(/const cargarOchentaVeinte = useMemo</);
+    expect(puerta).toContain(api);
+    expect(fuente).toMatch(lecturas ? /const lecturas = useMemo\(\(\) => lecturasDeLaFicha\(/ : /const cargarOchentaVeinte = useMemo</);
   });
 });
 
