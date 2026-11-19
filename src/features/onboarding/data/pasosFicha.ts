@@ -100,6 +100,9 @@ const AVISOS = {
   // 2026-10-06, decisión del dueño: solo mayores de 18 (D-80). La única regla nueva desde el rediseño.
   edad: { titulo: 'Solo para mayores de 18', mensaje: 'Renaser es solo para mayores de 18 años.' },
   whatsapp: { titulo: 'WhatsApp requerido', mensaje: 'Por favor ingresa tu número de WhatsApp para contacto con tu mentor.' },
+  // 2026-11-19, issue #235: la ubicación ya no llega rellena de fábrica, así que se pide elegirla.
+  ciudad: { titulo: 'Ciudad requerida', mensaje: 'Por favor elige el departamento y la ciudad o provincia donde vives.' },
+  distrito: { titulo: 'Distrito requerido', mensaje: 'Por favor elige el distrito o la zona donde vives.' },
   horas: { titulo: 'Horas de sueño requeridas', mensaje: 'Por favor ingresa tus horas promedio de sueño (entre 0 y 24).' },
   medicacion: { titulo: 'Medicación requerida', mensaje: 'Por favor especifica tu medicación y el motivo de la toma.' },
 } satisfies Record<string, AvisoDePaso>;
@@ -138,6 +141,9 @@ export function validarPaso(
       return identidad.numeroDocumento.trim().length < 4 ? AVISOS.documento : null;
     case 'whatsapp':
       return validarWhatsapp(identidad.whatsapp);
+    case 'ubicacion':
+      if (!identidad.ciudad.trim()) return AVISOS.ciudad;
+      return identidad.distrito?.trim() ? null : AVISOS.distrito;
     case 'descanso': {
       const horas = parseFloat(salud.horasSueno);
       const valida = !isNaN(horas) && horas >= 0 && horas <= 24 && salud.horasSueno.trim() !== '';
@@ -148,7 +154,7 @@ export function validarPaso(
     case 'consentimiento':
       return !consentimiento.autorizaUsoDatos && !consentimiento.compromiso90Dias ? avisoDelCompromiso(plazo) : null;
     default:
-      // familia, trabajo, ubicación, expectativa y temor no tenían campos obligatorios.
+      // familia, trabajo, expectativa y temor no tienen campos obligatorios.
       return null;
   }
 }

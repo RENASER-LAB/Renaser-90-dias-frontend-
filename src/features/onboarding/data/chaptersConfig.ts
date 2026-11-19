@@ -51,9 +51,10 @@ export const INITIAL_FICHA_DATA: FichaInicialData = {
     codigoPais: '+51',
     email: '',
     pais: 'Perú',
-    departamento: 'Lima',
-    ciudad: 'Lima Metropolitana',
-    distrito: 'Miraflores',
+    // Vacíos hasta que la persona los elige (issue #235): ni la IP ni un valor de ejemplo los rellenan.
+    departamento: '',
+    ciudad: '',
+    distrito: '',
     direccion: '',
     expectativa: '',
     temor: '',

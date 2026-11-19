@@ -63,7 +63,7 @@ jest.mock('../../api/onboardingApi', () => ({ obtenerRespuestas: async () => ({ 
 jest.mock('../../../formaciones/hooks/usePlazoDeLaSesion', () => ({ usePlazoDeLaSesion: () => ({ plazo: '90 días', duracionDias: 90 }) }));
 
 import { FichaInicialScreen } from '../FichaInicialScreen';
-import { PasoDocumento, PasoSobreTi, PasoWhatsapp } from '../../components/ChapterIdentidad';
+import { PasoDocumento, PasoSobreTi, PasoUbicacion, PasoWhatsapp } from '../../components/ChapterIdentidad';
 import { mapearIdentidad } from '../../data/mapaPreguntas';
 import { INITIAL_FICHA_DATA } from '../../data/chaptersConfig';
 import type { FichaIdentidadData } from '../../types/onboarding.types';
@@ -159,6 +159,7 @@ describe('Ficha Inicial de a un paso por pantalla', () => {
     await siguiente(raiz); // → whatsapp
     completar(raiz, PasoWhatsapp, { whatsapp: '+51 987654321' });
     await siguiente(raiz); // → ubicación
+    completar(raiz, PasoUbicacion, { departamento: 'Lima', ciudad: 'Lima Metropolitana', distrito: 'Miraflores' });
     await siguiente(raiz); // → expectativa
     await siguiente(raiz); // → temor
     expect(titulo(raiz)).toBe('¿Qué temes que no funcione?');
@@ -177,6 +178,9 @@ describe('Ficha Inicial de a un paso por pantalla', () => {
         numeroDocumento: '72345678',
         whatsapp: '+51 987654321',
         codigoPais: '+51',
+        departamento: 'Lima',
+        ciudad: 'Lima Metropolitana',
+        distrito: 'Miraflores',
       }),
     );
     expect(mockAvanzarEstado).toHaveBeenCalledWith({
@@ -198,7 +202,9 @@ describe('Ficha Inicial de a un paso por pantalla', () => {
     completar(raiz, PasoDocumento, { numeroDocumento: '12345678' });
     await siguiente(raiz);
     completar(raiz, PasoWhatsapp, { whatsapp: '+51 999888777' });
-    for (let i = 0; i < 4; i++) await siguiente(raiz);
+    await siguiente(raiz); // → ubicación
+    completar(raiz, PasoUbicacion, { ciudad: 'Arequipa', distrito: 'Cayma' });
+    for (let i = 0; i < 3; i++) await siguiente(raiz);
 
     expect(mockAlerta).toHaveBeenCalledWith(
       'No se pudo guardar',

@@ -62,21 +62,32 @@ function Pregunta({ rotulo, children }: { rotulo: string; children: React.ReactN
 /**
  * País y prefijo según dónde está el teléfono, si todavía no se eligieron (estilo WhatsApp). Es el
  * mismo efecto que corría al montar el capítulo entero; ahora corre en los dos pasos que lo usan.
+ *
+ * **Solo país y prefijo (2026-11-19, issue #235).** Antes también rellenaba departamento, ciudad y
+ * distrito con lo que daba la IP (la ciudad del proveedor de internet) o con lugares fijos
+ * inventados. Ahora esos tres quedan vacíos hasta que la persona los elige, y si no se sabe ni el
+ * país no se rellena nada. La respuesta llega tarde (hasta 2 s): se completa sobre lo más reciente
+ * que escribió la persona, no sobre lo que había al abrir el paso.
  */
-function useCompletarUbicacion({ data, onChange }: PasoIdentidadProps) {
+function useCompletarUbicacion(props: PasoIdentidadProps) {
+  const ultimas = useRef(props);
+  ultimas.current = props;
+
   useEffect(() => {
-    if (!data.pais || !data.codigoPais) {
-      LocationService.detectUserLocation().then(loc => {
-        onChange({
-          ...data,
-          pais: data.pais || loc.pais,
-          departamento: data.departamento || loc.departamento,
-          ciudad: data.ciudad || loc.ciudad,
-          distrito: data.distrito || loc.distrito,
-          codigoPais: data.codigoPais || loc.codigoPais,
-        });
+    if (props.data.pais && props.data.codigoPais) return;
+    let vigente = true;
+    LocationService.detectUserLocation().then(loc => {
+      if (!vigente || !loc) return;
+      const { data, onChange } = ultimas.current;
+      onChange({
+        ...data,
+        pais: data.pais || loc.pais,
+        codigoPais: data.codigoPais || loc.codigoPais,
       });
-    }
+    });
+    return () => {
+      vigente = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 }
@@ -332,9 +343,9 @@ export function PasoUbicacion(props: PasoIdentidadProps) {
     <LocationCascadePicker
       data={{
         pais: data.pais || 'Perú',
-        departamento: data.departamento || 'Lima',
-        ciudad: data.ciudad || 'Lima Metropolitana',
-        distrito: data.distrito || 'Miraflores',
+        departamento: data.departamento || '',
+        ciudad: data.ciudad || '',
+        distrito: data.distrito || '',
         direccion: data.direccion || '',
       }}
       onChange={handleLocationChange}

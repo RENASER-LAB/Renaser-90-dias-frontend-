@@ -656,3 +656,35 @@ Spec en el backend: se amplió la **051** (`specs/051-whatsapp-confirmado-en-yo/
 * **No cambian**: el orden y los textos de los pasos, el login, la recuperación, el alta con Google, Yo → «WhatsApp» (spec 051, que sigue rechazando solo al confirmar), los cinco tabs. Sin dependencias ni código nativo.
 * **Pruebas:** Jest `registroPorPasosPantalla` (409, 429 y el 409 al crear) y `codigoPorWhatsAppApi` (la consulta; un 404 no bloquea). **Hace falta un APK nuevo** (solo JavaScript) **y el backend de la 051/D-353 antes.**
 
+
+## Decisión del dueño — 2026-11-19 — La Ficha Inicial ya no «detecta» la ubicación: sin «Usar mi ubicación», y departamento, ciudad y distrito los elige la persona (issue #235)
+
+> Pedido del dueño del 19/11, según la issue #235: **quitar el botón «Usar mi ubicación» de la ficha, no arreglarlo.**
+
+Por qué: el botón **nunca usaba el GPS en el teléfono** (`navigator.geolocation` no existe en React Native; solo funcionaba en la web) y caía siempre en la IP, que da la
+ciudad del proveedor de internet (con datos móviles suele salir Lima aunque la persona esté en Arequipa) y ponía la ciudad como distrito. Si `ipapi.co` no respondía en 2 s,
+rellenaba **lugares fijos inventados** como si se hubieran detectado (Cayma, Equipetrol, Chapinero, Cuauhtémoc, Malasaña, Brickell). Y la ficha rellenaba sola, al abrirse,
+departamento, ciudad y distrito con eso. Toca la Ficha Inicial (onboarding), no los cinco tabs. Lo que cambia y nada más:
+* **Se quitó el botón «Usar mi ubicación»** (`LocationCascadePicker`) con todo su código: `handleUseCurrentGPS`, `fallbackIPDetection`, el estado de espera, sus textos y sus
+  estilos. Arriba de las cuatro filas queda solo el rótulo «Ubicación geográfica» (sin hueco). También se borró `reverseGeocodeGPS`, que nadie más usaba.
+* **La detección dice solo el país** (`LocationService.detectUserLocation`): país (con el nombre de la lista de la app, en español), ISO, bandera y prefijo, por IP (solo el
+  código de país) o, si falla, por la zona horaria. Nunca departamento, ciudad ni distrito y **sin lugares de reserva**. Si no se sabe ni el país, devuelve `null` y no se rellena
+  nada (antes, sin zona conocida, respondía Perú).
+* **Al abrir los pasos del WhatsApp y de «¿Dónde vives?»** (`useCompletarUbicacion`) la ficha completa **solo país y prefijo, y solo si faltan**. Además, la respuesta que llega
+  tarde se completa sobre lo último que escribió la persona (antes podía borrar el número recién tecleado).
+* **Departamento, ciudad y distrito empiezan vacíos.** Los datos iniciales de la ficha y el paso traían de fábrica «Lima / Lima Metropolitana / Miraflores» (se guardaban si la persona
+  no tocaba nada), y el selector mostraba como elegido el primero de cada lista. Ahora las filas dicen **«Seleccionar»**. Tocar «ciudad» o «distrito» sin el nivel de arriba abre
+  la hoja de ese nivel (departamento, luego ciudad): nunca una lista vacía ni armada con un departamento supuesto.
+* **La cascada vacía los niveles de abajo** (mismo pedido, el mismo 19/11: no poner un lugar que la persona no eligió). Elegir un país, un departamento o una ciudad **distinto** del que había
+  deja en «Seleccionar» los niveles de abajo (antes ponía el primero de cada lista, por ejemplo un distrito que nadie eligió); así «Ciudad requerida» / «Distrito requerido» obligan a elegirlos
+  de verdad. **Volver a elegir el mismo valor no borra** lo de abajo. El buscador de Google sigue llenando todo al elegir un resultado, y «Usar …» solo pone el distrito.
+* **Regla nueva (no existía): el paso «¿Dónde vives?» pide ciudad y distrito** antes de seguir, diciendo qué falta («Ciudad requerida» / «Distrito requerido», con
+  `validarPaso`; `validarCapitulo` devuelve a ese paso un borrador que quedó sin ellos). Antes el paso no tenía campos obligatorios porque siempre llegaba relleno. El departamento
+  no se pide: no se guarda en el servidor (`mapaPreguntas`: el catálogo solo tiene `city` y `district`).
+* **Guarda nueva:** `sinGeolocalizacionDelNavegador` frena `navigator.geolocation` en todo `.ts` / `.tsx` de `src/` que no sea `.web.ts` / `.web.tsx`; el mensaje manda usar `expo-location`.
+* **No cambian:** las listas de cada nivel, el buscador de Google Places y su atribución, «Usar …» con lo escrito, la dirección, los cinco tabs. Sin dependencias, sin código nativo y sin
+  cambios de backend.
+* **Pruebas:** Jest `ubicacionSinBotonNiSupuestos` (sin botón, «Seleccionar», la cascada en orden, los niveles de abajo vacíos al elegir uno de arriba y sin borrar si es el mismo valor), `ubicacionAlAbrir` (solo país y prefijo, sin pisar, sin lugar de ejemplo),
+  `detectarPaisSinInventarLugares` (solo país, `null` sin país, ni un nombre fijo en el código), `sinGeolocalizacionDelNavegador` (la guarda) y `pasosFicha` / `fichaPasoAPaso` (la validación nueva).
+  Ninguna lleva marca `// spec NNN FR-NNN`: la spec 026 no tiene un FR de la ubicación de la ficha estándar (el texto que se propone para ella va aparte).
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). No hace falta backend.
