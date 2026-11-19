@@ -36,6 +36,7 @@
     "expo-status-bar": "~57.0.1",
     "expo-task-manager": "57.0.21",
     "expo-thinking-orbs": "^0.2.1",
+    "expo-updates": "~57.0.28",
     "expo-web-browser": "~57.0.2",
     "react": "19.2.3",
     "react-dom": "19.2.3",

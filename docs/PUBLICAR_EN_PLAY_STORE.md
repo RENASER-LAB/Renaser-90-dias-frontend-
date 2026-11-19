@@ -180,3 +180,13 @@ Verificación que sí sirve, sobre el archivo y no sobre el log:
 `aapt2 dump badging renaser.apk | head -1` (paquete y versión) y
 `unzip -p renaser.apk assets/index.android.bundle | grep -ao "https://[a-z0-9]*\.cloudfront\.net"`
 (la URL de la API incrustada).
+
+---
+
+## Actualizaciones por internet (EAS Update)
+
+Desde el AAB 136 y el próximo IPA, lo que cambia solo en el código de la app (TypeScript) llega sin tienda. Lo nativo (plugins, permisos, `app.json`, dependencias nativas, parches de `postinstall`) sigue pidiendo AAB/IPA nuevo: cambia el *fingerprint* y el update no llega a los binarios viejos. Las versiones anteriores al 136 no reciben nada.
+
+- Publicar: `EXPO_PUBLIC_API_URL=https://djbooeq09skac.cloudfront.net EXPO_PUBLIC_MAPA_DIA7=on npx eas-cli update --channel production --environment production --message "…"` (las `EXPO_PUBLIC_*` del perfil `production` de `eas.json` no se aplican solas a `eas update`: sin ellas el bundle saldría sin la URL de la API).
+- Las claves de Maps (`GOOGLE_MAPS_*_KEY`) entran en el fingerprint vía `app.config.js`: `--environment production` las trae de EAS; sin ellas el update no coincidiría con el binario.
+- La app abre con lo que tiene y aplica el update en la siguiente apertura. Canales: `production`, `preview`, `development` (uno por perfil).

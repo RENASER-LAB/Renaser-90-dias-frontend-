@@ -9,7 +9,8 @@
       "distribution": "internal",
       "android": {
         "buildType": "apk"
-      }
+      },
+      "channel": "development"
     },
     "debug-pasos": {
       "distribution": "internal",
@@ -27,7 +28,8 @@
       "env": {
         "EXPO_PUBLIC_API_URL": "https://djbooeq09skac.cloudfront.net",
         "EXPO_PUBLIC_MAPA_DIA7": "on"
-      }
+      },
+      "channel": "preview"
     },
     "production": {
       "autoIncrement": true,
@@ -37,7 +39,8 @@
       "env": {
         "EXPO_PUBLIC_API_URL": "https://djbooeq09skac.cloudfront.net",
         "EXPO_PUBLIC_MAPA_DIA7": "on"
-      }
+      },
+      "channel": "production"
     },
     "ios-simulador": {
       "distribution": "internal",

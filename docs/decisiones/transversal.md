@@ -950,3 +950,17 @@ Reporte del dueño en el simulador de iPhone: en el Código Renaser «sobresale 
 * Las ventanas `Modal` que usan `SafeAreaView` se abren con `ModalConZonaSegura` (`src/components/ModalConZonaSegura.tsx`), que les pone su propio `SafeAreaProvider`. En iOS un `Modal` es una ventana nativa aparte y el proveedor de la raíz no llega ahí. Son el Código Renaser, el registro con foto, la nueva publicación, SER y las dos de Comunidad.
 * **No cambian** el contenido de las ventanas, los cinco tabs ni Android: allí la ventana ya recibía los márgenes.
 * **Pruebas:** la guarda `modalesConZonaSegura.test.ts` exige el componente compartido. Hace falta un build nuevo de iOS para verlo en iPhone.
+
+## Cambio por pedido del dueño — 2026-11-19 — Actualizaciones por internet con EAS Update (issue #244)
+
+Pedido del dueño: «procede con ese cambio de expo updates». Lo que cambia y nada más:
+
+* La app trae `expo-updates` (`~57.0.28`). Lo que es solo código de la app (TypeScript) puede llegar a los teléfonos sin un AAB ni un IPA nuevo.
+* `app.json`: `updates.url` (`https://u.expo.dev/<projectId>`), `checkAutomatically: ON_LOAD`, `fallbackToCacheTimeout: 0` (la app abre al toque con lo que tiene y aplica el update en la siguiente apertura) y `runtimeVersion` con la política `fingerprint` (un update nunca llega a un binario con otro código nativo).
+* `eas.json`: un `channel` por perfil: `production` → «production», `preview` → «preview», `development` → «development».
+* **Solo aplica desde el AAB 136 y el próximo IPA**: las versiones ya instaladas no traen `expo-updates` y no reciben nada.
+* **Lo nativo sigue necesitando build**: plugins, permisos, `app.json`, dependencias nativas y los parches de `postinstall` a módulos nativos cambian el fingerprint; ese cambio no llega por update.
+* Cómo se publica: `docs/PUBLICAR_EN_PLAY_STORE.md`, sección «Actualizaciones por internet (EAS Update)».
+* **No cambian** los cinco tabs ni ninguna pantalla.
+* **Pruebas:** `src/__tests__/reglas/easUpdateConfigurado.test.ts`. El update real en un teléfono se verifica después del AAB 136.
+
