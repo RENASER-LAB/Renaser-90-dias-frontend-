@@ -19,11 +19,13 @@ export interface GooglePlaceResult {
   distrito: string;
 }
 
+/**
+ * Lo único que se sabe de dónde está la persona sin pedirle permiso: su PAÍS (con su ISO, su
+ * bandera y su prefijo telefónico). Nunca departamento, ciudad ni distrito: la IP da la ciudad del
+ * proveedor de internet y no la de la persona (issue #235, decisión del dueño del 2026-11-19).
+ */
 export interface DetectedLocation {
   pais: string;
-  departamento: string;
-  ciudad: string;
-  distrito: string;
   codigoPais: string;
   iso: string;
   flag: string;
@@ -362,6 +364,24 @@ const INSTANT_DISTRICTS_MAP: Record<string, string[]> = {
   ],
 };
 
+/** El país de la lista de la app (nombre en español, bandera y prefijo) para un código ISO, o `null`. */
+function paisPorIso(iso: string | null | undefined): DetectedLocation | null {
+  const clave = (iso ?? '').trim().toUpperCase();
+  const pais = ALL_WORLD_PHONE_COUNTRIES.find(p => p.iso === clave);
+  return pais ? { pais: pais.name, codigoPais: pais.code, iso: pais.iso, flag: pais.flag } : null;
+}
+
+/** Solo las zonas horarias que apuntan a un país con certeza; el resto no dice nada. */
+function isoPorZonaHoraria(zona: string): string | null {
+  if (zona.includes('Lima')) return 'PE';
+  if (zona.includes('La_Paz')) return 'BO';
+  if (zona.includes('Bogota')) return 'CO';
+  if (zona.includes('Mexico')) return 'MX';
+  if (zona.includes('Madrid')) return 'ES';
+  if (zona.includes('New_York') || zona.includes('Los_Angeles') || zona.includes('Chicago')) return 'US';
+  return null;
+}
+
 // In-memory search cache for Google Places predictions
 const searchCache = new Map<string, GooglePlaceResult[]>();
 
@@ -451,156 +471,32 @@ export class LocationService {
   }
 
   /**
-   * Detect User Location & Country automatically (WhatsApp / Instagram style via Timezone & IP)
+   * El país de la persona y nada más: por IP (`ipapi.co`, solo el código de país) o, si eso falla,
+   * por la zona horaria del teléfono. Devuelve `null` si no se sabe ni el país: quien llama no
+   * rellena nada. Nunca devuelve departamento, ciudad ni distrito, y no hay lugares «de reserva»
+   * (antes, sin respuesta, salían lugares fijos como si se hubieran detectado; issue #235). Dónde
+   * vive de verdad, la persona lo elige.
    */
-  static async detectUserLocation(): Promise<DetectedLocation> {
-    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
-    let defaultLocation: DetectedLocation = {
-      pais: 'Perú',
-      departamento: 'Arequipa',
-      ciudad: 'Arequipa',
-      distrito: 'Cayma',
-      codigoPais: '+51',
-      iso: 'PE',
-      flag: '🇵🇪',
-    };
-
-    if (tz.includes('La_Paz')) {
-      defaultLocation = {
-        pais: 'Bolivia',
-        departamento: 'Santa Cruz',
-        ciudad: 'Santa Cruz de la Sierra',
-        distrito: 'Equipetrol / Barrio Sirari',
-        codigoPais: '+591',
-        iso: 'BO',
-        flag: '🇧🇴',
-      };
-    } else if (tz.includes('Bogota')) {
-      defaultLocation = {
-        pais: 'Colombia',
-        departamento: 'Bogotá D.C.',
-        ciudad: 'Bogotá',
-        distrito: 'Chapinero',
-        codigoPais: '+57',
-        iso: 'CO',
-        flag: '🇨🇴',
-      };
-    } else if (tz.includes('Mexico')) {
-      defaultLocation = {
-        pais: 'México',
-        departamento: 'Ciudad de México (CDMX)',
-        ciudad: 'CDMX',
-        distrito: 'Cuauhtémoc',
-        codigoPais: '+52',
-        iso: 'MX',
-        flag: '🇲🇽',
-      };
-    } else if (tz.includes('Madrid')) {
-      defaultLocation = {
-        pais: 'España',
-        departamento: 'Madrid',
-        ciudad: 'Madrid Capital',
-        distrito: 'Centro / Sol / Malasaña',
-        codigoPais: '+34',
-        iso: 'ES',
-        flag: '🇪🇸',
-      };
-    } else if (tz.includes('New_York') || tz.includes('Los_Angeles') || tz.includes('Chicago')) {
-      defaultLocation = {
-        pais: 'Estados Unidos',
-        departamento: 'Florida (Miami, Orlando, Tampa)',
-        ciudad: 'Miami',
-        distrito: 'Brickell',
-        codigoPais: '+1',
-        iso: 'US',
-        flag: '🇺🇸',
-      };
-    }
-
+  static async detectUserLocation(): Promise<DetectedLocation | null> {
     try {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 2000);
-
-      const res = await fetch('https://ipapi.co/json/', { signal: controller.signal });
-      clearTimeout(timeout);
-
-      if (res.ok) {
-        const data = await res.json();
-        if (data.country_name) {
-          return {
-            pais: data.country_name || defaultLocation.pais,
-            departamento: data.region || defaultLocation.departamento,
-            ciudad: data.city || defaultLocation.ciudad,
-            distrito: data.city || defaultLocation.distrito,
-            codigoPais: data.country_calling_code || defaultLocation.codigoPais,
-            iso: data.country_code || defaultLocation.iso,
-            flag: data.country_code
-              ? data.country_code
-                  .toUpperCase()
-                  .replace(/./g, (char: string) => String.fromCodePoint(char.charCodeAt(0) + 127397))
-              : defaultLocation.flag,
-          };
+      try {
+        const res = await fetch('https://ipapi.co/json/', { signal: controller.signal });
+        if (res.ok) {
+          const data = await res.json();
+          const porIp = paisPorIso(data?.country_code);
+          if (porIp) return porIp;
         }
+      } finally {
+        clearTimeout(timeout);
       }
     } catch {
-      // Fallback
+      // Sin red o sin respuesta: se intenta con la zona horaria.
     }
 
-    return defaultLocation;
-  }
-
-  /**
-   * Reverse Geocode GPS Coordinates to Exact District, City, State, Country via Google Geocoding API
-   */
-  static async reverseGeocodeGPS(latitude: number, longitude: number): Promise<GooglePlaceResult | null> {
-    const apiKey = API_CONFIG.GOOGLE_PLACES_API_KEY;
-    if (!apiKey) return null;
-
-    try {
-      const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&language=es&key=${apiKey}`;
-      const res = await fetch(url);
-      if (res.ok) {
-        const json = await res.json();
-        if (json.results && json.results.length > 0) {
-          const first = json.results[0];
-          let distrito = '';
-          let ciudad = '';
-          let departamento = '';
-          let pais = '';
-
-          first.address_components.forEach((comp: any) => {
-            const types: string[] = comp.types || [];
-            if (types.includes('sublocality') || types.includes('sublocality_level_1') || types.includes('neighborhood')) {
-              distrito = comp.long_name;
-            } else if (types.includes('locality')) {
-              ciudad = comp.long_name;
-              if (!distrito) distrito = comp.long_name;
-            } else if (types.includes('administrative_area_level_2')) {
-              if (!ciudad) ciudad = comp.long_name;
-            } else if (types.includes('administrative_area_level_1')) {
-              departamento = comp.long_name;
-            } else if (types.includes('country')) {
-              pais = comp.long_name;
-            }
-          });
-
-          return {
-            placeId: first.place_id,
-            description: first.formatted_address,
-            mainText: distrito || ciudad || first.formatted_address.split(',')[0],
-            secondaryText: `${ciudad ? ciudad + ', ' : ''}${departamento}, ${pais}`,
-            distrito: distrito || ciudad || 'Centro',
-            ciudad: ciudad || departamento || 'Ciudad Principal',
-            departamento: departamento || pais || 'Región',
-            pais: pais || 'Perú',
-          };
-        }
-      }
-    } catch {
-      // Ignore network errors
-    }
-
-    return null;
+    const zona = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+    return paisPorIso(isoPorZonaHoraria(zona));
   }
 
   /**

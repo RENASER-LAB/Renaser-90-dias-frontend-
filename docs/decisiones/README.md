@@ -33,7 +33,7 @@ también en el texto (`grep -n "Plan" docs/decisiones/*.md`). Si dos entradas ch
 | [comunidad.md](comunidad.md) | Comunidad: Muro, chat, Tribu, Eventos, Cursos y Ranking | 28 |
 | [formaciones.md](formaciones.md) | Formaciones (Escuela, Diplomado, Certificación): specs 022–025, 035 y el plazo de cada formación | 8 |
 | [hoy.md](hoy.md) | Hoy: tarjetas, frase del día, semáforo y lo que Hoy muestra | 8 |
-| [ingreso-y-onboarding.md](ingreso-y-onboarding.md) | Login, onboarding, ficha, diagnóstico, términos y el Día 1 | 11 |
+| [ingreso-y-onboarding.md](ingreso-y-onboarding.md) | Login, onboarding, ficha, diagnóstico, términos y el Día 1 | 12 |
 | [kilometros-y-carrera.md](kilometros-y-carrera.md) | Kilómetros diarios: captura, pasos (Health Connect y Salud de Apple) y la carrera con GPS | 10 |
 | [liderazgo-y-administracion.md](liderazgo-y-administracion.md) | Mentor, líder de mentores, Administración, Alquimista y sus fichas | 19 |
 | [pagos.md](pagos.md) | Cronograma de pagos y «Mi ingreso» (spec 032) | 2 |
@@ -50,6 +50,7 @@ también en el texto (`grep -n "Plan" docs/decisiones/*.md`). Si dos entradas ch
 | Fecha | Tabs | Tipo | Entrada | Archivo | Corregida |
 |---|---|---|---|---|---|
 | 2026-11-19 | Training | Cambio | Carrera con GPS: el punto del mapa ya no cae en la casa de al lado (lectura fresca, promedio quieto, círculo de precisión y aviso de ubicación aproximada; spec 042 FR-053 a FR-057, #236) | [kilometros-y-carrera.md](kilometros-y-carrera.md) |  |
+| 2026-11-19 | ninguno | Decisión del dueño | La Ficha Inicial ya no «detecta» la ubicación: sin «Usar mi ubicación», y departamento, ciudad y distrito los elige la persona (issue #235) | [ingreso-y-onboarding.md](ingreso-y-onboarding.md) |  |
 | 2026-11-18 | Yo | Cambio | El rol de líder de mentores rediseñado: Mis mentores con «Por resolver» y cupo, la ficha del mentor y del aprendiz de la 055, grupos que el líder crea y reparte, consultas, reporte y sesión (spec 056) | [liderazgo-y-administracion.md](liderazgo-y-administracion.md) |  |
 | 2026-11-17 | Yo, Comunidad | Cambio | El rol de mentor rediseñado: Mis grupos, Mi grupo, la ficha con la semana y el mes, la evidencia y las notas privadas (spec 055, fase 1) | [liderazgo-y-administracion.md](liderazgo-y-administracion.md) |  |
 | 2026-11-16 | Training | Decisión del dueño | La carrera con GPS también en iPhone, y sin permiso de Face ID | [kilometros-y-carrera.md](kilometros-y-carrera.md) |  |

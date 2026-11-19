@@ -37,6 +37,8 @@ const IDENTIDAD_COMPLETA = {
   numeroDocumento: '72345678',
   fechaNacimiento: '15/06/1995',
   whatsapp: '+51 987654321',
+  ciudad: 'Lima Metropolitana',
+  distrito: 'Miraflores',
 };
 
 describe('Los pasos de la ficha', () => {
@@ -91,9 +93,25 @@ describe('validarPaso: los mismos avisos de antes, en el paso donde vive cada ca
   });
 
   it('los pasos sin campos obligatorios nunca frenan', () => {
-    for (const id of ['familia', 'trabajo', 'ubicacion', 'expectativa', 'temor'] as const) {
+    for (const id of ['familia', 'trabajo', 'expectativa', 'temor'] as const) {
       expect(validarPaso(id, ficha())).toBeNull();
     }
+  });
+
+  // Issue #235 (2026-11-19): la ubicación ya no llega rellena de fábrica (ni con la IP ni con un lugar de ejemplo).
+  // Si la persona no elige su ciudad o su distrito, la ficha se lo dice en vez de guardar un hueco o un valor inventado.
+  it('ubicación: sin ciudad o sin distrito dice qué falta; con los dos, sigue', () => {
+    expect(INITIAL_FICHA_DATA.identidad).toMatchObject({ departamento: '', ciudad: '', distrito: '' });
+    expect(validarPaso('ubicacion', ficha())).toEqual({
+      titulo: 'Ciudad requerida',
+      mensaje: 'Por favor elige el departamento y la ciudad o provincia donde vives.',
+    });
+    expect(validarPaso('ubicacion', ficha({ identidad: { ciudad: 'Arequipa' } }))).toEqual({
+      titulo: 'Distrito requerido',
+      mensaje: 'Por favor elige el distrito o la zona donde vives.',
+    });
+    expect(validarPaso('ubicacion', ficha({ identidad: { ciudad: 'Arequipa', distrito: '  ' } }))?.titulo).toBe('Distrito requerido');
+    expect(validarPaso('ubicacion', ficha({ identidad: { ciudad: 'Arequipa', distrito: 'Cayma' } }))).toBeNull();
   });
 
   it('salud: horas fuera de rango, y la medicación sólo si dijo que sí', () => {
@@ -121,6 +139,14 @@ describe('validarCapitulo: la red antes de guardar', () => {
       aviso: expect.objectContaining({ titulo: 'WhatsApp requerido' }),
     });
     expect(validarCapitulo(0, ficha({ identidad: IDENTIDAD_COMPLETA }))).toBeNull();
+  });
+
+  it('una ficha sin ubicación (borrador viejo o sin elegir) vuelve al paso «¿Dónde vives?» antes de guardar', () => {
+    const sinUbicacion = ficha({ identidad: { ...IDENTIDAD_COMPLETA, ciudad: '', distrito: '' } });
+    expect(validarCapitulo(0, sinUbicacion)).toEqual({
+      indice: PASOS_FICHA.findIndex(p => p.id === 'ubicacion'),
+      aviso: expect.objectContaining({ titulo: 'Ciudad requerida' }),
+    });
   });
 });
 
