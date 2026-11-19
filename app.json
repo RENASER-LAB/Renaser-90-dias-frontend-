@@ -2,12 +2,14 @@
   "expo": {
     "name": "renaser",
     "slug": "renaser",
+    "owner": "renaser-lab",
     "version": "1.8.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
+      "config": { "usesNonExemptEncryption": false },
       "bundleIdentifier": "com.renaser.app"
     },
     "android": {
