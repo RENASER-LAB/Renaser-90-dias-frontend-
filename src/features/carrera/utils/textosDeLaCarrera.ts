@@ -79,6 +79,15 @@ export function cuerpoDeLaNotificacion(duracion: string, ritmoSeg: number | null
   return enPausa ? `${duracion} · ${ritmo}` : ritmo;
 }
 
+/**
+ * La precisión del punto en el mapa (spec 042 FR-055): lo que se ve («Precisión de 18 m») y lo que dice el lector de pantalla
+ * («Precisión de 18 metros»), siempre en metros enteros.
+ */
+export function precisionDelPunto(metros: number): { visible: string; accesible: string } {
+  const m = Math.max(1, Math.round(metros));
+  return { visible: `Precisión de ${m} m`, accesible: `Precisión de ${m} ${m === 1 ? 'metro' : 'metros'}` };
+}
+
 /** La chapita del mapa: «Km 3 · 0,47 en 2:44». */
 export function chapaDelKm(metros: number, segundosDelKmEnCurso: number): string {
   const km = Math.floor(metros / 1000) + 1;

@@ -9,7 +9,7 @@ import { Presionable } from '../../../components/Presionable';
 import { fuentes } from '../../../theme/fuentes';
 import { useTheme } from '../../../theme/ThemeContext';
 import { useEstadoDelEnvio, useRelojDeLaCarrera } from '../hooks/useCarreraEnVivo';
-import { useCentroDelMapa } from '../servicios/centroDelMapa';
+import { useCentroDelMapa, useDetalleDelCentro } from '../servicios/centroDelMapa';
 import type { EstadoDeLaCarrera, PreferenciasDeLaCarrera } from '../types/carrera.types';
 import {
   alDarPasos,
@@ -21,7 +21,7 @@ import {
   type PosicionDelAvatar,
 } from '../utils/fusionDelAvatar';
 import { rumboEntre } from '../utils/geo';
-import { activoMs, ritmoActualSegPorKm, tramosDe, zancadaEstimada } from '../utils/motorDeCarrera';
+import { activoMs, estaQuieta, ritmoActualSegPorKm, tramosDe, zancadaEstimada } from '../utils/motorDeCarrera';
 import { formatoDuracion, formatoEntero, formatoKm, formatoRitmo, ritmoSegPorKm } from '../utils/ritmoYCalorias';
 import { chapaDelKm, lineaDelEnvio, TEXTOS_DE_LA_CARRERA } from '../utils/textosDeLaCarrera';
 import { MapaDeCarrera } from './MapaDeCarrera';
@@ -76,6 +76,7 @@ export function PantallaCorriendo({
   const enPausa = e.fase === 'pausa' && !detrasDeLaCuenta;
   const ahora = useRelojDeLaCarrera(true);
   const centroDeVista = useCentroDelMapa();
+  const detalleDelCentro = useDetalleDelCentro();
   // Detrás de la cuenta solo se deja ver el mapa: lo demás ocupa su lugar (el mapa no se mueve al terminar) pero no se ve.
   const soloElMapa = detrasDeLaCuenta ? estilos.invisible : null;
   const [pestana, setPestana] = useState<PestanaDeLaCarrera>('mapa');
@@ -116,6 +117,9 @@ export function PantallaCorriendo({
             ruta={e.ruta}
             posicion={avatar.estado.posicion}
             centroDeVista={centroDeVista}
+            precisionM={detalleDelCentro.precisionM}
+            promediado={detalleDelCentro.promediado}
+            quieta={estaQuieta(e, ahora)}
             rumbo={avatar.estado.rumbo}
             duracionMs={avatar.duracionMs}
             figura={persona.figura}
