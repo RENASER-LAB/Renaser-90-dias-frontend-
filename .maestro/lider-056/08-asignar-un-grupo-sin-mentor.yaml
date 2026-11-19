@@ -1,0 +1,35 @@
+# Spec 056 SC-002 y FR-009 (historia 4): resolver un grupo sin mentor desde «Mis mentores» en cuatro toques: «Asignar» de «Por resolver» → «Asignar» de la fila del grupo →
+# elegir el mentor (con su cupo) → «Asignar» (el botón de la hoja es la confirmación). El grupo sale de «Sin mentor» y pasa a «Activos» con ese mentor.
+# Los cuatro toques de abajo son EXACTAMENTE los cuatro `tapOn` marcados (1 a 4); lo demás son comprobaciones.
+# ESTE FLUJO CAMBIA UN DATO: le pone «Mentor Dos E2E» al grupo «Célula Aurora (PRUEBA)». Para repetirlo: `limpiar.sql` (se lo quita).
+# cuenta: LÍDER (e2e-lider@renaser.test). Precondición: «Célula Aurora (PRUEBA)» sin mentor y «Mentor Dos E2E» con cupo libre.
+# spec 056 FR-009, SC-002
+# corrido: 2026-11-18
+appId: com.renaser.app
+---
+- runFlow: ../comun/abrir-mis-mentores.yaml
+- extendedWaitUntil:
+    visible: "Por resolver"
+    timeout: 30000
+# Toque 1: «Asignar» de la fila «N grupos sin mentor».
+- tapOn: "Asignar"
+- extendedWaitUntil:
+    visible: "Asignar mentor a Célula Aurora \\(PRUEBA\\)"
+    timeout: 30000
+# Toque 2: «Asignar» de la fila del grupo.
+- tapOn: "Asignar mentor a Célula Aurora \\(PRUEBA\\)"
+- extendedWaitUntil:
+    visible: "Mentor Dos E2E. Cupo \\d+ de \\d+"
+    timeout: 20000
+- takeScreenshot: L08a-elegir-mentor
+# Toque 3: el mentor, con su cupo a la vista.
+- tapOn: "Mentor Dos E2E. Cupo \\d+ de \\d+"
+# Toque 4: la confirmación (con el mentor elegido, el botón de la hoja dice su nombre).
+- tapOn: "Asignar a Mentor Dos E2E"
+# El grupo ya no está sin mentor: en «Activos» aparece con su nombre.
+- extendedWaitUntil:
+    notVisible: "Asignar mentor a Célula Aurora \\(PRUEBA\\)"
+    timeout: 40000
+- tapOn: "Activos · \\d+"
+- assertVisible: "Abrir el grupo Célula Aurora \\(PRUEBA\\)"
+- takeScreenshot: L08b-el-grupo-ya-tiene-mentor
