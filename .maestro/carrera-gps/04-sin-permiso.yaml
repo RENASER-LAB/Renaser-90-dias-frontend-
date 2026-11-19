@@ -3,11 +3,17 @@
 # y `... ACCESS_COARSE_LOCATION`.
 # cuenta: aprendiz
 # spec 042 FR-039
+# corrido: 2026-11-19
 appId: com.renaser.app
 ---
 - runFlow: ../comun/ya-adentro.yaml
 - runFlow: ../comun/abrir-training.yaml
-- tapOn: "Correr con GPS"
+# «Kilómetros diarios» puede quedar abajo (en «Se te pasó la hora» según la hora): se baja hasta el botón.
+- scrollUntilVisible:
+    element: "Correr con GPS.*"
+    direction: DOWN
+    timeout: 30000
+- tapOn: "Correr con GPS.*"
 - extendedWaitUntil:
     visible: "No permitir|Don’t allow|Don't allow"
     timeout: 10000
@@ -18,4 +24,7 @@ appId: com.renaser.app
 - takeScreenshot: C04-sin-permiso
 - tapOn: "OK|ACEPTAR|Aceptar"
 - assertNotVisible: "Empezar ya"
-- assertVisible: "Kilómetros diarios"
+- scrollUntilVisible:
+    element: "Kilómetros diarios"
+    direction: DOWN
+    timeout: 30000

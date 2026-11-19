@@ -19,8 +19,10 @@ Closes #
 ```
 
 - [ ] `npm run verificar` sale con 0 (parches, tipos, Jest completo y trazabilidad de specs).
-- [ ] Si se ve en la app: `npm run verificar -- --e2e` (Maestro) y los casos de la spec con mobile-mcp, con capturas.
-      Nunca contra producción. Un flujo «escrito y sin correr» no cuenta como evidencia.
+- [ ] Si se ve en la app: los flujos de Maestro de lo tocado y de lo relacionado (`npm run verificar -- --e2e <flujo…>`)
+      y los casos de la spec con mobile-mcp, con capturas. Nunca contra producción. Un flujo «escrito y sin correr» no
+      cuenta como evidencia.
+- **Flujos de Maestro corridos** (carpeta/flujo → resultado):
 
 ## Estado limpio
 

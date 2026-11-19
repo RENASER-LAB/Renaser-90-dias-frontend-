@@ -1,0 +1,79 @@
+# F01 — «¿Dónde vives?» de la Ficha Inicial (spec 026 FR-045, issue #235): sin «Usar mi ubicación», al cambiar el departamento la
+# ciudad y el distrito vuelven a «Seleccionar», «Siguiente» sin ciudad avisa «Ciudad requerida» y con Perú › Arequipa › Arequipa ›
+# Yanahuara pasa al paso 8.
+# Precondición: un aprendiz con el onboarding en la Ficha Inicial (`estado_onboarding.paso_actual = 2`) y los pasos 1 a 6 ya
+# respondidos en el servidor (nombre, sexo y fecha, familia, trabajo, documento y WhatsApp), como `e2e-aprendiz@renaser.test` de la
+# base clonada. Se corre con E2E_APRENDIZ_EMAIL apuntando a esa cuenta. El flujo no envía el capítulo: la ficha queda igual.
+# cuenta: aprendiz
+# spec 026 FR-045
+# corrido: 2026-11-19
+appId: com.renaser.app
+---
+- runFlow:
+    when:
+      visible: "Allow|Permitir"
+    commands:
+      - tapOn: "Allow|Permitir"
+- extendedWaitUntil:
+    visible: "Paso 1 de .*"
+    timeout: 30000
+- runFlow:
+    when:
+      visible: "Allow|Permitir"
+    commands:
+      - tapOn: "Allow|Permitir"
+# Pasos 1 a 6 ya respondidos: se avanza con «Siguiente».
+- tapOn: "Siguiente"
+- extendedWaitUntil:
+    visible: "Paso 2 de .*"
+    timeout: 15000
+- tapOn: "Siguiente"
+- extendedWaitUntil:
+    visible: "Paso 3 de .*"
+    timeout: 15000
+- tapOn: "Siguiente"
+- extendedWaitUntil:
+    visible: "Paso 4 de .*"
+    timeout: 15000
+- tapOn: "Siguiente"
+- extendedWaitUntil:
+    visible: "Paso 5 de .*"
+    timeout: 15000
+- tapOn: "Siguiente"
+- extendedWaitUntil:
+    visible: "Paso 6 de .*"
+    timeout: 15000
+- tapOn: "Siguiente"
+- extendedWaitUntil:
+    visible: "¿Dónde vives\\?"
+    timeout: 15000
+# Sin botón para «detectar» la ubicación.
+- assertNotVisible: "(?i).*usar mi ubicaci.*"
+# Elegir un departamento deja ciudad y distrito por elegir.
+- tapOn: "depto / estado: .*"
+- tapOn: "Arequipa"
+- assertVisible: "depto / estado: Arequipa"
+- assertVisible: "ciudad / provincia: Seleccionar"
+- assertVisible: "distrito / zona: Seleccionar"
+- takeScreenshot: F01a-niveles-vacios
+# Sin ciudad no avanza y dice qué falta.
+- tapOn: "Siguiente"
+- assertVisible: "Ciudad requerida"
+- takeScreenshot: F01b-ciudad-requerida
+- tapOn: "OK|ACEPTAR|Aceptar|Entendido"
+- assertVisible: "¿Dónde vives\\?"
+# Con ciudad y distrito, pasa al paso 8.
+- tapOn: "ciudad / provincia: .*"
+- tapOn: "Arequipa"
+- assertVisible: "ciudad / provincia: Arequipa"
+- tapOn: "distrito / zona: .*"
+- extendedWaitUntil:
+    visible: "Distritos de Arequipa"
+    timeout: 10000
+- tapOn: "Yanahuara"
+- assertVisible: "distrito / zona: Yanahuara"
+- tapOn: "Siguiente"
+- extendedWaitUntil:
+    visible: "Paso 8 de .*"
+    timeout: 15000
+- takeScreenshot: F01c-paso-8
