@@ -37,6 +37,17 @@ describe('la Política de Privacidad publicada', () => {
     }
   });
 
+  it('dice qué lee de Salud de Apple en iPhone (HealthKit, App Store 5.1.3) y que no lo usa para publicidad', () => {
+    expect(texto).toContain('Salud de Apple');
+    expect(texto).toContain('HealthKit');
+    expect(texto).toMatch(/total de pasos y de distancia de cada día/);
+    expect(texto).toMatch(/no usamos esos datos para publicidad/);
+  });
+
+  it('no promete «usar mi ubicación»: la ficha ya no detecta la ubicación (issue #235)', () => {
+    expect(texto).not.toContain('usar mi ubicación');
+  });
+
   it('no deja marcadores, pendientes ni datos de ejemplo', () => {
     expect(HTML).not.toMatch(/\[\[|\]\]|\[\.\.\.\]|\[…\]|marcador|p\. ej\./i);
     expect(HTML).not.toMatch(/\bTODO\b|PENDIENTE|XXX/);
