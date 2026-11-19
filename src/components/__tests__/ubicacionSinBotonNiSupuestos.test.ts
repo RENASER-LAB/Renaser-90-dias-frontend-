@@ -30,6 +30,7 @@ jest.mock('../../utils/tacto', () => ({
 }));
 
 import { LocationCascadePicker, type LocationData } from '../LocationCascadePicker';
+import { LocationService } from '../../services/locationService';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -37,9 +38,9 @@ let raiz: ReactTestRenderer | null = null;
 
 const SIN_ELEGIR: LocationData = { pais: 'Perú', departamento: '', ciudad: '', distrito: '', direccion: '' };
 
-function montar(data: LocationData): ReactTestRenderer {
+function montar(data: LocationData, onChange: (data: LocationData) => void = () => undefined): ReactTestRenderer {
   act(() => {
-    raiz = TestRenderer.create(React.createElement(LocationCascadePicker, { data, onChange: () => undefined }));
+    raiz = TestRenderer.create(React.createElement(LocationCascadePicker, { data, onChange }));
   });
   return raiz!;
 }
@@ -126,6 +127,64 @@ describe('La cascada se recorre en orden cuando falta un nivel (#235)', () => {
     await tocar(r, 'distrito / zona: Seleccionar');
     expect(textos(r)).toContain('Distritos de Arequipa');
     expect(textos(r)).toContain('Cayma');
+  });
+});
+
+describe('Elegir un nivel vacía los de abajo, no los llena con el primero de la lista (#235)', () => {
+  const COMPLETA: LocationData = { pais: 'Perú', departamento: 'Cusco', ciudad: 'Cusco', distrito: 'Wanchaq', direccion: 'Av. El Sol 123' };
+
+  async function elegir(data: LocationData, fila: string, opcion: string): Promise<LocationData[]> {
+    const onChange = jest.fn<(data: LocationData) => void>();
+    const r = montar(data, onChange);
+    await tocar(r, fila);
+    await tocar(r, opcion);
+    act(() => r.unmount());
+    raiz = null;
+    return onChange.mock.calls.map(c => c[0]);
+  }
+
+  it('otro país: departamento, ciudad y distrito quedan vacíos (la dirección escrita se conserva)', async () => {
+    expect(await elegir(COMPLETA, 'país: Perú', 'Bolivia')).toEqual([
+      { pais: 'Bolivia', departamento: '', ciudad: '', distrito: '', direccion: 'Av. El Sol 123' },
+    ]);
+  });
+
+  it('otro departamento: ciudad y distrito quedan vacíos', async () => {
+    expect(await elegir(COMPLETA, 'depto / estado: Cusco', 'Arequipa')).toEqual([
+      { ...COMPLETA, departamento: 'Arequipa', ciudad: '', distrito: '' },
+    ]);
+  });
+
+  it('otra ciudad: el distrito queda vacío', async () => {
+    const ciudadDeCusco = LocationService.getCities('Perú', 'Cusco').find(c => c !== 'Cusco')!;
+    expect(await elegir(COMPLETA, 'ciudad / provincia: Cusco', ciudadDeCusco)).toEqual([
+      { ...COMPLETA, ciudad: ciudadDeCusco, distrito: '' },
+    ]);
+  });
+
+  it('volver a elegir el mismo valor no borra lo de abajo', async () => {
+    expect(await elegir(COMPLETA, 'país: Perú', 'Perú')).toEqual([COMPLETA]);
+    expect(await elegir(COMPLETA, 'depto / estado: Cusco', 'Cusco')).toEqual([COMPLETA]);
+    expect(await elegir(COMPLETA, 'ciudad / provincia: Cusco', 'Cusco')).toEqual([COMPLETA]);
+  });
+
+  it('el distrito solo cambia el distrito', async () => {
+    const otroDistrito = LocationService.getDistricts('Cusco', 'Cusco').find(d => d !== 'Wanchaq')!;
+    expect(await elegir(COMPLETA, 'distrito / zona: Wanchaq', otroDistrito)).toEqual([{ ...COMPLETA, distrito: otroDistrito }]);
+  });
+
+  it('tras elegir un departamento, las filas de abajo dicen «Seleccionar» y se eligen en orden', async () => {
+    const cambios: LocationData[] = [];
+    const r = montar(COMPLETA, d => cambios.push(d));
+    await tocar(r, 'depto / estado: Cusco');
+    await tocar(r, 'Arequipa');
+    act(() => r.update(React.createElement(LocationCascadePicker, { data: cambios[0], onChange: d => cambios.push(d) })));
+
+    expect(etiquetas(r)).toEqual(
+      expect.arrayContaining(['depto / estado: Arequipa', 'ciudad / provincia: Seleccionar', 'distrito / zona: Seleccionar']),
+    );
+    await tocar(r, 'distrito / zona: Seleccionar');
+    expect(textos(r)).toContain('Provincia / Ciudad');
   });
 });
 

@@ -52,16 +52,17 @@ const prefijoDeItem = (item: ListItem) => item.prefijo;
  * lista agrupada (como los ajustes del teléfono) y cada una abre una hoja desde abajo con buscador
  * (sin tildes), la lista virtualizada y lo elegido marcado con ✓.
  *
- * **Qué no cambió (el contrato).** La cascada es la misma: elegir un país pone su primer
- * departamento, ciudad y distrito; elegir un departamento, su primera ciudad y distrito; y así. La
- * búsqueda en Google Places del distrito, la opción «Usar …» con lo escrito y la dirección guardan
- * lo mismo que antes.
+ * **Qué no cambió (el contrato).** Los cuatro niveles y sus listas son los mismos. La búsqueda en
+ * Google Places del distrito, la opción «Usar …» con lo escrito y la dirección guardan lo mismo que
+ * antes. (Lo que sí cambió, 2026-11-19: elegir un nivel ya no pone el primero de cada lista de
+ * abajo; ver abajo.)
  *
  * **Sin «Usar mi ubicación» (2026-11-19, issue #235).** El botón nunca usaba el GPS en el celular
  * (`navigator.geolocation` no existe en React Native) y caía en la IP, que da la ciudad del
  * proveedor de internet, con valores fijos inventados si no respondía. Se quitó por pedido del
  * dueño: la persona elige su ubicación. Y mientras no elige, los niveles quedan vacíos
- * («Seleccionar»): ya no se muestra como elegido el primero de cada lista.
+ * («Seleccionar»): ya no se muestra como elegido el primero de cada lista, y elegir un país, un
+ * departamento o una ciudad distinto del anterior vacía los niveles de abajo.
  *
  * **Atribución de Google.** Las sugerencias de Places se muestran sin un mapa de Google, y su
  * política pide entonces la atribución «Powered by Google» junto a ellas. Antes faltaba.
@@ -201,33 +202,28 @@ export function LocationCascadePicker({ data, onChange, error }: LocationCascade
     [activeModal, currentCountry, data.ciudad, data.departamento, data.distrito],
   );
 
-  /** La cascada de siempre: elegir un nivel pone el primero de cada nivel de abajo. */
+  /**
+   * La cascada: elegir un país, un departamento o una ciudad DISTINTO del que había deja VACÍOS los niveles de abajo
+   * («Seleccionar»): la persona los elige de verdad, no se le pone el primero de cada lista (2026-11-19, issue #235).
+   * Volver a elegir el mismo valor no borra nada de lo de abajo.
+   */
   const elegirItem = useCallback(
     (item: ListItem) => {
       if (activeModal === 'pais') {
-        const newStates = LocationService.getStates(item.value);
-        const firstState = newStates[0] || '';
-        const newCities = LocationService.getCities(item.value, firstState);
-        const firstCity = newCities[0] || '';
-        const newDistricts = LocationService.getDistricts(firstCity, firstState);
-        const firstDistrict = newDistricts[0] || '';
-        onChange({ ...data, pais: item.value, departamento: firstState, ciudad: firstCity, distrito: firstDistrict });
+        const igual = normalize(data.pais) === normalize(item.value);
+        onChange(igual ? { ...data, pais: item.value } : { ...data, pais: item.value, departamento: '', ciudad: '', distrito: '' });
       } else if (activeModal === 'departamento') {
-        const newCities = LocationService.getCities(currentCountry, item.value);
-        const firstCity = newCities[0] || '';
-        const newDistricts = LocationService.getDistricts(firstCity, item.value);
-        const firstDistrict = newDistricts[0] || '';
-        onChange({ ...data, departamento: item.value, ciudad: firstCity, distrito: firstDistrict });
+        const igual = data.departamento === item.value;
+        onChange(igual ? { ...data } : { ...data, departamento: item.value, ciudad: '', distrito: '' });
       } else if (activeModal === 'ciudad') {
-        const newDistricts = LocationService.getDistricts(item.value, currentDept);
-        const firstDistrict = newDistricts[0] || '';
-        onChange({ ...data, ciudad: item.value, distrito: firstDistrict });
+        const igual = data.ciudad === item.value;
+        onChange(igual ? { ...data } : { ...data, ciudad: item.value, distrito: '' });
       } else if (activeModal === 'distrito') {
         onChange({ ...data, distrito: item.value });
       }
       cerrarHoja();
     },
-    [activeModal, cerrarHoja, currentCountry, currentDept, data, onChange],
+    [activeModal, cerrarHoja, data, onChange],
   );
 
   const escrito = searchQuery.trim();

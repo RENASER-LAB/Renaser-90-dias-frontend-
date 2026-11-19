@@ -192,7 +192,7 @@ describe('Código de país del WhatsApp en una hoja con buscador', () => {
 describe('Ubicación en filas que abren una hoja', () => {
   const ubicacion: LocationData = { pais: 'Perú', departamento: 'Lima', ciudad: 'Lima Metropolitana', distrito: 'Miraflores', direccion: '' };
 
-  it('elegir un departamento mantiene la cascada de siempre (su primera ciudad y su primer distrito)', async () => {
+  it('elegir un departamento distinto vacía su ciudad y su distrito (issue #235: no se pone el primero de la lista)', async () => {
     const onChange = jest.fn<(data: LocationData) => void>();
     const r = montar(React.createElement(LocationCascadePicker, { data: ubicacion, onChange }));
 
@@ -200,9 +200,7 @@ describe('Ubicación en filas que abren una hoja', () => {
     expect(tocable(r, 'Lima').props.accessibilityState).toEqual({ selected: true });
     await tocar(r, 'Arequipa');
 
-    const ciudad = LocationService.getCities('Perú', 'Arequipa')[0];
-    const distrito = LocationService.getDistricts(ciudad, 'Arequipa')[0];
-    expect(onChange).toHaveBeenCalledWith({ ...ubicacion, departamento: 'Arequipa', ciudad, distrito });
+    expect(onChange).toHaveBeenCalledWith({ ...ubicacion, departamento: 'Arequipa', ciudad: '', distrito: '' });
     expect(hojaAbierta(r)).toBe(false);
   });
 

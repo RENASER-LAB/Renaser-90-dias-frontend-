@@ -675,14 +675,16 @@ departamento, ciudad y distrito con eso. Toca la Ficha Inicial (onboarding), no 
 * **Departamento, ciudad y distrito empiezan vacíos.** Los datos iniciales de la ficha y el paso traían de fábrica «Lima / Lima Metropolitana / Miraflores» (se guardaban si la persona
   no tocaba nada), y el selector mostraba como elegido el primero de cada lista. Ahora las filas dicen **«Seleccionar»**. Tocar «ciudad» o «distrito» sin el nivel de arriba abre
   la hoja de ese nivel (departamento, luego ciudad): nunca una lista vacía ni armada con un departamento supuesto.
+* **La cascada vacía los niveles de abajo** (mismo pedido, el mismo 19/11: no poner un lugar que la persona no eligió). Elegir un país, un departamento o una ciudad **distinto** del que había
+  deja en «Seleccionar» los niveles de abajo (antes ponía el primero de cada lista, por ejemplo un distrito que nadie eligió); así «Ciudad requerida» / «Distrito requerido» obligan a elegirlos
+  de verdad. **Volver a elegir el mismo valor no borra** lo de abajo. El buscador de Google sigue llenando todo al elegir un resultado, y «Usar …» solo pone el distrito.
 * **Regla nueva (no existía): el paso «¿Dónde vives?» pide ciudad y distrito** antes de seguir, diciendo qué falta («Ciudad requerida» / «Distrito requerido», con
   `validarPaso`; `validarCapitulo` devuelve a ese paso un borrador que quedó sin ellos). Antes el paso no tenía campos obligatorios porque siempre llegaba relleno. El departamento
   no se pide: no se guarda en el servidor (`mapaPreguntas`: el catálogo solo tiene `city` y `district`).
 * **Guarda nueva:** `sinGeolocalizacionDelNavegador` frena `navigator.geolocation` en todo `.ts` / `.tsx` de `src/` que no sea `.web.ts` / `.web.tsx`; el mensaje manda usar `expo-location`.
-* **No cambian:** la lista en cascada (elegir un nivel pone el primero de los de abajo), el buscador de Google Places y su atribución, «Usar …» con lo escrito, la dirección, los cinco
-  tabs. Sin dependencias, sin código nativo y sin cambios de backend. (Sigue en pie, por pedido de dejar la cascada igual: al elegir un país o un departamento a mano, los niveles de
-  abajo quedan con el primero de su lista.)
-* **Pruebas:** Jest `ubicacionSinBotonNiSupuestos` (sin botón, «Seleccionar», la cascada en orden), `ubicacionAlAbrir` (solo país y prefijo, sin pisar, sin lugar de ejemplo),
+* **No cambian:** las listas de cada nivel, el buscador de Google Places y su atribución, «Usar …» con lo escrito, la dirección, los cinco tabs. Sin dependencias, sin código nativo y sin
+  cambios de backend.
+* **Pruebas:** Jest `ubicacionSinBotonNiSupuestos` (sin botón, «Seleccionar», la cascada en orden, los niveles de abajo vacíos al elegir uno de arriba y sin borrar si es el mismo valor), `ubicacionAlAbrir` (solo país y prefijo, sin pisar, sin lugar de ejemplo),
   `detectarPaisSinInventarLugares` (solo país, `null` sin país, ni un nombre fijo en el código), `sinGeolocalizacionDelNavegador` (la guarda) y `pasosFicha` / `fichaPasoAPaso` (la validación nueva).
   Ninguna lleva marca `// spec NNN FR-NNN`: la spec 026 no tiene un FR de la ubicación de la ficha estándar (el texto que se propone para ella va aparte).
 * **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). No hace falta backend.
