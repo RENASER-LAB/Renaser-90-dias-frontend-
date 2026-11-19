@@ -24,6 +24,7 @@ import { rumboEntre } from '../utils/geo';
 import { activoMs, estaQuieta, ritmoActualSegPorKm, tramosDe, zancadaEstimada } from '../utils/motorDeCarrera';
 import { formatoDuracion, formatoEntero, formatoKm, formatoRitmo, ritmoSegPorKm } from '../utils/ritmoYCalorias';
 import { chapaDelKm, lineaDelEnvio, TEXTOS_DE_LA_CARRERA } from '../utils/textosDeLaCarrera';
+import { AvisoDeUbicacionAproximada } from './AvisoDeUbicacionAproximada';
 import { MapaDeCarrera } from './MapaDeCarrera';
 import { BarraDeslizarParaPausar } from './BarraDeslizarParaPausar';
 import { FilaDeTresDatos, PanelEstadisticas, PanelTramos, PanelVoz, PestanasDeLaCarrera, type PestanaDeLaCarrera } from './PanelesDeLaCarrera';
@@ -192,6 +193,7 @@ export function PantallaCorriendo({
         </ScrollView>
       ) : (
         <>
+          <AvisoDeUbicacionAproximada estilo={soloElMapa} />
           <View style={soloElMapa}>
             <PestanasDeLaCarrera valor={pestana} onCambiar={setPestana} />
           </View>

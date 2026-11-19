@@ -45,6 +45,13 @@ export const TEXTOS_DE_LA_CARRERA = {
   sinGpsActivo: 'Activa la ubicación de tu teléfono para empezar la carrera.',
   retomar: 'Tienes una carrera sin terminar',
   mapaSinClave: 'El mapa todavía no está disponible. Tu carrera se cuenta igual.',
+  /** Spec 042 FR-056: el permiso de ubicación está dado, pero solo aproximado. */
+  ubicacionAproximada: 'Tu ubicación es aproximada y el punto puede salir desviado.',
+  abrirAjustes: 'Abrir ajustes',
+  abrirAjustesAccesible: 'Abrir los ajustes de Renaser para activar la ubicación precisa',
+  sinAjustesTitulo: 'No se pudo abrir',
+  sinAjustesAndroid: 'Abre los Ajustes del teléfono, entra a Apps, Renaser, Permisos, Ubicación y activa «Usar ubicación precisa».',
+  sinAjustesIos: 'Abre Ajustes, entra a Renaser, Ubicación y activa «Ubicación exacta».',
   pestanas: { mapa: 'Mapa', estadisticas: 'Estadísticas', tramos: 'Tramos', voz: 'Voz' },
 } as const;
 

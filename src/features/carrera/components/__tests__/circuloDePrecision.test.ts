@@ -39,6 +39,11 @@ jest.mock('../../hooks/useCarreraEnVivo', () => ({
   useCarreraEnVivo: () => null,
   usePreferenciasDeLaCarrera: () => null,
 }));
+// Ver la nota de `pantallasDeLaCarrera.test.ts`: el aviso de ubicación aproximada no se prueba aquí.
+jest.mock('../../servicios/ubicacionAproximada', () => ({
+  useUbicacionAproximada: () => false,
+  abrirAjustesDeLaUbicacion: jest.fn(),
+}));
 
 import { light } from '../../../../theme/tokens';
 import { PREFERENCIAS_POR_DEFECTO } from '../../types/carrera.types';
