@@ -6,6 +6,7 @@ import { MicroLabel } from '../../../components/ui';
 import { fuentes } from '../../../theme/fuentes';
 import { useTheme } from '../../../theme/ThemeContext';
 import type { CargarObjetivos, ObjetivosDeLaPersona } from '../../lider-mentores/types/objetivosDeLaPersona.types';
+import { nombreDelEje } from '../../ochenta-veinte/utils/textosDelOchentaVeinte';
 import { cuantosObjetivos, useObjetivosDeLaFicha } from '../hooks/useObjetivosDeLaFicha';
 
 /**
@@ -49,13 +50,25 @@ export function ObjetivosDeLaFicha({ cargar }: { cargar: CargarObjetivos | null 
             </Grupo>
           ) : null}
           {objetivos.mes ? (
-            <Grupo rotulo="Del mes">
-              <FilaDeObjetivo id="mes" titulo={objetivos.mes.titulo} avance={objetivos.mes.avance} />
+            <Grupo rotulo={objetivos.mes.objetivos?.length ? `Del mes · ${objetivos.mes.titulo}` : 'Del mes'}>
+              {objetivos.mes.objetivos?.length ? (
+                /* Spec 057: un objetivo por eje, con el eje a la derecha. */
+                objetivos.mes.objetivos.map(o => <FilaDeObjetivo key={`mes-${o.eje}`} id={`mes-${o.eje}`} titulo={o.texto} cifra={nombreDelEje(o.eje)} />)
+              ) : (
+                <FilaDeObjetivo id="mes" titulo={objetivos.mes.titulo} avance={objetivos.mes.avance} />
+              )}
             </Grupo>
           ) : null}
           {objetivos.semana ? (
-            <Grupo rotulo="De la semana">
-              <FilaDeObjetivo id="semana" titulo={objetivos.semana.titulo} cifra={`${objetivos.semana.cumplidas} de ${objetivos.semana.planificadas}`} />
+            <Grupo rotulo={objetivos.semana.objetivos?.length ? `De la semana · ${objetivos.semana.titulo}` : 'De la semana'}>
+              {objetivos.semana.objetivos?.map(o => (
+                <FilaDeObjetivo key={`semana-${o.eje}`} id={`semana-${o.eje}`} titulo={o.texto} cifra={nombreDelEje(o.eje)} />
+              ))}
+              <FilaDeObjetivo
+                id="semana"
+                titulo={objetivos.semana.objetivos?.length ? 'Acciones cumplidas' : objetivos.semana.titulo}
+                cifra={`${objetivos.semana.cumplidas} de ${objetivos.semana.planificadas}`}
+              />
             </Grupo>
           ) : null}
         </View>
