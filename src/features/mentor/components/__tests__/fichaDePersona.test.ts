@@ -204,14 +204,14 @@ describe('la ficha abierta por el líder', () => {
 describe('la ficha abierta por el mentor (lo de siempre)', () => {
   const origen = { quien: 'mentor', grupoId: 'g-7' } as const;
 
-  it('lee por sus funciones de carga con el grupo, marca los avisos como leídos y lleva la caja; sin objetivos', async () => { // spec 056 FR-014
+  it('lee por sus funciones de carga con el grupo, marca los avisos como leídos y lleva la caja, y monta los objetivos', async () => { // spec 056 FR-014
     const r = await montar(ficha({ origen }));
     expect(mockUsarSemanas).toHaveBeenCalledWith(expect.any(Function), 'a-1');
     expect(mockUsarAvisos).toHaveBeenCalledWith('a-1');
     expect(mockUsarNotas).toHaveBeenCalledWith({ quien: 'mentor', grupoId: 'g-7', aprendizId: 'a-1' });
     expect(ultimas('HojaDeNotas')?.soloLectura).toBe(false);
     expect(marcas(r)).toContain('SECCION caja');
-    expect(ultimas('Objetivos')?.cargar).toBeNull();
+    expect(ultimas('Objetivos')?.cargar).toEqual(expect.any(Function)); // spec 057 FR-004: la ficha del mentor monta los objetivos
   });
 
   it('sin grupo no hay a quién preguntarle: ninguna función de carga ni notas', async () => { // spec 056 FR-014
@@ -220,6 +220,7 @@ describe('la ficha abierta por el mentor (lo de siempre)', () => {
     expect(mockUsarAvisos).toHaveBeenCalledWith(null);
     expect(mockUsarNotas).toHaveBeenCalledWith(null);
     expect(ultimas('Diagnóstico')?.cargar).toBeNull();
+    expect(ultimas('Objetivos')?.cargar).toBeNull();
   });
 });
 

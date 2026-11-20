@@ -33,6 +33,7 @@ import { AdminScreen, type EntradaDeAdmin } from '../features/admin/screens/Admi
 import { usePanelesDeRol } from '../features/paneles-de-rol/hooks/usePanelesDeRol';
 import { PantallaDelPanelDeRol } from '../features/paneles-de-rol/screens/PantallaDelPanelDeRol';
 import { vistaDeEntradaAlGrupo } from '../features/paneles-de-rol/utils/vistasDeLosPaneles';
+import { hayVariosGrupos } from '../features/mentor/utils/entradaAMisGrupos';
 import { useCapacidades } from '../features/admin/hooks/useCapacidades';
 import { EntradaAlProgramaPropio } from '../features/programa/components/EntradaAlProgramaPropio';
 import { useDiaUnoPorElegir } from '../features/programa/hooks/useDiaUnoPorElegir';
@@ -1057,10 +1058,10 @@ export default function YoScreen() {
               <FilaDeAjuste
                 key="mi-grupo"
                 icono="users"
-                titulo={(paneles.celula.vista?.grupos.length ?? 0) > 1 ? 'Mis grupos' : 'Mi grupo'}
-                detalle={(paneles.celula.vista?.grupos.length ?? 0) > 1 ? 'Tus grupos y aprendices' : 'Tus aprendices'}
-                etiqueta={(paneles.celula.vista?.grupos.length ?? 0) > 1 ? 'Abrir Mis grupos' : 'Abrir Mi grupo'}
-                onPress={() => paneles.ir(vistaDeEntradaAlGrupo(paneles.celula.vista?.grupos.length ?? 0))}
+                titulo={hayVariosGrupos(paneles.celula.vista?.grupos.length ?? 0, paneles.celula.hayAnteriores) ? 'Mis grupos' : 'Mi grupo'}
+                detalle={hayVariosGrupos(paneles.celula.vista?.grupos.length ?? 0, paneles.celula.hayAnteriores) ? 'Tus grupos y aprendices' : 'Tus aprendices'}
+                etiqueta={hayVariosGrupos(paneles.celula.vista?.grupos.length ?? 0, paneles.celula.hayAnteriores) ? 'Abrir Mis grupos' : 'Abrir Mi grupo'}
+                onPress={() => paneles.ir(vistaDeEntradaAlGrupo(paneles.celula.vista?.grupos.length ?? 0, paneles.celula.hayAnteriores))}
               />
             ) : null}
             {paneles.filas.misMentores ? (

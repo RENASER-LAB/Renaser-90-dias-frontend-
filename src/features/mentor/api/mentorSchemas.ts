@@ -247,6 +247,36 @@ export const evaluacionPropiaSchema = z
   .passthrough();
 
 /**
+ * Spec 057 FR-020: `GET /api/v1/mentor/me/groups/history` — los grupos que el mentor ya no acompaña. Tolerante: llega una lista o un
+ * objeto con la lista adentro; lo que falta es «sin dato» (nunca un 0 inventado) y un tramo sin nombre ni período no se dibuja.
+ * `personas` no lleva ids a propósito (FR-021): la sección es de solo lectura.
+ */
+export const grupoAnteriorSchema = z
+  .object({
+    grupoId: z.string().nullish(),
+    nombre: z.string().nullish(),
+    desde: z.string().nullish(),
+    hasta: z.string().nullish(),
+    aprendices: z.number().nullish(),
+    puestoFinal: z.object({ posicion: z.number(), total: z.number() }).passthrough().nullish(),
+    colorFinal: z.string().nullish(),
+    porcentajeFinal: z.number().nullish(),
+    personas: z.array(z.object({ nombre: z.string().nullish(), colorFinal: z.string().nullish() }).passthrough()).nullish(),
+  })
+  .passthrough();
+
+export const historialDeGruposSchema = z.union([
+  z.array(grupoAnteriorSchema),
+  z
+    .object({
+      grupos: z.array(grupoAnteriorSchema).nullish(),
+      tramos: z.array(grupoAnteriorSchema).nullish(),
+      anteriores: z.array(grupoAnteriorSchema).nullish(),
+    })
+    .passthrough(),
+]);
+
+/**
  * `RankingDeGrupos` — `GET /api/v1/ranking/groups`.
  *
  * `posicion` puede repetirse: los empates la comparten (P-08). `porcentaje` es `null` en los
@@ -304,6 +334,7 @@ export type ObligacionDiaApi = DiaAlumnoApi['obligaciones'][number];
 export type EvaluacionPropiaApi = z.infer<typeof evaluacionPropiaSchema>;
 export type QuienBajaApi = NonNullable<EvaluacionPropiaApi['quienBaja']>[number];
 export type AccionDeLaEvaluacionApi = NonNullable<EvaluacionPropiaApi['acciones']>[number];
+export type GrupoAnteriorApi = z.infer<typeof grupoAnteriorSchema>;
 export type RankingGruposApi = z.infer<typeof rankingGruposSchema>;
 export type AsignacionMentorApi = ContextoMentorApi['assignments'][number];
 export type AprendicesGrupoApi = z.infer<typeof aprendicesGrupoSchema>;

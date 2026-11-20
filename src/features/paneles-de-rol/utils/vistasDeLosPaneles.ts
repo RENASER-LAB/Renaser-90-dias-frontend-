@@ -27,9 +27,9 @@ export type VistaDelPanel =
 
 export const SIN_VISTA: VistaDelPanel = { tipo: 'ninguna' };
 
-/** Spec 055 FR-001 y FR-002: la vista a la que entra la fila de Yo — «Mis grupos» con dos o más grupos, «Mi grupo» con uno. */
-export function vistaDeEntradaAlGrupo(cantidadDeGrupos: number): VistaDelPanel {
-  return entradaAMisGrupos(cantidadDeGrupos) === 'misGrupos' ? { tipo: 'misGrupos' } : { tipo: 'miGrupo', enfocarSemaforo: false };
+/** Spec 055 FR-001 y FR-002: la vista a la que entra la fila de Yo — «Mis grupos» con dos o más grupos (o con uno y grupos anteriores, spec 057 FR-022), «Mi grupo» con uno. */
+export function vistaDeEntradaAlGrupo(cantidadDeGrupos: number, hayAnteriores = false): VistaDelPanel {
+  return entradaAMisGrupos(cantidadDeGrupos, hayAnteriores) === 'misGrupos' ? { tipo: 'misGrupos' } : { tipo: 'miGrupo', enfocarSemaforo: false };
 }
 
 /**

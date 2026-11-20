@@ -99,7 +99,7 @@ describe('Yo: una fila por panel de rol, junto a Administración', () => {
 
   it('tocar una fila abre el panel: «Mi grupo» → `miGrupo` sin enfocar el semáforo, «Mis mentores» → `misMentores`', () => {
     /* Spec 055: con dos o más grupos la fila entra a «Mis grupos»; con uno, directo a `miGrupo` sin enfocar el semáforo (`vistaDeEntradaAlGrupo`). */
-    expect(YO).toContain('onPress={() => paneles.ir(vistaDeEntradaAlGrupo(paneles.celula.vista?.grupos.length ?? 0))}');
+    expect(YO).toContain('onPress={() => paneles.ir(vistaDeEntradaAlGrupo(paneles.celula.vista?.grupos.length ?? 0, paneles.celula.hayAnteriores))}');
     expect(YO).toContain("onPress={() => paneles.ir({ tipo: 'misMentores' })}");
   });
 
@@ -154,7 +154,7 @@ describe('el hook de los paneles', () => {
 
 describe('la pantalla del panel', () => {
   it('«Mi grupo» abre `MiCelulaScreen` con la cabecera «‹ Mi grupo»; «Mis mentores», la suya con «‹ Mis mentores»', () => {
-    expect(PANTALLA).toMatch(/<MiCelulaScreen\s+rotuloDeVolver=\{\(celula\.vista\?\.grupos\.length \?\? 0\) > 1 \? 'Mis grupos' : 'Mi grupo'\}/);
+    expect(PANTALLA).toMatch(/<MiCelulaScreen\s+rotuloDeVolver=\{hayVariosGrupos\(celula\.vista\?\.grupos\.length \?\? 0, celula\.hayAnteriores\) \? 'Mis grupos' : 'Mi grupo'\}/);
     expect(PANTALLA).toMatch(/<MisGruposScreen\s+rotuloDeVolver="Yo"/);
     expect(PANTALLA).toMatch(/<LiderMentoresScreen/);
     expect(leer('features/lider-mentores/screens/MisMentoresScreen.tsx')).toContain('titulo="Mis mentores"');

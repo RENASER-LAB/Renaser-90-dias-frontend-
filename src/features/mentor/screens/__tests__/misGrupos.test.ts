@@ -1,8 +1,11 @@
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 import React from 'react';
+import { act } from 'react-test-renderer';
 
-import { hayTocable, montar, tocar, todoElTexto } from '../../__tests__/ayudasDeLasPantallas';
+import { hayTocable, montar, porTestID, tocar, todoElTexto } from '../../__tests__/ayudasDeLasPantallas';
 import type { VistaCelula } from '../../hooks/useCelulaQueAcompano';
+import type { GrupoAnterior } from '../../types/mentor.types';
+import { entradaAMisGrupos, hayVariosGrupos } from '../../utils/entradaAMisGrupos';
 
 jest.mock('../../../../theme/ThemeContext', () => {
   const tokens = jest.requireActual<typeof import('../../../../theme/tokens')>('../../../../theme/tokens');
@@ -88,5 +91,90 @@ describe('«Mis grupos»', () => {
     const r = await montar(React.createElement(MisGruposScreen, props(vistaCon(grupo('g-1', 'Fénix')), { cargando: true })));
     expect(abrir).not.toHaveBeenCalled();
     expect(todoElTexto(r)).toContain('Cargando');
+  });
+});
+
+/**
+ * «Anteriores» (spec 057 FR-022, historia 3): solo lectura, debajo de los activos; sin anteriores no hay sección; con un solo grupo
+ * activo y anteriores, la entrada abre «Mis grupos» en vez de saltar al grupo.
+ */
+const anterior = (nombre: string, extra: Partial<GrupoAnterior> = {}): GrupoAnterior => ({
+  clave: `${nombre}-2026-03-02`,
+  nombre,
+  desde: '2026-03-02',
+  hasta: '2026-06-26',
+  aprendices: 8,
+  puestoFinal: { posicion: 2, total: 7 },
+  colorFinal: 'VERDE',
+  porcentajeFinal: 84,
+  personas: [
+    { nombre: 'Ana Quispe', colorFinal: 'ROJO' },
+    { nombre: 'Beto Rojas', colorFinal: 'VERDE' },
+  ],
+  ...extra,
+});
+
+describe('«Anteriores»', () => {
+  it('debajo de los activos: nombre, período, cuántos aprendices, cómo cerró y las personas con su color final', async () => { // spec 057 FR-022
+    const r = await montar(React.createElement(MisGruposScreen, props(vistaCon(grupo('g-1', 'Fénix'), grupo('g-2', 'Cupo piso')), { anteriores: [anterior('Alba')] })));
+    const texto = todoElTexto(r);
+    expect(texto).toContain('Anteriores');
+    expect(texto).toContain('Alba');
+    expect(texto).toContain('mar 2026 – jun 2026');
+    expect(texto).toContain('8 aprendices');
+    expect(texto).toContain('Cerró en el puesto 2 de 7 · 84 %');
+    expect(texto).toContain('color final verde');
+    expect(texto).toContain('Ana Quispe');
+    expect(texto).toContain('rojo');
+    expect(texto.indexOf('Fénix')).toBeLessThan(texto.indexOf('Anteriores'));
+  });
+
+  it('es de solo lectura: ni el grupo ni las personas son botones, y no hay ids con qué abrir fichas', async () => { // spec 057 FR-022
+    const r = await montar(React.createElement(MisGruposScreen, props(vistaCon(grupo('g-1', 'Fénix'), grupo('g-2', 'Cupo piso')), { anteriores: [anterior('Alba')] })));
+    expect(hayTocable(r, 'Alba')).toBe(false);
+    expect(hayTocable(r, 'Ana Quispe')).toBe(false);
+    expect(porTestID(r, 'grupo-anterior')).toHaveLength(1);
+    expect(Object.keys(anterior('Alba').personas[0]).sort()).toEqual(['colorFinal', 'nombre']);
+  });
+
+  it('sin anteriores no hay sección ni título vacío', async () => { // spec 057 FR-022
+    for (const anteriores of [[], undefined]) {
+      const r = await montar(React.createElement(MisGruposScreen, props(vistaCon(grupo('g-1', 'Fénix'), grupo('g-2', 'Cupo piso')), { anteriores })));
+      expect(todoElTexto(r)).not.toContain('Anteriores');
+    }
+  });
+
+  it('un grupo anterior sin puesto ni porcentaje no inventa cifras ni deja huecos', async () => { // spec 057 FR-022
+    const r = await montar(
+      React.createElement(MisGruposScreen, props(vistaCon(grupo('g-1', 'Fénix'), grupo('g-2', 'Cupo piso')), { anteriores: [anterior('Alba', { puestoFinal: null, porcentajeFinal: null, colorFinal: 'SIN_DATOS', personas: [], aprendices: null })] })),
+    );
+    const texto = todoElTexto(r);
+    expect(texto).toContain('Alba');
+    expect(texto).not.toMatch(/Cerró|color final|\b0 %|0 aprendices/);
+  });
+
+  it('con un solo grupo activo y anteriores NO salta al grupo: se queda en «Mis grupos» con la lista y los anteriores', async () => { // spec 057 FR-022
+    const r = await montar(React.createElement(MisGruposScreen, props(vistaCon(grupo('g-1', 'Fénix')), { anteriores: [anterior('Alba')] })));
+    expect(abrir).not.toHaveBeenCalled();
+    const texto = todoElTexto(r);
+    expect(texto).toContain('Fénix');
+    expect(texto).toContain('Anteriores');
+    await tocar(r, 'Abrir Fénix');
+    expect(abrir).toHaveBeenCalledWith('g-1');
+  });
+
+  it('mientras no se sabe si hay anteriores, un solo grupo espera; al saber que no hay, entra directo', async () => { // spec 057 FR-022
+    const r = await montar(React.createElement(MisGruposScreen, props(vistaCon(grupo('g-1', 'Fénix')), { anterioresListos: false })));
+    expect(abrir).not.toHaveBeenCalled();
+    await act(async () => r.update(React.createElement(MisGruposScreen, props(vistaCon(grupo('g-1', 'Fénix')), { anterioresListos: true }))));
+    expect(abrir).toHaveBeenCalledWith('g-1');
+  });
+
+  it('la entrada decide por grupos y anteriores: uno y sin anteriores entra directo; uno con anteriores o dos o más, a la lista', () => { // spec 057 FR-022
+    expect(entradaAMisGrupos(1, false)).toBe('miGrupo');
+    expect(entradaAMisGrupos(1, true)).toBe('misGrupos');
+    expect(entradaAMisGrupos(2, false)).toBe('misGrupos');
+    expect(hayVariosGrupos(1)).toBe(false);
+    expect(hayVariosGrupos(1, true)).toBe(true);
   });
 });

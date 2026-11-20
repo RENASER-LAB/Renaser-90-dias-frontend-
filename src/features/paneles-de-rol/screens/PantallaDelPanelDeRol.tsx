@@ -8,6 +8,7 @@ import { LiderMentoresScreen } from '../../lider-mentores/screens/LiderMentoresS
 import { AlumnoScreen } from '../../mentor/screens/AlumnoScreen';
 import { MiCelulaScreen } from '../../mentor/screens/MiCelulaScreen';
 import { MisGruposScreen } from '../../mentor/screens/MisGruposScreen';
+import { hayVariosGrupos } from '../../mentor/utils/entradaAMisGrupos';
 import { Alert } from '../../../components/Alerta';
 import type { PanelesDeRol } from '../hooks/usePanelesDeRol';
 import { vistaDeEntradaAlGrupo } from '../utils/vistasDeLosPaneles';
@@ -38,13 +39,15 @@ export function PantallaDelPanelDeRol({ paneles }: { paneles: PanelesDeRol }) {
           fallo={celula.fallo}
           detalle={celula.detalle}
           recargar={celula.recargar}
+          anteriores={celula.anteriores}
+          anterioresListos={celula.anterioresListos}
         />
       );
 
     case 'miGrupo':
       return (
         <MiCelulaScreen
-          rotuloDeVolver={(celula.vista?.grupos.length ?? 0) > 1 ? 'Mis grupos' : 'Mi grupo'}
+          rotuloDeVolver={hayVariosGrupos(celula.vista?.grupos.length ?? 0, celula.hayAnteriores) ? 'Mis grupos' : 'Mi grupo'}
           onSalir={volver}
           onAbrirAlumno={alumno => ir({ tipo: 'alumno', alumno })}
           vista={celula.vista}
@@ -65,7 +68,7 @@ export function PantallaDelPanelDeRol({ paneles }: { paneles: PanelesDeRol }) {
             /* El servidor dijo que ya no lo acompaña (FR-017, FR-028): se dice por qué y se vuelve a la lista, releída y sin datos viejos. */
             Alert.alert('Ya no acompañas a este aprendiz', motivo);
             celula.recargar();
-            ir(vistaDeEntradaAlGrupo(celula.vista?.grupos.length ?? 0));
+            ir(vistaDeEntradaAlGrupo(celula.vista?.grupos.length ?? 0, celula.hayAnteriores));
           }}
         />
       );
