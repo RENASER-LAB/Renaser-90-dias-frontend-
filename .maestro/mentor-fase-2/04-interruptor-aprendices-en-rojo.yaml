@@ -2,7 +2,7 @@
 # explicación (aviso a las 19:00 del mismo día). El aviso en sí (barrido de las 19:00 en la zona del mentor) se comprobó en la base
 # local el 2026-11-20 (13 avisos ROJO_DEL_DIA); los botones del push no se ven en el emulador debug, que no tiene token push.
 # corrido: 2026-11-20. cuenta: mentor (E2E_MENTOR_*).
-# spec 057 FR-034
+# spec 057 FR-034, SC-004
 appId: com.renaser.app
 ---
 - runFlow: ../comun/ya-adentro.yaml

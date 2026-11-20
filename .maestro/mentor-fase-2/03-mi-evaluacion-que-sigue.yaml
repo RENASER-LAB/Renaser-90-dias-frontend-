@@ -1,7 +1,7 @@
 # Spec 057, historia 2 (FR-010 a FR-013): «Mi evaluación» suma la comparación con el mes anterior, «Qué sigue» (acciones con su motivo,
 # calculadas por el servidor) y «Quién baja el promedio»; «Escríbele a …» abre la conversación 1 a 1 con esa persona.
 # corrido: 2026-11-20. cuenta: mentor (E2E_MENTOR_*) con aprendices bajo el 60 % este mes. Precondición: `siembra.sql`.
-# spec 057 FR-013
+# spec 057 FR-013, SC-004
 appId: com.renaser.app
 ---
 - runFlow: ../comun/ya-adentro.yaml

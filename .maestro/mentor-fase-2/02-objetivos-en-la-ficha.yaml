@@ -3,7 +3,7 @@
 # dicho en palabras (sin códigos del servidor).
 # corrido: 2026-11-20. cuenta: mentor (E2E_MENTOR_*). Precondición: `siembra.sql` («Grupo Plan E2E» en curso con Api Aprendiz E2E,
 # que tiene sus objetivos del programa).
-# spec 057 FR-001, FR-004
+# spec 057 FR-001, FR-004, SC-004
 appId: com.renaser.app
 ---
 - runFlow: ../comun/ya-adentro.yaml

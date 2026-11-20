@@ -2,7 +2,7 @@
 # una sola vez (los tramos del mismo grupo se juntan), con su período, cuántos aprendices tuvo y la lista de nombres con su color final.
 # corrido: 2026-11-20. cuenta: mentor (E2E_MENTOR_*), e2e-mentor con tramos cerrados. Precondición: `siembra.sql` (y la de
 # `../rediseno-del-mentor/`) en la base local clonada (nunca producción).
-# spec 057 FR-020, FR-021, FR-022
+# spec 057 FR-020, FR-021, FR-022, SC-004
 appId: com.renaser.app
 ---
 - runFlow: ../comun/ya-adentro.yaml
