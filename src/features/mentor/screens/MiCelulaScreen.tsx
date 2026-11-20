@@ -200,6 +200,16 @@ export function MiCelulaScreen({
         evaluacion={evaluacion}
         cohorteId={vista?.celula.cohorteId ?? null}
         grupoId={vista?.celula.id ?? null}
+        acciones={{
+          escribirle: (id, nombre) => void escribirle(id, nombre),
+          escribiendoId,
+          /* Solo quien sigue en el padrón de este grupo: la ficha necesita al alumno entero (como las filas de arriba). */
+          abrirFicha: id => {
+            const alumno = vista?.todos.find(a => a.participanteId === id);
+            return alumno ? () => onAbrirAlumno(alumno as AlumnoConEstado) : null;
+          },
+          avatarDe: id => filas.find(f => f.aprendizId === id)?.avatarUrl ?? null,
+        }}
       />
     </SafeAreaView>
   );

@@ -208,6 +208,41 @@ export const evaluacionPropiaSchema = z
         })
         .passthrough(),
     ),
+    /**
+     * Spec 057 FR-010: los tres campos nuevos son aditivos. Un servidor viejo no los manda, así que todo es opcional: sin ellos la hoja se
+     * ve como en la fase 1.
+     */
+    /** El porcentaje del mes anterior, o null si ese mes no está CALCULADA. */
+    porcentajeMesAnterior: z.number().nullish(),
+    /** «Quién baja el promedio» (FR-012): hasta 5 aprendices vigentes con menos de 80 %, del menor al mayor. */
+    quienBaja: z
+      .array(
+        z
+          .object({
+            aprendizId: z.string(),
+            grupoId: z.string().nullish(),
+            nombre: z.string().nullish(),
+            porcentaje: z.number().nullish(),
+            entregadas: z.number().nullish(),
+            esperadas: z.number().nullish(),
+          })
+          .passthrough(),
+      )
+      .nullish(),
+    /** «Qué sigue» (FR-011): hasta 3 acciones. ESCRIBIR trae el aprendiz al que se le escribe. */
+    acciones: z
+      .array(
+        z
+          .object({
+            tipo: z.string(),
+            accion: z.string().nullish(),
+            motivo: z.string().nullish(),
+            aprendizId: z.string().nullish(),
+            nombre: z.string().nullish(),
+          })
+          .passthrough(),
+      )
+      .nullish(),
   })
   .passthrough();
 
@@ -267,6 +302,8 @@ export type SemanaAlumnoApi = z.infer<typeof semanaAlumnoSchema>;
 export type DiaAlumnoApi = SemanaAlumnoApi['dias'][number];
 export type ObligacionDiaApi = DiaAlumnoApi['obligaciones'][number];
 export type EvaluacionPropiaApi = z.infer<typeof evaluacionPropiaSchema>;
+export type QuienBajaApi = NonNullable<EvaluacionPropiaApi['quienBaja']>[number];
+export type AccionDeLaEvaluacionApi = NonNullable<EvaluacionPropiaApi['acciones']>[number];
 export type RankingGruposApi = z.infer<typeof rankingGruposSchema>;
 export type AsignacionMentorApi = ContextoMentorApi['assignments'][number];
 export type AprendicesGrupoApi = z.infer<typeof aprendicesGrupoSchema>;
