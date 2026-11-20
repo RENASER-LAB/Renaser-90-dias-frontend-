@@ -35,7 +35,7 @@ también en el texto (`grep -n "Plan" docs/decisiones/*.md`). Si dos entradas ch
 | [hoy.md](hoy.md) | Hoy: tarjetas, frase del día, semáforo y lo que Hoy muestra | 8 |
 | [ingreso-y-onboarding.md](ingreso-y-onboarding.md) | Login, onboarding, ficha, diagnóstico, términos y el Día 1 | 12 |
 | [kilometros-y-carrera.md](kilometros-y-carrera.md) | Kilómetros diarios: captura, pasos (Health Connect y Salud de Apple) y la carrera con GPS | 10 |
-| [liderazgo-y-administracion.md](liderazgo-y-administracion.md) | Mentor, líder de mentores, Administración, Alquimista y sus fichas | 19 |
+| [liderazgo-y-administracion.md](liderazgo-y-administracion.md) | Mentor, líder de mentores, Administración, Alquimista y sus fichas | 20 |
 | [pagos.md](pagos.md) | Cronograma de pagos y «Mi ingreso» (spec 032) | 2 |
 | [plan.md](plan.md) | Plan: objetivos, semana, mes, 80/20, Cierra tu día y el Mapa (retirado) | 12 |
 | [ser-y-fenix.md](ser-y-fenix.md) | SER (el acompañante), el orbe, el fénix y las celebraciones | 9 |
@@ -49,6 +49,7 @@ también en el texto (`grep -n "Plan" docs/decisiones/*.md`). Si dos entradas ch
 
 | Fecha | Tabs | Tipo | Entrada | Archivo | Corregida |
 |---|---|---|---|---|---|
+| 2026-11-20 | Yo, Comunidad | Decisión del dueño | El rol de mentor, fase 2: objetivos del aprendiz, «Qué sigue» en Mi evaluación, grupos anteriores y el aviso de rojo (spec 057) | [liderazgo-y-administracion.md](liderazgo-y-administracion.md) |  |
 | 2026-11-19 | ninguno | Cambio | Actualizaciones por internet con EAS Update: `expo-updates`, `runtimeVersion` por fingerprint y un canal por perfil; solo desde el AAB 136 (issue #244) | [transversal.md](transversal.md) |  |
 | 2026-11-19 | ninguno | Decisión del dueño | El E2E corre los flujos de Maestro de lo tocado y de lo relacionado (no la suite entera ni solo mobile-mcp) | [transversal.md](transversal.md) |  |
 | 2026-11-19 | Yo | Cambio | Yo → Política de privacidad: dice qué lee de Salud de Apple en iPhone y ya no menciona «usar mi ubicación» | [yo.md](yo.md) |  |
