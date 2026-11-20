@@ -43,7 +43,11 @@ export function useObjetivosDeLaFicha(cargar: CargarObjetivos | null): VistaDeLo
     setVista({ tipo: 'cargando' });
     cargar().then(
       objetivos => {
-        if (vigente) setVista(sinObjetivos(objetivos) ? { tipo: 'oculta' } : { tipo: 'lista', objetivos });
+        if (!vigente) return;
+        /* Spec 057 FR-004: la ruta del mentor responde 200 vacío en Día 0 (con `duracionDias` y `fase`): se dice en una línea. La del líder
+           no manda esos campos, y sin objetivos sigue sin dibujar nada. */
+        const delMentor = objetivos.duracionDias != null || objetivos.fase != null;
+        setVista(sinObjetivos(objetivos) ? { tipo: delMentor ? 'sin-programa' : 'oculta' } : { tipo: 'lista', objetivos });
       },
       error => {
         const sinPrograma = error instanceof ApiError && error.status === 404 && error.codigo === CODIGO_SIN_PROGRAMA_ACTIVO;

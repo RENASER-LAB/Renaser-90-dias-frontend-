@@ -26,6 +26,13 @@ export function aprendizDelAviso(datos: unknown, aprendizDeLaRuta: string | null
   return typeof id === 'string' && id.trim() ? id.trim() : aprendizDeLaRuta;
 }
 
+/** El nombre del aprendiz sacado del título del push («<Nombre> está en rojo hoy»); `null` si el título no tiene esa forma. */
+export function nombreDelTituloDelAviso(titulo: unknown): string | null {
+  if (typeof titulo !== 'string') return null;
+  const m = /^(.+?)\s+está en rojo hoy\.?$/i.exec(titulo.trim());
+  return m ? m[1].trim() : null;
+}
+
 /** Registra la categoría con sus dos botones; los dos abren la app. Nunca lanza: sin ella los avisos se abren igual por `route`. */
 export function registrarLaCategoriaDeRojo(N: Pick<typeof TipoNotificaciones, 'setNotificationCategoryAsync'>): void {
   void Promise.resolve()

@@ -46,6 +46,7 @@ export function MiCelulaScreen({
   detalle,
   recargar,
   rotuloDeVolver = 'Volver',
+  onAbrirAlumnoDeOtroGrupo,
 }: {
   onSalir: () => void;
   onAbrirAlumno: (alumno: AlumnoConEstado) => void;
@@ -56,6 +57,11 @@ export function MiCelulaScreen({
   recargar: () => void;
   /** Lo que dice la barra de arriba junto a la flecha: «Mis grupos» si hay varios, «Mi grupo» desde Yo, «Volver» desde Tribu. */
   rotuloDeVolver?: string;
+  /**
+   * Spec 057 FR-013: abre la ficha de alguien de OTRO de sus grupos (o que no está en este padrón): quien llama pasa a ese grupo y abre
+   * la ficha con su padrón, igual que con un aviso (D-141). Sin esto, esas filas de «Quién baja el promedio» no se pueden tocar.
+   */
+  onAbrirAlumnoDeOtroGrupo?: (grupoId: string, aprendizId: string) => void;
 }) {
   const barraAlDesplazar = useOcultarBarraAlDesplazar();
   const { c, t } = useTheme();
@@ -203,10 +209,11 @@ export function MiCelulaScreen({
         acciones={{
           escribirle: (id, nombre) => void escribirle(id, nombre),
           escribiendoId,
-          /* Solo quien sigue en el padrón de este grupo: la ficha necesita al alumno entero (como las filas de arriba). */
-          abrirFicha: id => {
-            const alumno = vista?.todos.find(a => a.participanteId === id);
-            return alumno ? () => onAbrirAlumno(alumno as AlumnoConEstado) : null;
+          /* La ficha necesita al alumno entero: del padrón de este grupo si es de este grupo; si no, se pasa a SU grupo. */
+          abrirFicha: (id, grupoId) => {
+            const alumno = !grupoId || grupoId === vista?.celula.id ? vista?.todos.find(a => a.participanteId === id) : undefined;
+            if (alumno) return () => onAbrirAlumno(alumno as AlumnoConEstado);
+            return grupoId && onAbrirAlumnoDeOtroGrupo ? () => onAbrirAlumnoDeOtroGrupo(grupoId, id) : null;
           },
           avatarDe: id => filas.find(f => f.aprendizId === id)?.avatarUrl ?? null,
         }}

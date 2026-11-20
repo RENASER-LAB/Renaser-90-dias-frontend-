@@ -21,14 +21,13 @@ import { useTheme } from '../../../theme/ThemeContext';
  */
 /**
  * Spec 057 FR-013: las manos de la hoja con el resto de la pantalla. `escribirle` es el de `useEscribirleAlAprendiz` (un solo pedido a
- * la vez, el mismo de las filas de «Mi grupo»); `abrirFicha` abre la ficha con la navegación existente y devuelve `false` si esa
- * persona no está en el grupo que se mira (no se puede abrir su ficha desde acá).
+ * la vez, el mismo de las filas de «Mi grupo»); `abrirFicha` abre la ficha con la navegación existente, con el grupo de esa persona.
  */
 export interface AccionesDeLaHoja {
   escribirle: (aprendizId: string, nombre: string | null) => void;
   escribiendoId: string | null;
-  /** `null` = esa persona no se puede abrir desde este grupo. */
-  abrirFicha: (aprendizId: string) => (() => void) | null;
+  /** Abre la ficha con SU grupo (spec 057 FR-013): sea o no el grupo desde el que se abrió la hoja. `null` = no hay cómo abrirla. */
+  abrirFicha: (aprendizId: string, grupoId: string | null) => (() => void) | null;
   avatarDe: (aprendizId: string) => string | null;
 }
 
@@ -147,7 +146,7 @@ function Cuerpo({
                 <>
                   <Icon name={iconoDeLaAccion(a.tipo)} size={20} color={c.goldInk} />
                   <View style={estilos.textos}>
-                    <Text style={[t.body, { color: c.text, fontSize: 16 }]}>{a.accion}</Text>
+                    <Text style={[t.body, { color: c.text, fontSize: 16 }]}>{a.titulo}</Text>
                     {a.motivo ? <Text style={[t.body, { color: c.textSoft, fontSize: 15 /* metadato */, lineHeight: 19 }]}>{a.motivo}</Text> : null}
                   </View>
                 </>
@@ -159,11 +158,11 @@ function Cuerpo({
                   onPress={() => {
                     if (acciones.escribiendoId !== null) return;
                     alCerrar();
-                    acciones.escribirle(alumno, a.nombre ?? null);
+                    acciones.escribirle(alumno, evaluacion?.quienBaja?.find(b => b.aprendizId === alumno)?.nombre ?? null);
                   }}
                   disabled={escribiendo}
                   accessibilityRole="button"
-                  accessibilityLabel={a.accion ?? 'Escribirle'}
+                  accessibilityLabel={a.titulo ?? 'Escribirle'}
                   accessibilityState={{ disabled: escribiendo, busy: escribiendo }}
                   style={[estilos.accion, separador, { opacity: escribiendo ? 0.5 : 1 }]}
                 >
@@ -186,7 +185,7 @@ function Cuerpo({
           <View style={[estilos.lista, { borderColor: c.border, backgroundColor: c.cardBg }]}>
             {bajan.map((b, i) => {
               const quien = b.nombre?.trim() || 'Aprendiz sin nombre';
-              const abrir = acciones?.abrirFicha(b.aprendizId) ?? null;
+              const abrir = acciones?.abrirFicha(b.aprendizId, b.grupoId ?? null) ?? null;
               const detalle =
                 b.porcentaje === null || b.porcentaje === undefined
                   ? 'Sin porcentaje este mes'

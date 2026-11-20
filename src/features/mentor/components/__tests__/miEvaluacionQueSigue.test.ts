@@ -48,13 +48,13 @@ const base: EvaluacionPropiaApi = {
     { aprendizId: 'u-fuera', grupoId: 'g-2', nombre: 'Fuera', porcentaje: 75, entregadas: 3, esperadas: 4 },
   ],
   acciones: [
-    { tipo: 'ESCRIBIR', accion: 'Escríbele a Ana', motivo: 'Entregó 4 de 10 este mes', aprendizId: 'u-ana', nombre: 'Ana' },
-    { tipo: 'VENTANAS', accion: 'Recuérdales las horas de entrega', motivo: '2 evidencias llegaron fuera de hora' },
+    { tipo: 'ESCRIBIR', titulo: 'Escríbele a Ana', motivo: 'Entregó 4 de 10 este mes', aprendizId: 'u-ana', grupoId: 'g-1' },
+    { tipo: 'VENTANAS', titulo: 'Recuérdales las horas de entrega', motivo: '2 evidencias llegaron fuera de hora' },
   ],
 };
 
 const escribirle = jest.fn<AccionesDeLaHoja['escribirle']>();
-const abrirLaFicha = jest.fn<(id: string) => void>();
+const abrirLaFicha = jest.fn<(id: string, grupoId: string | null) => void>();
 let escribiendoId: string | null = null;
 const alCerrar = jest.fn<() => void>();
 
@@ -62,7 +62,7 @@ function hoja(evaluacion: EvaluacionPropiaApi | null = base) {
   const acciones: AccionesDeLaHoja = {
     escribirle,
     escribiendoId,
-    abrirFicha: id => (id === 'u-fuera' ? null : () => abrirLaFicha(id)),
+    abrirFicha: (id, grupoId) => () => abrirLaFicha(id, grupoId),
     avatarDe: () => null,
   };
   return React.createElement(HojaDeMiEvaluacion, { visible: true, alCerrar, evaluacion, cohorteId: 'c-1', grupoId: 'g-1', acciones });
@@ -119,6 +119,13 @@ describe('«Qué sigue»', () => {
     expect(tocable(r, 'Escríbele a Ana').props.accessibilityState).toMatchObject({ disabled: true });
   });
 
+  it('una persona sin cómo abrirla (sin grupo) se lee pero no es un botón', async () => { // spec 057 FR-013
+    const sinCamino: AccionesDeLaHoja = { escribirle, escribiendoId, abrirFicha: () => null, avatarDe: () => null };
+    const r = await montar(React.createElement(HojaDeMiEvaluacion, { visible: true, alCerrar, evaluacion: base, cohorteId: 'c-1', grupoId: 'g-1', acciones: sinCamino }));
+    expect(todoElTexto(r)).toContain('Beto');
+    expect(tocables(r).some(n => String(n.props.accessibilityLabel).includes('Abrir la ficha de Beto'))).toBe(false);
+  });
+
   it('sin acciones (SIN_MUESTRA, SIN_HISTORIAL o servidor viejo) no hay título vacío', async () => { // spec 057 FR-013
     for (const parcial of [{ acciones: [], quienBaja: [] }, { acciones: undefined, quienBaja: undefined }, { acciones: null, quienBaja: null }]) {
       const r = await montar(hoja({ ...base, estado: 'SIN_MUESTRA', porcentaje: null, porcentajeMesAnterior: null, ...parcial }));
@@ -141,14 +148,14 @@ describe('«Quién baja el promedio»', () => {
     expect(new Set(bordes).size).toBe(2); // rojo (Ana, bajo 60) y ámbar (Beto, 60 a 79)
   });
 
-  it('tocar una persona de este grupo cierra la hoja y abre su ficha; una de otro grupo no abre nada', async () => { // spec 057 FR-013
+  it('tocar a cualquiera cierra la hoja y abre su ficha con SU grupo, también si es de otro de los grupos', async () => { // spec 057 FR-013
     const r = await montar(hoja());
     await tocar(r, 'Abrir la ficha de Beto');
     expect(alCerrar).toHaveBeenCalledTimes(1);
-    expect(abrirLaFicha).toHaveBeenCalledWith('u-beto');
-    /* La de otro grupo se lee (está en la lista) pero no es un botón: su ficha no se abre desde acá. */
-    expect(todoElTexto(r)).toContain('Fuera');
-    expect(tocables(r).some(n => String(n.props.accessibilityLabel).includes('Fuera'))).toBe(false);
+    expect(abrirLaFicha).toHaveBeenCalledWith('u-beto', 'g-1');
+    abrirLaFicha.mockReset();
+    await tocar(r, 'Abrir la ficha de Fuera');
+    expect(abrirLaFicha).toHaveBeenCalledWith('u-fuera', 'g-2');
   });
 
   it('cada toque mide al menos 48 de alto', async () => { // spec 057 FR-040

@@ -3026,6 +3026,13 @@ function ComunidadPorFormacion({
         rotuloDeVolver={variosGrupos ? 'Mis grupos' : 'Volver'}
         onSalir={() => despacharVista({ tipo: 'salir-de-mi-grupo', variosGrupos })}
         onAbrirAlumno={alumno => despacharVista({ tipo: 'abrir-ficha', alumno })}
+        onAbrirAlumnoDeOtroGrupo={(grupoId, alumnoId) => {
+          /* Spec 057 FR-013: se pasa a SU grupo y se abre la ficha con ese padrón. */
+          void celulaQueAcompano.elegirGrupo(grupoId).then(nueva => {
+            const alumno = nueva?.todos.find(a => a.participanteId === alumnoId);
+            if (alumno) despacharVista({ tipo: 'abrir-ficha', alumno });
+          });
+        }}
         vista={celulaQueAcompano.vista}
         cargando={celulaQueAcompano.cargando}
         fallo={celulaQueAcompano.fallo}
@@ -4299,7 +4306,9 @@ function ComunidadPorFormacion({
                         ? `${celulaQueAcompano.vista.resumen.total} ${
                             celulaQueAcompano.vista.resumen.total === 1 ? 'aprendiz' : 'aprendices'
                           }`
-                        : 'Ver el grupo que acompañas'}
+                        : celulaQueAcompano.hayAnteriores
+                          ? 'Tus grupos anteriores'
+                          : 'Ver el grupo que acompañas'}
                   </Text>
                 </View>
                 <Icon name="chevron" size={TAMANO_ICONO.chico} color={c.goldInk} />

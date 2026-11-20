@@ -114,6 +114,13 @@ describe('la ficha del mentor (spec 057)', () => {
     expect(hayTocable(r, 'Objetivos')).toBe(false);
   });
 
+  it('Día 0: un 200 vacío de la ruta del mentor (con plazo y fase) también dice «Todavía no tiene objetivos»; el del líder, sin esos campos, no dibuja nada', async () => { // spec 057 FR-004
+    cargar.mockResolvedValue({ duracionDias: 60, fase: null, noventaDias: [], mes: null, semana: null });
+    expect(todoElTexto(await montar(ficha()))).toContain('Todavía no tiene objetivos');
+    cargar.mockResolvedValue({ noventaDias: [], mes: null, semana: null });
+    expect((await montar(ficha())).toJSON()).toBeNull();
+  });
+
   it('un 403 (ya no lo acompaña) o un 404 sin código no dibujan nada', async () => { // spec 057 FR-004
     cargar.mockRejectedValue(new ApiError(403, 'no'));
     expect((await montar(ficha())).toJSON()).toBeNull();

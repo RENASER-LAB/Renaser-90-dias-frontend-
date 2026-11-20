@@ -170,10 +170,28 @@ describe('«Anteriores»', () => {
     expect(abrir).toHaveBeenCalledWith('g-1');
   });
 
+  it('un mentor que rotó (sin grupos activos, con anteriores) ve «Anteriores» y una línea, no «no acompañas ningún grupo»', async () => { // spec 057 FR-022
+    const r = await montar(React.createElement(MisGruposScreen, props(null, { fallo: 'sin_celula', anteriores: [anterior('Alba')] })));
+    const texto = todoElTexto(r);
+    expect(texto).toContain('Anteriores');
+    expect(texto).toContain('Alba');
+    expect(texto).toContain('Hoy no acompañas ningún grupo');
+    expect(texto).not.toContain('Todavía no acompañas ningún grupo');
+    expect(abrir).not.toHaveBeenCalled();
+  });
+
+  it('sin activos ni anteriores queda el mensaje de siempre; mientras no se sabe si hay anteriores, espera sin parpadear', async () => { // spec 057 FR-022
+    expect(todoElTexto(await montar(React.createElement(MisGruposScreen, props(null, { fallo: 'sin_celula' }))))).toContain('Todavía no acompañas ningún grupo');
+    const esperando = await montar(React.createElement(MisGruposScreen, props(null, { fallo: 'sin_celula', anterioresListos: false })));
+    expect(todoElTexto(esperando)).not.toContain('Todavía no acompañas ningún grupo');
+  });
+
   it('la entrada decide por grupos y anteriores: uno y sin anteriores entra directo; uno con anteriores o dos o más, a la lista', () => { // spec 057 FR-022
     expect(entradaAMisGrupos(1, false)).toBe('miGrupo');
     expect(entradaAMisGrupos(1, true)).toBe('misGrupos');
     expect(entradaAMisGrupos(2, false)).toBe('misGrupos');
+    expect(entradaAMisGrupos(0, true)).toBe('misGrupos'); // sin activos pero con anteriores
+    expect(entradaAMisGrupos(0, false)).toBe('miGrupo');
     expect(hayVariosGrupos(1)).toBe(false);
     expect(hayVariosGrupos(1, true)).toBe(true);
   });

@@ -50,6 +50,13 @@ export function PantallaDelPanelDeRol({ paneles }: { paneles: PanelesDeRol }) {
           rotuloDeVolver={hayVariosGrupos(celula.vista?.grupos.length ?? 0, celula.hayAnteriores) ? 'Mis grupos' : 'Mi grupo'}
           onSalir={volver}
           onAbrirAlumno={alumno => ir({ tipo: 'alumno', alumno })}
+          onAbrirAlumnoDeOtroGrupo={(grupoId, alumnoId) => {
+            /* Spec 057 FR-013: se pasa a SU grupo y se abre la ficha con ese padrón (como un aviso de otro de sus grupos). */
+            void celula.elegirGrupo(grupoId).then(nueva => {
+              const alumno = nueva?.todos.find(a => a.participanteId === alumnoId);
+              if (alumno) ir({ tipo: 'alumno', alumno });
+            });
+          }}
           vista={celula.vista}
           cargando={celula.cargando}
           fallo={celula.fallo}

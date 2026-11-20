@@ -1,11 +1,12 @@
 /**
- * Por dónde entra el mentor a sus grupos (spec 055 FR-001 y FR-002): con uno solo, directo a «Mi grupo»; con dos o más (o con uno
- * y grupos anteriores, spec 057 FR-022), por «Mis grupos». Lo preguntan las dos entradas (la fila de Yo y la de Comunidad → Tribu) y el atrás de «Mi grupo», para que
+ * Por dónde entra el mentor a sus grupos (spec 055 FR-001 y FR-002): con uno solo, directo a «Mi grupo»; con dos o más (o con grupos
+ * anteriores, spec 057 FR-022: uno o ninguno activo), por «Mis grupos». Lo preguntan las dos entradas (la fila de Yo y la de Comunidad → Tribu) y el atrás de «Mi grupo», para que
  * nunca lleven a la lista cuando la lista tiene una sola fila.
  */
 export function hayVariosGrupos(cantidadDeGrupos: number, hayAnteriores = false): boolean {
-  /* Spec 057 FR-022: con un solo grupo activo y anteriores la entrada ya no salta directo al grupo: abre «Mis grupos» para que vea los anteriores. */
-  return cantidadDeGrupos > 1 || (cantidadDeGrupos === 1 && hayAnteriores);
+  /* Spec 057 FR-022: con un solo grupo activo y anteriores la entrada ya no salta directo al grupo: abre «Mis grupos» para que vea los
+     anteriores. Sin ningún grupo activo pero con anteriores (un mentor que rotó) también: no hay grupo al que saltar. */
+  return cantidadDeGrupos > 1 || hayAnteriores;
 }
 
 export type EntradaAMisGrupos = 'misGrupos' | 'miGrupo';

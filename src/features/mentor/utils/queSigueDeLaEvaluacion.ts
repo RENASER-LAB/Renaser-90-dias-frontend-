@@ -44,7 +44,7 @@ export function iconoDeLaAccion(tipo: string): IconName {
 
 /** Solo se muestran las acciones que dicen algo: sin texto no hay qué leer. Como mucho 3 (FR-011). */
 export function accionesQueSeMuestran(evaluacion: Pick<EvaluacionPropiaApi, 'acciones'>): AccionDeLaEvaluacionApi[] {
-  return (evaluacion.acciones ?? []).filter(a => (a.accion ?? '').trim().length > 0).slice(0, 3);
+  return (evaluacion.acciones ?? []).filter(a => (a.titulo ?? '').trim().length > 0).slice(0, 3);
 }
 
 /** Como mucho 5 (FR-012), tal como los manda el servidor: del menor al mayor. */

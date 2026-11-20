@@ -235,10 +235,10 @@ export const evaluacionPropiaSchema = z
         z
           .object({
             tipo: z.string(),
-            accion: z.string().nullish(),
+            titulo: z.string().nullish(),
             motivo: z.string().nullish(),
             aprendizId: z.string().nullish(),
-            nombre: z.string().nullish(),
+            grupoId: z.string().nullish(),
           })
           .passthrough(),
       )

@@ -109,8 +109,16 @@ export function MisGruposScreen({
           <Text style={[t.screenTitle, { color: c.text, fontSize: 21 }]}>Mis grupos</Text>
         </Aparicion>
 
-        {cargando ? <CargandoCelula /> : null}
-        {!cargando && fallo ? <EstadoCelula fallo={fallo} detalle={detalle} onReintentar={recargar} /> : null}
+        {/* Un mentor que rotó y ya no acompaña ninguno (`sin_celula`) pero tiene anteriores no ve «no acompañas ningún grupo»: ve una línea y sus anteriores. */}
+        {cargando || (fallo === 'sin_celula' && !anterioresListos) ? <CargandoCelula /> : null}
+        {!cargando && fallo && !(fallo === 'sin_celula' && (!anterioresListos || hayAnteriores)) ? (
+          <EstadoCelula fallo={fallo} detalle={detalle} onReintentar={recargar} />
+        ) : null}
+        {!cargando && fallo === 'sin_celula' && anterioresListos && hayAnteriores ? (
+          <Text testID="sin-grupos-activos" style={[t.body, { color: c.textSoft, marginTop: 14 }]}>
+            Hoy no acompañas ningún grupo
+          </Text>
+        ) : null}
 
         {!cargando && !fallo && vista && hayVariosGrupos(grupos.length, hayAnteriores) ? (
           <Aparicion retardo={40} style={{ marginTop: 14 }}>
@@ -122,7 +130,7 @@ export function MisGruposScreen({
           </Aparicion>
         ) : null}
 
-        {!cargando && !fallo && vista && hayAnteriores ? (
+        {!cargando && (!fallo || fallo === 'sin_celula') && hayAnteriores ? (
           <Aparicion retardo={80} style={estilos.anteriores}>
             <Text accessibilityRole="header" style={[t.cardTitle, { color: c.textStrong }]}>
               Anteriores

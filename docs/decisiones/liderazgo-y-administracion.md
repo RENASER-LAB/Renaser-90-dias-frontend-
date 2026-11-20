@@ -720,17 +720,17 @@ de https://claude.ai/artifact/1NGKi8rKZxxm6BmRmU3GRz. El 20/11 pidió terminarla
 nuevas**. **Autorizó el cambio de las pantallas del mentor dentro de `Yo` y de `Comunidad` → Tribu**, que es lo único de los cinco tabs que se toca. Lo que cambia en la app y nada más:
 * **Objetivos en la ficha del aprendiz:** la sección `ObjetivosDeLaFicha` que ya veía el líder se monta también en la ficha del mentor (`lecturasDeLaFicha` le da `cargarObjetivos` por
   `GET /mentor/groups/{g}/learners/{u}/objetivos`, con el mismo parser). El rótulo del programa dice «Objetivo de N días» con N el plazo **de la formación** del aprendiz (nunca «90» escrito
-  a mano) y arriba va la fase («Fase 2 · días 8 a 34»). Sin programa activo, en Día 0 o suspendido (404 con `SIN_PROGRAMA_ACTIVO`) una línea: «Todavía no tiene objetivos». Un 403 (ya no lo
+  a mano) y arriba va la fase («Fase 2 · días 8 a 34»). Sin programa activo o suspendido (404 con `SIN_PROGRAMA_ACTIVO`) o en Día 0 (200 vacío) una línea: «Todavía no tiene objetivos». Un 403 (ya no lo
   acompaña) o cualquier otro error no dibuja nada, como antes; el líder no cambia.
 * **Mi evaluación:** debajo del porcentaje, «N puntos más/menos que en <mes>» (si el mes anterior no está calculado, no se muestra); «Qué sigue» con hasta 3 acciones (ícono, acción y motivo
   en gris; «Escríbele a <nombre>» abre el 1 a 1 con el hook de siempre, un pedido a la vez); «Quién baja el promedio» con hasta 5 aprendices, el borde del avatar rojo bajo 60 % y ámbar de 60 a
-  79, y tocar uno abre su ficha (solo los de ese grupo). Sin muestra o sin historial no hay ni títulos ni lista. Los tres campos son opcionales: una respuesta vieja se ve como antes.
+  79, y tocar uno abre su ficha con SU grupo (si es de otro de sus grupos, se pasa a ese grupo, como con un aviso). Sin muestra o sin historial no hay ni títulos ni lista. Los tres campos son opcionales: una respuesta vieja se ve como antes.
 * **Mis grupos → «Anteriores»:** debajo de los activos, cada grupo que acompañó con su nombre, período, aprendices, cómo cerró (puesto del último mes y color final, con la palabra) y la lista
-  de nombres con su color final. **Solo lectura**: no hay ids ni se abre ninguna ficha. Sin anteriores no hay sección ni título. Con un solo grupo activo y anteriores, la fila de Yo y la entrada
+  de nombres con su color final. **Solo lectura**: no hay ids ni se abre ninguna ficha. Sin anteriores no hay sección ni título. Con un solo grupo activo y anteriores —o con ninguno activo, un mentor que rotó—, la fila de Yo y la entrada
   de Comunidad → Tribu abren «Mis grupos» en vez de saltar al grupo (y desde «Mi grupo» el atrás vuelve a «Mis grupos»).
 * **Aviso de rojo (19:00):** Yo → Notificaciones suma «Aprendices en rojo» («Te avisamos a las 19:00 si alguien de tu grupo cae a rojo ese día»), solo para quien acompaña un grupo y solo si el
   servidor lista el tipo `ROJO_DEL_DIA`. La bandeja del mentor lo incluye y abrir la ficha lo marca leído, como `ACOMPANAMIENTO_ALUMNO`. La notificación trae dos botones registrados al empezar a
-  escuchar avisos (categoría `rojo-del-dia`): «Escribirle» (abre el chat 1 a 1; si no se puede, abre la ficha) y «Ver ficha»; tocar el cuerpo abre la ficha.
+  escuchar avisos (categoría `rojo-del-dia`): «Escribirle» (abre el chat 1 a 1 con el nombre del título del push; si no se puede, abre la ficha) y «Ver ficha»; tocar el cuerpo abre la ficha.
 * **No cambian:** los cinco tabs, el semáforo y sus colores, el chat, los permisos (los decide el servidor) ni las pantallas del líder.
 * **Pruebas:** `objetivosDeLaFicha`, `lecturasDeLaFicha`, `fichaDePersona`, `miEvaluacionQueSigue`, `misGrupos`, `gruposAnteriores`, `avisoDeRojo`, `panelesDeRolEnYo`.
 * **Hace falta el backend de la spec 057 antes** (`/objetivos` del mentor, los tres campos de `/evaluation`, `/me/groups/history` y el tipo `ROJO_DEL_DIA`): contra uno anterior cada pieza se

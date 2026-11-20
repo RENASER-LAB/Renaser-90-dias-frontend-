@@ -4,7 +4,7 @@ import { Platform } from 'react-native';
 
 import { rutaDelMensajeDeChat } from '../../chat/avisos/avisoDeChat';
 import { destinoDeRuta, type DestinoDeAviso } from '../api/avisosApi';
-import { aprendizDelAviso, queSePidioEnElAviso, registrarLaCategoriaDeRojo } from './avisoDeRojo';
+import { aprendizDelAviso, nombreDelTituloDelAviso, queSePidioEnElAviso, registrarLaCategoriaDeRojo } from './avisoDeRojo';
 import { HAY_PUSH_NATIVO } from './pushNativo';
 
 /**
@@ -120,7 +120,7 @@ function atender(respuesta: TipoNotificaciones.NotificationResponse | null): voi
   atendidas.add(id);
 
   const datos = respuesta.notification.request.content.data as { route?: unknown } | null;
-  if (queSePidioEnElAviso(respuesta.actionIdentifier) === 'escribir' && escribirleDesdeElAviso(datos)) return;
+  if (queSePidioEnElAviso(respuesta.actionIdentifier) === 'escribir' && escribirleDesdeElAviso(datos, respuesta.notification.request.content.title)) return;
   anotarRutaDeAviso(datos?.route);
   atenderLasRepeticionesDelHabito(datos?.route, respuesta.notification.date);
   atenderLasRepeticionesDeObjetivos(datos, respuesta.notification.date);
@@ -128,17 +128,17 @@ function atender(respuesta: TipoNotificaciones.NotificationResponse | null): voi
 
 /**
  * Spec 057 FR-035: el botón «Escribirle» del aviso de rojo abre el chat 1 a 1 con ese aprendiz (el mismo camino del ícono de chat).
- * Devuelve `true` si lo atiende. Si no hay a quién (sin `aprendizId` ni ruta) devuelve `false` y el toque abre la ficha como siempre;
+ * El chat se abre con el nombre del título del push («<Nombre> está en rojo hoy»). Devuelve `true` si lo atiende. Si no hay a quién (sin `aprendizId` ni ruta) devuelve `false` y el toque abre la ficha como siempre;
  * si el chat no se pudo abrir (sin sesión, sin red) también se abre la ficha: el mentor nunca se queda sin respuesta. Se carga acá
  * adentro para no arrastrar el chat y la navegación al contexto de sesión (ciclo de importaciones).
  */
-function escribirleDesdeElAviso(datos: { route?: unknown } | null): boolean {
+function escribirleDesdeElAviso(datos: { route?: unknown } | null, titulo?: unknown): boolean {
   const aprendizId = aprendizDelAviso(datos, (destinoDeRuta(datos?.route) as { alumnoId?: string } | null)?.alumnoId ?? null);
   if (!aprendizId) return false;
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { abrirElChatConElAprendiz } = require('../hooks/useEscribirleAlAprendiz') as typeof import('../hooks/useEscribirleAlAprendiz');
-    abrirElChatConElAprendiz(aprendizId, null).catch(() => {
+    abrirElChatConElAprendiz(aprendizId, nombreDelTituloDelAviso(titulo)).catch(() => {
       anotarRutaDeAviso(datos?.route);
     });
     return true;

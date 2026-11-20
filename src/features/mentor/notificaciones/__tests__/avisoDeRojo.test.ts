@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, jest } from '@jest/globals';
  */
 type Respuesta = {
   actionIdentifier?: string;
-  notification: { date: number; request: { identifier: string; content: { data: Record<string, unknown> | null } } };
+  notification: { date: number; request: { identifier: string; content: { title?: string; data: Record<string, unknown> | null } } };
 };
 type Oyente = (respuesta: Respuesta) => void;
 
@@ -36,14 +36,14 @@ jest.mock('../../../../services/http/apiClient', () => ({
 import { TEMAS, temasVisibles } from '../../../alarmas/api/preferenciasDeNotificacion';
 import { obtenerAvisosDeAcompanamiento } from '../../api/avisosApi';
 import { avisoVigenteDe, motivoCorto } from '../../utils/motivoDeLaFila';
-import { ACCION_ESCRIBIR, ACCION_VER_FICHA, CATEGORIA_ROJO_DEL_DIA, queSePidioEnElAviso } from '../avisoDeRojo';
+import { ACCION_ESCRIBIR, ACCION_VER_FICHA, CATEGORIA_ROJO_DEL_DIA, nombreDelTituloDelAviso, queSePidioEnElAviso } from '../avisoDeRojo';
 import { consumirRutaPendiente, escucharAperturaDeAviso, olvidarRutaPendiente } from '../rutaDeAviso';
 
 const RUTA = '/mentor/groups/g-1/learners/u-ana';
 let siguiente = 1;
-const tocar = (actionIdentifier: string | undefined, data: Record<string, unknown> | null = { route: RUTA, grupoId: 'g-1', aprendizId: 'u-ana' }) => {
+const tocar = (actionIdentifier: string | undefined, data: Record<string, unknown> | null = { route: RUTA, grupoId: 'g-1', aprendizId: 'u-ana' }, title = 'Ana Quispe está en rojo hoy') => {
   for (const oyente of mockOyentes) {
-    oyente({ actionIdentifier, notification: { date: 1, request: { identifier: `rojo-${siguiente++}`, content: { data } } } });
+    oyente({ actionIdentifier, notification: { date: 1, request: { identifier: `rojo-${siguiente++}`, content: { title, data } } } });
   }
 };
 const esperar = () => new Promise<void>(r => setTimeout(r, 0));
@@ -107,7 +107,7 @@ describe('los botones del aviso', () => {
     tocar('escribir');
     await esperar();
     expect(mockAbrirChat).toHaveBeenCalledWith('u-ana');
-    expect(mockIrAPestana).toHaveBeenCalledWith('Comunidad', { abrirChatConversacionId: 'conv-5', abrirChatTitulo: undefined });
+    expect(mockIrAPestana).toHaveBeenCalledWith('Comunidad', { abrirChatConversacionId: 'conv-5', abrirChatTitulo: 'Ana Quispe' });
     expect(consumirRutaPendiente('alumno')).toBeNull();
     dejar();
   });
@@ -148,6 +148,12 @@ describe('los botones del aviso', () => {
     expect(mockAbrirChat).not.toHaveBeenCalled();
     expect(consumirRutaPendiente('semaforo')).toEqual({ tipo: 'semaforo' });
     dejar();
+  });
+
+  it('el chat abre con el nombre que trae el título del push; con otro título, sin nombre', () => { // spec 057 FR-035
+    expect(nombreDelTituloDelAviso('Ana Quispe está en rojo hoy')).toBe('Ana Quispe');
+    expect(nombreDelTituloDelAviso('Otro aviso')).toBeNull();
+    expect(nombreDelTituloDelAviso(undefined)).toBeNull();
   });
 
   it('qué se pidió: solo «escribir» escribe; todo lo demás es la ficha', () => { // spec 057 FR-035
