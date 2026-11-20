@@ -1,3 +1,5 @@
+import type { ColorSemaforo } from '../../semaforo/types/semaforo.types';
+
 /**
  * Tipos del rol Mentor: acompañar a una célula sin dejar de ser aprendiz.
  *
@@ -101,4 +103,22 @@ export interface AlumnoConEstado extends AlumnoCelula {
   evaluable: boolean;
   /** 0..1, o `null` cuando el servidor no manda los hábitos de la semana. */
   cumplimiento: number | null;
+}
+
+/**
+ * Un grupo que el mentor acompañó y ya no (spec 057 FR-020, FR-021): solo lectura. El color y el porcentaje son los de la última
+ * semana cerrada DENTRO de su tramo, nunca los de hoy; las personas no llevan id (no se abre su ficha).
+ */
+export interface GrupoAnterior {
+  /** Con el id del grupo y el inicio del tramo: un mismo grupo puede aparecer dos veces (dos tramos). */
+  clave: string;
+  nombre: string;
+  /** `YYYY-MM-DD`. */
+  desde: string | null;
+  hasta: string | null;
+  aprendices: number | null;
+  puestoFinal: { posicion: number; total: number } | null;
+  colorFinal: ColorSemaforo;
+  porcentajeFinal: number | null;
+  personas: Array<{ nombre: string; colorFinal: ColorSemaforo }>;
 }

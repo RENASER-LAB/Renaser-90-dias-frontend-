@@ -147,9 +147,13 @@ Corrida contra la base local `renaser_e2e_final` (resultados en `~/Imágenes/e2e
 - `semaforo-podio/31`: aun eligiendo la formación, la hoja de compartir del sistema puede no salir en el emulador (límite del emulador).
 
 - `rediseno-del-mentor/` (spec 055, 2026-11-17): el rol de mentor rediseñado — Yo → «Mis grupos» → «Mi grupo» ordenado con el color en el borde de la
-  foto, la ficha con la semana en 7 círculos y el mes desplegable, el ojo de la evidencia y la nota privada. **Escritos y sin correr**; piden la
+  foto, la ficha con la semana en 7 círculos y el mes desplegable, el ojo de la evidencia y la nota privada. **Corridos en verde el 2026-11-20**; piden la
   cuenta del mentor con 3 grupos y `siembra.sql` en la base local clonada (lo dice arriba de cada archivo). Se corren de a uno con
   `.maestro/correr.sh .maestro/rediseno-del-mentor/<flujo>.yaml` o juntos con `npm run verificar -- --e2e .maestro/rediseno-del-mentor/`.
+- `mentor-fase-2/` (spec 057, 2026-11-20): la fase 2 del mentor — «Anteriores» de solo lectura en «Mis grupos» (cada grupo una vez), «Objetivos» en la
+  ficha con la fase y «Objetivo de N días» del plazo de la formación, «Mi evaluación» con la comparación con el mes anterior, «Qué sigue» y «Quién baja el
+  promedio», y el interruptor «Aprendices en rojo» en Yo → Ajustes → Notificaciones. **Corridos en verde el 2026-11-20**; piden la siembra de
+  `rediseno-del-mentor/` y la propia `siembra.sql` en la base local clonada. El push del aviso con sus botones no se ve en el emulador debug (sin token push).
 - `lider-056/` (spec 056, 2026-11-18): el rediseño del rol de líder de mentores — «Mis mentores» con «Por resolver» y el cupo de cada mentor, la ficha del mentor y su «Como mentor»,
   el grupo y la ficha del aprendiz, Grupos y «Crear grupo», Consultas, el reporte del mes y asignar un grupo sin mentor en cuatro toques; más, con la cuenta del mentor, abrir la ficha
   desde el aviso del líder. Con `comun/abrir-mis-mentores.yaml` como punto de partida. **Los que dicen `# corrido:` pasaron en el emulador**; piden `siembra.sql` en la base local; `04` y

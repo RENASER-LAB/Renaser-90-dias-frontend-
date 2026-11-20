@@ -16,6 +16,7 @@ import type { CargarOchentaVeinte } from '../../ochenta-veinte/types/ochentaVein
 import type { CargarHistorialDeRadar } from '../../radar/hooks/useHistorialDeRadar';
 import {
   obtenerDiasDelAprendiz,
+  obtenerObjetivosDelAprendiz,
   obtenerRadarDeAlumno,
   obtenerSemanaDelAprendiz,
   type DiasDelAprendiz,
@@ -51,7 +52,7 @@ export interface LecturasDeLaFicha {
   cargarCierres: CargarCierres | null;
   cargarDiagnostico: CargarLecturaDelDiagnostico | null;
   cargarOchentaVeinte: CargarOchentaVeinte | null;
-  /** Solo el líder los lee (spec 056 FR-016, FR-027): el mentor no tiene esa puerta, y su ficha no cambia. */
+  /** El líder los lee por su puerta (spec 056 FR-016, FR-027) y el mentor por la suya (spec 057 FR-001), con la misma forma. */
   cargarObjetivos: CargarObjetivos | null;
   /** De dónde se leen las notas privadas: el mentor las lee y las escribe; el líder, solo las lee. */
   origenDeLasNotas: OrigenDeLasNotas | null;
@@ -89,7 +90,7 @@ export function lecturasDeLaFicha(origen: OrigenDeLaFicha, personaId: string, op
       cargarCierres: lunes => obtenerCierresDeAlumno(grupoId, personaId, lunes),
       cargarDiagnostico: () => lecturaParaElMentor(grupoId, personaId),
       cargarOchentaVeinte: (tipo, inicio) => obtenerOchentaVeinteDeUnAlumno(grupoId, personaId, tipo, inicio),
-      cargarObjetivos: null,
+      cargarObjetivos: () => obtenerObjetivosDelAprendiz(grupoId, personaId),
       origenDeLasNotas: { quien: 'mentor', grupoId, aprendizId: personaId },
     };
   }

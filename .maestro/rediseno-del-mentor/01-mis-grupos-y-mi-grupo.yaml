@@ -1,7 +1,7 @@
 # Spec 055, historia 1 (FR-001 a FR-008): Yo → «Mis grupos» (3 grupos con su cantidad), «Mi grupo» con los aprendices ordenados
 # rojo → ámbar → verde → sin datos (color en el borde de la foto), la línea del motivo y el chat en un toque. Sin lista de avisos
 # arriba, sin conteos por color y sin la insignia del rol; al pie, «Mi evaluación».
-# corrido: 2026-11-17. cuenta: mentor (la ranura E2E_MENTOR_*), con 3 grupos; el grupo «Cupo [e2e-piso-1314]» con 9 aprendices de
+# corrido: 2026-11-20. cuenta: mentor (la ranura E2E_MENTOR_*), con 3 grupos; el grupo «Cupo [e2e-piso-1314]» con 9 aprendices de
 # colores distintos. Precondición: `siembra.sql` en la base local clonada (nunca producción).
 # spec 055 FR-001, FR-002, FR-003, FR-004, FR-005, FR-006, FR-007, FR-008
 appId: com.renaser.app

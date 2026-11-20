@@ -712,3 +712,26 @@ cinco tabs que se toca. Lo que cambia y nada más:
   `fichaDelAprendizEnElChat` y la guarda `pantallasDelLiderSinRelleno`.
 * **Hace falta un APK nuevo** (solo JavaScript) **y el backend de la spec 056 antes** (`/leadership/mentors/por-resolver`, cupo y colores en el padrón, permisos de grupos, responder
   consultas, avisar al mentor, documento semanal): contra uno anterior las filas que no cargan lo dicen y el resto sigue.
+
+## Decisión del dueño — 2026-11-20 — el rol de mentor, fase 2: objetivos del aprendiz, «Qué sigue» en Mi evaluación, grupos anteriores y el aviso de rojo (spec 057)
+
+La spec 055 dejó escrita la fase 2 y el dueño la había decidido el 17–18/11 con los bocetos B (Objetivos), 0 (Mis grupos con anteriores), F (Mi evaluación v2) y D (aviso de rojo)
+de https://claude.ai/artifact/1NGKi8rKZxxm6BmRmU3GRz. El 20/11 pidió terminarla antes de la próxima versión, **reutilizando lo que ya existe, sin duplicar código y sin tablas
+nuevas**. **Autorizó el cambio de las pantallas del mentor dentro de `Yo` y de `Comunidad` → Tribu**, que es lo único de los cinco tabs que se toca. Lo que cambia en la app y nada más:
+* **Objetivos en la ficha del aprendiz:** la sección `ObjetivosDeLaFicha` que ya veía el líder se monta también en la ficha del mentor (`lecturasDeLaFicha` le da `cargarObjetivos` por
+  `GET /mentor/groups/{g}/learners/{u}/objetivos`, con el mismo parser). El rótulo del programa dice «Objetivo de N días» con N el plazo **de la formación** del aprendiz (nunca «90» escrito
+  a mano) y arriba va la fase («Fase 2 · días 8 a 34»). Sin programa activo o suspendido (404 con `SIN_PROGRAMA_ACTIVO`) o en Día 0 (200 vacío) una línea: «Todavía no tiene objetivos». Un 403 (ya no lo
+  acompaña) o cualquier otro error no dibuja nada, como antes; el líder no cambia.
+* **Mi evaluación:** debajo del porcentaje, «N puntos más/menos que en <mes>» (si el mes anterior no está calculado, no se muestra); «Qué sigue» con hasta 3 acciones (ícono, acción y motivo
+  en gris; «Escríbele a <nombre>» abre el 1 a 1 con el hook de siempre, un pedido a la vez); «Quién baja el promedio» con hasta 5 aprendices, el borde del avatar rojo bajo 60 % y ámbar de 60 a
+  79, y tocar uno abre su ficha con SU grupo (si es de otro de sus grupos, se pasa a ese grupo, como con un aviso). Sin muestra o sin historial no hay ni títulos ni lista. Los tres campos son opcionales: una respuesta vieja se ve como antes.
+* **Mis grupos → «Anteriores»:** debajo de los activos, cada grupo que acompañó con su nombre, período, aprendices, cómo cerró (puesto del último mes y color final, con la palabra) y la lista
+  de nombres con su color final. **Solo lectura**: no hay ids ni se abre ninguna ficha. Sin anteriores no hay sección ni título. Con un solo grupo activo y anteriores —o con ninguno activo, un mentor que rotó—, la fila de Yo y la entrada
+  de Comunidad → Tribu abren «Mis grupos» en vez de saltar al grupo (y desde «Mi grupo» el atrás vuelve a «Mis grupos»).
+* **Aviso de rojo (19:00):** Yo → Notificaciones suma «Aprendices en rojo» («Te avisamos a las 19:00 si alguien de tu grupo cae a rojo ese día»), solo para quien acompaña un grupo y solo si el
+  servidor lista el tipo `ROJO_DEL_DIA`. La bandeja del mentor lo incluye y abrir la ficha lo marca leído, como `ACOMPANAMIENTO_ALUMNO`. La notificación trae dos botones registrados al empezar a
+  escuchar avisos (categoría `rojo-del-dia`): «Escribirle» (abre el chat 1 a 1 con el nombre del título del push; si no se puede, abre la ficha) y «Ver ficha»; tocar el cuerpo abre la ficha.
+* **No cambian:** los cinco tabs, el semáforo y sus colores, el chat, los permisos (los decide el servidor) ni las pantallas del líder.
+* **Pruebas:** `objetivosDeLaFicha`, `lecturasDeLaFicha`, `fichaDePersona`, `miEvaluacionQueSigue`, `misGrupos`, `gruposAnteriores`, `avisoDeRojo`, `panelesDeRolEnYo`.
+* **Hace falta el backend de la spec 057 antes** (`/objetivos` del mentor, los tres campos de `/evaluation`, `/me/groups/history` y el tipo `ROJO_DEL_DIA`): contra uno anterior cada pieza se
+  apaga sola, sin errores. **Solo JavaScript:** no hace falta un build nativo nuevo (`setNotificationCategoryAsync` es el mismo API de la carrera); sale en el siguiente AAB o por EAS Update.

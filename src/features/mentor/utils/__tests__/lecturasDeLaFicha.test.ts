@@ -50,16 +50,26 @@ describe('la ficha abierta por un mentor', () => {
     expect(await rutaDe(() => ficha.cargarOchentaVeinte!('SEMANA', null))).toBe(`${base}/analisis-80-20?periodo=SEMANA`);
   });
 
-  it('las notas son las del mentor (con grupo y persona) y los objetivos no se piden: el mentor no los lee por su puerta', () => { // spec 056 FR-014
+  it('las notas son las del mentor (con grupo y persona)', () => { // spec 056 FR-014
+    expect(l().origenDeLasNotas).toEqual({ quien: 'mentor', grupoId: 'g1', aprendizId: 'p1' });
+  });
+
+  it('los objetivos salen por la puerta del mentor, con grupo y aprendiz, y traen el plazo y la fase', async () => { // spec 057 FR-001
     const ficha = l();
-    expect(ficha.origenDeLasNotas).toEqual({ quien: 'mentor', grupoId: 'g1', aprendizId: 'p1' });
-    expect(ficha.cargarObjetivos).toBeNull();
+    expect(ficha.cargarObjetivos).not.toBeNull();
+    expect(await rutaDe(() => ficha.cargarObjetivos!())).toBe('/api/v1/mentor/groups/g1/learners/p1/objetivos');
+    mockApiFetch.mockReset();
+    mockApiFetch.mockResolvedValue({ duracionDias: 90, fase: { numero: 2, primerDia: 8, ultimoDia: 34 }, noventaDias: [{ id: 'o1', titulo: 'Bajar a 75 kg', avance: 40 }] });
+    const o = await ficha.cargarObjetivos!();
+    expect(o.duracionDias).toBe(90);
+    expect(o.fase).toEqual({ numero: 2, primerDia: 8, ultimoDia: 34 });
+    expect(o.noventaDias).toHaveLength(1);
   });
 
   it('sin grupo no hay a quién preguntarle: ninguna lectura y ninguna nota', () => { // spec 056 FR-014
     const ficha = lecturasDeLaFicha({ quien: 'mentor', grupoId: null }, 'p1');
     for (const clave of LECTURAS) expect(ficha[clave]).toBeNull();
-    expect(ficha.cargarObjetivos).toBeNull();
+    expect(ficha.cargarObjetivos).toBeNull(); // spec 057 FR-001: sin grupo no hay a quién preguntarle
     expect(ficha.origenDeLasNotas).toBeNull();
   });
 });

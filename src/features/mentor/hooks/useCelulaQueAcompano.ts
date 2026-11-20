@@ -4,6 +4,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { esDeRed, esNoDisponible, esProhibido, esSinCelula, obtenerMiCelula } from '../api/mentorApi';
 import { repartirAlumnos, resumenDe } from '../reglas';
 import type { CelulaResumen, MiCelula } from '../types/mentor.types';
+import { useGruposAnteriores } from './useGruposAnteriores';
 
 /**
  * NO se llama `useMiCelula` a propósito: ya existe uno con ese nombre en `features/community`,
@@ -122,7 +123,11 @@ export function useCelulaQueAcompano(activo: boolean) {
 
   const vista = useMemo(() => vistaDe(datos), [datos]);
 
-  return { vista, cargando, fallo, detalle, recargar: reintentar, elegirGrupo };
+  /* Spec 057 FR-022: los grupos anteriores viajan con la lectura de los de hoy, para que cada entrada sepa si «Mis grupos» tiene algo más
+     que mostrar (con un solo grupo activo y anteriores, la entrada abre la lista en vez de saltar al grupo). */
+  const { anteriores, hayAnteriores, listo: anterioresListos } = useGruposAnteriores(activo);
+
+  return { vista, cargando, fallo, detalle, recargar: reintentar, elegirGrupo, anteriores, hayAnteriores, anterioresListos };
 }
 
 /** Los datos con la cabecera del grupo elegido y sin padrón, mientras llega el de ese grupo. */

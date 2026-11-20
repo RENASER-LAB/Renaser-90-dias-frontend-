@@ -1,7 +1,7 @@
 # Spec 055, historia 3 (FR-019 a FR-022): el ojo de un hábito cumplido con evidencia abre la hoja desde abajo (foto, audio, texto), con
 # «1 de N», la hora y el pilar, «‹ Anterior · Ver en el Muro · Siguiente ›»; el gesto de volver del sistema la cierra y deja la ficha en
 # el mismo día.
-# corrido: 2026-11-17. cuenta: mentor (E2E_MENTOR_*) con un aprendiz que subió foto, audio y texto a distintos hábitos de hoy.
+# corrido: 2026-11-20. cuenta: mentor (E2E_MENTOR_*) con un aprendiz que subió foto, audio y texto a distintos hábitos de hoy.
 # spec 055 FR-019, FR-020, FR-021, FR-022
 appId: com.renaser.app
 ---
@@ -13,7 +13,7 @@ appId: com.renaser.app
     timeout: 40000
 - tapOn: "Abrir Mis grupos"
 - tapOn: ".*Cupo \\[e2e-piso-1314\\].*"
-- tapOn: "Abrir la ficha de .*"
+- tapOn: "Abrir la ficha de E2E Aprendiz"
 - extendedWaitUntil:
     visible: "Ver la evidencia de .*"
     timeout: 30000

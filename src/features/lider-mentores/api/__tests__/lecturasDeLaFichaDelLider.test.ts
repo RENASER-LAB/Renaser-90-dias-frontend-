@@ -125,7 +125,7 @@ describe('los objetivos', () => {
 
   it('sin mes ni semana quedan en null, y una lista ausente es vacía', async () => { // spec 056 FR-027
     mockApiFetch.mockResolvedValueOnce({ mes: null });
-    expect(await obtenerObjetivosDeLaPersona('p1')).toEqual({ noventaDias: [], mes: null, semana: null });
+    expect(await obtenerObjetivosDeLaPersona('p1')).toEqual({ duracionDias: null, fase: null, noventaDias: [], mes: null, semana: null });
   });
 
   it('es tolerante: el avance se acota a 0–100, un avance que no es número es «sin cifra» y un objetivo sin título se descarta', async () => { // spec 056 FR-027

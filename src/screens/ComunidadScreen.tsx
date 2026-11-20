@@ -2965,7 +2965,7 @@ function ComunidadPorFormacion({
           Alert.alert('Ya no acompañas a este aprendiz', motivo);
           celulaQueAcompano.recargar();
           despacharVista(
-            hayVariosGrupos(celulaQueAcompano.vista?.grupos.length ?? 0) ? { tipo: 'abrir-mis-grupos' } : { tipo: 'volver-a-mi-grupo' },
+            hayVariosGrupos(celulaQueAcompano.vista?.grupos.length ?? 0, celulaQueAcompano.hayAnteriores) ? { tipo: 'abrir-mis-grupos' } : { tipo: 'volver-a-mi-grupo' },
           );
         }}
       />
@@ -3014,16 +3014,25 @@ function ComunidadPorFormacion({
         fallo={celulaQueAcompano.fallo}
         detalle={celulaQueAcompano.detalle}
         recargar={celulaQueAcompano.recargar}
+        anteriores={celulaQueAcompano.anteriores}
+        anterioresListos={celulaQueAcompano.anterioresListos}
       />
     );
   }
   if (loQueTapa === 'mi-grupo') {
-    const variosGrupos = hayVariosGrupos(celulaQueAcompano.vista?.grupos.length ?? 0);
+    const variosGrupos = hayVariosGrupos(celulaQueAcompano.vista?.grupos.length ?? 0, celulaQueAcompano.hayAnteriores);
     return (
       <MiCelulaScreen
         rotuloDeVolver={variosGrupos ? 'Mis grupos' : 'Volver'}
         onSalir={() => despacharVista({ tipo: 'salir-de-mi-grupo', variosGrupos })}
         onAbrirAlumno={alumno => despacharVista({ tipo: 'abrir-ficha', alumno })}
+        onAbrirAlumnoDeOtroGrupo={(grupoId, alumnoId) => {
+          /* Spec 057 FR-013: se pasa a SU grupo y se abre la ficha con ese padrón. */
+          void celulaQueAcompano.elegirGrupo(grupoId).then(nueva => {
+            const alumno = nueva?.todos.find(a => a.participanteId === alumnoId);
+            if (alumno) despacharVista({ tipo: 'abrir-ficha', alumno });
+          });
+        }}
         vista={celulaQueAcompano.vista}
         cargando={celulaQueAcompano.cargando}
         fallo={celulaQueAcompano.fallo}
@@ -4277,27 +4286,29 @@ function ComunidadPorFormacion({
               <Presionable
                 onPress={() =>
                   despacharVista({
-                    tipo: entradaAMisGrupos(celulaQueAcompano.vista?.grupos.length ?? 0) === 'misGrupos' ? 'abrir-mis-grupos' : 'abrir-mi-grupo',
+                    tipo: entradaAMisGrupos(celulaQueAcompano.vista?.grupos.length ?? 0, celulaQueAcompano.hayAnteriores) === 'misGrupos' ? 'abrir-mis-grupos' : 'abrir-mi-grupo',
                   })
                 }
                 accessibilityRole="button"
-                accessibilityLabel={hayVariosGrupos(celulaQueAcompano.vista?.grupos.length ?? 0) ? 'Abrir los grupos que acompañas' : 'Abrir el grupo que acompañas'}
+                accessibilityLabel={hayVariosGrupos(celulaQueAcompano.vista?.grupos.length ?? 0, celulaQueAcompano.hayAnteriores) ? 'Abrir los grupos que acompañas' : 'Abrir el grupo que acompañas'}
                 style={[styles.entradaMentor, { borderColor: c.goldInk, backgroundColor: c.goldWash }]}
               >
                 <View style={{ flex: 1 }}>
                   <Text style={[t.cardTitle, { color: c.textStrong }]} numberOfLines={1}>
-                    {hayVariosGrupos(celulaQueAcompano.vista?.grupos.length ?? 0) ? 'Mis grupos' : celulaQueAcompano.vista?.celula.nombre ?? 'Mi grupo'}
+                    {hayVariosGrupos(celulaQueAcompano.vista?.grupos.length ?? 0, celulaQueAcompano.hayAnteriores) ? 'Mis grupos' : celulaQueAcompano.vista?.celula.nombre ?? 'Mi grupo'}
                   </Text>
                   <Text style={[t.small, { color: c.textSoft, marginTop: 2 }]}>
                     {celulaQueAcompano.cargando
                       ? 'Cargando…'
-                      : hayVariosGrupos(celulaQueAcompano.vista?.grupos.length ?? 0)
+                      : (celulaQueAcompano.vista?.grupos.length ?? 0) > 1
                         ? `${celulaQueAcompano.vista?.grupos.length} grupos`
                       : celulaQueAcompano.vista
                         ? `${celulaQueAcompano.vista.resumen.total} ${
                             celulaQueAcompano.vista.resumen.total === 1 ? 'aprendiz' : 'aprendices'
                           }`
-                        : 'Ver el grupo que acompañas'}
+                        : celulaQueAcompano.hayAnteriores
+                          ? 'Tus grupos anteriores'
+                          : 'Ver el grupo que acompañas'}
                   </Text>
                 </View>
                 <Icon name="chevron" size={TAMANO_ICONO.chico} color={c.goldInk} />

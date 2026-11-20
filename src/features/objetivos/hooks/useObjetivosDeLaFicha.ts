@@ -1,13 +1,21 @@
 import { useEffect, useState } from 'react';
 
+import { ApiError } from '../../../services/http/apiClient';
 import type { CargarObjetivos, ObjetivosDeLaPersona } from '../../lider-mentores/types/objetivosDeLaPersona.types';
 
 /**
  * Lo que se ve de los objetivos de otra persona (spec 056 FR-016, FR-027): `cargando` y `oculta` no dibujan nada —ni marco ni mensaje—;
- * `lista` trae los objetivos. **Cualquier error es «oculta»**: un 404 (backend sin la ruta), un 403 (otro rol, fuera de su alcance) o
+ * `lista` trae los objetivos. **Cualquier error es «oculta»** (salvo el 404 con `SIN_PROGRAMA_ACTIVO`, que dice «Todavía no tiene objetivos»): un 404 (backend sin la ruta), un 403 (otro rol, fuera de su alcance) o
  * un fallo de red dejan la ficha como estaba; los objetivos son un dato de más, no lo que la ficha necesita para mostrar a la persona.
  */
-export type VistaDeLosObjetivos = { tipo: 'cargando' } | { tipo: 'oculta' } | { tipo: 'lista'; objetivos: ObjetivosDeLaPersona };
+export type VistaDeLosObjetivos =
+  | { tipo: 'cargando' }
+  | { tipo: 'oculta' }
+  /** Spec 057 FR-003/FR-004: 404 con `codigo: SIN_PROGRAMA_ACTIVO` (sin programa, Día 0 o suspendido): una línea, no un hueco. */
+  | { tipo: 'sin-programa' }
+  | { tipo: 'lista'; objetivos: ObjetivosDeLaPersona };
+
+export const CODIGO_SIN_PROGRAMA_ACTIVO = 'SIN_PROGRAMA_ACTIVO';
 
 /** Cuántos objetivos tiene: los del programa y el del mes (la semana se cuenta aparte, en acciones). */
 export function cuantosObjetivos(o: ObjetivosDeLaPersona): number {
@@ -35,10 +43,15 @@ export function useObjetivosDeLaFicha(cargar: CargarObjetivos | null): VistaDeLo
     setVista({ tipo: 'cargando' });
     cargar().then(
       objetivos => {
-        if (vigente) setVista(sinObjetivos(objetivos) ? { tipo: 'oculta' } : { tipo: 'lista', objetivos });
+        if (!vigente) return;
+        /* Spec 057 FR-004: la ruta del mentor responde 200 vacío en Día 0 (con `duracionDias` y `fase`): se dice en una línea. La del líder
+           no manda esos campos, y sin objetivos sigue sin dibujar nada. */
+        const delMentor = objetivos.duracionDias != null || objetivos.fase != null;
+        setVista(sinObjetivos(objetivos) ? { tipo: delMentor ? 'sin-programa' : 'oculta' } : { tipo: 'lista', objetivos });
       },
-      () => {
-        if (vigente) setVista({ tipo: 'oculta' });
+      error => {
+        const sinPrograma = error instanceof ApiError && error.status === 404 && error.codigo === CODIGO_SIN_PROGRAMA_ACTIVO;
+        if (vigente) setVista({ tipo: sinPrograma ? 'sin-programa' : 'oculta' });
       },
     );
     return () => {

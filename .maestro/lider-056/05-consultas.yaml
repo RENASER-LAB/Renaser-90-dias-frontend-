@@ -3,7 +3,7 @@
 # sus aprendices («Consultas de <mentor>») y «Ver las de todos» quita el filtro. NO recuerda ni responde nada (FR-029 y FR-030 mandan mensajes: se prueban con Jest y a mano).
 # cuenta: LÍDER (e2e-lider@renaser.test). Precondición: al menos una consulta sin responder de un aprendiz de «E2E Mentor».
 # spec 056 FR-028
-# corrido: 2026-11-18
+# corrido: 2026-11-20
 appId: com.renaser.app
 ---
 - runFlow: ../comun/abrir-mis-mentores.yaml

@@ -10,6 +10,7 @@ jest.mock('../../../../theme/ThemeContext', () => {
   return { useTheme: () => ({ mode: 'light', c: tokens.light, t: tokens.type, space: tokens.space, toggle: () => undefined, setMode: () => undefined }) };
 });
 
+import { leerObjetivosDeLaPersona } from '../../../lider-mentores/api/objetivosDeLaPersonaSchemas';
 import { ObjetivosDeLaFicha } from '../ObjetivosDeLaFicha';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -86,6 +87,112 @@ describe('la sección de objetivos', () => {
     await tocar(r, 'Objetivos');
     expect(todoElTexto(r)).not.toContain('Del programa');
     expect(todoElTexto(r)).not.toContain('Del mes');
+  });
+});
+
+/** La respuesta real de `GET /mentor/groups/{g}/learners/{u}/objetivos` (spec 057): mes y semana traen un objetivo por eje en `objetivos`. */
+const RESPUESTA_REAL = {
+  duracionDias: 90,
+  fase: { numero: 4, primerDia: 65, ultimoDia: 90 },
+  noventaDias: [
+    { id: 'CUERPO', eje: 'CUERPO', titulo: 'Bajar a 75 kg', avance: 40 },
+    { id: 'TRABAJO', eje: 'TRABAJO', titulo: 'Facturar 5000', avance: 20 },
+    { id: 'RELACIONES', eje: 'RELACIONES', titulo: 'Cenar en familia', avance: null },
+  ],
+  mes: {
+    titulo: 'Mes 3',
+    numeroMes: 3,
+    diaDeCierre: 90,
+    objetivos: [
+      { eje: 'CUERPO', titulo: null, cifra: 78, unidad: 'kg', unidadAdelante: false, metaAlcanzada: false, motivoSinCifra: null },
+      { eje: 'TRABAJO', titulo: 'Cerrar tres ventas', cifra: null, unidad: null, unidadAdelante: false, metaAlcanzada: false, motivoSinCifra: null },
+      { eje: 'RELACIONES', titulo: null, cifra: null, unidad: null, unidadAdelante: false, metaAlcanzada: false, motivoSinCifra: 'SIN_TIPO' },
+    ],
+  },
+  semana: {
+    titulo: 'Semana 12',
+    numeroSemana: 12,
+    planificadas: 5,
+    cumplidas: 2,
+    objetivos: [
+      { eje: 'CUERPO', titulo: 'Caminar 4 días' },
+      { eje: 'TRABAJO', titulo: 'Llamar a diez clientes' },
+    ],
+  },
+};
+
+describe('la sección entera con la respuesta real del mentor (spec 057)', () => {
+  it('muestra la fase, los 3 ejes del programa, el objetivo de cada eje del mes y de la semana, sin cortarse en «Mes 3»', async () => { // spec 057 FR-004
+    cargar.mockResolvedValue(leerObjetivosDeLaPersona(RESPUESTA_REAL, 'prueba'));
+    const r = await montar(ficha());
+    await tocar(r, 'Objetivos');
+    const texto = todoElTexto(r);
+    expect(texto).toContain('Fase 4 · días 65 a 90');
+    expect(texto).toContain('Objetivo de 90 días');
+    for (const t of ['Bajar a 75 kg', 'Facturar 5000', 'Cenar en familia']) expect(texto).toContain(t);
+    expect(texto).toContain('Del mes · Mes 3');
+    for (const t of ['Llegar a 78 kg', 'Cerrar tres ventas', 'Este mes no lleva cifra.']) expect(texto).toContain(t);
+    // El motivo llega como código del servidor: nunca se muestra crudo (visto en el E2E del 20/11).
+    for (const codigo of ['SIN_TIPO', 'SIN_DATOS']) expect(texto).not.toContain(codigo);
+    expect(texto).toContain('De la semana · Semana 12');
+    for (const t of ['Caminar 4 días', 'Llamar a diez clientes', 'Acciones cumplidas', '2 de 5']) expect(texto).toContain(t);
+    for (const eje of ['Cuerpo', 'Negocio y dinero', 'Relaciones']) expect(texto).toContain(eje);
+  });
+
+  it('una respuesta sin los ejes del mes y la semana (la del líder) se dibuja como siempre', async () => { // spec 057 FR-004
+    cargar.mockResolvedValue(leerObjetivosDeLaPersona({ noventaDias: [], mes: { titulo: 'Caminar 20 días', avance: 55 }, semana: { titulo: 'Tres caminatas', planificadas: 5, cumplidas: 3 } }, 'prueba'));
+    const r = await montar(ficha());
+    await tocar(r, 'Objetivos');
+    const texto = todoElTexto(r);
+    expect(texto).toContain('Caminar 20 días');
+    expect(texto).toContain('Tres caminatas');
+    expect(texto).toContain('3 de 5');
+  });
+
+  it('el mes y la semana con ejes se dibujan aunque no traigan título', async () => { // spec 057 FR-004
+    const o = leerObjetivosDeLaPersona({ mes: { objetivos: [{ eje: 'CUERPO', titulo: 'Caminar' }] }, semana: { planificadas: 2, cumplidas: 1, objetivos: [{ eje: 'TRABAJO', titulo: 'Llamar' }] } }, 'prueba');
+    expect(o.mes?.objetivos).toHaveLength(1);
+    expect(o.semana?.objetivos).toHaveLength(1);
+  });
+});
+
+describe('la ficha del mentor (spec 057)', () => {
+  it('el rótulo dice el plazo de la formación y arriba va la fase', async () => { // spec 057 FR-004
+    cargar.mockResolvedValue({ ...objetivos, duracionDias: 60, fase: { numero: 2, primerDia: 8, ultimoDia: 34 } });
+    const r = await montar(ficha());
+    await tocar(r, 'Objetivos');
+    const texto = todoElTexto(r);
+    expect(texto).toContain('Objetivo de 60 días');
+    expect(texto).toContain('Fase 2 · días 8 a 34');
+    expect(texto).not.toContain('Del programa');
+  });
+
+  it('sin plazo ni fase (el líder o un servidor viejo) conserva «Del programa» y no inventa la fase', async () => { // spec 057 FR-004
+    const r = await montar(ficha());
+    await tocar(r, 'Objetivos');
+    expect(todoElTexto(r)).toContain('Del programa');
+    expect(porTestID(r, 'fase-del-programa')).toHaveLength(0);
+  });
+
+  it('un 404 con SIN_PROGRAMA_ACTIVO dice «Todavía no tiene objetivos» en una línea, sin hueco', async () => { // spec 057 FR-004
+    cargar.mockRejectedValue(new ApiError(404, 'sin programa', { codigo: 'SIN_PROGRAMA_ACTIVO' }));
+    const r = await montar(ficha());
+    expect(todoElTexto(r)).toContain('Todavía no tiene objetivos');
+    expect(hayTocable(r, 'Objetivos')).toBe(false);
+  });
+
+  it('Día 0: un 200 vacío de la ruta del mentor (con plazo y fase) también dice «Todavía no tiene objetivos»; el del líder, sin esos campos, no dibuja nada', async () => { // spec 057 FR-004
+    cargar.mockResolvedValue({ duracionDias: 60, fase: null, noventaDias: [], mes: null, semana: null });
+    expect(todoElTexto(await montar(ficha()))).toContain('Todavía no tiene objetivos');
+    cargar.mockResolvedValue({ noventaDias: [], mes: null, semana: null });
+    expect((await montar(ficha())).toJSON()).toBeNull();
+  });
+
+  it('un 403 (ya no lo acompaña) o un 404 sin código no dibujan nada', async () => { // spec 057 FR-004
+    cargar.mockRejectedValue(new ApiError(403, 'no'));
+    expect((await montar(ficha())).toJSON()).toBeNull();
+    cargar.mockRejectedValue(new ApiError(404, 'no', { codigo: 'OTRO' }));
+    expect((await montar(ficha())).toJSON()).toBeNull();
   });
 });
 

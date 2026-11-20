@@ -7,6 +7,7 @@ import { useAprendicesDisponibles } from '../../lider-mentores/hooks/useAprendic
 import { useHabitosDeTodosDisponibles } from '../../lider-mentores/hooks/useHabitosDeTodosDisponibles';
 import { useCelulaQueAcompano } from '../../mentor/hooks/useCelulaQueAcompano';
 import { useEsMentor } from '../../mentor/hooks/useEsMentor';
+import { hayVariosGrupos } from '../../mentor/utils/entradaAMisGrupos';
 import { esLiderDeMentores } from '../../mentor/utils/entradaAlGrupo';
 import { useResumenPorGrupos } from '../../semaforo/hooks/useLecturaPorSemana';
 import {
@@ -75,7 +76,7 @@ export function usePanelesDeRol({
   });
 
   const [vista, setVista] = useState<VistaDelPanel>(SIN_VISTA);
-  const variosGrupos = (celula.vista?.grupos.length ?? 0) > 1;
+  const variosGrupos = hayVariosGrupos(celula.vista?.grupos.length ?? 0, celula.hayAnteriores);
   const volver = useCallback(() => setVista(actual => vistaDeRegreso(actual, variosGrupos)), [variosGrupos]);
   const cerrarTodo = useCallback(() => setVista(SIN_VISTA), []);
 

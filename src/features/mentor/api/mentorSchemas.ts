@@ -208,8 +208,73 @@ export const evaluacionPropiaSchema = z
         })
         .passthrough(),
     ),
+    /**
+     * Spec 057 FR-010: los tres campos nuevos son aditivos. Un servidor viejo no los manda, así que todo es opcional: sin ellos la hoja se
+     * ve como en la fase 1.
+     */
+    /** El porcentaje del mes anterior, o null si ese mes no está CALCULADA. */
+    porcentajeMesAnterior: z.number().nullish(),
+    /** «Quién baja el promedio» (FR-012): hasta 5 aprendices vigentes con menos de 80 %, del menor al mayor. */
+    quienBaja: z
+      .array(
+        z
+          .object({
+            aprendizId: z.string(),
+            grupoId: z.string().nullish(),
+            nombre: z.string().nullish(),
+            porcentaje: z.number().nullish(),
+            entregadas: z.number().nullish(),
+            esperadas: z.number().nullish(),
+          })
+          .passthrough(),
+      )
+      .nullish(),
+    /** «Qué sigue» (FR-011): hasta 3 acciones. ESCRIBIR trae el aprendiz al que se le escribe. */
+    acciones: z
+      .array(
+        z
+          .object({
+            tipo: z.string(),
+            titulo: z.string().nullish(),
+            motivo: z.string().nullish(),
+            aprendizId: z.string().nullish(),
+            grupoId: z.string().nullish(),
+          })
+          .passthrough(),
+      )
+      .nullish(),
   })
   .passthrough();
+
+/**
+ * Spec 057 FR-020: `GET /api/v1/mentor/me/groups/history` — los grupos que el mentor ya no acompaña. Tolerante: llega una lista o un
+ * objeto con la lista adentro; lo que falta es «sin dato» (nunca un 0 inventado) y un tramo sin nombre ni período no se dibuja.
+ * `personas` no lleva ids a propósito (FR-021): la sección es de solo lectura.
+ */
+export const grupoAnteriorSchema = z
+  .object({
+    grupoId: z.string().nullish(),
+    nombre: z.string().nullish(),
+    desde: z.string().nullish(),
+    hasta: z.string().nullish(),
+    aprendices: z.number().nullish(),
+    puestoFinal: z.object({ posicion: z.number(), total: z.number() }).passthrough().nullish(),
+    colorFinal: z.string().nullish(),
+    porcentajeFinal: z.number().nullish(),
+    personas: z.array(z.object({ nombre: z.string().nullish(), colorFinal: z.string().nullish() }).passthrough()).nullish(),
+  })
+  .passthrough();
+
+export const historialDeGruposSchema = z.union([
+  z.array(grupoAnteriorSchema),
+  z
+    .object({
+      grupos: z.array(grupoAnteriorSchema).nullish(),
+      tramos: z.array(grupoAnteriorSchema).nullish(),
+      anteriores: z.array(grupoAnteriorSchema).nullish(),
+    })
+    .passthrough(),
+]);
 
 /**
  * `RankingDeGrupos` — `GET /api/v1/ranking/groups`.
@@ -267,6 +332,9 @@ export type SemanaAlumnoApi = z.infer<typeof semanaAlumnoSchema>;
 export type DiaAlumnoApi = SemanaAlumnoApi['dias'][number];
 export type ObligacionDiaApi = DiaAlumnoApi['obligaciones'][number];
 export type EvaluacionPropiaApi = z.infer<typeof evaluacionPropiaSchema>;
+export type QuienBajaApi = NonNullable<EvaluacionPropiaApi['quienBaja']>[number];
+export type AccionDeLaEvaluacionApi = NonNullable<EvaluacionPropiaApi['acciones']>[number];
+export type GrupoAnteriorApi = z.infer<typeof grupoAnteriorSchema>;
 export type RankingGruposApi = z.infer<typeof rankingGruposSchema>;
 export type AsignacionMentorApi = ContextoMentorApi['assignments'][number];
 export type AprendicesGrupoApi = z.infer<typeof aprendicesGrupoSchema>;

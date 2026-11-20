@@ -2,15 +2,19 @@ import { z } from 'zod';
 
 import { ApiError, apiFetch } from '../../../services/http/apiClient';
 import type { HistorialRadarApi } from '../../radar/types/radar.types';
-import type { AlumnoCelula, MiCelula } from '../types/mentor.types';
+import type { AlumnoCelula, GrupoAnterior, MiCelula } from '../types/mentor.types';
 import { aSemanaDePersona, cumplimientoDelLiderSchemas } from '../../lider-mentores/api/cumplimientoDelLiderSchemas';
+import { leerObjetivosDeLaPersona } from '../../lider-mentores/api/objetivosDeLaPersonaSchemas';
+import type { ObjetivosDeLaPersona } from '../../lider-mentores/types/objetivosDeLaPersona.types';
 import type { SemanaDePersona } from '../../lider-mentores/types/cumplimientoDelLider.types';
+import { aColorSemaforo } from '../../semaforo/api/semaforoSchemas';
 import type { ColorSemaforo } from '../../semaforo/types/semaforo.types';
 import {
   aprendicesGrupoSchema,
   diasDelAprendizSchema,
   contextoMentorSchema,
   evaluacionPropiaSchema,
+  historialDeGruposSchema,
   radarDelAlumnoSchema,
   rankingGruposSchema,
   validarRespuesta,
@@ -188,6 +192,45 @@ export async function obtenerRadarDeAlumno(
     'GET /api/v1/mentor/groups/{g}/learners/{u}/radar',
   );
   return { entries: datos.entries, nextCursor: datos.nextCursor ?? null, miRadar: datos.miRadar ?? null };
+}
+
+/**
+ * Spec 057 FR-020: los grupos que el mentor acompañó y ya no, del más reciente al más viejo (el orden lo pone el servidor). Un
+ * tramo sin nombre se descarta; sin anteriores, lista vacía (la pantalla no dibuja la sección). Solo lectura: nada trae ids de personas.
+ */
+export async function obtenerGruposAnteriores(): Promise<GrupoAnterior[]> {
+  const crudo = validarRespuesta<z.infer<typeof historialDeGruposSchema>>(
+    historialDeGruposSchema,
+    await apiFetch<unknown>('/api/v1/mentor/me/groups/history'),
+    'GET /api/v1/mentor/me/groups/history',
+  );
+  const lista = Array.isArray(crudo) ? crudo : (crudo.grupos ?? crudo.tramos ?? crudo.anteriores ?? []);
+  return lista.flatMap((g, i) => {
+    const nombre = g.nombre?.trim();
+    if (!nombre) return [];
+    return [
+      {
+        clave: `${g.grupoId ?? nombre}-${g.desde ?? 'sin-inicio'}-${g.hasta ?? 'sin-fin'}-${i}`,
+        nombre,
+        desde: g.desde ?? null,
+        hasta: g.hasta ?? null,
+        aprendices: typeof g.aprendices === 'number' ? g.aprendices : null,
+        puestoFinal: g.puestoFinal ? { posicion: g.puestoFinal.posicion, total: g.puestoFinal.total } : null,
+        colorFinal: aColorSemaforo(g.colorFinal),
+        porcentajeFinal: typeof g.porcentajeFinal === 'number' ? g.porcentajeFinal : null,
+        personas: (g.personas ?? []).flatMap(p => (p.nombre?.trim() ? [{ nombre: p.nombre.trim(), colorFinal: aColorSemaforo(p.colorFinal) }] : [])),
+      },
+    ];
+  });
+}
+
+/**
+ * Spec 057 FR-001: los objetivos de un aprendiz que el mentor acompaña hoy, con la misma forma que los del líder más `duracionDias` y
+ * `fase`. 403 = ya no lo acompaña; 404 con `codigo: SIN_PROGRAMA_ACTIVO` = sin programa, Día 0 o suspendido (lo lee quien lo muestra).
+ */
+export async function obtenerObjetivosDelAprendiz(grupoId: string, aprendizId: string): Promise<ObjetivosDeLaPersona> {
+  const ruta = `/api/v1/mentor/groups/${encodeURIComponent(grupoId)}/learners/${encodeURIComponent(aprendizId)}/objetivos`;
+  return leerObjetivosDeLaPersona(await apiFetch<unknown>(ruta), 'GET /api/v1/mentor/groups/{g}/learners/{u}/objetivos');
 }
 
 /**
