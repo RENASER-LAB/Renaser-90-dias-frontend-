@@ -10,23 +10,39 @@ import { cuantosObjetivos, useObjetivosDeLaFicha } from '../hooks/useObjetivosDe
 
 /**
  * «Objetivos» en la ficha de una persona (spec 056 FR-016, FR-027): los del programa, el del mes y el de la semana con su avance, **solo
- * lectura**, en una sección que se abre y se cierra del mismo estilo que los pilares del día (`SeccionPlegable`). La ve el líder de la
- * formación; la ficha del mentor (055) no la monta.
+ * lectura**, en una sección que se abre y se cierra del mismo estilo que los pilares del día (`SeccionPlegable`). La ven el líder de la
+ * formación y, desde la spec 057 (FR-004), el mentor que acompaña a la persona: con el plazo de **su formación** («Objetivo de N días») y
+ * la fase en la que va arriba, si el servidor los manda.
  *
  * Mismo criterio que `CierresDelDia` y el diagnóstico: `cargar` es de cada ficha y estable por persona; sin `cargar`, mientras llega la
- * primera lectura, sin objetivos o con cualquier error (404, 403, red) no se dibuja nada —ni marco ni hueco—.
+ * primera lectura, sin objetivos o con cualquier error (404, 403, red) no se dibuja nada —ni marco ni hueco—. La única excepción: un 404
+ * con `SIN_PROGRAMA_ACTIVO` dice en una línea que todavía no tiene objetivos.
  */
 export function ObjetivosDeLaFicha({ cargar }: { cargar: CargarObjetivos | null }) {
   const vista = useObjetivosDeLaFicha(cargar);
+  const { c, t } = useTheme();
+  if (vista.tipo === 'sin-programa') {
+    return (
+      <View style={estilos.raiz}>
+        <Text style={[t.body, { color: c.textSoft }]}>Todavía no tiene objetivos</Text>
+      </View>
+    );
+  }
   if (vista.tipo !== 'lista') return null;
   const { objetivos } = vista;
+  const fase = objetivos.fase;
 
   return (
     <View style={estilos.raiz}>
       <SeccionPlegable titulo="Objetivos" derecha={<Resumen objetivos={objetivos} />}>
         <View style={estilos.cuerpo}>
+          {fase ? (
+            <Text testID="fase-del-programa" style={[t.body, { color: c.textSoft, fontFamily: fuentes.media, fontVariant: ['tabular-nums'] }]}>
+              {`Fase ${fase.numero} · días ${fase.primerDia} a ${fase.ultimoDia}`}
+            </Text>
+          ) : null}
           {objetivos.noventaDias.length > 0 ? (
-            <Grupo rotulo="Del programa">
+            <Grupo rotulo={objetivos.duracionDias ? `Objetivo de ${objetivos.duracionDias} días` : 'Del programa'}>
               {objetivos.noventaDias.map(o => (
                 <FilaDeObjetivo key={o.id} id={o.id} titulo={o.titulo} avance={o.avance} />
               ))}

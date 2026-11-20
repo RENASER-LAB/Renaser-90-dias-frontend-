@@ -23,7 +23,18 @@ export interface ObjetivosDeLaSemanaDeLaPersona {
   cumplidas: number;
 }
 
+/** La fase del programa en la que va la persona (spec 057 FR-001): «Fase 2 · días 8 a 34». */
+export interface FaseDelPrograma {
+  numero: number;
+  primerDia: number;
+  ultimoDia: number;
+}
+
 export interface ObjetivosDeLaPersona {
+  /** Spec 057 FR-001: el plazo de la formación de la persona. Opcional: el servidor del líder y los viejos no lo mandan. */
+  duracionDias?: number | null;
+  /** Spec 057 FR-001: la fase en la que va. Opcional por lo mismo. */
+  fase?: FaseDelPrograma | null;
   noventaDias: ObjetivoDelPrograma[];
   mes: ObjetivoDelMesDeLaPersona | null;
   semana: ObjetivosDeLaSemanaDeLaPersona | null;

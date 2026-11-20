@@ -89,6 +89,39 @@ describe('la sección de objetivos', () => {
   });
 });
 
+describe('la ficha del mentor (spec 057)', () => {
+  it('el rótulo dice el plazo de la formación y arriba va la fase', async () => { // spec 057 FR-004
+    cargar.mockResolvedValue({ ...objetivos, duracionDias: 60, fase: { numero: 2, primerDia: 8, ultimoDia: 34 } });
+    const r = await montar(ficha());
+    await tocar(r, 'Objetivos');
+    const texto = todoElTexto(r);
+    expect(texto).toContain('Objetivo de 60 días');
+    expect(texto).toContain('Fase 2 · días 8 a 34');
+    expect(texto).not.toContain('Del programa');
+  });
+
+  it('sin plazo ni fase (el líder o un servidor viejo) conserva «Del programa» y no inventa la fase', async () => { // spec 057 FR-004
+    const r = await montar(ficha());
+    await tocar(r, 'Objetivos');
+    expect(todoElTexto(r)).toContain('Del programa');
+    expect(porTestID(r, 'fase-del-programa')).toHaveLength(0);
+  });
+
+  it('un 404 con SIN_PROGRAMA_ACTIVO dice «Todavía no tiene objetivos» en una línea, sin hueco', async () => { // spec 057 FR-004
+    cargar.mockRejectedValue(new ApiError(404, 'sin programa', { codigo: 'SIN_PROGRAMA_ACTIVO' }));
+    const r = await montar(ficha());
+    expect(todoElTexto(r)).toContain('Todavía no tiene objetivos');
+    expect(hayTocable(r, 'Objetivos')).toBe(false);
+  });
+
+  it('un 403 (ya no lo acompaña) o un 404 sin código no dibujan nada', async () => { // spec 057 FR-004
+    cargar.mockRejectedValue(new ApiError(403, 'no'));
+    expect((await montar(ficha())).toJSON()).toBeNull();
+    cargar.mockRejectedValue(new ApiError(404, 'no', { codigo: 'OTRO' }));
+    expect((await montar(ficha())).toJSON()).toBeNull();
+  });
+});
+
 describe('cuando no hay nada que mostrar, no se dibuja nada', () => {
   it('sin función de carga no hay sección ni pedido', async () => { // spec 056 FR-027
     const r = await montar(ficha(null));

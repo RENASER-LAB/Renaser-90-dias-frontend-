@@ -88,7 +88,7 @@ export interface PropsDeFichaDePersona {
  *    despliega el mes en el mismo lugar y «Ver solo la semana» lo pliega.
  * 3. El título del día con «N de M» y los pilares (Cuerpo, Mente, Espíritu, Emociones) como secciones; cada hábito con su estado, el
  *    ojo de la evidencia y su hora.
- * 4. Al final, lo que ya existía y se queda: Objetivos (solo el líder los lee), Código Renaser (si está encendido), Diagnóstico, 80/20 de
+ * 4. Al final, lo que ya existía y se queda: Objetivos (el líder y el mentor que lo acompaña, spec 057), Código Renaser (si está encendido), Diagnóstico, 80/20 de
  *    SER, Tiempo libre, los cierres del día y la caja. Cada uno se dibuja solo cuando tiene algo que mostrar: nada de huecos.
  *
  * Las semanas vienen de `…/semana` (la caché y el adelanto de la anterior viven en `useSemanasDelAprendiz`) y los colores de `…/dias`.

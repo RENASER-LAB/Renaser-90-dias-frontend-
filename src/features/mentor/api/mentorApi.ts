@@ -4,6 +4,8 @@ import { ApiError, apiFetch } from '../../../services/http/apiClient';
 import type { HistorialRadarApi } from '../../radar/types/radar.types';
 import type { AlumnoCelula, MiCelula } from '../types/mentor.types';
 import { aSemanaDePersona, cumplimientoDelLiderSchemas } from '../../lider-mentores/api/cumplimientoDelLiderSchemas';
+import { leerObjetivosDeLaPersona } from '../../lider-mentores/api/objetivosDeLaPersonaSchemas';
+import type { ObjetivosDeLaPersona } from '../../lider-mentores/types/objetivosDeLaPersona.types';
 import type { SemanaDePersona } from '../../lider-mentores/types/cumplimientoDelLider.types';
 import type { ColorSemaforo } from '../../semaforo/types/semaforo.types';
 import {
@@ -188,6 +190,15 @@ export async function obtenerRadarDeAlumno(
     'GET /api/v1/mentor/groups/{g}/learners/{u}/radar',
   );
   return { entries: datos.entries, nextCursor: datos.nextCursor ?? null, miRadar: datos.miRadar ?? null };
+}
+
+/**
+ * Spec 057 FR-001: los objetivos de un aprendiz que el mentor acompaña hoy, con la misma forma que los del líder más `duracionDias` y
+ * `fase`. 403 = ya no lo acompaña; 404 con `codigo: SIN_PROGRAMA_ACTIVO` = sin programa, Día 0 o suspendido (lo lee quien lo muestra).
+ */
+export async function obtenerObjetivosDelAprendiz(grupoId: string, aprendizId: string): Promise<ObjetivosDeLaPersona> {
+  const ruta = `/api/v1/mentor/groups/${encodeURIComponent(grupoId)}/learners/${encodeURIComponent(aprendizId)}/objetivos`;
+  return leerObjetivosDeLaPersona(await apiFetch<unknown>(ruta), 'GET /api/v1/mentor/groups/{g}/learners/{u}/objetivos');
 }
 
 /**

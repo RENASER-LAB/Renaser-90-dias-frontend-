@@ -28,8 +28,18 @@ const semanaSchema = z
   })
   .passthrough();
 
+const faseSchema = z
+  .object({
+    numero: z.unknown().optional(),
+    primerDia: z.unknown().optional(),
+    ultimoDia: z.unknown().optional(),
+  })
+  .passthrough();
+
 const objetivosSchema = z
   .object({
+    duracionDias: z.unknown().optional(),
+    fase: faseSchema.nullish(),
     noventaDias: z.array(objetivoSchema).nullish(),
     mes: objetivoSchema.nullish(),
     semana: semanaSchema.nullish(),
@@ -68,5 +78,12 @@ export function leerObjetivosDeLaPersona(crudo: unknown, origen: string): Objeti
       ? { titulo: tituloDeLaSemana, planificadas, cumplidas: Math.min(cuenta(datos.semana.cumplidas), planificadas) }
       : null;
 
-  return { noventaDias, mes, semana };
+  /* Spec 057 FR-001: el plazo y la fase son aditivos. Sin plazo válido no se escribe «Objetivo de N días»; una fase incompleta no se dibuja. */
+  const duracionDias = cuenta(datos.duracionDias) > 0 ? cuenta(datos.duracionDias) : null;
+  const numero = datos.fase ? cuenta(datos.fase.numero) : 0;
+  const primerDia = datos.fase ? cuenta(datos.fase.primerDia) : 0;
+  const ultimoDia = datos.fase ? cuenta(datos.fase.ultimoDia) : 0;
+  const fase = numero > 0 && primerDia > 0 && ultimoDia >= primerDia ? { numero, primerDia, ultimoDia } : null;
+
+  return { duracionDias, fase, noventaDias, mes, semana };
 }
