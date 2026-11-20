@@ -210,7 +210,7 @@ export async function obtenerGruposAnteriores(): Promise<GrupoAnterior[]> {
     if (!nombre) return [];
     return [
       {
-        clave: `${g.grupoId ?? nombre}-${g.desde ?? i}`,
+        clave: `${g.grupoId ?? nombre}-${g.desde ?? 'sin-inicio'}-${g.hasta ?? 'sin-fin'}-${i}`,
         nombre,
         desde: g.desde ?? null,
         hasta: g.hasta ?? null,

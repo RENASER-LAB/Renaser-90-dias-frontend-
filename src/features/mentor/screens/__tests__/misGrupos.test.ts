@@ -137,6 +137,16 @@ describe('«Anteriores»', () => {
     expect(Object.keys(anterior('Alba').personas[0]).sort()).toEqual(['colorFinal', 'nombre']);
   });
 
+  it('con tramos repetidos y personas con el mismo nombre no hay keys duplicadas (React no avisa)', async () => { // spec 057 FR-022
+    const error = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    const gemelas = [{ nombre: 'Ana Quispe', colorFinal: 'ROJO' as const }, { nombre: 'Ana Quispe', colorFinal: 'VERDE' as const }];
+    await montar(
+      React.createElement(MisGruposScreen, props(vistaCon(grupo('g-1', 'Fénix'), grupo('g-2', 'Cupo piso')), { anteriores: [anterior('Alba', { clave: 'g-9-a-b-0', personas: gemelas }), anterior('Alba', { clave: 'g-9-a-b-1', personas: gemelas })] })),
+    );
+    expect(error.mock.calls.filter(([m]) => String(m).includes('same key'))).toHaveLength(0);
+    error.mockRestore();
+  });
+
   it('sin anteriores no hay sección ni título vacío', async () => { // spec 057 FR-022
     for (const anteriores of [[], undefined]) {
       const r = await montar(React.createElement(MisGruposScreen, props(vistaCon(grupo('g-1', 'Fénix'), grupo('g-2', 'Cupo piso')), { anteriores })));

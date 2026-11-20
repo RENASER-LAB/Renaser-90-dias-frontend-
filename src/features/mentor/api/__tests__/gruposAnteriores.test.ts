@@ -45,6 +45,14 @@ describe('los grupos anteriores', () => {
     expect(lista[0]).toMatchObject({ nombre: 'Alba', colorFinal: 'SIN_DATOS', puestoFinal: null, porcentajeFinal: null, aprendices: null, personas: [] });
   });
 
+  it('dos tramos del mismo grupo con el mismo inicio llevan claves distintas (React no repite keys)', async () => { // spec 057 FR-022
+    const tramo = { grupoId: 'g-9', nombre: 'Alba', desde: '2026-09-27', hasta: '2026-10-30' };
+    mockApiFetch.mockResolvedValue({ grupos: [tramo, { ...tramo }, { ...tramo, hasta: null }, { nombre: 'Sin id' }, { nombre: 'Sin id' }] });
+    const claves = (await obtenerGruposAnteriores()).map(g => g.clave);
+    expect(claves).toHaveLength(5);
+    expect(new Set(claves).size).toBe(5);
+  });
+
   it('sin anteriores devuelve una lista vacía (la pantalla no dibuja la sección)', async () => { // spec 057 FR-022
     mockApiFetch.mockResolvedValue([]);
     expect(await obtenerGruposAnteriores()).toEqual([]);
