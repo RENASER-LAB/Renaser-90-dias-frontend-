@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 import { validarRespuesta } from '../../semaforo/api/semaforoSchemas';
 import { cifraEscrita } from '../../objetivos/api/planMensualApi';
+import { TEXTO_SIN_CIFRA } from '../../objetivos/utils/objetivoDelMesEnPalabras';
 import type { ObjetivoPorEje, ObjetivosDeLaPersona } from '../types/objetivosDeLaPersona.types';
 
 /**
@@ -82,7 +83,9 @@ function objetivoPorEje(o: PorEjeCrudo): ObjetivoPorEje | null {
   if (!eje) return null;
   const propio = tituloDe(o.titulo);
   const cifra = typeof o.cifra === 'number' && Number.isFinite(o.cifra) ? `Llegar a ${cifraEscrita(o.cifra, o.unidad ?? '', o.unidadAdelante === true)}` : null;
-  const texto = propio ?? cifra ?? tituloDe(o.motivoSinCifra);
+  // El motivo llega como código (SIN_TIPO, SIN_DATOS…): nunca se muestra crudo. Quien lee es el mentor o el líder, no la persona,
+  // así que va el texto neutro de «Planificar mi mes» y no el del motivo, que habla de «tu objetivo».
+  const texto = propio ?? cifra ?? (tituloDe(o.motivoSinCifra) ? TEXTO_SIN_CIFRA : null);
   return texto ? { eje, texto, ...(o.metaAlcanzada === true ? { metaAlcanzada: true } : {}) } : null;
 }
 

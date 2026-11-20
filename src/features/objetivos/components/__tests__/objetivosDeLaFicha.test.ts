@@ -106,7 +106,7 @@ const RESPUESTA_REAL = {
     objetivos: [
       { eje: 'CUERPO', titulo: null, cifra: 78, unidad: 'kg', unidadAdelante: false, metaAlcanzada: false, motivoSinCifra: null },
       { eje: 'TRABAJO', titulo: 'Cerrar tres ventas', cifra: null, unidad: null, unidadAdelante: false, metaAlcanzada: false, motivoSinCifra: null },
-      { eje: 'RELACIONES', titulo: null, cifra: null, unidad: null, unidadAdelante: false, metaAlcanzada: false, motivoSinCifra: 'Todavía sin cifra para este mes' },
+      { eje: 'RELACIONES', titulo: null, cifra: null, unidad: null, unidadAdelante: false, metaAlcanzada: false, motivoSinCifra: 'SIN_TIPO' },
     ],
   },
   semana: {
@@ -131,7 +131,9 @@ describe('la sección entera con la respuesta real del mentor (spec 057)', () =>
     expect(texto).toContain('Objetivo de 90 días');
     for (const t of ['Bajar a 75 kg', 'Facturar 5000', 'Cenar en familia']) expect(texto).toContain(t);
     expect(texto).toContain('Del mes · Mes 3');
-    for (const t of ['Llegar a 78 kg', 'Cerrar tres ventas', 'Todavía sin cifra para este mes']) expect(texto).toContain(t);
+    for (const t of ['Llegar a 78 kg', 'Cerrar tres ventas', 'Este mes no lleva cifra.']) expect(texto).toContain(t);
+    // El motivo llega como código del servidor: nunca se muestra crudo (visto en el E2E del 20/11).
+    for (const codigo of ['SIN_TIPO', 'SIN_DATOS']) expect(texto).not.toContain(codigo);
     expect(texto).toContain('De la semana · Semana 12');
     for (const t of ['Caminar 4 días', 'Llamar a diez clientes', 'Acciones cumplidas', '2 de 5']) expect(texto).toContain(t);
     for (const eje of ['Cuerpo', 'Negocio y dinero', 'Relaciones']) expect(texto).toContain(eje);
