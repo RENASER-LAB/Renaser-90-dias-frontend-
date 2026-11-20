@@ -8,7 +8,12 @@
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.renaser.app"
+      "bundleIdentifier": "com.renaser.app",
+      "infoPlist": {
+        "NSSpeechRecognitionUsageDescription": "Renaser convierte tu voz en texto para que puedas hablarle al acompañante en vez de escribir.",
+        "NSMicrophoneUsageDescription": "Renaser usa el micrófono para que puedas dictarle tus mensajes al acompañante.",
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -35,8 +40,18 @@
     "plugins": [
       "expo-font",
       "expo-web-browser",
-      ["expo-secure-store", { "faceIDPermission": false }],
-      ["expo-sensors", { "motionPermission": "Renaser cuenta tus pasos con el sensor de movimiento mientras corres con «Correr con GPS», para sumar tus kilómetros." }],
+      [
+        "expo-secure-store",
+        {
+          "faceIDPermission": false
+        }
+      ],
+      [
+        "expo-sensors",
+        {
+          "motionPermission": "Renaser cuenta tus pasos con el sensor de movimiento mientras corres con «Correr con GPS», para sumar tus kilómetros."
+        }
+      ],
       [
         "expo-build-properties",
         {
