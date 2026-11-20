@@ -115,7 +115,7 @@ export function MisGruposScreen({
           <EstadoCelula fallo={fallo} detalle={detalle} onReintentar={recargar} />
         ) : null}
         {!cargando && fallo === 'sin_celula' && anterioresListos && hayAnteriores ? (
-          <Text testID="sin-grupos-activos" style={[t.body, { color: c.textSoft, marginTop: 14 }]}>
+          <Text testID="sin-grupos-activos" style={[t.body, { color: c.textSoft, fontSize: 16, marginTop: 14 }]}>
             Hoy no acompañas ningún grupo
           </Text>
         ) : null}
