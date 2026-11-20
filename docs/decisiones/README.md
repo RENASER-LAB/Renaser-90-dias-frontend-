@@ -41,7 +41,7 @@ también en el texto (`grep -n "Plan" docs/decisiones/*.md`). Si dos entradas ch
 | [ser-y-fenix.md](ser-y-fenix.md) | SER (el acompañante), el orbe, el fénix y las celebraciones | 9 |
 | [soporte-ti.md](soporte-ti.md) | Soporte TI: interruptores, despliegue, roles personalizados y «ver como» (spec 002) | 2 |
 | [training.md](training.md) | Training: lista por hora, hábitos, evidencias y el editor Planificar | 19 |
-| [transversal.md](transversal.md) | Lo que tocó varios tabs a la vez: diseño, fuentes, barra de pestañas, velocidad, CI y arreglos de E2E | 25 |
+| [transversal.md](transversal.md) | Lo que tocó varios tabs a la vez: diseño, fuentes, barra de pestañas, velocidad, CI y arreglos de E2E | 26 |
 | [yo.md](yo.md) | Yo: Ajustes, fase, evidencias, Caja, emergencia, perfil, cuenta y privacidad | 14 |
 | [reglas-historial.md](reglas-historial.md) | Las reglas de `AGENTS.md` tal como estaban, con sus notas «Corregido» | — |
 
@@ -49,6 +49,7 @@ también en el texto (`grep -n "Plan" docs/decisiones/*.md`). Si dos entradas ch
 
 | Fecha | Tabs | Tipo | Entrada | Archivo | Corregida |
 |---|---|---|---|---|---|
+| 2026-11-19 | ninguno | Cambio | Actualizaciones por internet con EAS Update: `expo-updates`, `runtimeVersion` por fingerprint y un canal por perfil; solo desde el AAB 136 (issue #244) | [transversal.md](transversal.md) |  |
 | 2026-11-19 | ninguno | Decisión del dueño | El E2E corre los flujos de Maestro de lo tocado y de lo relacionado (no la suite entera ni solo mobile-mcp) | [transversal.md](transversal.md) |  |
 | 2026-11-19 | Yo | Cambio | Yo → Política de privacidad: dice qué lee de Salud de Apple en iPhone y ya no menciona «usar mi ubicación» | [yo.md](yo.md) |  |
 | 2026-11-19 | Training | Cambio | Carrera con GPS: el punto del mapa ya no cae en la casa de al lado (lectura fresca, promedio quieto, círculo de precisión y aviso de ubicación aproximada; spec 042 FR-053 a FR-057, #236) | [kilometros-y-carrera.md](kilometros-y-carrera.md) |  |

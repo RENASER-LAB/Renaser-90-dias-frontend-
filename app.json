@@ -141,6 +141,14 @@
         }
       ]
     ],
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/390944e9-a787-4479-90c8-cae078bc9d59",
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0
+    },
     "extra": {
       "eas": {
         "projectId": "390944e9-a787-4479-90c8-cae078bc9d59"
