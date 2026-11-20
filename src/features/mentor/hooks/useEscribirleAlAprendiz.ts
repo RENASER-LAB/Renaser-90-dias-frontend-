@@ -6,6 +6,16 @@ import { mensajeDeError } from '../../../services/http/apiClient';
 import { abrirConversacionDirecta } from '../../chat/api/chatApi';
 
 /**
+ * Abre —o crea— el 1 a 1 con el aprendiz y lleva hasta él, sin enviar nada. Lo usan el ícono de chat (este hook) y el botón
+ * «Escribirle» del aviso de rojo (spec 057 FR-035, `rutaDeAviso.ts`): un solo camino. Devuelve `false` si la navegación todavía no
+ * estaba lista (la conversación quedó creada); lanza lo que lance el servidor.
+ */
+export async function abrirElChatConElAprendiz(aprendizId: string, nombre: string | null): Promise<boolean> {
+  const conversacion = await abrirConversacionDirecta(aprendizId);
+  return irAPestana('Comunidad', { abrirChatConversacionId: conversacion.id, abrirChatTitulo: nombre?.trim() || undefined });
+}
+
+/**
  * El ícono de chat de «Mi grupo» y de la ficha (spec 055 FR-007): abre —o crea— el 1 a 1 con el aprendiz y lleva hasta él,
  * SIN enviar nada (escribirle es decisión del mentor, no un efecto de tocar un ícono). Es idempotente en el servidor.
  *
@@ -22,8 +32,7 @@ export function useEscribirleAlAprendiz() {
     enCurso.current = aprendizId;
     setEscribiendoId(aprendizId);
     try {
-      const conversacion = await abrirConversacionDirecta(aprendizId);
-      const navego = irAPestana('Comunidad', { abrirChatConversacionId: conversacion.id, abrirChatTitulo: nombre?.trim() || undefined });
+      const navego = await abrirElChatConElAprendiz(aprendizId, nombre);
       if (!navego) {
         /* La conversación SÍ quedó creada: callarse dejaría al mentor creyendo que el ícono no hizo nada. */
         Alert.alert(

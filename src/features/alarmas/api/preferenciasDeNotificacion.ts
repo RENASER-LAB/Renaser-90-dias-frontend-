@@ -46,7 +46,7 @@ import { apiFetch } from '../../../services/http/apiClient';
  */
 
 export interface TemaDeAviso {
-  clave: 'eventos' | 'logros' | 'resumen' | 'mensajes' | 'revisiones' | 'analisis' | 'whatsapp';
+  clave: 'eventos' | 'logros' | 'resumen' | 'mensajes' | 'revisiones' | 'rojo-del-dia' | 'analisis' | 'whatsapp';
   nombre: string;
   detalle: string;
   tipos: readonly string[];
@@ -86,6 +86,15 @@ export const TEMAS: readonly TemaDeAviso[] = [
     nombre: 'Revisiones de tu líder',
     detalle: 'Un aviso a las 8 de la noche si tu líder revisó a alguien de tu grupo',
     tipos: ['REVISION_DEL_LIDER'],
+    soloParaQuienAcompana: true,
+  },
+  /* Spec 057 (FR-034): el aviso de las 19:00 cuando alguien del grupo cae a rojo ese día. Solo para quien acompaña un grupo; contra un
+     servidor anterior (sin `ROJO_DEL_DIA`) el interruptor no se ofrece. */
+  {
+    clave: 'rojo-del-dia',
+    nombre: 'Aprendices en rojo',
+    detalle: 'Te avisamos a las 19:00 si alguien de tu grupo cae a rojo ese día',
+    tipos: ['ROJO_DEL_DIA'],
     soloParaQuienAcompana: true,
   },
   /* Spec 031 (FR-024): el aviso de que el análisis de la semana o del mes está listo. Encendido de fábrica; el texto del aviso es fijo y

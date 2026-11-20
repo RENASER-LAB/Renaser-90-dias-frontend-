@@ -15,6 +15,12 @@ import { EJES, type EjeObjetivo } from '../../objetivos/types/objetivos.types';
  * bandejas que no coinciden.
  */
 const TIPO_ACOMPANAMIENTO = 'ACOMPANAMIENTO_ALUMNO';
+/**
+ * Spec 057 FR-034: el aviso de rojo del mismo día (`ROJO_DEL_DIA`) también es de acompañamiento: va a la misma bandeja y abrir la
+ * ficha de ese aprendiz lo marca como leído, igual que `ACOMPANAMIENTO_ALUMNO`. Los dos llevan la ruta de la ficha del aprendiz.
+ */
+const TIPO_ROJO_DEL_DIA = 'ROJO_DEL_DIA';
+const TIPOS_DE_ACOMPANAMIENTO: readonly string[] = [TIPO_ACOMPANAMIENTO, TIPO_ROJO_DEL_DIA];
 
 const bandejaSchema = z
   .object({
@@ -194,7 +200,7 @@ export async function obtenerAvisosDeAcompanamiento(): Promise<AvisoApi[]> {
     await apiFetch<unknown>('/api/v1/notifications'),
     'GET /api/v1/notifications',
   );
-  return bandeja.items.filter(n => n.type === TIPO_ACOMPANAMIENTO);
+  return bandeja.items.filter(n => TIPOS_DE_ACOMPANAMIENTO.includes(n.type));
 }
 
 export async function marcarAvisoLeido(id: number): Promise<void> {

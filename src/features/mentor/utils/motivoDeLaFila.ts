@@ -37,6 +37,8 @@ export function motivoCorto(cuerpo: string, nombre?: string | null): string {
   let t = cuerpo.trim();
   const n = nombre?.trim();
   if (n && t.toLocaleLowerCase('es').startsWith(n.toLocaleLowerCase('es'))) t = t.slice(n.length).trim();
+  /* Spec 057: el aviso de rojo termina con la invitación del push; en la fila sobra. */
+  t = t.replace(/\.?\s*Toca para ver su ficha y escribirle\.?$/i, '');
   t = t.replace(/\.$/, '').trim();
   const sinActividad = /^no registra actividad hace (\d+) d[ií]as?$/i.exec(t);
   if (sinActividad) return `${sinActividad[1]} ${sinActividad[1] === '1' ? 'día' : 'días'} sin actividad`;
