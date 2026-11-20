@@ -1,0 +1,28 @@
+# Spec 057, historia 3 (FR-020 a FR-022): Yo → «Mis grupos» muestra, debajo de los activos, «Anteriores» de solo lectura: cada grupo
+# una sola vez (los tramos del mismo grupo se juntan), con su período, cuántos aprendices tuvo y la lista de nombres con su color final.
+# corrido: 2026-11-20. cuenta: mentor (E2E_MENTOR_*), e2e-mentor con tramos cerrados. Precondición: `siembra.sql` (y la de
+# `../rediseno-del-mentor/`) en la base local clonada (nunca producción).
+# spec 057 FR-020, FR-021, FR-022
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "YO"
+- scrollUntilVisible:
+    element: "Abrir Mis grupos"
+    direction: DOWN
+    timeout: 40000
+- tapOn: "Abrir Mis grupos"
+- extendedWaitUntil:
+    visible: "Mis grupos"
+    timeout: 20000
+- scrollUntilVisible:
+    element: "Anteriores"
+    direction: DOWN
+    timeout: 20000
+- assertVisible: "Grupo del mentor E2E"
+- assertVisible: ".*aprendices.*"
+- takeScreenshot: F2-01-anteriores
+# Solo lectura: tocar a una persona de un grupo anterior no abre su ficha.
+- tapOn: "E2E Libre 01.*"
+- assertNotVisible: "Volver a mi grupo"
+- assertVisible: "Anteriores"

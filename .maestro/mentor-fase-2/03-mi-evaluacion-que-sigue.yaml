@@ -1,0 +1,29 @@
+# Spec 057, historia 2 (FR-010 a FR-013): «Mi evaluación» suma la comparación con el mes anterior, «Qué sigue» (acciones con su motivo,
+# calculadas por el servidor) y «Quién baja el promedio»; «Escríbele a …» abre la conversación 1 a 1 con esa persona.
+# corrido: 2026-11-20. cuenta: mentor (E2E_MENTOR_*) con aprendices bajo el 60 % este mes. Precondición: `siembra.sql`.
+# spec 057 FR-013
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "YO"
+- scrollUntilVisible:
+    element: "Abrir Mis grupos"
+    direction: DOWN
+    timeout: 40000
+- tapOn: "Abrir Mis grupos"
+- tapOn: "Grupo Plan E2E"
+- tapOn: "Mi evaluación.*"
+- extendedWaitUntil:
+    visible: "Qué sigue"
+    timeout: 20000
+- assertVisible: ".*que en .*"
+- assertVisible: "Escríbele a .*"
+- assertVisible: "Entregó \\d+ de \\d+ este mes"
+- assertVisible: "Quién baja el promedio"
+- takeScreenshot: F2-03-mi-evaluacion
+- tapOn: "Escríbele a .*"
+- extendedWaitUntil:
+    visible: "Mensaje"
+    timeout: 30000
+- assertVisible: "1 a 1"
+- takeScreenshot: F2-03-chat-1-a-1

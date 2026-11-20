@@ -1,0 +1,21 @@
+# Spec 057, historia 4 (FR-030, FR-034): en Yo → Ajustes → Notificaciones, quien acompaña un grupo ve «Aprendices en rojo» con su
+# explicación (aviso a las 19:00 del mismo día). El aviso en sí (barrido de las 19:00 en la zona del mentor) se comprobó en la base
+# local el 2026-11-20 (13 avisos ROJO_DEL_DIA); los botones del push no se ven en el emulador debug, que no tiene token push.
+# corrido: 2026-11-20. cuenta: mentor (E2E_MENTOR_*).
+# spec 057 FR-034
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "YO"
+- tapOn: "Ajustes"
+- scrollUntilVisible:
+    element: "Notificaciones"
+    direction: DOWN
+    timeout: 30000
+- tapOn: "Notificaciones"
+- scrollUntilVisible:
+    element: "Aprendices en rojo"
+    direction: DOWN
+    timeout: 20000
+- assertVisible: "Te avisamos a las 19:00 si alguien de tu grupo cae a rojo ese día"
+- takeScreenshot: F2-04-interruptor

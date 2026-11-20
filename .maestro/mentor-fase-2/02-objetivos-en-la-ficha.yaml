@@ -1,0 +1,33 @@
+# Spec 057, historia 1 (FR-001 a FR-004): en la ficha que abre el mentor, la sección «Objetivos» trae la fase en la que va la persona,
+# «Objetivo de N días» con el plazo de SU formación (nunca «90» escrito a mano) y el avance de cada eje, y el objetivo del mes por eje
+# dicho en palabras (sin códigos del servidor).
+# corrido: 2026-11-20. cuenta: mentor (E2E_MENTOR_*). Precondición: `siembra.sql` («Grupo Plan E2E» en curso con Api Aprendiz E2E,
+# que tiene sus objetivos del programa).
+# spec 057 FR-001, FR-004
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "YO"
+- scrollUntilVisible:
+    element: "Abrir Mis grupos"
+    direction: DOWN
+    timeout: 40000
+- tapOn: "Abrir Mis grupos"
+- tapOn: "Grupo Plan E2E"
+- tapOn: "Abrir la ficha de Api Aprendiz E2E"
+- scrollUntilVisible:
+    element: "Objetivos"
+    direction: DOWN
+    timeout: 40000
+- tapOn: "Objetivos"
+- scrollUntilVisible:
+    element: "Del mes.*"
+    direction: DOWN
+    timeout: 20000
+- assertVisible: "Fase \\d+ · días \\d+ a \\d+"
+- assertVisible: "Objetivo de \\d+ días"
+- assertVisible: "Bajar a 75 kg"
+- assertVisible: "\\d+ %"
+- assertNotVisible: ".*SIN_TIPO.*"
+- assertNotVisible: ".*SIN_DATOS.*"
+- takeScreenshot: F2-02-objetivos

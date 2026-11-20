@@ -1,6 +1,6 @@
 # Spec 055, historia 4 (FR-023 a FR-027): el mentor escribe una nota desde el lápiz, la ve arriba de las anteriores y la corrige el
 # mismo día; el líder la lee desde la ficha de la persona (sin campo ni botón).
-# corrido: 2026-11-17. cuenta: mentor (E2E_MENTOR_*). Para el paso del líder se corre aparte con la cuenta del líder
+# corrido: 2026-11-20. cuenta: mentor (E2E_MENTOR_*). Para el paso del líder se corre aparte con la cuenta del líder
 # (`# cuenta: lider` no existe en `correr.sh`: se abre «Mis mentores → Todos los aprendices → una persona» a mano y se mira el lápiz).
 # Para probar «ya no se puede corregir» se cambia en la base: `update notas_del_mentor set dia_del_autor = current_date - 1`.
 # spec 055 FR-023, FR-024, FR-025, FR-026, FR-027
