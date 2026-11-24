@@ -4,6 +4,7 @@
 # Precondición: la Pastilla PENDIENTE (la deja la línea `# antes:`) y el audio de Espíritu del día cargado en la base. (El audio puede quedar en «cargando…» en local: no hace falta oírlo para registrar.)
 # antes: .maestro/comun/estado-de-hoy.sh PENDIENTE PASTILLA_RENACER
 # cuenta: aprendiz
+# corrido: 2026-11-24
 appId: com.renaser.app
 ---
 - runFlow: ../comun/ya-adentro.yaml

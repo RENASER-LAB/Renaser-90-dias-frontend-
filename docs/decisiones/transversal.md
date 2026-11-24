@@ -976,3 +976,15 @@ Pedido del dueño: «procede con ese cambio de expo updates». Lo que cambia y n
 * **No cambian** los cinco tabs ni ninguna pantalla.
 * **Pruebas:** `src/__tests__/reglas/easUpdateConfigurado.test.ts`. El update real en un teléfono se verifica después del AAB 136.
 
+
+## Decisión del dueño — 2026-11-24 — La Pastilla Renacer funciona como un reproductor de música (issue #254, norma 2.5.4 de Apple)
+
+Apple rechazó NaSer 1.8.0 porque la app declara audio en segundo plano (`UIBackgroundModes: audio`, que agrega el plugin `expo-audio`) y no encontraron audio que siga sonando. El dueño eligió la opción C: **se mantiene el audio en segundo plano** y la Pastilla se comporta como un reproductor del sistema. Lo que cambia y nada más:
+
+* Mientras suena, la pantalla bloqueada, el Centro de control de iOS y la notificación de medios de Android muestran el título del audio (o su rótulo), la formación de la persona como artista (nunca «90 días» escrito; sin formación, «Renaser»), reproducir/pausa, adelantar/retroceder y la barra. Sale de `setActiveForLockScreen` con metadatos.
+* `setAudioModeAsync` pide `interruptionMode: 'doNotMix'` (lo exige `expo-audio` para los controles del sistema).
+* Al cerrar el modal se pausa (como antes) y se llama `clearLockScreenControls`; también al desmontar.
+* `app.json`: el plugin `expo-audio` declara `enableBackgroundPlayback: true` de forma explícita, para que quede claro que es intencional.
+* El mismo modal sirve a la Audioterapia semanal, así que ella también queda con controles del sistema.
+* **No cambian** los cinco tabs, los demás audios (sonidos de hábitos, alarmas, grabación) ni el flujo de preguntas.
+* **Pruebas:** `src/__tests__/reglas/pastillaComoReproductor.test.ts`. Falta probarlo en un dispositivo (pantalla bloqueada y Centro de control). Necesita build nativa (cambia `app.json`).

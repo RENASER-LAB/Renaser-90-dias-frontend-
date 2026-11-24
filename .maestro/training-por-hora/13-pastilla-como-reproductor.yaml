@@ -1,0 +1,61 @@
+# T13 — La Pastilla Renacer como reproductor del sistema (issue #254, norma 2.5.4 de Apple): al sonar, la notificación de medios
+# (Android) muestra el título del audio con pausa/reanudar; pausar desde ahí pausa la app; al cerrar el modal se pausa y la
+# notificación desaparece.
+# Precondición: la Pastilla PENDIENTE (la deja la línea `# antes:`) y su audio del día cargado en el S3 LOCAL
+# (`contenido/pastilla-renacer/dia-NN.mp3`; el audio del día de la cuenta, ver `# antes` y el README de esta carpeta). Sin ese
+# archivo el reproductor queda en «cargando…» y no suena: el flujo lo dirá en su primer assert.
+# antes: .maestro/comun/estado-de-hoy.sh PENDIENTE PASTILLA_RENACER
+# cuenta: aprendiz
+# corrido: 2026-11-24
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- runFlow: ../comun/abrir-training.yaml
+- scrollUntilVisible:
+    element: ".*Pastilla Renacer.*"
+    direction: DOWN
+    centerElement: true
+    timeout: 30000
+- tapOn: ".*Pastilla Renacer.*"
+- extendedWaitUntil:
+    visible: "Pregunta 1 de 2"
+    timeout: 20000
+- tapOn: "Reproducir"
+- extendedWaitUntil:
+    visible: "Pausar"
+    timeout: 30000
+- takeScreenshot: T13a-pastilla-sonando
+# Ir al inicio: el audio sigue (audio en segundo plano) y el sistema muestra la notificación de medios.
+- pressKey: home
+- swipe:
+    start: "50%,0%"
+    end: "50%,70%"
+    duration: 600
+- extendedWaitUntil:
+    visible: ".*Pastilla Renaser.*|.*Renaser.*"
+    timeout: 15000
+- takeScreenshot: T13b-notificacion-de-medios
+- assertVisible: "(?i)pause|pausa|pausar"
+- tapOn: "(?i)pause|pausa|pausar"
+- takeScreenshot: T13c-pausado-desde-la-notificacion
+- tapOn: "(?i)play|reproducir|reanudar"
+- takeScreenshot: T13d-reanudado-desde-la-notificacion
+# Volver a la app desde la notificación (el modal sigue abierto y sonando) y cerrar: se pausa y los controles desaparecen.
+- tapOn: "problema benditos"
+- extendedWaitUntil:
+    visible: "Pregunta 1 de 2"
+    timeout: 15000
+- takeScreenshot: T13e-de-vuelta-en-la-pastilla
+- pressKey: back
+- extendedWaitUntil:
+    notVisible: "Pregunta 1 de 2"
+    timeout: 15000
+- swipe:
+    start: "50%,0%"
+    end: "50%,70%"
+    duration: 600
+- extendedWaitUntil:
+    visible: "Clear all|Borrar todo|Silent|Silenciosas"
+    timeout: 10000
+- assertNotVisible: "problema benditos"
+- takeScreenshot: T13f-sin-controles-tras-cerrar

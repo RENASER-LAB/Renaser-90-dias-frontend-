@@ -41,7 +41,7 @@ también en el texto (`grep -n "Plan" docs/decisiones/*.md`). Si dos entradas ch
 | [ser-y-fenix.md](ser-y-fenix.md) | SER (el acompañante), el orbe, el fénix y las celebraciones | 9 |
 | [soporte-ti.md](soporte-ti.md) | Soporte TI: interruptores, despliegue, roles personalizados y «ver como» (spec 002) | 2 |
 | [training.md](training.md) | Training: lista por hora, hábitos, evidencias y el editor Planificar | 19 |
-| [transversal.md](transversal.md) | Lo que tocó varios tabs a la vez: diseño, fuentes, barra de pestañas, velocidad, CI y arreglos de E2E | 26 |
+| [transversal.md](transversal.md) | Lo que tocó varios tabs a la vez: diseño, fuentes, barra de pestañas, velocidad, CI y arreglos de E2E | 27 |
 | [yo.md](yo.md) | Yo: Ajustes, fase, evidencias, Caja, emergencia, perfil, cuenta y privacidad | 15 |
 | [reglas-historial.md](reglas-historial.md) | Las reglas de `AGENTS.md` tal como estaban, con sus notas «Corregido» | — |
 
@@ -49,6 +49,7 @@ también en el texto (`grep -n "Plan" docs/decisiones/*.md`). Si dos entradas ch
 
 | Fecha | Tabs | Tipo | Entrada | Archivo | Corregida |
 |---|---|---|---|---|---|
+| 2026-11-24 | Training | Decisión del dueño | La Pastilla Renacer funciona como un reproductor de música: controles en la pantalla bloqueada y el Centro de control, con el audio en segundo plano (issue #254, norma 2.5.4 de Apple) | [transversal.md](transversal.md) |  |
 | 2026-11-24 | Yo | Cambio | Yo → Preferencias: fila «Salud de Apple» solo en iOS, con el ícono oficial de Apple (autorización del dueño solo para esto; issue #255) | [yo.md](yo.md) |  |
 | 2026-11-24 | Training, Yo | Cambio | «Salud de Apple» visible en la app: fila en Yo, ícono oficial, hoja con el nombre y textos de iPhone con el nombre completo (spec 037, norma 2.5.1 de la App Store, issue #255) | [kilometros-y-carrera.md](kilometros-y-carrera.md) |  |
 | 2026-11-20 | Yo, Comunidad | Decisión del dueño | El rol de mentor, fase 2: objetivos del aprendiz, «Qué sigue» en Mi evaluación, grupos anteriores y el aviso de rojo (spec 057) | [liderazgo-y-administracion.md](liderazgo-y-administracion.md) |  |
