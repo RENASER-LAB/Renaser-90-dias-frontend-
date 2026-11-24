@@ -34,7 +34,7 @@ también en el texto (`grep -n "Plan" docs/decisiones/*.md`). Si dos entradas ch
 | [formaciones.md](formaciones.md) | Formaciones (Escuela, Diplomado, Certificación): specs 022–025, 035 y el plazo de cada formación | 8 |
 | [hoy.md](hoy.md) | Hoy: tarjetas, frase del día, semáforo y lo que Hoy muestra | 8 |
 | [ingreso-y-onboarding.md](ingreso-y-onboarding.md) | Login, onboarding, ficha, diagnóstico, términos y el Día 1 | 12 |
-| [kilometros-y-carrera.md](kilometros-y-carrera.md) | Kilómetros diarios: captura, pasos (Health Connect y Salud de Apple) y la carrera con GPS | 11 |
+| [kilometros-y-carrera.md](kilometros-y-carrera.md) | Kilómetros diarios: captura, pasos (Health Connect y Salud de Apple) y la carrera con GPS | 12 |
 | [liderazgo-y-administracion.md](liderazgo-y-administracion.md) | Mentor, líder de mentores, Administración, Alquimista y sus fichas | 20 |
 | [pagos.md](pagos.md) | Cronograma de pagos y «Mi ingreso» (spec 032) | 2 |
 | [plan.md](plan.md) | Plan: objetivos, semana, mes, 80/20, Cierra tu día y el Mapa (retirado) | 12 |
@@ -49,6 +49,7 @@ también en el texto (`grep -n "Plan" docs/decisiones/*.md`). Si dos entradas ch
 
 | Fecha | Tabs | Tipo | Entrada | Archivo | Corregida |
 |---|---|---|---|---|---|
+| 2026-11-24 | ninguno | Corrección | El permiso de iPhone trae el texto de escritura en Salud (lo exige Apple, error 90683) aunque la app solo lee pasos y distancia (issue #259) | [kilometros-y-carrera.md](kilometros-y-carrera.md) |  |
 | 2026-11-24 | Training | Decisión del dueño | La Pastilla Renacer funciona como un reproductor de música: controles en la pantalla bloqueada y el Centro de control, con el audio en segundo plano (issue #254, norma 2.5.4 de Apple) | [transversal.md](transversal.md) |  |
 | 2026-11-24 | Yo | Cambio | Yo → Preferencias: fila «Salud de Apple» solo en iOS, con el ícono oficial de Apple (autorización del dueño solo para esto; issue #255) | [yo.md](yo.md) |  |
 | 2026-11-24 | Training, Yo | Cambio | «Salud de Apple» visible en la app: fila en Yo, ícono oficial, hoja con el nombre y textos de iPhone con el nombre completo (spec 037, norma 2.5.1 de la App Store, issue #255) | [kilometros-y-carrera.md](kilometros-y-carrera.md) |  |

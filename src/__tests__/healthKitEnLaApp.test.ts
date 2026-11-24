@@ -20,8 +20,13 @@ describe('el plugin de HealthKit en app.json', () => {
   it('está, y pide solo leer: sin escribir en Salud y sin entrega en segundo plano', () => {
     expect(pluginDeHealthKit).toBeDefined();
     const opciones = pluginDeHealthKit![1];
-    // `false` quita `NSHealthUpdateUsageDescription`: la app no escribe nada en Salud.
-    expect(opciones.NSHealthUpdateUsageDescription).toBe(false);
+    // La app no escribe nada en Salud (`saludDeApple.ts` pide solo `toRead`), pero Apple rechaza la carga sin
+    // `NSHealthUpdateUsageDescription` (error 90683, issue #259): el texto existe y dice que no se guarda nada.
+    // Si alguien vuelve a poner `false`, la compilación queda «Fallido» en App Store Connect.
+    const escritura = String(opciones.NSHealthUpdateUsageDescription);
+    expect(opciones.NSHealthUpdateUsageDescription).not.toBe(false);
+    expect(escritura).toMatch(/no guarda nada/);
+    expect(escritura).toMatch(/\btus\b/);
     // `false` quita el entitlement `com.apple.developer.healthkit.background-delivery`: no hay lectura en segundo plano.
     expect(opciones.background).toBe(false);
   });
