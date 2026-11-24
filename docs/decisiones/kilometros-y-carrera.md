@@ -420,3 +420,10 @@ Lo que cambia y nada más:
 No cambian: Android y la web, los cinco tabs salvo esa fila de Yo (autorizada solo para esto), la lectura de pasos, el servidor, la hoja de kilómetros de Training, «Cuenta tus pasos solo».
 Pruebas: `features/yo/components/__tests__/filaSaludDeApple.test.ts` y las de `textosDePasos` / `pasosEnPantalla` con los textos nuevos. **Sin comprobar:** iPhone o simulador (el E2E es solo en el emulador de Android);
 el aspecto del ícono y de la fila se comprueba con el build de iOS. Solo JavaScript y un PNG: hace falta un build nuevo de iOS para la App Store.
+
+## Corrección — 2026-11-24 — El permiso de iPhone ahora trae el texto de escritura en Salud, aunque la app no escribe nada (issue #259)
+
+App Store Connect marcó como «Fallido» el procesamiento de la 1.8.0 (17) con el error 90683: el código de `@kingstinct/react-native-healthkit` hace referencia a las APIs de escritura de HealthKit, y Apple exige
+`NSHealthUpdateUsageDescription` aunque la app nunca las use. Esto corrige la decisión de la spec 037 de arriba («**sin** `NSHealthUpdateUsageDescription`»): el texto existe y dice la verdad, «Renaser no guarda
+nada en la app Salud: solo lee tus pasos y la distancia para sumar tus kilómetros diarios.». **La app sigue sin pedir escritura:** `saludDeApple.ts` pide solo `toRead`, así que el diálogo de Salud muestra
+únicamente pasos y distancia. Prueba: `src/__tests__/healthKitEnLaApp.test.ts` falla si vuelve el `false`. No cambian Android, la web ni el servidor.

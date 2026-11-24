@@ -139,7 +139,7 @@
         "@kingstinct/react-native-healthkit",
         {
           "NSHealthShareUsageDescription": "Renaser lee tus pasos y la distancia que caminas o corres en la app Salud, para llenar tus kilómetros diarios sin que subas una captura. Tu mentor y la tabla de kilómetros ven tu total de km.",
-          "NSHealthUpdateUsageDescription": false,
+          "NSHealthUpdateUsageDescription": "Renaser no guarda nada en la app Salud: solo lee tus pasos y la distancia para sumar tus kilómetros diarios.",
           "background": false
         }
       ],
