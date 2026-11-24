@@ -34,7 +34,7 @@ también en el texto (`grep -n "Plan" docs/decisiones/*.md`). Si dos entradas ch
 | [formaciones.md](formaciones.md) | Formaciones (Escuela, Diplomado, Certificación): specs 022–025, 035 y el plazo de cada formación | 8 |
 | [hoy.md](hoy.md) | Hoy: tarjetas, frase del día, semáforo y lo que Hoy muestra | 8 |
 | [ingreso-y-onboarding.md](ingreso-y-onboarding.md) | Login, onboarding, ficha, diagnóstico, términos y el Día 1 | 12 |
-| [kilometros-y-carrera.md](kilometros-y-carrera.md) | Kilómetros diarios: captura, pasos (Health Connect y Salud de Apple) y la carrera con GPS | 10 |
+| [kilometros-y-carrera.md](kilometros-y-carrera.md) | Kilómetros diarios: captura, pasos (Health Connect y Salud de Apple) y la carrera con GPS | 11 |
 | [liderazgo-y-administracion.md](liderazgo-y-administracion.md) | Mentor, líder de mentores, Administración, Alquimista y sus fichas | 20 |
 | [pagos.md](pagos.md) | Cronograma de pagos y «Mi ingreso» (spec 032) | 2 |
 | [plan.md](plan.md) | Plan: objetivos, semana, mes, 80/20, Cierra tu día y el Mapa (retirado) | 12 |
@@ -42,7 +42,7 @@ también en el texto (`grep -n "Plan" docs/decisiones/*.md`). Si dos entradas ch
 | [soporte-ti.md](soporte-ti.md) | Soporte TI: interruptores, despliegue, roles personalizados y «ver como» (spec 002) | 2 |
 | [training.md](training.md) | Training: lista por hora, hábitos, evidencias y el editor Planificar | 19 |
 | [transversal.md](transversal.md) | Lo que tocó varios tabs a la vez: diseño, fuentes, barra de pestañas, velocidad, CI y arreglos de E2E | 27 |
-| [yo.md](yo.md) | Yo: Ajustes, fase, evidencias, Caja, emergencia, perfil, cuenta y privacidad | 14 |
+| [yo.md](yo.md) | Yo: Ajustes, fase, evidencias, Caja, emergencia, perfil, cuenta y privacidad | 15 |
 | [reglas-historial.md](reglas-historial.md) | Las reglas de `AGENTS.md` tal como estaban, con sus notas «Corregido» | — |
 
 ## Entradas (la más nueva primero)
@@ -50,6 +50,8 @@ también en el texto (`grep -n "Plan" docs/decisiones/*.md`). Si dos entradas ch
 | Fecha | Tabs | Tipo | Entrada | Archivo | Corregida |
 |---|---|---|---|---|---|
 | 2026-11-24 | Training | Decisión del dueño | La Pastilla Renacer funciona como un reproductor de música: controles en la pantalla bloqueada y el Centro de control, con el audio en segundo plano (issue #254, norma 2.5.4 de Apple) | [transversal.md](transversal.md) |  |
+| 2026-11-24 | Yo | Cambio | Yo → Preferencias: fila «Salud de Apple» solo en iOS, con el ícono oficial de Apple (autorización del dueño solo para esto; issue #255) | [yo.md](yo.md) |  |
+| 2026-11-24 | Training, Yo | Cambio | «Salud de Apple» visible en la app: fila en Yo, ícono oficial, hoja con el nombre y textos de iPhone con el nombre completo (spec 037, norma 2.5.1 de la App Store, issue #255) | [kilometros-y-carrera.md](kilometros-y-carrera.md) |  |
 | 2026-11-20 | Yo, Comunidad | Decisión del dueño | El rol de mentor, fase 2: objetivos del aprendiz, «Qué sigue» en Mi evaluación, grupos anteriores y el aviso de rojo (spec 057) | [liderazgo-y-administracion.md](liderazgo-y-administracion.md) |  |
 | 2026-11-19 | ninguno | Cambio | Actualizaciones por internet con EAS Update: `expo-updates`, `runtimeVersion` por fingerprint y un canal por perfil; solo desde el AAB 136 (issue #244) | [transversal.md](transversal.md) |  |
 | 2026-11-19 | ninguno | Decisión del dueño | El E2E corre los flujos de Maestro de lo tocado y de lo relacionado (no la suite entera ni solo mobile-mcp) | [transversal.md](transversal.md) |  |

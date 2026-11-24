@@ -346,35 +346,35 @@ describe('en iPhone: la app Salud de Apple (spec 037, D-362)', () => {
   });
 
   // spec 037 FR-016, FR-022
-  it('la hoja para conectar dice «Con la app Salud, de Apple.» y lo que lee el iPhone o el Apple Watch', () => {
+  it('la hoja para conectar dice «Con Salud de Apple.» y lo que lee el iPhone o el Apple Watch', () => {
     montar(
       React.createElement(HojaConectarPasos, propsParaConectar('disponible')),
     );
     const dicho = textos();
     expect(dicho).toContain('Cuenta tus km solo');
-    expect(dicho).toContain('Con la app Salud, de Apple.');
+    expect(dicho).toContain('Con Salud de Apple.');
     expect(dicho).toContain('Tu iPhone o tu Apple Watch cuentan los pasos.');
     expect(dicho).toContain('Conectar');
     expect(dicho).not.toMatch(/Health Connect|Android/);
   });
 
   // spec 037 FR-017, FR-022
-  it('un iPad sin Salud: «Sube tu captura» y que los pasos automáticos necesitan la app Salud', () => {
+  it('un iPad sin Salud: «Sube tu captura» y que los pasos automáticos necesitan Salud de Apple', () => {
     montar(
       React.createElement(HojaConectarPasos, propsParaConectar('no-disponible')),
     );
     expect(textos()).toContain('Sube tu captura');
-    expect(textos()).toContain('Los pasos automáticos necesitan la app Salud de Apple.');
+    expect(textos()).toContain('Los pasos automáticos necesitan Salud de Apple.');
     expect(boton('Conectar')).toBeUndefined();
   });
 
   // spec 037 FR-019, FR-022
-  it('sin pasos hoy: pide revisar el permiso en Salud, ofrece abrir Salud, actualizar y la captura', () => {
+  it('sin pasos hoy: pide revisar el permiso en Salud, ofrece abrir Salud de Apple, actualizar y la captura', () => {
     const p = props({ modo: 'sin-datos', hayManuales: false });
     montar(React.createElement(HojaDeKilometros, p));
     expect(textos()).toContain('Todavía no vemos pasos hoy');
-    expect(textos()).toContain('Si no diste permiso, actívalo en Salud.');
-    act(() => boton('Abrir Salud')!.props.onPress());
+    expect(textos()).toContain('Si no diste permiso, actívalo en Salud de Apple.');
+    act(() => boton('Abrir Salud de Apple')!.props.onPress());
     expect(p.onAbrirHealthConnect).toHaveBeenCalledTimes(1);
     expect(boton('Actualizar')).toBeDefined();
     expect(boton('Subir captura')).toBeDefined();
