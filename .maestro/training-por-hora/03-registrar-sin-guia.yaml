@@ -3,6 +3,7 @@
 # Precondición: Jugo verde PENDIENTE (lo deja la línea `# antes:`: este flujo lo cumple); fotos en local.
 # antes: .maestro/comun/estado-de-hoy.sh PENDIENTE GREEN_JUICE
 # cuenta: aprendiz
+# corrido: 2026-11-24
 appId: com.renaser.app
 ---
 - runFlow: ../comun/ya-adentro.yaml
