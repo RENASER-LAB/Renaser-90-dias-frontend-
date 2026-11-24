@@ -10,6 +10,7 @@ import { Icon, TAMANO_ICONO } from '../../../components/Icon';
 import { Presionable } from '../../../components/Presionable';
 import { HojaDesdeAbajo } from '../../../components/hojaDesdeAbajo/HojaDesdeAbajo';
 import { useTheme } from '../../../theme/ThemeContext';
+import { useFormacionDeLaSesion } from '../../formaciones/context/FormacionContext';
 import { RESPUESTA_MAX_LENGTH, RESPUESTA_MIN_LENGTH } from '../api/spiritApi';
 import { preguntasDelDia } from '../data/preguntasPastilla';
 import { borradorEspiritu, type BorradorEspiritu } from '../storage/borradorEspiritu';
@@ -103,6 +104,9 @@ export function PastillaRenacerModal({
 }: PastillaRenacerModalProps) {
   const { c, t } = useTheme();
   const insets = useSafeAreaInsets();
+  const { formacion } = useFormacionDeLaSesion();
+  // Identidad por formación: nunca «90 días» escrito. Sin formación cargada, la marca.
+  const artista = formacion?.activa?.nombre ?? 'Renaser';
 
   const yaEntregado = audio?.yaEntregado ?? false;
   // Spec 048 (FR-017): el audio bajado al teléfono si ya está (se escucha sin señal); si no, por internet, y se baja para la próxima.
@@ -123,8 +127,43 @@ export function PastillaRenacerModal({
   useEffect(() => {
     // Que se escuche aunque el teléfono esté en silencio (iOS) y que no se corte al bloquear la
     // pantalla: es un audio de 5-10 minutos que la persona escucha con el teléfono en el bolsillo.
-    void setAudioModeAsync({ playsInSilentMode: true, shouldPlayInBackground: true });
+    // `doNotMix` es obligatorio para los controles de la pantalla bloqueada (issue #254).
+    void setAudioModeAsync({
+      playsInSilentMode: true,
+      shouldPlayInBackground: true,
+      interruptionMode: 'doNotMix',
+    });
   }, []);
+
+  // Issue #254 (Apple, norma 2.5.4): la app declara audio en segundo plano, así que la Pastilla se
+  // comporta como un reproductor de música: mientras suena, la pantalla bloqueada, el Centro de
+  // control de iOS y la notificación de medios de Android muestran el título con reproducir/pausa
+  // y la barra. Se activa al sonar y se limpia al cerrar el modal o desmontar.
+  const tituloDelAudio = audio?.titulo ?? audio?.rotulo ?? null;
+  const albumDelAudio = audio ? `${audio.rotulo} · ${audio.subtitulo}` : null;
+  const sonando = estadoAudio.playing;
+  useEffect(() => {
+    if (!visible || !sonando || !tituloDelAudio) return;
+    player.setActiveForLockScreen(
+      true,
+      { title: tituloDelAudio, artist: artista, albumTitle: albumDelAudio ?? undefined },
+      { showSeekBackward: true, showSeekForward: true },
+    );
+  }, [visible, sonando, tituloDelAudio, albumDelAudio, artista, player]);
+
+  useEffect(() => {
+    if (!visible) player.clearLockScreenControls();
+  }, [visible, player]);
+
+  useEffect(() => {
+    return () => {
+      try {
+        player.clearLockScreenControls();
+      } catch {
+        // El reproductor ya se liberó con el desmontaje: no hay nada que limpiar.
+      }
+    };
+  }, [player]);
 
   // Al cerrar el modal el audio se pausa. Que siga sonando sobre Training sin control visible
   // sería peor que cortarlo.
