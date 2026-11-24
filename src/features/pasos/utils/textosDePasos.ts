@@ -80,6 +80,15 @@ export const TEXTOS_DE_PASOS = {
     noSeSuma: 'No se suma',
     unaSolaVez: 'Contamos una sola vez: la fuente que pusiste primero en Health Connect.',
   },
+  /** La fila de Yo y el nombre de la app de Apple (solo iPhone; spec 037, issue #255). En Android no se muestra. */
+  saludDeApple: {
+    nombre: 'Salud de Apple',
+    conectada: 'Conectada',
+    sinConectar: 'Sin conectar',
+    noDisponible: 'No disponible en este dispositivo',
+    revisando: 'Revisando…',
+    desconectarAviso: 'Se abre Salud de Apple: ahí quitas el permiso de Renaser en Datos y acceso.',
+  },
   errores: {
     noSePudoRegistrar: 'No pudimos registrar tus km. Intenta de nuevo en un momento.',
     noSePudoConectar: 'No pudimos conectar tus pasos. Intenta de nuevo.',
@@ -91,27 +100,28 @@ type Ancho<T> = T extends string ? string : T extends readonly (infer U)[] ? rea
 export type TextosDePasos = Ancho<typeof TEXTOS_DE_PASOS>;
 
 /**
- * Los textos en iPhone (spec 037, D-362, FR-022): el mismo flujo y los mismos botones, con «Salud» donde en Android dice «Health Connect».
- * Apple no dice si la persona negó la lectura, así que «Todavía no vemos pasos hoy» le pide revisar el permiso en Salud y le ofrece abrirla.
+ * Los textos en iPhone (spec 037, D-362, FR-022): el mismo flujo y los mismos botones, con «Salud de Apple» donde en Android dice «Health Connect»
+ * (la App Store pide nombrar la app de Apple completa, norma 2.5.1, issue #255; HIG: «Apple Health», en español «Salud de Apple»).
+ * Apple no dice si la persona negó la lectura, así que «Todavía no vemos pasos hoy» le pide revisar el permiso en Salud de Apple y le ofrece abrirla.
  */
 export const TEXTOS_DE_PASOS_EN_IPHONE: TextosDePasos = {
   ...TEXTOS_DE_PASOS,
-  abrirHealthConnect: 'Abrir Salud',
+  abrirHealthConnect: 'Abrir Salud de Apple',
   conectar: {
     ...TEXTOS_DE_PASOS.conectar,
-    subtitulo: 'Con la app Salud, de Apple.',
+    subtitulo: 'Con Salud de Apple.',
     lineas: [
       'Tu iPhone o tu Apple Watch cuentan los pasos.',
-      'Renaser solo lee pasos y distancia.',
+      'Renaser solo lee pasos y distancia de Salud de Apple.',
       'Tu mentor y la tabla de kilómetros ven tu total de km.',
     ],
   },
-  sinSoporte: { ...TEXTOS_DE_PASOS.sinSoporte, texto: 'Los pasos automáticos necesitan la app Salud de Apple.' },
-  sinPermiso: { ...TEXTOS_DE_PASOS.sinPermiso, texto: 'Quitaste el permiso en Salud.' },
+  sinSoporte: { ...TEXTOS_DE_PASOS.sinSoporte, texto: 'Los pasos automáticos necesitan Salud de Apple.' },
+  sinPermiso: { ...TEXTOS_DE_PASOS.sinPermiso, texto: 'Quitaste el permiso en Salud de Apple.' },
   sinDatos: {
     ...TEXTOS_DE_PASOS.sinDatos,
-    texto: 'Lleva tu iPhone contigo o revisa que tu Apple Watch sincronice. Si no diste permiso, actívalo en Salud.',
-    abrir: 'Abrir Salud',
+    texto: 'Lleva tu iPhone contigo o revisa que tu Apple Watch sincronice. Si no diste permiso, actívalo en Salud de Apple.',
+    abrir: 'Abrir Salud de Apple',
   },
   hoja: { ...TEXTOS_DE_PASOS.hoja, unaSolaVez: 'Contamos una sola vez lo que miden tu iPhone y tu Apple Watch.' },
 };

@@ -85,19 +85,20 @@ describe('lo que se promete y lo que no', () => {
 
 describe('los textos en iPhone: la app Salud de Apple (spec 037, D-362)', () => {
   // spec 037 FR-022
-  it('en iPhone dicen «Salud» y no «Health Connect», ni «Android 14»', () => {
+  it('en iPhone dicen «Salud de Apple» (nombre completo, norma 2.5.1) y no «Health Connect», ni «Android 14»', () => {
     const iphone = textosDePasosPara('ios');
-    expect(iphone.conectar.subtitulo).toBe('Con la app Salud, de Apple.');
+    expect(iphone.conectar.subtitulo).toBe('Con Salud de Apple.');
     expect(iphone.conectar.lineas).toEqual([
       'Tu iPhone o tu Apple Watch cuentan los pasos.',
-      'Renaser solo lee pasos y distancia.',
+      'Renaser solo lee pasos y distancia de Salud de Apple.',
       'Tu mentor y la tabla de kilómetros ven tu total de km.',
     ]);
-    expect(iphone.abrirHealthConnect).toBe('Abrir Salud');
-    expect(iphone.sinPermiso.texto).toBe('Quitaste el permiso en Salud.');
-    expect(iphone.sinSoporte.texto).toBe('Los pasos automáticos necesitan la app Salud de Apple.');
-    expect(iphone.sinDatos.texto).toContain('Si no diste permiso, actívalo en Salud.');
-    expect(iphone.sinDatos.abrir).toBe('Abrir Salud');
+    expect(iphone.abrirHealthConnect).toBe('Abrir Salud de Apple');
+    expect(iphone.sinPermiso.texto).toBe('Quitaste el permiso en Salud de Apple.');
+    expect(iphone.sinSoporte.texto).toBe('Los pasos automáticos necesitan Salud de Apple.');
+    expect(iphone.sinDatos.texto).toContain('Si no diste permiso, actívalo en Salud de Apple.');
+    expect(iphone.sinDatos.abrir).toBe('Abrir Salud de Apple');
+    expect(iphone.saludDeApple.nombre).toBe('Salud de Apple');
     expect(iphone.hoja.unaSolaVez).toBe('Contamos una sola vez lo que miden tu iPhone y tu Apple Watch.');
     const todo = JSON.stringify(iphone);
     expect(todo).not.toMatch(/Health Connect|Android|Google/);

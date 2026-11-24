@@ -47,6 +47,7 @@ import { useFormacionDeLaSesion } from '../features/formaciones/context/Formacio
 import { tacto } from '../utils/tacto';
 import { CabeceraAdmin } from '../features/admin/components/CabeceraAdmin';
 import { FenixDeSerQuieto } from '../features/fenix/components/FenixDeSerQuieto';
+import { FilaSaludDeApple, muestraSaludDeApple } from '../features/yo/components/FilaSaludDeApple';
 import { FilaDeAjuste, GrupoDeAjustes, LADO_BALDOSA } from '../features/yo/components/FilasDeAjustes';
 import { MetodoEnPaginas, type FaseDelMetodo } from '../features/yo/components/MetodoEnPaginas';
 import { PactoFirmado } from '../features/yo/components/PactoFirmado';
@@ -1294,6 +1295,9 @@ export default function YoScreen() {
                 detalle="Despertar, eventos y sonido"
                 onPress={() => setActiveView('alarmas')}
               />
+              {/* 2026-11-24 (autorizado por el dueño, issue #255, norma 2.5.1 de la App Store): solo en iPhone y iPad, el lugar fijo
+                  donde la app nombra «Salud de Apple» con su ícono oficial y deja conectarla o desconectarla. */}
+              {muestraSaludDeApple(Platform.OS) ? <FilaSaludDeApple cuentaId={user?.id ?? null} /> : null}
               {/* D-167: solo si la memoria está encendida, o si quedó algo de antes para borrar. La
                   baldosa es el orbe de SER, su cara en Hoy y en el botón flotante (era un cerebro, el
                   mismo de la dimensión «Mente»). */}

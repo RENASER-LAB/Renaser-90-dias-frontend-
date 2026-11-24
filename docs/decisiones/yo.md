@@ -345,3 +345,9 @@ sin servidor, relee, una lectura vieja no pisa), `whatsappConfirmadoEnYo` (la fi
   Apple (HealthKit)**: solo el total diario de pasos y distancia, de solo lectura, sin otros datos de salud, sin publicidad y cómo quitar el
   permiso (norma 5.1.3 de Apple). Se quita la frase de «usar mi ubicación» en la web: la ficha ya no detecta la ubicación (issue #235).
   Lo comprueba `paginaPoliticaDePrivacidad.test.ts`.
+
+## Cambio por pedido del dueño — 2026-11-24 — tab `Yo` → Preferencias: fila «Salud de Apple» (solo iOS)
+
+* Autorización explícita del dueño para tocar el tab `Yo` **en esto y nada más**: una fila «Salud de Apple» con el ícono oficial de Apple y su estado (conectada, sin conectar, no disponible),
+  en el grupo Preferencias, solo en iPhone y iPad. Es la respuesta al rechazo de la App Store por la norma 2.5.1 (issue #255). El detalle, el origen del ícono y las pruebas están en
+  [kilometros-y-carrera.md](kilometros-y-carrera.md) (misma fecha). Android y la web no la tienen; el resto de Yo no cambia.

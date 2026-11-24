@@ -60,6 +60,8 @@ export function GrupoDeAjustes({ titulo, children }: { titulo?: string; children
  * - **`accesorio`** (un `Interruptor`): la fila no se toca, se toca el accesorio. Envolver un
  *   interruptor en algo tocable hace que un toque lo cambie dos veces y vuelva a donde estaba.
  * - **`baldosa`**: un dibujo propio en lugar de un ícono (el orbe de SER).
+ * - **`baldosaLibre`**: la baldosa sin el fondo dorado, para un logo que no se puede componer sobre otro color (el ícono oficial de
+ *   Salud de Apple: Apple pide dejarlo limpio y con margen).
  *
  * Las filas que se tocan responden al dedo (`Presionable`) y se anuncian como un botón con su título
  * y su detalle; la baldosa y el «›» son decorativos.
@@ -67,6 +69,7 @@ export function GrupoDeAjustes({ titulo, children }: { titulo?: string; children
 export function FilaDeAjuste({
   icono,
   baldosa,
+  baldosaLibre = false,
   titulo,
   detalle,
   onPress,
@@ -77,6 +80,7 @@ export function FilaDeAjuste({
 }: {
   icono?: IconName;
   baldosa?: React.ReactNode;
+  baldosaLibre?: boolean;
   titulo: string;
   detalle?: string | null;
   onPress?: () => void;
@@ -91,7 +95,7 @@ export function FilaDeAjuste({
     <>
       <View
         testID="baldosa-de-ajuste"
-        style={[estilos.baldosa, { backgroundColor: peligro ? c.dangerWash : c.gold }]}
+        style={[estilos.baldosa, baldosaLibre ? estilos.baldosaLibre : { backgroundColor: peligro ? c.dangerWash : c.gold }]}
       >
         {baldosa ?? (icono ? <Icon name={icono} size={TAMANO_ICONO_BALDOSA} color={peligro ? c.danger : c.onGold} /> : null)}
       </View>
@@ -139,6 +143,8 @@ const estilos = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  /* Sin fondo ni recorte: el logo se ve entero (ver `baldosaLibre`). */
+  baldosaLibre: { borderRadius: 0, overflow: 'visible' },
   textos: { flex: 1, minWidth: 0, gap: 1 },
   tituloFila: { fontFamily: fuentes.media, fontSize: 16, lineHeight: 22 },
   detalle: { fontSize: 14, lineHeight: 19 },

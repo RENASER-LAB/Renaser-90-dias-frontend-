@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 
 import { GoldButton } from '../../../components/GoldButton';
 import { Icon, TAMANO_ICONO, type IconName } from '../../../components/Icon';
@@ -9,6 +9,7 @@ import { fuentes } from '../../../theme/fuentes';
 import { useTheme } from '../../../theme/ThemeContext';
 import { abrirPoliticaDePrivacidad } from '../../legal/enlacesLegales';
 import { textoDesdeCuando, textosDeEstaPlataforma } from '../utils/textosDePasos';
+import { LogoSaludDeApple } from './LogoSaludDeApple';
 
 /**
  * «Cuenta tus km solo» (spec 037, D-310; maqueta 1.2, 1.4 y 3.4): la hoja donde la persona acepta que Renaser lea sus pasos y
@@ -20,6 +21,9 @@ import { textoDesdeCuando, textosDeEstaPlataforma } from '../utils/textosDePasos
  * 2. **listo**: «Ya contamos tus pasos», la fuente (cuando ya se leyó) y desde qué hora cuenta hoy;
  * 3. **sin soporte** (Android menor a 14, sin Health Connect, iPad sin Salud, web): «Sube tu captura». Por decisión del dueño no se
  *    ofrece instalar nada; el botón lleva a la captura de siempre.
+ *
+ * En iPhone, arriba de las tres caras va «Salud de Apple» con su ícono oficial al lado (norma 2.5.1 de la App Store, issue #255): el
+ * ícono es decoración, nunca un botón. Con `onDesconectar` (la fila de Yo), la cara «listo» ofrece «Desconectar», que abre Salud.
  *
  * Sin animación propia: la hoja es la de la app y se ve una vez por cuenta.
  */
@@ -34,6 +38,7 @@ export function HojaConectarPasos({
   alTerminarDeCerrar,
   onSubirCaptura,
   onAbrirHealthConnect,
+  onDesconectar,
 }: {
   visible: boolean;
   soporte: 'disponible' | 'no-disponible';
@@ -54,6 +59,8 @@ export function HojaConectarPasos({
   /** Lleva a la captura de siempre; quien monta la abre cuando la hoja ya se fue. */
   onSubirCaptura: () => void;
   onAbrirHealthConnect: () => void;
+  /** Desde Yo: olvida la conexión y abre Salud para quitar el permiso. Sin esto la cara «listo» no ofrece desconectar. */
+  onDesconectar?: () => void;
 }) {
   const { c, t } = useTheme();
   const [paso, setPaso] = useState<'pregunta' | 'listo'>('pregunta');
@@ -92,6 +99,11 @@ export function HojaConectarPasos({
     }
   };
 
+  const desconectar = () => {
+    onCerrar();
+    onDesconectar?.();
+  };
+
   const irALaCaptura = () => {
     despues.current = onSubirCaptura;
     onCerrar();
@@ -120,7 +132,14 @@ export function HojaConectarPasos({
         sinSoporte ? (
           <GoldButton label={textos.sinSoporte.boton} icon="camera" iconPosition="left" onPress={irALaCaptura} textStyle={estilos.textoDelBoton} />
         ) : paso === 'listo' ? (
-          <GoldButton label={textos.conectado.listo} onPress={onCerrar} textStyle={estilos.textoDelBoton} />
+          <View style={{ gap: 4 }}>
+            <GoldButton label={textos.conectado.listo} onPress={onCerrar} textStyle={estilos.textoDelBoton} />
+            {onDesconectar ? (
+              <Presionable onPress={desconectar} accessibilityRole="button" accessibilityLabel={textos.desconectar} style={estilos.ahoraNo}>
+                <Text style={[t.body, { color: c.textSoft, fontFamily: fuentes.seminegrita, fontSize: 16 }]}>{textos.desconectar}</Text>
+              </Presionable>
+            ) : null}
+          </View>
         ) : (
           <View style={{ gap: 4 }}>
             <GoldButton label={textos.conectar.boton} onPress={() => void alConectar()} loading={enviando} textStyle={estilos.textoDelBoton} />
@@ -132,6 +151,12 @@ export function HojaConectarPasos({
       }
     >
       <View style={estilos.cuerpo}>
+        {Platform.OS === 'ios' ? (
+          <View style={estilos.nombreDeSalud}>
+            <LogoSaludDeApple size={28} />
+            <Text style={[t.body, { color: c.textStrong, fontFamily: fuentes.seminegrita, flexShrink: 1 }]}>{textos.saludDeApple.nombre}</Text>
+          </View>
+        ) : null}
         {sinSoporte ? (
           <Text style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 23 }]}>{textos.sinSoporte.texto}</Text>
         ) : paso === 'listo' ? (
@@ -141,6 +166,7 @@ export function HojaConectarPasos({
               <Text style={[t.body, { color: c.textStrong, fontFamily: fuentes.seminegrita }]}>{fuente ?? '…'}</Text>
             </View>
             {desdeLasHoy ? <Text style={[t.body, { color: c.textSoft }]}>{textoDesdeCuando(desdeLasHoy)}</Text> : null}
+            {onDesconectar ? <Text style={[t.small, { color: c.textSoft }]}>{textos.saludDeApple.desconectarAviso}</Text> : null}
           </View>
         ) : (
           <>
@@ -179,6 +205,7 @@ const ICONOS_DE_LAS_LINEAS: readonly IconName[] = ['footprints', 'lock', 'trophy
 
 const estilos = StyleSheet.create({
   cuerpo: { paddingHorizontal: 20, paddingBottom: 12, gap: 14 },
+  nombreDeSalud: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   linea: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   icono: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   fuente: { borderWidth: 1, borderRadius: 14, padding: 14, gap: 2 },

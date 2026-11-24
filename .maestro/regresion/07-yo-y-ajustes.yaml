@@ -1,5 +1,6 @@
 # 07 — Yo: «Tu evolución» y Ajustes por el engranaje, con sus grupos y «Mis evidencias».
 # cuenta: aprendiz
+# corrido: 2026-11-24
 appId: com.renaser.app
 ---
 - runFlow: ../comun/ya-adentro.yaml

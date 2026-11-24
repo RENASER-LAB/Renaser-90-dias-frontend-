@@ -398,3 +398,25 @@ punto de la ruta (eso sería tocar las reglas del motor).
 Pruebas: `utils/__tests__/lecturaDelMapa.test.ts`, `servicios/__tests__/lecturaFrescaDelMapa.test.ts`, `components/__tests__/circuloDePrecision.test.ts` y `components/__tests__/avisoDeUbicacionAproximada.test.ts`.
 Solo JavaScript: no hace falta un build nativo nuevo. **Sin comprobar en el emulador ni en un teléfono:** la lectura con ubicación simulada, el círculo sobre Google Maps y el aviso en Android 12 o más
 con permiso «Aproximada» (cambiarlo en Ajustes puede reiniciar la app; la carrera se retoma sola); lo corre la sesión principal.
+
+## Cambio por pedido del dueño — 2026-11-24 — «Salud de Apple» visible en la app: fila en Yo, ícono oficial y el nombre completo (spec 037, D-362, issue #255)
+
+Pedido: Apple rechazó NaSer 1.8.0 (16) por la norma 2.5.1: la app usa HealthKit (pasos y distancia de los kilómetros diarios) y no lo identificaba claramente en la interfaz; solo se veía
+dentro de la hoja «Cuenta tus km solo», detrás del enlace «Cuenta tus pasos solo». Decisión del dueño (24/11): fila «Salud de Apple» en Yo, solo en iOS; textos de iPhone con el nombre completo; ícono oficial.
+
+Lo que cambia y nada más:
+* **Fila «Salud de Apple» en Yo → Preferencias, solo en iPhone y iPad** (`muestraSaludDeApple(Platform.OS)`; Android y la web no la tienen). El ícono oficial y el nombre van al lado; el estado dice
+  «Conectada», «Sin conectar», «No disponible en este dispositivo» (un iPad sin Salud: sin toque, no hay nada que conectar) o «Revisando…» mientras se lee. El toque va en la **fila entera**; el
+  ícono es decoración (`aria-hidden`), nunca un botón. Archivos: `features/yo/components/FilaSaludDeApple.tsx`, `features/pasos/hooks/useConexionDeSalud.ts` (la misma conexión por cuenta que
+  `usePasosDelDia`: conectar en Yo o en Training es lo mismo y no exige tener el hábito de kilómetros), `FilaDeAjuste` con `baldosaLibre` (sin el fondo dorado: Apple no deja componer el ícono sobre otro color).
+* **Conectar y desconectar reutilizan `HojaConectarPasos`.** En iPhone la hoja muestra arriba el ícono con «Salud de Apple»; con `onDesconectar` (solo Yo) la cara «Ya contamos tus pasos» suma
+  «Desconectar», que olvida la conexión y abre Salud para quitar el permiso allá (iOS no lo deja quitar desde la app; así el permiso se maneja solo en los ajustes del sistema, como pide Apple).
+* **Textos de iPhone con «Salud de Apple»** (`TEXTOS_DE_PASOS_EN_IPHONE`): «Con Salud de Apple.», «Renaser solo lee pasos y distancia de Salud de Apple.», «Abrir Salud de Apple», «Quitaste el
+  permiso en Salud de Apple.», «Los pasos automáticos necesitan Salud de Apple.». El HIG de HealthKit dice «Apple Health» y manda usar la traducción del sistema; el dueño eligió «Salud de Apple».
+* **Ícono oficial**, tal como lo da Apple (`Icon-Apple-Health.dmg` de Apple Design Resources, `https://devimages-cdn.apple.com/design/resources/download/Icon-Apple-Health.dmg`, enlazado desde
+  `https://developer.apple.com/design/resources/#technologies`): solo reducido a 40/80/120 px en `assets/salud-de-apple/`, con la licencia de Apple al lado. Sin recorte circular, bordes ni
+  efectos; margen libre de 1/10 de su alto. Solo lo carga `LogoSaludDeApple.ios.tsx`: Android y la web resuelven `LogoSaludDeApple.tsx` (no dibuja nada), porque la licencia lo permite solo en apps de iOS.
+
+No cambian: Android y la web, los cinco tabs salvo esa fila de Yo (autorizada solo para esto), la lectura de pasos, el servidor, la hoja de kilómetros de Training, «Cuenta tus pasos solo».
+Pruebas: `features/yo/components/__tests__/filaSaludDeApple.test.ts` y las de `textosDePasos` / `pasosEnPantalla` con los textos nuevos. **Sin comprobar:** iPhone o simulador (el E2E es solo en el emulador de Android);
+el aspecto del ícono y de la fila se comprueba con el build de iOS. Solo JavaScript y un PNG: hace falta un build nuevo de iOS para la App Store.
