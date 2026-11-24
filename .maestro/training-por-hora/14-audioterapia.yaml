@@ -1,0 +1,63 @@
+# T14 — La Audioterapia semanal desde la lista (Entrenar → «Audioterapia semanal» → «Escuchar»): abre la MISMA hoja de la Pastilla
+# (`PastillaRenacerModal`, subtítulo «Semana N»; antes pasa por la hoja del hábito con «Escuchar el audio»), suena y, con la app en segundo plano, la notificación
+# de medios del sistema muestra el título y el nombre de la formación con pausa/reanudar (issue #254); al cerrar la hoja se pausa y
+# desaparece. (El nombre es 14 y no 06 porque `06-clase-diaria` ya existe.)
+# Precondición: `GET /api/v1/audio-therapy/status` trae la semana con su `url` y el archivo existe en el S3 LOCAL (si el bucket no lo
+# tiene, la URL firmada responde 403 y el reproductor queda en «cargando…»: se sube cualquier MP3 corto con esa clave).
+# cuenta: aprendiz
+# corrido: 2026-11-24
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- runFlow: ../comun/abrir-training.yaml
+- scrollUntilVisible:
+    element: ".*Audioterapia semanal.*"
+    direction: DOWN
+    centerElement: true
+    timeout: 30000
+- tapOn: ".*Audioterapia semanal.*"
+- extendedWaitUntil:
+    visible: "Escuchar el audio"
+    timeout: 10000
+- tapOn: "Escuchar el audio"
+- extendedWaitUntil:
+    visible: ".*Semana .*"
+    timeout: 20000
+- takeScreenshot: T14a-audioterapia-abierta
+- tapOn: "Reproducir"
+- extendedWaitUntil:
+    visible: "Pausar"
+    timeout: 30000
+- takeScreenshot: T14b-audioterapia-sonando
+# Al inicio: el audio sigue sonando y el sistema muestra los controles multimedia.
+- pressKey: home
+- swipe:
+    start: "50%,0%"
+    end: "50%,70%"
+    duration: 600
+- extendedWaitUntil:
+    visible: "Supera tu frustración|.*Escuela Renaser.*|.*Renaser.*"
+    timeout: 15000
+- takeScreenshot: T14c-controles-multimedia
+- assertVisible: "(?i)pause|pausa|pausar"
+- tapOn: "(?i)pause|pausa|pausar"
+- takeScreenshot: T14d-pausado-desde-la-notificacion
+# De vuelta en la hoja (tocando el título) y cerrar: se pausa y los controles desaparecen.
+- tapOn: "Supera tu frustración"
+- extendedWaitUntil:
+    visible: ".*Semana .*"
+    timeout: 15000
+- pressKey: back
+- extendedWaitUntil:
+    notVisible: ".*Semana [0-9]+.*"
+    timeout: 15000
+- swipe:
+    start: "50%,0%"
+    end: "50%,70%"
+    duration: 600
+- extendedWaitUntil:
+    visible: "Clear all|Borrar todo|Silent|Silenciosas"
+    timeout: 10000
+- assertNotVisible: "Supera tu frustración"
+- takeScreenshot: T14e-sin-controles-tras-cerrar
+- pressKey: back
