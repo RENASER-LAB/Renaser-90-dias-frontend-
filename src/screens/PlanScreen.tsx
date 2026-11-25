@@ -48,6 +48,10 @@ import { etiquetaDelMes, mesDe, semanaDe } from '../features/objetivos/utils/per
 import { estaPorConfirmar, rocasPorConfirmar, type ObjetivoParaConfirmar } from '../features/objetivos/utils/objetivosPorConfirmar';
 import { ESPACIO_PARA_LANZADOR } from '../features/renasia/components/RenasiaLauncher';
 import { useOcultarBarraAlDesplazar } from '../navigation/barraAlDesplazar/BarraInferior';
+import { useFuncionalidad } from '../features/plataforma/estado/useFuncionalidad';
+import { CLAVES } from '../features/plataforma/utils/clavesDeLaApp';
+import { LineaDeLaMeta, SeparadorDelMes } from '../features/objetivos/components/RutaDelPlan';
+import { etiquetaDelSeparadorDelMes, objetivoCortoDelMes } from '../features/objetivos/utils/rutaDelPlan';
 
 // =========================================================================
 // TIPOS DEL PLAN DE HÁBITOS
@@ -131,6 +135,11 @@ const TEXTO_DE_BOTON = { fontSize: 15, letterSpacing: 0 } as const;
 export default function PlanScreen() {
   const { c, t } = useTheme();
   const { isTablet, horizontalPadding, contentMaxWidth } = useResponsive();
+  /* Spec 058: Plan como ruta de niveles solo si `plan.ruta` está prendida Y disponible para esta persona (nace apagada). Si no, Plan es el de siempre (FR-002). */
+  const planRuta = useFuncionalidad(CLAVES.planRuta);
+  const rutaActiva = planRuta.prendida && planRuta.disponible;
+  /* El engranaje de la cabecera: sube el contador y `PlanDelEje` abre «Planifica tus objetivos». */
+  const [pedidoDeAjustes, setPedidoDeAjustes] = useState(0);
 
   // =========================================================================
   // ESTADOS DE NAVEGACIÓN
@@ -280,6 +289,8 @@ export default function PlanScreen() {
   const planMensual = usePlanMensual();
   const mesDelEjeAbierto = planMensual.mesEnCursoDe(ejeAbierto);
   const planDelEjeAbierto = planMensual.porEje.get(ejeAbierto);
+  /* El mes del separador de la ruta: el mismo bloque de cuatro semanas que ya nombra «Planificar mi mes». */
+  const numeroMesDeLaRuta = mesDe(diaPrograma, undefined, resumen?.duracionDias);
   const [editandoMes, setEditandoMes] = useState(false);
   /* «Planificar mi mes» (spec 028): una hoja opcional con los tres meses del programa. `pedidoDeOrganizar` le avisa a `PlanDelEje` que la
      persona tocó su semana ahí adentro: abre «Organizar mi semana» de siempre cuando la hoja ya se fue. */
@@ -535,8 +546,15 @@ export default function PlanScreen() {
     <SafeAreaView edges={BORDES_DE_UNA_PESTANA} style={{ flex: 1, backgroundColor: c.bg }}>
       {/* Cabecera (2026-10-31, pedido del dueño: «en Plan replica este formato»): «Plan» grande y debajo, en dorado, la dirección
           de los 90 días. La maqueta traía una diana arriba a la derecha: no se dibuja, no tiene una acción clara. */}
-      <ScreenHeader title="Plan" />
-      <Text style={[t.body, { color: c.goldInk, paddingHorizontal: horizontalPadding, marginTop: -2 }]}>{`Tu dirección en ${plazo}`}</Text>
+      {rutaActiva ? (
+        /* Como ruta: «Plan» con el engranaje, sin subtítulo (FR-003). */
+        <ScreenHeader title="Plan" right="settings" onPressRight={() => setPedidoDeAjustes(n => n + 1)} etiquetaRight="Planifica tus objetivos" />
+      ) : (
+        <>
+          <ScreenHeader title="Plan" />
+          <Text style={[t.body, { color: c.goldInk, paddingHorizontal: horizontalPadding, marginTop: -2 }]}>{`Tu dirección en ${plazo}`}</Text>
+        </>
+      )}
 
       <ScrollView
         {...barraAlDesplazar}
@@ -572,6 +590,8 @@ export default function PlanScreen() {
             accessibilityLabel="Eje de tu plan"
           />
 
+          {!rutaActiva ? (
+          <>
           {/* c. El objetivo de 90 días. Los «…» abren la hoja de siempre: escribir el objetivo (si falta) o anotar el avance
               (si ya quedó fijo, D-234). Sin avance que anotar no se dibujan. */}
           <TarjetaDelObjetivo
@@ -584,6 +604,26 @@ export default function PlanScreen() {
           />
 
           <BotonPlanificarMes mesEnCurso={resumen ? etiquetaDelMes(mesDe(diaPrograma, undefined, resumen?.duracionDias), resumen?.duracionDias) : null} onPress={() => setPlanificandoMes(true)} />
+          </>
+          ) : (
+          <>
+          <LineaDeLaMeta
+            roca={rocaAbierta}
+            cargando={objetivos.cargando}
+            error={objetivos.error}
+            plazo={plazo}
+            alTocar={abiertaPorConfirmar ? () => setRevisando(true) : sinAvanceQueAnotar ? undefined : () => openEditGoalModal()}
+          />
+          <SeparadorDelMes
+            etiqueta={
+              resumen
+                ? etiquetaDelSeparadorDelMes(numeroMesDeLaRuta, objetivoCortoDelMes(planDelEjeAbierto?.meses.find(m => m.numeroMes === numeroMesDeLaRuta), planDelEjeAbierto))
+                : null
+            }
+            alTocar={() => setPlanificandoMes(true)}
+          />
+          </>
+          )}
 
           {confirmacion && (
             <ConfirmacionEnLinea key={confirmacion.clave} texto={confirmacion.texto} onTerminar={() => setConfirmacion(null)} />
@@ -604,6 +644,17 @@ export default function PlanScreen() {
             registrarLasAcciones={accionesRef}
             abrirOchentaVeinte={ochentaVeinteAlAbrir}
             alAbrirOchentaVeinte={() => setOchentaVeinteAlAbrir(null)}
+            pedidoDeAjustes={pedidoDeAjustes}
+            ruta={
+              rutaActiva
+                ? {
+                    numeroMes: numeroMesDeLaRuta,
+                    planDelEje: planDelEjeAbierto,
+                    etiquetaDelMes: resumen ? etiquetaDelMes(numeroMesDeLaRuta, resumen?.duracionDias) : null,
+                    onPlanificarMes: () => setPlanificandoMes(true),
+                  }
+                : undefined
+            }
           />
             </>
           )}

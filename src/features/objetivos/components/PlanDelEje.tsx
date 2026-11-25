@@ -17,6 +17,22 @@ import { PlanSemanalModal } from './PlanSemanalModal';
 import { RecordatoriosDeLasAcciones } from './RecordatoriosDeLasAcciones';
 import { RevisionSemanalModal } from './RevisionSemanalModal';
 import { AccionesQueMuevenLaMeta, HojaOchentaVeinte, TarjetaEstaSemana, TarjetaOchentaVeinte } from './TarjetasDelPlan';
+import { ContenidoDeLaRuta } from './ContenidoDeLaRuta';
+import { HojaPlanificaTusObjetivos } from './HojaPlanificaTusObjetivos';
+import { SincronizadorDeAlarmasDeLaRuta } from './SincronizadorDeAlarmasDeLaRuta';
+import type { PlanMensualDelEje } from '../api/planMensualApi';
+import { usePlazoDelObjetivo } from '../context/PlazoDelObjetivo';
+import { fechasDeLaSemanaDelPrograma, rangoDeFechas } from '../utils/mesDelPrograma';
+import { loQueViene, metaEnPocasPalabras, objetivoCortoDelMes, type ItemDeLoQueViene, type NivelDeLaRuta } from '../utils/rutaDelPlan';
+
+/** Lo que `PlanScreen` le da a `PlanDelEje` solo cuando Plan se dibuja como ruta (spec 058). */
+export interface DatosDeLaRuta {
+  numeroMes: number;
+  planDelEje?: PlanMensualDelEje;
+  /** «Mes 1 · Semanas 1 a 4», lo de la fila «Planificar mi mes» de la hoja del engranaje. */
+  etiquetaDelMes: string | null;
+  onPlanificarMes: () => void;
+}
 
 /**
  * Lo de DEBAJO del objetivo de 90 días en la pantalla principal de Plan (2026-10-31): «Esta semana», «Acciones que mueven la
@@ -48,7 +64,13 @@ export function PlanDelEje({
   alAbrirOchentaVeinte,
   accionSugerida = null,
   onDefinirObjetivos,
+  ruta,
+  pedidoDeAjustes = 0,
 }: {
+  /** Con datos, Plan se dibuja como ruta de niveles (spec 058, `plan.ruta`); sin ellos, como siempre. */
+  ruta?: DatosDeLaRuta;
+  /** Un contador: cada vez que sube, se abre «Planifica tus objetivos» (el engranaje de la cabecera). */
+  pedidoDeAjustes?: number;
   maestras: RocaMaestraApi[];
   numeroSemana: number;
   diaPrograma: number;
@@ -97,6 +119,15 @@ export function PlanDelEje({
     if (diaria.agendadasLeidas === false) void diaria.recargar();
   };
   const [ochentaVeinte, setOchentaVeinte] = useState(false);
+  /* Spec 058: «Planifica tus objetivos» (engranaje). Se abre cada vez que sube `pedidoDeAjustes`. */
+  const [ajustes, setAjustes] = useState(false);
+  const ajustesAtendidos = useRef(pedidoDeAjustes);
+  useEffect(() => {
+    if (pedidoDeAjustes === ajustesAtendidos.current) return;
+    ajustesAtendidos.current = pedidoDeAjustes;
+    setAjustes(true);
+  }, [pedidoDeAjustes]);
+  const plazo = usePlazoDelObjetivo();
   const [vistaInicialDeLaHoja, setVistaInicialDeLaHoja] = useState<'SEMANA' | 'MES' | undefined>(undefined);
   useEffect(() => {
     if (!abrirOchentaVeinte) return;
@@ -177,8 +208,95 @@ export function PlanDelEje({
     abrirAgendar(accion.fecha);
   };
 
+  /* ------------------------------------------------------------------------------------------------
+   * Plan como ruta (spec 058): lo mismo de arriba, dibujado como niveles. Nada de esto abre algo nuevo.
+   * ---------------------------------------------------------------------------------------------- */
+  const hoy = useMemo(() => new Date(), [diaPrograma, hoyIso]);
+  const errorDeLaRuta = diaria.error ?? (hayPlanSemanal || semanal.estado === 'bloqueada' ? null : semanal.error);
+  const sinLecturaDeLaRuta = (errorDeLaRuta !== null && delEje.length === 0) || (semanal.error !== null && semanal.estado === 'sin_planificar' && delEje.length === 0);
+  const rangoDeLaSemana = useMemo(() => {
+    const fechas = fechasDeLaSemanaDelPrograma(numeroSemana, diaPrograma, hoy, duracionDias);
+    return fechas ? rangoDeFechas(fechas) : null;
+  }, [numeroSemana, diaPrograma, hoy, duracionDias]);
+  const itemsDeLoQueViene: ItemDeLoQueViene[] = useMemo(() => {
+    if (!ruta) return [];
+    const maestra = maestras.find(m => m.eje === ejeAbierto);
+    return loQueViene({
+      numeroSemana,
+      numeroMes: ruta.numeroMes,
+      diaPrograma,
+      duracionDias,
+      armaLaQueEmpieza,
+      queEmpiezaArmada: rocaQueEmpieza != null,
+      hoy,
+      objetivoDelMes: mes => objetivoCortoDelMes(ruta.planDelEje?.meses.find(m => m.numeroMes === mes), ruta.planDelEje),
+      meta: metaEnPocasPalabras(maestra?.objetivo),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ruta, maestras, ejeAbierto, numeroSemana, diaPrograma, duracionDias, armaLaQueEmpieza, rocaQueEmpieza, hoy]);
+
+  /** Tocar un nivel abre lo mismo que hoy: la acción de hoy va a Entrenar (FR-005), una que viene abre «Agendar» en su día. */
+  const tocarNivel = (nivel: NivelDeLaRuta) => {
+    switch (nivel.alTocar) {
+      case 'accion':
+        if (nivel.accion) tocarUna(nivel.accion, true);
+        break;
+      case 'agendarDia':
+        if (nivel.accion) tocarUna(nivel.accion, false);
+        break;
+      case 'armar':
+        setArmando(true);
+        break;
+      case 'metas':
+        onDefinirObjetivos?.();
+        break;
+      case 'mas':
+        abrirAgendar();
+        break;
+      case 'cofre':
+        setRevisando(ejeAbierto);
+        break;
+      default:
+        break;
+    }
+  };
+  const editarMiSemana = () => {
+    if (semanal.estado === 'bloqueada') onDefinirObjetivos?.();
+    else setArmando(true);
+  };
+
   return (
     <View style={estilos.columna}>
+      {ruta ? (
+        <ContenidoDeLaRuta
+          eje={ejeAbierto}
+          acciones={delEje}
+          hoyIso={hoyIso}
+          estadoDeLaSemana={semanal.estado}
+          tituloDeLaSemana={rocaDeLaSemana?.titulo ?? null}
+          revisada={rocaDeLaSemana?.autoevaluacionFin ?? null}
+          puedeAgendar={puedeAgendar}
+          sinLectura={sinLecturaDeLaRuta}
+          error={errorDeLaRuta ?? semanal.error}
+          plazo={plazo}
+          avance={avance}
+          numeroSemana={numeroSemana}
+          rangoDeLaSemana={rangoDeLaSemana}
+          cierre={cierre}
+          loQueViene={itemsDeLoQueViene}
+          alTocarNivel={tocarNivel}
+          alTocarLaFranja={editarMiSemana}
+          alAbrirOchentaVeinte={() => {
+            setVistaInicialDeLaHoja(undefined);
+            setOchentaVeinte(true);
+          }}
+          alOrganizar={organizarMiSemana}
+          alTocarProximo={item => {
+            if (item.alTocar === 'armar') setArmando(true);
+          }}
+        />
+      ) : (
+      <>
       <TarjetaEstaSemana
         estado={semanal.estado}
         numeroSemana={numeroSemana}
@@ -225,6 +343,28 @@ export function PlanDelEje({
       />
 
       <GoldButton label="Organizar mi semana" onPress={organizarMiSemana} icon="chevron" textStyle={estilos.textoDelBoton} />
+      </>
+      )}
+
+      {ruta ? (
+        <>
+          {/* Las alarmas de las acciones se ponen al día con la hoja del engranaje cerrada; abierta lo hace su fila (`RecordatoriosDeLasAcciones`). */}
+          {!ajustes && hayPlanSemanal && user?.id ? <SincronizadorDeAlarmasDeLaRuta userId={user.id} rocas={rocasParaAlarmas} /> : null}
+          <HojaPlanificaTusObjetivos
+            visible={ajustes}
+            alCerrar={() => setAjustes(false)}
+            tituloDeLaSemanaDe={eje => semanal.deEje(eje)?.titulo ?? null}
+            acciones={todas}
+            hoy={hoy}
+            etiquetaDelMes={ruta.etiquetaDelMes}
+            alEditarLaSemana={editarMiSemana}
+            alAgendar={() => abrirAgendar()}
+            alPlanificarElMes={ruta.onPlanificarMes}
+            rocasParaAlarmas={rocasParaAlarmas}
+            hayPlanSemanal={hayPlanSemanal}
+          />
+        </>
+      ) : null}
 
       <HojaOchentaVeinte
         visible={ochentaVeinte}

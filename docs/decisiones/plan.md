@@ -495,3 +495,25 @@ un texto corto («Tiempo», «Imprevisto», «Lo evité»); el elegido, con el f
     lo que el servidor ya tiene), `src/features/objetivos/utils/__tests__/planPrincipal.test.ts` (`agendadasDeDiasQueVienen`),
     `accionesPropias.test.ts` (`recortadasAlTope`) y `src/features/objetivos/hooks/__tests__/agendadasLeidas.test.ts`. Solo JavaScript: no
     hace falta APK nuevo ni cambio en el backend.
+
+## Cambio por pedido del dueño — 2026-11-25 — tab `Plan`: Plan como ruta de niveles, detrás del interruptor `plan.ruta` (spec 058, propuesta R1 «Zigzag crema»)
+
+Pedido textual del dueño: eligió la propuesta R1 de la galería («vamos en el 1»), con estos ajustes: sin la fila de cifras (día · de 7 días · % semana), sin colores por eje
+(todo en el dorado de la app, cada eje con su ícono de siempre), sin el subtítulo «Tu dirección en 90 días» y la planificación de los objetivos detrás de un engranaje «igual que
+hábitos». Pidió implementarla («tú mismo procede con este cambio») y tenerla en su teléfono para hacer él mismo el E2E. **Autorización del dueño solo para esta spec: no abre el tab.**
+
+* **Interruptor.** Con `plan.ruta` apagada o no disponible para la persona, `PlanScreen` queda exactamente como antes (FR-002). La clave `plan.ruta` (hija de `plan`) nace apagada en el
+  catálogo del backend (FR-001) y se prende desde Soporte TI (por porcentaje o a probadores). En la app: `useFuncionalidad(CLAVES.planRuta)`, `prendida && disponible`.
+* **Con `plan.ruta`**, de arriba abajo: «Plan» con el engranaje (sin subtítulo), el selector de ejes, la línea de la meta (editor de siempre), el separador «Mes N · objetivo del mes»
+  (abre «Planificar mi mes»), la franja de la semana («N de M»; abre «Plan de la semana»), un nivel por acción en orden de día y hora (cumplido con check, el siguiente grande con el fénix,
+  candado de la Ley IV), el «+» (agendar otro día) y el cofre (revisión semanal, abierto si ya se revisó); debajo, «Cierra tu día», «Tu 80/20» y «Organizar mi semana», y al final «Lo que viene».
+  Primer nivel «Arma tu semana» (semana sin objetivo) o «Tus metas de <plazo>» (sin los tres objetivos).
+* **El engranaje** abre «Planifica tus objetivos»: «Tu semana» (Editar mi semana), «Tu agenda, día por día» (Agendar mis acciones), «Planificar mi mes» y «Recordatorios de tus acciones»
+  (esa fila sale del fondo de Plan en la ruta; Yo → Alarmas sigue igual). Cada fila abre la hoja que ya existía, sin cambiar sus campos.
+* **Efectos (FR-014, pedido del mismo día):** pop del nivel al cumplirse, check que se dibuja y háptico de éxito; el fénix salta en arco al nuevo siguiente; la cifra «N de M» y la barra de la
+  franja suben; el cofre se abre con rebote y brillo una sola vez; los niveles entran en cascada (menos de 300 ms) solo la primera vez de la sesión; el siguiente «respira» hasta que se toca.
+  Solo `transform` y `opacity`, en el hilo de la interfaz; con «Reducir movimiento» no se anima nada, el háptico sí. Cada efecto sale una vez por cambio real (`utils/efectosDeLaRuta`).
+* **Completar una acción (FR-005):** se navega a Entrenar como hoy. La hoja de la acción depende de todo el estado de Entrenar (`useTraining`, evidencias, hábitos) y abrirla encima de Plan
+  sin duplicarla no es posible en esta spec.
+* **No cambian:** ningún endpoint, tabla ni regla de negocio; los cinco tabs; Yo → Alarmas; «Cierra tu día», «Tu 80/20», «Organizar mi semana».
+* **Pruebas:** Jest `rutaDelPlan.test.ts` y `efectosDeLaRuta.test.ts` (marcas `spec 058 FR-…`); Maestro `.maestro/plan-ruta/`. Solo JavaScript: no hace falta APK nuevo, sí el backend con `plan.ruta`.
