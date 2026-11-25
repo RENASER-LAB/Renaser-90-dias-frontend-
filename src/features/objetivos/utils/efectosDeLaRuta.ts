@@ -52,11 +52,14 @@ export function efectosQueSeDisparan(antes: FotoDeLaRuta | null, ahora: FotoDeLa
   const yaEstaban = new Set(antes.cumplidos);
   const popDe = ahora.cumplidos.filter(id => !yaEstaban.has(id));
   const salta = popDe.length > 0 && antes.siguiente !== null && ahora.siguiente !== null && antes.siguiente !== ahora.siguiente;
+  const cuentaSubio = ahora.cumplidas > antes.cumplidas;
+  const cofreSeAbrio = !antes.cofreAbierto && ahora.cofreAbierto;
+  if (popDe.length === 0 && !cuentaSubio && !cofreSeAbrio) return SIN_EFECTOS;
   return {
     popDe,
     saltoDelFenix: salta ? { desde: popDe.includes(antes.siguiente as string) ? (antes.siguiente as string) : popDe[popDe.length - 1], hasta: ahora.siguiente as string } : null,
-    cuentaSubio: ahora.cumplidas > antes.cumplidas,
-    cofreSeAbrio: !antes.cofreAbierto && ahora.cofreAbierto,
+    cuentaSubio,
+    cofreSeAbrio,
   };
 }
 

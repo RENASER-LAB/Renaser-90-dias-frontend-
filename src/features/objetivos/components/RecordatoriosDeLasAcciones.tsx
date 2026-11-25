@@ -79,6 +79,12 @@ export function RecordatoriosDeLasAcciones({ userId, rocas }: { userId: string; 
   );
 }
 
+/** No dibuja nada: mantiene al día las alarmas de las acciones mientras esta fila no está montada (Plan como ruta, spec 058: la fila vive en la hoja del engranaje). */
+export function SincronizadorDeAlarmasDeLaRuta({ userId, rocas }: { userId: string; rocas?: RocaDiariaApi[] }) {
+  useAlarmasAlDiaConLasAcciones(userId, rocas);
+  return null;
+}
+
 const estilos = StyleSheet.create({
   contenedor: { marginTop: 14 },
   fila: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 56, paddingTop: 10, borderTopWidth: StyleSheet.hairlineWidth },

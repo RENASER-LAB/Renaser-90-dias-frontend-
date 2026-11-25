@@ -61,7 +61,8 @@ describe('Plan: textos', () => {
     expect(PLAN).toMatch(/color: c\.goldInk,[^}]*\}\]\}>\{`Tu dirección en \$\{plazo\}`\}<\/Text>/);
     expect(PLAN).not.toContain('Tu mapa de los próximos 90 días');
     // La diana de la maqueta no hace nada: no se dibuja (el ScreenHeader solo pinta un botón con ícono y acción).
-    expect(PLAN).not.toMatch(/<ScreenHeader[^>]*right=/);
+    // (Solo la cabecera de la ruta, spec 058, lleva el engranaje «Planifica tus objetivos», que sí hace algo.)
+    expect(PLAN.replace(/<ScreenHeader title="Plan" right="settings".*?etiquetaRight="Planifica tus objetivos" \/>/, '')).not.toMatch(/<ScreenHeader[^>]*right=/);
   });
 
   it('el estado vacío del objetivo entra en dos renglones', () => {
