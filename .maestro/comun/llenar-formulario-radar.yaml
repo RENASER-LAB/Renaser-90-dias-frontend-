@@ -6,17 +6,17 @@ appId: com.renaser.app
 ---
 # El aviso amarillo de la build de desarrollo tapa el pie del formulario («Registrar»): se cierra si está.
 - runFlow: cerrar-aviso-dev.yaml
-- tapOn: "Estoy…"
+- tapOn: "Estoy(…|\\.\\.\\.)"
 - inputText: "a"
-- tapOn: "Estoy pensando en…"
+- tapOn: "Estoy pensando en(…|\\.\\.\\.)"
 - inputText: "b"
-- tapOn: "Siento…"
+- tapOn: "Siento(…|\\.\\.\\.)"
 - inputText: "c"
 - hideKeyboard
 - scrollUntilVisible:
-    element: "Estoy evitando…"
+    element: "Estoy evitando(…|\\.\\.\\.)"
     direction: DOWN
-- tapOn: "Estoy evitando…"
+- tapOn: "Estoy evitando(…|\\.\\.\\.)"
 - inputText: "d"
 - hideKeyboard
 # Con el teclado abierto el botón «Registrar» no se ve (queda debajo) y el «5» de la escala coincide con la tecla «t» del teclado:
