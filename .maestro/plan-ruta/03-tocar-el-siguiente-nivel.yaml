@@ -1,0 +1,28 @@
+# PR03 — Tocar el siguiente nivel de hoy abre la acción en Entrenar, como hoy (FR-005); el «+» abre «Agendar mis acciones» y el cofre abre la revisión de la semana.
+# Precondición: `plan.ruta` prendida; una acción de hoy sin cumplir y la semana armada (`plan-por-dia/05a`).
+# corrido: sin correr
+# cuenta: e2e-ap-web@renaser.test
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "PLAN"
+- extendedWaitUntil:
+    visible: "Planifica tus objetivos"
+    timeout: 30000
+- tapOn: "Agendar otro día.*"
+- extendedWaitUntil:
+    visible: "Agendar mis acciones"
+    timeout: 15000
+- takeScreenshot: pr03-el-mas
+- pressKey: back
+- tapOn: "Cierra tu semana.*"
+- extendedWaitUntil:
+    visible: "Cerrar la semana.*"
+    timeout: 15000
+- takeScreenshot: pr03-el-cofre
+- pressKey: back
+- tapOn: ".*la que sigue"
+- extendedWaitUntil:
+    visible: "Marcar como hecha"
+    timeout: 20000
+- takeScreenshot: pr03-la-accion-en-entrenar

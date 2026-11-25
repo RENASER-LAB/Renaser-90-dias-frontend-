@@ -1,0 +1,24 @@
+# PR02 — El engranaje abre «Planifica tus objetivos»: «Tu semana», «Tu agenda, día por día», «Planificar mi mes» y «Recordatorios de tus acciones». «Agendar mis acciones» abre la hoja de siempre.
+# Precondición: `plan.ruta` prendida; semana armada (`plan-por-dia/04a`).
+# corrido: sin correr
+# cuenta: e2e-ap-web@renaser.test
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "PLAN"
+- extendedWaitUntil:
+    visible: "Planifica tus objetivos"
+    timeout: 30000
+- tapOn: "Planifica tus objetivos"
+- extendedWaitUntil:
+    visible: "Tu agenda, día por día"
+    timeout: 15000
+- assertVisible: "Tu semana"
+- assertVisible: "Planificar mi mes"
+- assertVisible: "Recordatorios de tus acciones"
+- takeScreenshot: pr02-hoja-del-engranaje
+- tapOn: "Agendar mis acciones"
+- extendedWaitUntil:
+    visible: "Agendar mis acciones"
+    timeout: 15000
+- takeScreenshot: pr02-agendar-desde-el-engranaje
