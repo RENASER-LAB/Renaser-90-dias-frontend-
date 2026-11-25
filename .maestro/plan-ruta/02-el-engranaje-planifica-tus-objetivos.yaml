@@ -1,6 +1,6 @@
 # PR02 — El engranaje abre «Planifica tus objetivos»: «Tu semana», «Tu agenda, día por día», «Planificar mi mes» y «Recordatorios de tus acciones». «Agendar mis acciones» abre la hoja de siempre.
 # Precondición: `plan.ruta` prendida; semana armada (`plan-por-dia/04a`).
-# corrido: sin correr
+# corrido: 2026-11-25
 # cuenta: e2e-ap-web@renaser.test
 appId: com.renaser.app
 ---

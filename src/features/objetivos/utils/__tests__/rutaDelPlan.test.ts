@@ -75,7 +75,7 @@ describe('la ruta de niveles de Plan', () => {
     const cerrado = nivelesDeLaRuta(entrada({ acciones: [accion('a', HOY, '07:00:00')] })).pop();
     expect(cerrado).toMatchObject({ tipo: 'cofre', abierto: false, alTocar: 'cofre' });
     const abierto = nivelesDeLaRuta(entrada({ estadoDeLaSemana: 'cerrada', revisada: 8, acciones: [accion('a', HOY, '07:00:00', { completada: true })] })).pop();
-    expect(abierto).toMatchObject({ tipo: 'cofre', abierto: true, alTocar: null, detalle: 'Revisada · te pusiste 8 de 10' });
+    expect(abierto).toMatchObject({ tipo: 'cofre', abierto: true, alTocar: null, detalle: 'Revisada · 8 de 10' });
   });
 
   // spec 058 FR-013

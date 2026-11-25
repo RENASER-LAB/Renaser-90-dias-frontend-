@@ -100,7 +100,7 @@ function cofre(abierto: boolean, revisada: number | null, tocable: boolean): Niv
     clave: 'cofre',
     tipo: 'cofre',
     titulo: 'Cierra tu semana',
-    detalle: abierto ? (revisada !== null ? `Revisada · te pusiste ${revisada} de 10` : 'Revisada') : tocable ? 'Tu revisión abre el cofre' : '',
+    detalle: abierto ? (revisada !== null ? `Revisada · ${revisada} de 10` : 'Revisada') : tocable ? 'Tu revisión abre el cofre' : '',
     icono: 'gift',
     grande: false,
     conFenix: false,
@@ -170,7 +170,7 @@ export function nivelesDeLaRuta(entrada: EntradaDeLaRuta): NivelDeLaRuta[] {
     if (accion.completada) {
       niveles.push({ ...comun, tipo: 'cumplido', detalle: `${base} · hecho${nota}`, icono: 'check', alTocar: null });
     } else if (accion.bloqueada) {
-      niveles.push({ ...comun, tipo: 'candado', detalle: `${base} · se abre al cumplir la 1.ª`, icono: 'lock', alTocar: null });
+      niveles.push({ ...comun, tipo: 'candado', detalle: `${base} · después de la 1.ª`, icono: 'lock', alTocar: null });
     } else if (i === siguiente) {
       niveles.push({ ...comun, tipo: 'siguiente', detalle: `${base}${nota}`, icono: iconoDelEje(eje), grande: true, conFenix: true, alTocar: esDeHoy ? 'accion' : puedeAgendar ? 'agendarDia' : null });
     } else {
