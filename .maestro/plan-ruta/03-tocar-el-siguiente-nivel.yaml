@@ -2,7 +2,7 @@
 # (nota del 1 al 10, qué te frenó y qué harás distinto).
 # Precondición: `plan.ruta` prendida y los datos de `plan-ruta/datos.sh semana-con-acciones` (semana 1 armada, «Caminar» y «Leer» de hoy, «Ver» mañana) seguidos de
 # `plan-ruta/datos.sh semana-sin-revisar` (el cofre solo se abre con la semana sin revisar). Si «Código Renaser» pide registro, `ya-adentro` lo hace.
-# corrido: sin correr
+# corrido: 2026-11-26
 # cuenta: e2e-ap-web@renaser.test
 appId: com.renaser.app
 ---

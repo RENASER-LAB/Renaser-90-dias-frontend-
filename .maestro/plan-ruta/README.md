@@ -21,3 +21,4 @@ Flujos de la R1. Cada uno dice su precondición y su cuenta arriba; ninguno est�
 | `04` | `datos.sh semana-sin-armar` |
 
 `comun/ya-adentro.yaml` registra el Código Renaser de la hora en punto si aparece y desliza hacia abajo para devolver la barra de pestañas que el scroll del flujo anterior dejó escondida.
+- Tras cambiar los datos por SQL (p. ej. `semana-sin-armar`) cierra y abre la app: guarda el plan en caché y el flujo ve el estado viejo.

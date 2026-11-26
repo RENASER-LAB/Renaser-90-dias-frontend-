@@ -1,0 +1,86 @@
+# PD05a — Agendar acciones con día y hora desde Plan («Agendar mis acciones»): tres para hoy en el primer eje de la hoja (Cuerpo: «Trotar» con una hora de la mañana —ya pasó—, «Vender» con una de la tarde y «Llamar» sin hora). La rueda de hora se mueve con un deslizamiento (cada uno corre ~3 horas desde las 06:00).
+# corrido: 2026-11-26 (con plan.ruta apagada, spec 058)
+# Ojo: en la build de desarrollo, escribir «rr» (dos erres seguidas) recarga el JS (atajo «RR» de React Native): los textos de los flujos no las llevan.
+# cuenta: e2e-ap-web@renaser.test
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "PLAN"
+- extendedWaitUntil:
+    visible: "Agendar mis acciones"
+    timeout: 30000
+- tapOn: "Agendar mis acciones"
+- extendedWaitUntil:
+    visible: "Elige hasta tres por eje. La hora es opcional."
+    timeout: 15000
+- takeScreenshot: 05a-agendar-hoja-hoy
+- tapOn:
+    text: "Escribe otra acción tuya"
+    index: 0
+- inputText: "Trotar"
+- hideKeyboard
+- tapOn:
+    text: "Agregar"
+    index: 0
+- extendedWaitUntil:
+    visible: "Ponerle hora \\(opcional\\)"
+    timeout: 10000
+- takeScreenshot: 05b-accion-elegida
+- tapOn: "Ponerle hora \\(opcional\\)"
+- extendedWaitUntil:
+    visible: "Elegir hora"
+    timeout: 10000
+- takeScreenshot: 05c-rueda-de-hora
+- swipe:
+    start: 26%, 37%
+    end: 26%, 23%
+    duration: 400
+# Una hora de la mañana (ya pasó: al cumplirla saldrá fuera de plazo).
+- assertVisible: "0[7-9]:00|1[01]:00"
+- takeScreenshot: 05d-hora-de-la-manana
+- tapOn: "Listo"
+- extendedWaitUntil:
+    visible: "A las (0[7-9]|1[01]):00"
+    timeout: 10000
+# Segunda acción, a una hora de la tarde (se desliza la rueda hasta pasar de las 13:00).
+- tapOn:
+    text: "Escribe otra acción tuya"
+    index: 0
+- inputText: "Vender"
+- hideKeyboard
+- tapOn:
+    text: "Agregar"
+    index: 0
+- tapOn: "Ponerle hora \\(opcional\\)"
+- extendedWaitUntil:
+    visible: "Elegir hora"
+    timeout: 10000
+- repeat:
+    while:
+      notVisible: "(1[3-9]|2[0-3]):00"
+    times: 8
+    commands:
+      - swipe:
+          start: 26%, 37%
+          end: 26%, 23%
+          duration: 400
+- takeScreenshot: 05e-hora-de-la-tarde
+- tapOn: "Listo"
+- extendedWaitUntil:
+    visible: "A las (1[3-9]|2[0-3]):00"
+    timeout: 10000
+# Tercera, sin hora.
+- tapOn:
+    text: "Escribe otra acción tuya"
+    index: 0
+- inputText: "Llamar"
+- hideKeyboard
+- tapOn:
+    text: "Agregar"
+    index: 0
+- takeScreenshot: 05f-tres-acciones-de-hoy-elegidas
+- tapOn: "Agendar \\(3\\)"
+- extendedWaitUntil:
+    visible: "Acciones que mueven la meta"
+    timeout: 20000
+- takeScreenshot: 05g-plan-con-acciones-agendadas

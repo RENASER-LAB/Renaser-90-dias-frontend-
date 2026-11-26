@@ -2,7 +2,7 @@
 # Datos de los flujos de plan-ruta (spec 058). SOLO la base LOCAL `renaser_e2e_plan` (se niega con otra que no empiece con renaser_e2e).
 #   datos.sh semana-con-acciones   Día 1, objetivos de 90 días intactos y sin avance, la semana 1 armada en Cuerpo (sin revisar) y tres acciones de Cuerpo:
 #                                  «Caminar» (1.ª) y «Leer» (2.ª, con candado) hoy, y «Ver» mañana. Deja la cuenta sin graduar.
-#   datos.sh cierre-del-dia        Como `semana-con-acciones` pero con las acciones de `plan-por-dia/07a`: «Trotar» (05:00, cumplida), «Vender» (13:00, sin cumplir) y «Llamar» (sin hora, cumplida).
+#   datos.sh cierre-del-dia        Como `semana-con-acciones` pero con las acciones de `plan-por-dia/07a`: «Trotar» (05:00, cumplida), «Vender» (06:00, ya pasó y sin cumplir; con 13:00 el flujo falla antes de esa hora) y «Llamar» (sin hora, cumplida).
 #   datos.sh semana-armada         Como `semana-con-acciones` pero SIN acciones (la semana 1 armada; `plan-por-dia/05a` las agenda).
 #   datos.sh semana-sin-armar      Día 1, objetivos de 90 días intactos y sin avance, y la semana 1 SIN armar (sin acciones): el primer nivel es «Arma tu semana».
 #   datos.sh semana-sin-revisar    Quita la revisión de la semana (para que el cofre se pueda abrir) sin tocar lo demás.
@@ -34,7 +34,7 @@ SQL
 DELETE FROM renaser.rocas_diarias WHERE participante_id=$U;
 INSERT INTO renaser.rocas_diarias (participante_id, fecha, posicion, titulo, color, puntaje_impacto, eje, roca_semanal_id, hora_inicio, completada, completada_en, puntos_otorgados)
 SELECT $U, $HOY, 1, 'Trotar', 'VERDE'::renaser.color_pareto, 5, 'CUERPO'::renaser.eje_objetivo, s.id, '05:00'::time, true, now(), 10 FROM renaser.rocas_semanales s WHERE s.roca_maestra_id=$CUERPO
-UNION ALL SELECT $U, $HOY, 2, 'Vender', 'AMARILLA'::renaser.color_pareto, 5, 'CUERPO'::renaser.eje_objetivo, s.id, '13:00'::time, false, NULL, 0 FROM renaser.rocas_semanales s WHERE s.roca_maestra_id=$CUERPO
+UNION ALL SELECT $U, $HOY, 2, 'Vender', 'AMARILLA'::renaser.color_pareto, 5, 'CUERPO'::renaser.eje_objetivo, s.id, '06:00'::time, false, NULL, 0 FROM renaser.rocas_semanales s WHERE s.roca_maestra_id=$CUERPO
 UNION ALL SELECT $U, $HOY, 3, 'Llamar', 'ROJA'::renaser.color_pareto, 5, 'CUERPO'::renaser.eje_objetivo, s.id, NULL::time, true, now(), 10 FROM renaser.rocas_semanales s WHERE s.roca_maestra_id=$CUERPO;
 SQL
   ;;

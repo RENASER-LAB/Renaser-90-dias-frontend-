@@ -1,0 +1,46 @@
+# PD07a — «Cierra tu día» desde Plan: la tarjeta está bajo «Acciones que mueven la meta»; la hoja pregunta solo por lo que ya llegó a su hora y no se
+# cumplió («Vender», una hora que ya pasó); se responde, «Guardar mi cierre» deja «Día cerrado» y «Ver mañana en Plan» lleva a las acciones que vienen.
+# Precondición: pasó la hora de «Vender» (06:00 en los datos) y sigue sin cumplir; «Trotar» y «Llamar» ya cumplidas; el día sin cerrar.
+# corrido: 2026-11-26 (con plan.ruta apagada, spec 058)
+# cuenta: e2e-ap-web@renaser.test
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "PLAN"
+- extendedWaitUntil:
+    visible: "Acciones que mueven la meta"
+    timeout: 30000
+- scrollUntilVisible:
+    element: "Cierra tu día"
+    direction: DOWN
+    timeout: 60000
+- assertVisible: "2 minutos · opcional, no da puntos"
+- takeScreenshot: 07a-tarjeta-cierra-tu-dia
+- tapOn: "Cierra tu día"
+- extendedWaitUntil:
+    visible: "Guardar mi cierre"
+    timeout: 30000
+- assertVisible: "¿Qué pasó?"
+- assertVisible: "Era a las .* · quedó pendiente"
+- takeScreenshot: 07b-hoja-del-cierre
+- tapOn:
+    text: "No me alcanzó el tiempo"
+    index: 0
+- tapOn:
+    text: ".*[Oo]tra hora.*"
+    index: 0
+- takeScreenshot: 07c-cierre-respondido
+- tapOn: "Guardar mi cierre"
+- extendedWaitUntil:
+    visible: "Día cerrado"
+    timeout: 30000
+- takeScreenshot: 07d-dia-cerrado
+- tapOn: "Ver mañana en Plan"
+- extendedWaitUntil:
+    visible: "Acciones que mueven la meta"
+    timeout: 30000
+- scrollUntilVisible:
+    element: "Día cerrado"
+    direction: DOWN
+    timeout: 60000
+- takeScreenshot: 07e-tarjeta-en-verde

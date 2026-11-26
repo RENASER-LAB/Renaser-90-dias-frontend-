@@ -1,6 +1,6 @@
 # PR04 — Semana sin objetivo: el primer nivel es «Arma tu semana» y abre «Plan de la semana» (el asistente de siempre).
 # Precondición: `plan.ruta` prendida y `plan-ruta/datos.sh semana-sin-armar` (Día 1, objetivos de 90 días escritos, semana 1 sin armar).
-# corrido: sin correr
+# corrido: 2026-11-26
 # cuenta: e2e-ap-web@renaser.test
 appId: com.renaser.app
 ---

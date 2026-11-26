@@ -7,7 +7,7 @@ appId: com.renaser.app
 # escondida por el scroll del flujo anterior, un deslizamiento hacia abajo la devuelve (spec 058: lo que hacía fallar este paso en cadena).
 - runFlow:
     when:
-      visible: ".*Innegociable.*"
+      visible: "Estoy pensando en(…|\\.\\.\\.)"
     commands:
       - runFlow: llenar-formulario-radar.yaml
 - swipe:
@@ -24,6 +24,12 @@ appId: com.renaser.app
           timeout: 5000
           optional: true
       - runFlow: despejar-capas.yaml
+      # El formulario puede abrirse unos segundos después de entrar (llega con la hora en punto): se vuelve a mirar.
+      - runFlow:
+          when:
+            visible: "Estoy pensando en(…|\\.\\.\\.)"
+          commands:
+            - runFlow: llenar-formulario-radar.yaml
 - extendedWaitUntil:
     visible: "ENTRENAR"
     timeout: 30000
