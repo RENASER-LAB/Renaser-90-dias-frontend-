@@ -5,6 +5,7 @@
 #   datos.sh cierre-del-dia        Como `semana-con-acciones` pero con las acciones de `plan-por-dia/07a`: «Trotar» (05:00, cumplida), «Vender» (06:00, ya pasó y sin cumplir; con 13:00 el flujo falla antes de esa hora) y «Llamar» (sin hora, cumplida).
 #   datos.sh semana-armada         Como `semana-con-acciones` pero SIN acciones (la semana 1 armada; `plan-por-dia/05a` las agenda).
 #   datos.sh semana-sin-armar      Día 1, objetivos de 90 días intactos y sin avance, y la semana 1 SIN armar (sin acciones): el primer nivel es «Arma tu semana».
+#   datos.sh sin-objetivos         Día 1 y SIN objetivos de 90 días (borra sus rocas, semanales y diarias): el formulario «Define tu objetivo» arranca desde cero (spec 058 FR-015). `semana-con-acciones` los deja como estaban.
 #   datos.sh semana-sin-revisar    Quita la revisión de la semana (para que el cofre se pueda abrir) sin tocar lo demás.
 #   datos.sh sql "<consulta>"      una consulta suelta
 set -euo pipefail
@@ -47,7 +48,16 @@ DELETE FROM renaser.rocas_semanales WHERE roca_maestra_id IN (SELECT id FROM ren
 COMMIT;
 SQL
   ;;
+  sin-objetivos) psql_ <<SQL
+BEGIN;
+UPDATE renaser.participantes_programa SET fecha_inicio=$HOY, dia_programa=1, dia_programa_avanzado_el=$HOY, dias_ajuste_programa=0, programa_completado=false, programa_completado_en=NULL, dia_post_programa=0 WHERE usuario_id=$U;
+DELETE FROM renaser.rocas_diarias WHERE participante_id=$U;
+DELETE FROM renaser.rocas_semanales WHERE roca_maestra_id IN (SELECT id FROM renaser.rocas_maestras WHERE participante_id=$U);
+DELETE FROM renaser.rocas_maestras WHERE participante_id=$U;
+COMMIT;
+SQL
+  ;;
   semana-sin-revisar) psql_ -c "UPDATE renaser.rocas_semanales SET autoevaluacion_fin=NULL, bloqueo_principal=NULL, correccion=NULL WHERE roca_maestra_id IN (SELECT id FROM renaser.rocas_maestras WHERE participante_id=$U)" ;;
   sql) psql_ -c "$2" ;;
-  *) echo "uso: datos.sh semana-con-acciones|semana-armada|cierre-del-dia|semana-sin-armar|semana-sin-revisar|sql" >&2; exit 2 ;;
+  *) echo "uso: datos.sh semana-con-acciones|semana-armada|cierre-del-dia|semana-sin-armar|sin-objetivos|semana-sin-revisar|sql" >&2; exit 2 ;;
 esac

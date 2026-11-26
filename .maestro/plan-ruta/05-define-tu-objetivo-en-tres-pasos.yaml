@@ -1,0 +1,58 @@
+# PR05 — «Define tu objetivo» en tres pasos (spec 058 FR-015): idea, unidad y números con la frase armada; «Anota tu avance» cuando ya quedó fijo.
+# Precondición: `plan.ruta` prendida; `plan-ruta/datos.sh sin-objetivos` (Día 1 y sin objetivos de 90 días).
+# SIN CORRER
+# cuenta: e2e-ap-web@renaser.test
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "PLAN"
+- extendedWaitUntil:
+    visible: "Escribe tu meta de 90 días"
+    timeout: 30000
+- tapOn: "Escribe tu meta de 90 días"
+- extendedWaitUntil:
+    visible: "¿Qué quieres lograr en tu cuerpo?"
+    timeout: 20000
+- assertVisible: "Cuerpo · paso 1 de 3"
+- takeScreenshot: pr05-paso-1
+- tapOn: "Bajar de peso"
+- tapOn: "Siguiente"
+- extendedWaitUntil:
+    visible: "¿Cómo vas a medirlo?"
+    timeout: 10000
+- assertVisible: "No se mide con un número"
+- takeScreenshot: pr05-paso-2
+- tapOn: "kg"
+- tapOn: "Siguiente"
+- extendedWaitUntil:
+    visible: "¿Desde dónde partes y a dónde quieres llegar?"
+    timeout: 10000
+- tapOn: "Desde dónde partes"
+- inputText: "82"
+- tapOn: "A dónde quieres llegar"
+- inputText: "76"
+- hideKeyboard
+- assertVisible: "Tu objetivo: bajar de 82 a 76 kg en 90 días.*"
+- takeScreenshot: pr05-paso-3
+- tapOn: "Guardar mi objetivo"
+- extendedWaitUntil:
+    visible: "Tu objetivo de 90 días quedó guardado."
+    timeout: 40000
+# Ya fijo: la misma hoja es «Anota tu avance» con un solo número.
+- scrollUntilVisible:
+    element: "Más opciones del objetivo|Anota tu avance|.*Llevas.*"
+    direction: UP
+    optional: true
+- tapOn: "Meta de 90 días.*|.*Bajar de peso.*"
+- extendedWaitUntil:
+    visible: "¿En cuánto vas hoy?"
+    timeout: 20000
+- tapOn: "Cuánto llevas hoy"
+- inputText: "80,5"
+- hideKeyboard
+- assertVisible: "Llevas 1,5 de 6 kg · 25 %"
+- takeScreenshot: pr05-anota-tu-avance
+- tapOn: "Guardar mi avance"
+- extendedWaitUntil:
+    visible: "Tu avance quedó anotado."
+    timeout: 40000

@@ -28,10 +28,17 @@ appId: com.renaser.app
 - extendedWaitUntil:
     visible: "Define tu objetivo de 90 días"
     timeout: 20000
-- tapOn: "Escribe tu objetivo aquí"
-- inputText: "Correr"
+# Desde la spec 058 (FR-015) el formulario es de tres pasos: idea, unidad y números. Aquí se elige «Correr una distancia», «km» y 0 → 5.
+- tapOn: "Correr una distancia"
+- tapOn: "Siguiente"
+- tapOn: "km"
+- tapOn: "Siguiente"
+- tapOn: "Desde dónde partes"
+- inputText: "0"
+- tapOn: "A dónde quieres llegar"
+- inputText: "5"
 - hideKeyboard
-- tapOn: "Guardar"
+- tapOn: "Guardar mi objetivo"
 - extendedWaitUntil:
     visible: "Tu objetivo de 90 días quedó guardado."
     timeout: 40000
