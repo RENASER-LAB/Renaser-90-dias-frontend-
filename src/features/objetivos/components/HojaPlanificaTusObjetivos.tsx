@@ -13,6 +13,8 @@ import type { EjeObjetivo, RocaDiariaApi } from '../types/objetivos.types';
 import { EJES, ETIQUETA_EJE } from '../types/objetivos.types';
 import { iconoDelEje } from '../utils/iconoDelEje';
 import { diasDeLaAgenda } from '../utils/rutaDelPlan';
+import { TarjetaDelFenix } from '../../ochenta-veinte/components/TarjetaDelFenix';
+import { recomendacionDeLaPlanificacion } from '../../ochenta-veinte/utils/recomendacionesDelFenix';
 import { RecordatoriosDeLasAcciones } from './RecordatoriosDeLasAcciones';
 
 /**
@@ -54,6 +56,14 @@ export function HojaPlanificaTusObjetivos({
     return true;
   }, visible);
   const dias = diasDeLaAgenda(hoy, acciones);
+  const armadas = EJES.filter(eje => tituloDeLaSemanaDe(eje) !== null).length;
+  const indiceDeHoy = dias.findIndex(d => d.esHoy);
+  const porVenir = dias.filter((_, i) => i >= indiceDeHoy);
+  const diasConAcciones = dias.filter(d => d.tieneAcciones).length;
+  const recomendacion = recomendacionDeLaPlanificacion({
+    ejesSinSemana: EJES.filter(eje => tituloDeLaSemanaDe(eje) === null),
+    diasSinAccionesPorVenir: porVenir.filter(d => !d.tieneAcciones).length,
+  });
   const abrirOtra = (abrir: () => void) => () => {
     alCerrar();
     abrir();
@@ -61,8 +71,14 @@ export function HojaPlanificaTusObjetivos({
   return (
     <HojaDesdeAbajo visible={visible} alCerrar={alCerrar} titulo="Planifica tus objetivos" tamano="grande">
       <View style={estilos.cuerpo}>
+        <TarjetaDelFenix texto={recomendacion} />
+
         <View style={[estilos.seccion, { borderColor: c.border, backgroundColor: c.cardBg }]}>
-          <Text style={[t.small, estilos.rotulo, { color: c.goldInk }]}>Tu semana</Text>
+          <Text style={[t.small, estilos.rotulo, { color: c.textSoft }]}>Tu semana</Text>
+          <Text style={[t.metric, estilos.cifra, { color: c.textStrong }]} accessibilityLabel={`${armadas} de ${EJES.length} semanas armadas`}>
+            {`${armadas} de ${EJES.length}`}
+            <Text style={[t.body, { color: c.textSoft, fontSize: 16 }]}>{'  ejes con semana armada'}</Text>
+          </Text>
           {EJES.map(eje => (
             <View key={eje} style={estilos.filaEje}>
               <Icon name={iconoDelEje(eje)} size={TAMANO_ICONO.normal} color={c.goldInk} />
@@ -75,7 +91,11 @@ export function HojaPlanificaTusObjetivos({
         </View>
 
         <View style={[estilos.seccion, { borderColor: c.border, backgroundColor: c.cardBg }]}>
-          <Text style={[t.small, estilos.rotulo, { color: c.goldInk }]}>Tu agenda, día por día</Text>
+          <Text style={[t.small, estilos.rotulo, { color: c.textSoft }]}>Tu agenda, día por día</Text>
+          <Text style={[t.metric, estilos.cifra, { color: c.textStrong }]} accessibilityLabel={`${diasConAcciones} de 7 días con acciones`}>
+            {`${diasConAcciones} de 7`}
+            <Text style={[t.body, { color: c.textSoft, fontSize: 16 }]}>{'  días con acciones'}</Text>
+          </Text>
           <View style={estilos.dias} accessible accessibilityLabel={`Días con acciones: ${dias.filter(d => d.tieneAcciones).map(d => d.numero).join(', ') || 'ninguno'}`}>
             {dias.map(d => (
               <View key={d.iso} style={estilos.dia}>
@@ -112,6 +132,7 @@ export function HojaPlanificaTusObjetivos({
 const estilos = StyleSheet.create({
   cuerpo: { gap: 14, paddingHorizontal: 20, paddingTop: 4, paddingBottom: 24 },
   seccion: { borderWidth: 1, borderRadius: 16, padding: 16, gap: 12 },
+  cifra: { fontSize: 32, lineHeight: 38 },
   rotulo: { fontFamily: fuentes.negrita, fontSize: 14, lineHeight: 20, letterSpacing: 0 },
   filaEje: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 32 },
   dias: { flexDirection: 'row', justifyContent: 'space-between' },
