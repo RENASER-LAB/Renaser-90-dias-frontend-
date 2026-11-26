@@ -65,7 +65,10 @@ export function PlanDelEje({
   onDefinirObjetivos,
   ruta,
   pedidoDeAjustes = 0,
+  metaDelMes = null,
 }: {
+  /** La cifra del objetivo de ESTE mes para el eje abierto (la del servidor): la vista Mes de «Tu 80/20» la compara con tu ritmo. */
+  metaDelMes?: number | null;
   /** Con datos, Plan se dibuja como ruta de niveles (spec 058, `plan.ruta`); sin ellos, como siempre. */
   ruta?: DatosDeLaRuta;
   /** Un contador: cada vez que sube, se abre «Planifica tus objetivos» (el engranaje de la cabecera). */
@@ -372,6 +375,12 @@ export function PlanDelEje({
         deHoy={deHoyDelEje}
         vistaInicial={vistaInicialDeLaHoja}
         alAgendar={() => abrirAgendar()}
+        hoyIso={hoyIso}
+        agendadas={todas}
+        maestra={maestras.find(m => m.eje === ejeAbierto) ?? null}
+        metaDelMes={metaDelMes}
+        diaPrograma={diaPrograma}
+        duracionDias={duracionDias}
       />
 
       {/* Arma la semana que se arma HOY (`seArma`): el domingo, la que empieza, con su número. */}

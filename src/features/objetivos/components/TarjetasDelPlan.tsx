@@ -11,7 +11,10 @@ import { useTheme } from '../../../theme/ThemeContext';
 import { obtenerOchentaVeinteDeLaPersona } from '../../ochenta-veinte/api/ochentaVeinteApi';
 import { PeriodoDelOchentaVeinte } from '../../ochenta-veinte/components/PeriodoDelOchentaVeinte';
 import { useOchentaVeinte } from '../../ochenta-veinte/hooks/useOchentaVeinte';
-import type { CargarOchentaVeinte } from '../../ochenta-veinte/types/ochentaVeinte.types';
+import { VistaDeHoy, VistaDeLaSemana, VistaDelMes } from '../../ochenta-veinte/components/VistasDelOchentaVeinte';
+import type { AccionDelOchentaVeinte, CargarOchentaVeinte } from '../../ochenta-veinte/types/ochentaVeinte.types';
+import { diasDelProgramaDe } from '../utils/mesDelPrograma';
+import { mesDe, mesesDelProgramaDe } from '../utils/periodoDelPrograma';
 import type { RocaDiariaApi, RocaMaestraApi } from '../types/objetivos.types';
 import { ETIQUETA_EJE } from '../types/objetivos.types';
 import { estadoDeLaAccion, horaCortaDeLaAccion, textoDelEstado } from '../utils/accionesDeHoy';
@@ -428,11 +431,25 @@ export function HojaOchentaVeinte({
   deHoy,
   vistaInicial,
   alAgendar,
+  hoyIso = null,
+  agendadas = [],
+  maestra = null,
+  metaDelMes = null,
+  diaPrograma = 0,
+  duracionDias,
 }: {
   visible: boolean;
   alCerrar: () => void;
   eje: RocaDiariaApi['eje'];
   deHoy: readonly RocaDiariaApi[];
+  /** El día de hoy según el servidor, y lo agendado que Plan ya leyó (hoy, mañana y los días que vienen): lo que las vistas necesitan. */
+  hoyIso?: string | null;
+  agendadas?: readonly RocaDiariaApi[];
+  /** El objetivo de 90 días del eje y la cifra que el servidor da para este mes (Mes: «¿vas a llegar?»). */
+  maestra?: RocaMaestraApi | null;
+  metaDelMes?: number | null;
+  diaPrograma?: number;
+  duracionDias?: number | null;
   /** El aviso «tu análisis está listo» abre la hoja directo en Semana o Mes. Sin él, se abre en Hoy. */
   vistaInicial?: 'SEMANA' | 'MES';
   /** «Agendar mis acciones»: cierra la hoja y abre el planificador. */
@@ -453,6 +470,9 @@ export function HojaOchentaVeinte({
     setVista(visible ? (vistaInicial ?? 'HOY') : 'HOY');
   }, [visible, vistaInicial]);
 
+  const duracion = diasDelProgramaDe(duracionDias);
+  const diaEnQueTerminaElMes = Math.round((mesDe(diaPrograma, undefined, duracionDias) * duracion) / mesesDelProgramaDe(duracionDias));
+
   const agendar = alAgendar
     ? () => {
         alCerrar();
@@ -472,52 +492,64 @@ export function HojaOchentaVeinte({
         {hayVistasNuevas ? (
           <ControlSegmentado opciones={OPCIONES_DE_LA_HOJA} valor={vistaVisible} onCambiar={setVista} />
         ) : null}
-        {vistaVisible === 'HOY' ? <ReglaYAccionesDeHoy eje={eje} deHoy={deHoy} /> : null}
-        {vistaVisible === 'SEMANA' ? <PeriodoDelOchentaVeinte cargar={cargar} tipo="SEMANA" activo={visible} alAgendar={agendar} /> : null}
-        {vistaVisible === 'MES' ? <PeriodoDelOchentaVeinte cargar={cargar} tipo="MES" activo={visible} alAgendar={agendar} /> : null}
+        {vistaVisible === 'HOY' ? (
+          <ReglaYAccionesDeHoy eje={eje} deHoy={deHoy} hoyIso={hoyIso} seFueron={sonda.datos?.cifras.lasQueSeFueron ?? []} alAgendar={agendar} />
+        ) : null}
+        {vistaVisible === 'SEMANA' ? (
+          <PeriodoDelOchentaVeinte
+            cargar={cargar}
+            tipo="SEMANA"
+            activo={visible}
+            alAgendar={agendar}
+            cifras={vistaDeLaSemana => <VistaDeLaSemana vista={vistaDeLaSemana} agendadas={agendadas} hoyIso={hoyIso} alAgendar={agendar} />}
+          />
+        ) : null}
+        {vistaVisible === 'MES' ? (
+          <PeriodoDelOchentaVeinte
+            cargar={cargar}
+            tipo="MES"
+            activo={visible}
+            alAgendar={agendar}
+            cifras={vistaDelMes => (
+              <VistaDelMes
+                vista={vistaDelMes}
+                eje={eje}
+                maestra={maestra}
+                metaDelMes={vistaDelMes.cerrado ? null : metaDelMes}
+                diaPrograma={diaPrograma}
+                diaEnQueTerminaElMes={diaEnQueTerminaElMes}
+                alAgendar={agendar}
+              />
+            )}
+          />
+        ) : null}
       </View>
     </HojaDesdeAbajo>
   );
 }
 
-/** La regla de Pareto, con las acciones de HOY del eje y su estado (la verde primero; las otras esperan con candado). */
-function ReglaYAccionesDeHoy({ eje, deHoy }: { eje: RocaDiariaApi['eje']; deHoy: readonly RocaDiariaApi[] }) {
+/** «Hoy»: el mensaje de inicio de la hoja y, debajo, la dona, la lista por impacto y la recomendación del fénix (spec 058 FR-016). */
+function ReglaYAccionesDeHoy({
+  eje,
+  deHoy,
+  hoyIso,
+  seFueron,
+  alAgendar,
+}: {
+  eje: RocaDiariaApi['eje'];
+  deHoy: readonly RocaDiariaApi[];
+  hoyIso: string | null;
+  seFueron: readonly AccionDelOchentaVeinte[];
+  alAgendar?: () => void;
+}) {
   const { c, t } = useTheme();
   return (
     <>
       <Text style={[t.body, { color: c.textStrong, fontSize: 17 }]}>Prioriza lo que más acerca tu meta.</Text>
       <Text style={[t.body, { color: c.textSoft }]}>
-        Pocas acciones mueven casi todo tu avance. En cada eje la acción verde va primero: es la que más mueve la aguja. Mientras no la
-        cumplas, las otras de ese eje esperan con un candado.
+        Pocas acciones mueven casi todo tu avance. En cada eje la acción verde va primero: es la que más mueve la aguja.
       </Text>
-      {deHoy.length > 0 ? (
-        <View style={{ gap: 10 }}>
-          <Text style={[t.small, estilos.rotulo, { color: c.goldInk }]}>Tus acciones de hoy · {ETIQUETA_EJE[eje]}</Text>
-          {deHoy.map(accion => {
-            const estado = estadoDeLaAccion(accion, 24 * 60);
-            const hora = horaCortaDeLaAccion(accion);
-            return (
-              <View key={accion.id} style={[estilos.accion, { borderColor: c.border, backgroundColor: c.cardBgAlt }]} accessible>
-                <View style={[estilos.marca, { backgroundColor: colorDePareto(accion.color, c) }]} />
-                <View style={{ flex: 1, gap: 2 }}>
-                  <Text style={[t.body, estilos.tituloDeLaAccion, { color: c.textStrong }]}>{accion.titulo}</Text>
-                  <Text style={[t.small, { color: c.textSoft }]}>
-                    {NOMBRE_DEL_COLOR[accion.color]}
-                    {hora ? ` · ${hora}` : ''} · {estado === 'sePaso' ? 'Pendiente' : textoDelEstado(estado, null)}
-                  </Text>
-                </View>
-                {estado === 'cumplida' ? (
-                  <Icon name="checkCircle" size={TAMANO_ICONO.normal} color={c.success} />
-                ) : estado === 'esperaALaVerde' ? (
-                  <Icon name="lock" size={TAMANO_ICONO.normal} color={c.chevron} />
-                ) : null}
-              </View>
-            );
-          })}
-        </View>
-      ) : (
-        <Text style={[t.small, { color: c.textSoft }]}>Hoy no tienes acciones agendadas en este eje.</Text>
-      )}
+      <VistaDeHoy eje={eje} deHoy={deHoy} hoyIso={hoyIso} seFueron={seFueron} alAgendar={alAgendar} />
     </>
   );
 }

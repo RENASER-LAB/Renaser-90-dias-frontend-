@@ -517,6 +517,7 @@ export default function PlanScreen() {
             abrirOchentaVeinte={ochentaVeinteAlAbrir}
             alAbrirOchentaVeinte={() => setOchentaVeinteAlAbrir(null)}
             pedidoDeAjustes={pedidoDeAjustes}
+            metaDelMes={mesDelEjeAbierto?.cifra ?? null}
             ruta={
               rutaActiva
                 ? {
