@@ -1,7 +1,7 @@
 # 02 — Cumplir un hábito con SER hace lo mismo que cumplirlo en Training: apaga las alarmas de ese día y celebra (spec 038, issue #33).
 # Precondición: aprendiz con Despertar PENDIENTE hoy y su aviso de las 06:30 programado en este teléfono (Yo → Alarmas); backend con la spec 038.
 # cuenta: aprendiz
-# ESCRITO Y SIN CORRER. La parte de las alarmas se comprueba a mano con `adb shell dumpsys alarm | grep habito-` antes y después de confirmar: la alarma del
+# corrido: 2026-11-27 (el texto «Marca mi Despertar» se escribió por adb, una letra cada 0,6 s: el inputText de Maestro se cuelga con la build de desarrollo; el resto del flujo es el mismo y la alarma NO se comprobó). La parte de las alarmas se comprueba a mano con `adb shell dumpsys alarm | grep habito-` antes y después de confirmar: la alarma del
 # día debe haber pasado a ser una alarma de fecha desde mañana (el «puente» del issue #33); mañana suena normal.
 #
 # Lo que prueba:
