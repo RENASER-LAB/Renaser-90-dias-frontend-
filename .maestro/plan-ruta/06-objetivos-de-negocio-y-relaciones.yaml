@@ -1,6 +1,6 @@
 # PR06 — «Define tu objetivo» en Negocio (otra unidad: S/ al mes) y en Relaciones («No se mide con un número») (spec 058 FR-015).
 # Precondición: `plan.ruta` prendida; Cuerpo ya definido (flujo 05) y Negocio/Relaciones sin objetivo.
-# SIN CORRER
+# corrido: 2026-11-27
 # cuenta: e2e-ap-web@renaser.test
 appId: com.renaser.app
 ---
@@ -46,7 +46,8 @@ appId: com.renaser.app
     timeout: 10000
 - tapOn: "No se mide con un número"
 - takeScreenshot: pr06-relaciones-sin-numero
-- tapOn: "Siguiente"
+# Sin número no hay paso 3: el pie ya dice «Guardar mi objetivo».
+- tapOn: "Guardar mi objetivo"
 - extendedWaitUntil:
     visible: "Más tiempo en familia.*"
     timeout: 40000

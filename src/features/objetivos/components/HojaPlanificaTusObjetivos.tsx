@@ -1,6 +1,6 @@
 import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { GoldButton } from '../../../components/GoldButton';
 import { HojaDesdeAbajo } from '../../../components/hojaDesdeAbajo/HojaDesdeAbajo';
@@ -70,7 +70,8 @@ export function HojaPlanificaTusObjetivos({
   };
   return (
     <HojaDesdeAbajo visible={visible} alCerrar={alCerrar} titulo="Planifica tus objetivos" tamano="grande">
-      <View style={estilos.cuerpo}>
+      {/* Con el aviso del fénix largo (faltan ejes por armar) el cuerpo no cabe: scroll propio para que «Recordatorios» no quede cortado. */}
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={estilos.cuerpo} showsVerticalScrollIndicator={false}>
         <TarjetaDelFenix texto={recomendacion} />
 
         <View style={[estilos.seccion, { borderColor: c.border, backgroundColor: c.cardBg }]}>
@@ -124,7 +125,7 @@ export function HojaPlanificaTusObjetivos({
 
         {/* La misma fila de siempre (con su hoja y su resumen). Las alarmas se ponen al día aparte, con la hoja cerrada (`PlanDelEje`). */}
         {hayPlanSemanal && user?.id && visible ? <RecordatoriosDeLasAcciones userId={user.id} rocas={rocasParaAlarmas} /> : null}
-      </View>
+      </ScrollView>
     </HojaDesdeAbajo>
   );
 }

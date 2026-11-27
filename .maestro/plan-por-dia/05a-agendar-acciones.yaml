@@ -1,5 +1,5 @@
 # PD05a — Agendar acciones con día y hora desde Plan («Agendar mis acciones»): tres para hoy en el primer eje de la hoja (Cuerpo: «Trotar» con una hora de la mañana —ya pasó—, «Vender» con una de la tarde y «Llamar» sin hora). La rueda de hora se mueve con un deslizamiento (cada uno corre ~3 horas desde las 06:00).
-# corrido: 2026-11-26 (con plan.ruta apagada, spec 058)
+# corrido: 2026-11-27 (con plan.ruta apagada, spec 058)
 # Ojo: en la build de desarrollo, escribir «rr» (dos erres seguidas) recarga el JS (atajo «RR» de React Native): los textos de los flujos no las llevan.
 # cuenta: e2e-ap-web@renaser.test
 appId: com.renaser.app

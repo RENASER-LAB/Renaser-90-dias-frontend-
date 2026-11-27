@@ -1,6 +1,6 @@
 # PR05 — «Define tu objetivo» en tres pasos (spec 058 FR-015): idea, unidad y números con la frase armada; «Anota tu avance» cuando ya quedó fijo.
 # Precondición: `plan.ruta` prendida; `plan-ruta/datos.sh sin-objetivos` (Día 1 y sin objetivos de 90 días).
-# SIN CORRER
+# corrido: 2026-11-27
 # cuenta: e2e-ap-web@renaser.test
 appId: com.renaser.app
 ---
@@ -49,6 +49,8 @@ appId: com.renaser.app
     visible: "¿En cuánto vas hoy?"
     timeout: 20000
 - tapOn: "Cuánto llevas hoy"
+# La hoja trae el número de hoy (82, de donde partió): se borra antes de escribir el nuevo.
+- eraseText: 10
 - inputText: "80,5"
 - hideKeyboard
 - assertVisible: "Llevas 1,5 de 6 kg · 25 %"

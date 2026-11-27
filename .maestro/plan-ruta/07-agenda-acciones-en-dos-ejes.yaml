@@ -1,6 +1,6 @@
 # PR07 — Agendar acciones de hoy en dos ejes: «Caminar» (Cuerpo, sin hora) y «Vender» (Negocio, con hora de la noche) (spec 058 FR-001).
 # Precondición: `plan.ruta` prendida, objetivos de Cuerpo y Negocio puestos y la semana 1 armada (Plan de la semana) y SIN acciones de hoy.
-# SIN CORRER
+# corrido: 2026-11-27
 # Ojo: en la build de desarrollo, escribir «rr» (dos erres seguidas) recarga el JS: los textos no las llevan.
 # cuenta: e2e-ap-web@renaser.test
 appId: com.renaser.app

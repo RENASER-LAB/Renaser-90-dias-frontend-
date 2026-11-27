@@ -19,6 +19,9 @@ Flujos de la R1. Cada uno dice su precondición y su cuenta arriba; ninguno est�
 | `01`, `02` | `datos.sh semana-con-acciones` |
 | `03` | `datos.sh semana-con-acciones` y luego `datos.sh semana-sin-revisar` |
 | `04` | `datos.sh semana-sin-armar` |
+| `05` | `datos.sh sin-objetivos` (Día 1, sin objetivos y sin la marca de «día cerrado») |
+| `06` | sigue del `05`: Cuerpo ya definido; Negocio y Relaciones sin objetivo |
+| `07` | objetivos de Cuerpo y Negocio y la semana 1 armada en los dos, sin acciones de hoy |
 
 `comun/ya-adentro.yaml` registra el Código Renaser de la hora en punto si aparece y desliza hacia abajo para devolver la barra de pestañas que el scroll del flujo anterior dejó escondida.
 - Tras cambiar los datos por SQL (p. ej. `semana-sin-armar`) cierra y abre la app: guarda el plan en caché y el flujo ve el estado viejo.

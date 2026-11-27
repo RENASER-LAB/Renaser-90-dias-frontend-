@@ -1,7 +1,7 @@
 # PD07a — «Cierra tu día» desde Plan: la tarjeta está bajo «Acciones que mueven la meta»; la hoja pregunta solo por lo que ya llegó a su hora y no se
 # cumplió («Vender», una hora que ya pasó); se responde, «Guardar mi cierre» deja «Día cerrado» y «Ver mañana en Plan» lleva a las acciones que vienen.
 # Precondición: pasó la hora de «Vender» (06:00 en los datos) y sigue sin cumplir; «Trotar» y «Llamar» ya cumplidas; el día sin cerrar.
-# corrido: 2026-11-26 (con plan.ruta apagada, spec 058)
+# corrido: 2026-11-27 (con plan.ruta apagada, spec 058)
 # cuenta: e2e-ap-web@renaser.test
 appId: com.renaser.app
 ---

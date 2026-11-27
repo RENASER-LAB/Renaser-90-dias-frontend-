@@ -1,7 +1,7 @@
 # PR01 — Plan como ruta con la semana armada y acciones agendadas: título «Plan» con el engranaje, el selector de ejes, la meta, el separador del mes, la franja de la semana,
 # los niveles con su día y hora, «Organizar mi semana» y, al final, «Lo que viene». Sin la fila de cifras y sin el subtítulo «Tu dirección en …».
 # Precondición: `plan.ruta` prendida; semana armada y acciones agendadas (`plan-por-dia/04a` y `05a`).
-# corrido: 2026-11-25
+# corrido: 2026-11-27
 # cuenta: e2e-ap-web@renaser.test
 appId: com.renaser.app
 ---
