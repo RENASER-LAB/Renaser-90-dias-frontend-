@@ -37,7 +37,7 @@ también en el texto (`grep -n "Plan" docs/decisiones/*.md`). Si dos entradas ch
 | [kilometros-y-carrera.md](kilometros-y-carrera.md) | Kilómetros diarios: captura, pasos (Health Connect y Salud de Apple) y la carrera con GPS | 12 |
 | [liderazgo-y-administracion.md](liderazgo-y-administracion.md) | Mentor, líder de mentores, Administración, Alquimista y sus fichas | 20 |
 | [pagos.md](pagos.md) | Cronograma de pagos y «Mi ingreso» (spec 032) | 2 |
-| [plan.md](plan.md) | Plan: objetivos, semana, mes, 80/20, Cierra tu día y el Mapa (retirado) | 12 |
+| [plan.md](plan.md) | Plan: objetivos, semana, mes, 80/20, Cierra tu día y el Mapa (retirado) | 13 |
 | [ser-y-fenix.md](ser-y-fenix.md) | SER (el acompañante), el orbe, el fénix y las celebraciones | 9 |
 | [soporte-ti.md](soporte-ti.md) | Soporte TI: interruptores, despliegue, roles personalizados y «ver como» (spec 002) | 2 |
 | [training.md](training.md) | Training: lista por hora, hábitos, evidencias y el editor Planificar | 19 |
@@ -49,6 +49,7 @@ también en el texto (`grep -n "Plan" docs/decisiones/*.md`). Si dos entradas ch
 
 | Fecha | Tabs | Tipo | Entrada | Archivo | Corregida |
 |---|---|---|---|---|---|
+| 2026-11-25 | Plan | Cambio | Plan como ruta de niveles detrás del interruptor `plan.ruta` (autorización solo para la spec 058, propuesta R1) | [plan.md](plan.md) |  |
 | 2026-11-24 | ninguno | Corrección | El permiso de iPhone trae el texto de escritura en Salud (lo exige Apple, error 90683) aunque la app solo lee pasos y distancia (issue #259) | [kilometros-y-carrera.md](kilometros-y-carrera.md) |  |
 | 2026-11-24 | Training | Decisión del dueño | La Pastilla Renacer funciona como un reproductor de música: controles en la pantalla bloqueada y el Centro de control, con el audio en segundo plano (issue #254, norma 2.5.4 de Apple) | [transversal.md](transversal.md) |  |
 | 2026-11-24 | Yo | Cambio | Yo → Preferencias: fila «Salud de Apple» solo en iOS, con el ícono oficial de Apple (autorización del dueño solo para esto; issue #255) | [yo.md](yo.md) |  |

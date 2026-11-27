@@ -90,7 +90,7 @@ describe('con las vistas nuevas del servidor', () => {
     const r = await abrir();
     const t = textos(r);
     expect(t).toContain('Prioriza lo que más acerca tu meta.');
-    expect(t).toContain('Tus acciones de hoy · Cuerpo');
+    expect(t).toContain('Por orden de impacto');
     expect(t).toContain('Hoy');
     expect(t).toContain('Semana');
     expect(t).toContain('Mes');

@@ -61,7 +61,8 @@ describe('Plan: textos', () => {
     expect(PLAN).toMatch(/color: c\.goldInk,[^}]*\}\]\}>\{`Tu dirección en \$\{plazo\}`\}<\/Text>/);
     expect(PLAN).not.toContain('Tu mapa de los próximos 90 días');
     // La diana de la maqueta no hace nada: no se dibuja (el ScreenHeader solo pinta un botón con ícono y acción).
-    expect(PLAN).not.toMatch(/<ScreenHeader[^>]*right=/);
+    // (Solo la cabecera de la ruta, spec 058, lleva el engranaje «Planifica tus objetivos», que sí hace algo.)
+    expect(PLAN.replace(/<ScreenHeader title="Plan" right="settings".*?etiquetaRight="Planifica tus objetivos" \/>/, '')).not.toMatch(/<ScreenHeader[^>]*right=/);
   });
 
   it('el estado vacío del objetivo entra en dos renglones', () => {
@@ -69,9 +70,12 @@ describe('Plan: textos', () => {
     expect(TARJETAS).toContain('Todavía no lo definiste. Toca los tres puntos y escribe a dónde quieres llegar.');
   });
 
-  it('los ejemplos del formulario van con «Ej.:» y en gris tenue', () => {
-    for (const ejemplo of ['Ej.: 82', 'Ej.: 30000', 'Ej.: USD']) {
-      expect(PLAN).toMatch(new RegExp(`placeholder="${ejemplo.replace('.', '\\.')}"\\s+placeholderTextColor=\\{c\\.tabInactive\\}`));
+  it('los ejemplos del formulario del objetivo (HojaDelObjetivo, spec 058) van en gris tenue', () => {
+    const hoja = sinComentarios(leer(`${OBJETIVOS}/HojaDelObjetivo.tsx`));
+    const ejemplos = hoja.match(/placeholder="[^"]*"/g) ?? [];
+    expect(ejemplos.length).toBeGreaterThan(0);
+    for (const ejemplo of ejemplos) {
+      expect(hoja).toMatch(new RegExp(`${ejemplo}\\s+placeholderTextColor=\\{c\\.tabInactive\\}`));
     }
   });
 
@@ -130,7 +134,9 @@ describe('Plan: el eje y su objetivo', () => {
 
 describe('Plan: hojas y avisos', () => {
   it('las cinco ventanas son hojas desde abajo', () => {
-    expect(PLAN).toMatch(/<HojaDesdeAbajo\s+visible=\{editGoalModalVisible\}/);
+    // Desde la spec 058 FR-015 la hoja del objetivo vive en su componente, que es una hoja desde abajo.
+    expect(PLAN).toMatch(/<HojaDelObjetivo\s+visible=\{editGoalModalVisible\}/);
+    expect(sinComentarios(leer(`${OBJETIVOS}/HojaDelObjetivo.tsx`))).toMatch(/<HojaDesdeAbajo\b/);
     expect(PLAN).not.toMatch(/<Modal\b/);
     for (const archivo of HOJAS) {
       const fuente = sinComentarios(leer(archivo));

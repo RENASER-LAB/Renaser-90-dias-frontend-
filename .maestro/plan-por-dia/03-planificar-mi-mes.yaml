@@ -1,0 +1,53 @@
+# PD03 — «Planificar mi mes» en Plan: la hoja con los tres meses del programa, el objetivo del mes del eje abierto (Cuerpo) y sus semanas; el
+# objetivo del mes 2 se corrige con la cifra de la persona («Tu cifra»). Día 1: el mes en curso es el 1, los otros dos «todavía no llegan».
+# Precondición: los tres objetivos de 90 días (Cuerpo con cifra en kg), Día 1 del programa (`datos.sh dia 1`).
+# corrido: 2026-11-27 (con plan.ruta apagada, spec 058)
+# cuenta: e2e-ap-web@renaser.test
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "PLAN"
+- extendedWaitUntil:
+    visible: "Planificar mi mes"
+    timeout: 30000
+- tapOn: "Cuerpo"
+- assertVisible: "Mes . · Semanas .*"
+- tapOn: "Planificar mi mes"
+- extendedWaitUntil:
+    visible: "Objetivo del mes"
+    timeout: 15000
+- assertVisible: "Mes 1"
+- assertVisible: "Mes 2"
+- assertVisible: "Mes 3"
+- assertVisible: ".*El mes en curso"
+- assertVisible: "Semanas"
+- takeScreenshot: 03a-hoja-mes-1-en-curso
+- tapOn: "Mes 2"
+- assertVisible: "Mes 2 · Semanas 5 a 8"
+- takeScreenshot: 03b-mes-2
+- tapOn: "Mes 3"
+- assertVisible: "Mes 3 · Semanas 9 a 13"
+- takeScreenshot: 03c-mes-3
+# Corregir el objetivo del mes 2: se escribe la cifra propia.
+- tapOn: "Mes 2"
+- tapOn: "(Cambiar|Escribir la cifra) el objetivo de este mes"
+- extendedWaitUntil:
+    visible: "¿Dónde quieres estar al Día 60\\?"
+    timeout: 10000
+- takeScreenshot: 03d-formulario-objetivo-del-mes-2
+- tapOn:
+    text: "Cifra del mes"
+- eraseText: 10
+- inputText: "79"
+- hideKeyboard
+- tapOn: "Guardar"
+- extendedWaitUntil:
+    visible: "Tu objetivo del mes 2 quedó guardado\\.*"
+    timeout: 15000
+    optional: true   # el aviso en línea dura ~3 s
+- assertVisible: "Al Día 60 · Tu cifra"
+- takeScreenshot: 03e-mes-2-corregido
+- back
+- extendedWaitUntil:
+    visible: "Tu dirección en 90 días"
+    timeout: 15000

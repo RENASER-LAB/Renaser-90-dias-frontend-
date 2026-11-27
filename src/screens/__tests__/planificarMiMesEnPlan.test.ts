@@ -59,7 +59,7 @@ describe('Plan: «Planificar mi mes»', () => {
   });
 
   it('no suma otro scroll a Plan ni toca el formulario del objetivo del mes de siempre', () => {
-    expect((PLAN.match(/<ScrollView/g) ?? []).length).toBe(2);
+    expect((PLAN.match(/<ScrollView/g) ?? []).length).toBe(1);
     expect(PLAN).toContain('<EditarObjetivoDelMesModal');
     expect(PLAN).toContain('const [editandoMes, setEditandoMes] = useState(false);');
   });

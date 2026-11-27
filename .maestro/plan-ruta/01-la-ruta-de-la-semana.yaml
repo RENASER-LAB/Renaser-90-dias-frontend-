@@ -1,0 +1,28 @@
+# PR01 — Plan como ruta con la semana armada y acciones agendadas: título «Plan» con el engranaje, el selector de ejes, la meta, el separador del mes, la franja de la semana,
+# los niveles con su día y hora, «Organizar mi semana» y, al final, «Lo que viene». Sin la fila de cifras y sin el subtítulo «Tu dirección en …».
+# Precondición: `plan.ruta` prendida; semana armada y acciones agendadas (`plan-por-dia/04a` y `05a`).
+# corrido: 2026-11-27
+# spec 058 FR-009 — «Organizar mi semana» y «Tu 80/20» se ven debajo de la ruta.
+# cuenta: e2e-ap-web@renaser.test
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "PLAN"
+- extendedWaitUntil:
+    visible: "Planifica tus objetivos"
+    timeout: 30000
+- assertNotVisible: "Tu dirección en.*"
+- assertVisible: "Mes 1.*"
+- assertVisible: "Semana 1.*"
+- takeScreenshot: pr01-arriba
+- scrollUntilVisible:
+    element: "Organizar mi semana"
+    direction: DOWN
+    timeout: 30000
+- assertVisible: "Tu 80/20"
+- takeScreenshot: pr01-debajo-de-la-ruta
+- scrollUntilVisible:
+    element: "Lo que viene"
+    direction: DOWN
+    timeout: 20000
+- takeScreenshot: pr01-lo-que-viene

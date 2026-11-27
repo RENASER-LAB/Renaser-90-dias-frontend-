@@ -22,6 +22,8 @@ export const CLAVES = {
   habitosKmCarreras: 'habitos.km.carreras',
   /* Rocas y objetivos (las acciones del día). También tapa «Cierra tu día», que desde la spec 033 vive en Plan. */
   plan: 'plan',
+  /* Plan como ruta de niveles (spec 058): hija de `plan`, nace apagada. Prendida y disponible, Plan se dibuja como ruta; si no, como siempre. */
+  planRuta: 'plan.ruta',
   eventos: 'eventos',
   eventosGestion: 'eventos.gestion',
   cursos: 'cursos',

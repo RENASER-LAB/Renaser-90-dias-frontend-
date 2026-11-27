@@ -1,0 +1,26 @@
+# PD11b — «Recordatorios de tus acciones» en Plan: la fila (debajo de las acciones) dice su estado y abre la hoja con el mismo control que Yo → Alarmas.
+# Precondición: la semana armada con acciones (`05a`). En el emulador el permiso de avisos y las alarmas no se prueban (solo la hoja y su estado).
+# corrido: 2026-11-27 (con plan.ruta apagada, spec 058)
+# cuenta: e2e-ap-web@renaser.test
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "PLAN"
+- extendedWaitUntil:
+    visible: "Acciones que mueven la meta"
+    timeout: 30000
+- scrollUntilVisible:
+    element: "Recordatorios de tus acciones"
+    direction: DOWN
+    centerElement: true
+    timeout: 30000
+- takeScreenshot: 11d-fila-de-recordatorios
+- tapOn: "Recordatorios de tus acciones"
+- extendedWaitUntil:
+    visible: "Recordarme mis acciones del día"
+    timeout: 15000
+- takeScreenshot: 11e-hoja-de-recordatorios
+- back
+- extendedWaitUntil:
+    visible: "Recordatorios de tus acciones"
+    timeout: 15000

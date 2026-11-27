@@ -22,6 +22,11 @@ describe('cifraEscrita', () => {
     expect(cifraEscrita(1500, 'USD', true)).toBe(`USD 1${DURO}500`);
   });
 
+  it('con una unidad de varias palabras pone la moneda delante y el resto detrás', () => {
+    // «S/ al mes» es una unidad de la hoja «Define tu objetivo» (spec 058 FR-015): «S/ 2 120 al mes», no «S/ al mes 2 120».
+    expect(cifraEscrita(2120, 'S/ al mes', true)).toBe(`S/ 2${DURO}120 al mes`);
+  });
+
   it('pega la escala al número, sin espacio', () => {
     expect(cifraEscrita(7, '/10', false)).toBe('7/10');
     // Y no le hace caso al "adelante": "/10 7" no significa nada.

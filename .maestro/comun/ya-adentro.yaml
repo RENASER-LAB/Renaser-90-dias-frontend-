@@ -3,6 +3,16 @@
 # pestañas. La guía de SER puede llegar unos segundos después del permiso: por eso se despeja hasta tres veces.
 appId: com.renaser.app
 ---
+# El formulario del Código Renaser de la hora en punto tapa todo: se registra antes de seguir (llenar-formulario-radar). Y si la barra de pestañas quedó
+# escondida por el scroll del flujo anterior, un deslizamiento hacia abajo la devuelve (spec 058: lo que hacía fallar este paso en cadena).
+- runFlow:
+    when:
+      visible: "Estoy pensando en(…|\\.\\.\\.)"
+    commands:
+      - runFlow: llenar-formulario-radar.yaml
+- swipe:
+    start: 50%,30%
+    end: 50%,65%
 - runFlow: despejar-capas.yaml
 - repeat:
     while:
@@ -14,6 +24,12 @@ appId: com.renaser.app
           timeout: 5000
           optional: true
       - runFlow: despejar-capas.yaml
+      # El formulario puede abrirse unos segundos después de entrar (llega con la hora en punto): se vuelve a mirar.
+      - runFlow:
+          when:
+            visible: "Estoy pensando en(…|\\.\\.\\.)"
+          commands:
+            - runFlow: llenar-formulario-radar.yaml
 - extendedWaitUntil:
     visible: "ENTRENAR"
     timeout: 30000

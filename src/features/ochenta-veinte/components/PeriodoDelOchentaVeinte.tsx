@@ -50,6 +50,7 @@ export function PeriodoDelOchentaVeinte({
   activo = true,
   alAgendar,
   voz = 'propia',
+  cifras,
 }: {
   cargar: CargarOchentaVeinte | null;
   tipo: TipoDePeriodo;
@@ -58,6 +59,8 @@ export function PeriodoDelOchentaVeinte({
   alAgendar?: () => void;
   /** Quién lo lee: la propia persona en Plan (por defecto, «tu 80/20») o quien la acompaña en su ficha («su 80/20»). */
   voz?: VozDelOchentaVeinte;
+  /** Spec 058: dibuja las cifras de otra forma (las vistas con el fénix de Plan). Sin esto, las líneas de siempre (la ficha de quien acompaña). */
+  cifras?: (vista: VistaDelPeriodo) => React.ReactNode;
 }) {
   const lectura = useOchentaVeinte(cargar, tipo, activo);
   const { datos, cargando, fallo } = lectura;
@@ -71,7 +74,7 @@ export function PeriodoDelOchentaVeinte({
       ) : fallo ? (
         <Fallo fallo={fallo} alReintentar={lectura.reintentar} voz={voz} />
       ) : datos ? (
-        <Cuerpo vista={datos} alAgendar={alAgendar} voz={voz} />
+        <Cuerpo vista={datos} alAgendar={alAgendar} voz={voz} cifrasPropias={cifras} />
       ) : null}
     </View>
   );
@@ -124,7 +127,17 @@ function Fallo({ fallo, alReintentar, voz }: { fallo: FalloDelOchentaVeinte; alR
   );
 }
 
-function Cuerpo({ vista, alAgendar, voz }: { vista: VistaDelPeriodo; alAgendar?: () => void; voz: VozDelOchentaVeinte }) {
+function Cuerpo({
+  vista,
+  alAgendar,
+  voz,
+  cifrasPropias,
+}: {
+  vista: VistaDelPeriodo;
+  alAgendar?: () => void;
+  voz: VozDelOchentaVeinte;
+  cifrasPropias?: (vista: VistaDelPeriodo) => React.ReactNode;
+}) {
   const { c, t } = useTheme();
   const iaAnalisis = useFuncionalidad(CLAVES.iaAnalisis);
   /* El análisis de la IA lo apaga Soporte TI aparte de SER; las cifras no dependen de eso. */
@@ -135,7 +148,7 @@ function Cuerpo({ vista, alAgendar, voz }: { vista: VistaDelPeriodo; alAgendar?:
 
   return (
     <View style={estilos.cuerpo}>
-      {hayCifras(vista.cifras) ? <Cifras vista={vista} conListas={!conTexto} voz={voz} /> : <SinAcciones alAgendar={alAgendar} voz={voz} />}
+      {hayCifras(vista.cifras) ? cifrasPropias ? cifrasPropias(vista) : <Cifras vista={vista} conListas={!conTexto} voz={voz} /> : <SinAcciones alAgendar={alAgendar} voz={voz} />}
       {enMantenimiento ? <AvisoDeMantenimiento aviso={iaAnalisis.aviso} /> : null}
       {aviso && hayCifras(vista.cifras) ? (
         <Text style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 23 }]} accessibilityLiveRegion="polite">

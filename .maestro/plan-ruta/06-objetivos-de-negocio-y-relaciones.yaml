@@ -1,0 +1,54 @@
+# PR06 — «Define tu objetivo» en Negocio (otra unidad: S/ al mes) y en Relaciones («No se mide con un número») (spec 058 FR-015).
+# Precondición: `plan.ruta` prendida; Cuerpo ya definido (flujo 05) y Negocio/Relaciones sin objetivo.
+# corrido: 2026-11-27
+# cuenta: e2e-ap-web@renaser.test
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "PLAN"
+- tapOn: "Negocio"
+- tapOn: "Escribe tu meta de 90 días"
+- extendedWaitUntil:
+    visible: "¿Qué quieres lograr en tu negocio\\?"
+    timeout: 20000
+- tapOn: "Subir mis ingresos"
+- tapOn: "Siguiente"
+- extendedWaitUntil:
+    visible: "¿Cómo vas a medirlo\\?"
+    timeout: 10000
+- takeScreenshot: pr06-negocio-paso-2
+- tapOn: "S/ al mes"
+- tapOn: "Siguiente"
+- extendedWaitUntil:
+    visible: "¿Desde dónde partes y a dónde quieres llegar\\?"
+    timeout: 10000
+- tapOn: "Desde dónde partes"
+- inputText: "2000"
+- tapOn: "A dónde quieres llegar"
+- inputText: "3500"
+- hideKeyboard
+- takeScreenshot: pr06-negocio-paso-3
+- tapOn: "Guardar mi objetivo"
+- extendedWaitUntil:
+    visible: "Subir mis ingresos.*"
+    timeout: 40000
+- takeScreenshot: pr06-negocio-guardado
+- tapOn: "Relaciones"
+- tapOn: "Escribe tu meta de 90 días"
+- extendedWaitUntil:
+    visible: "¿Qué quieres lograr en tus relaciones\\?"
+    timeout: 20000
+- takeScreenshot: pr06-relaciones-paso-1
+- tapOn: "Más tiempo en familia"
+- tapOn: "Siguiente"
+- extendedWaitUntil:
+    visible: "¿Cómo vas a medirlo\\?"
+    timeout: 10000
+- tapOn: "No se mide con un número"
+- takeScreenshot: pr06-relaciones-sin-numero
+# Sin número no hay paso 3: el pie ya dice «Guardar mi objetivo».
+- tapOn: "Guardar mi objetivo"
+- extendedWaitUntil:
+    visible: "Más tiempo en familia.*"
+    timeout: 40000
+- takeScreenshot: pr06-relaciones-guardado

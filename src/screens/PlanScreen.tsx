@@ -1,6 +1,5 @@
-import { fuentes } from '../theme/fuentes';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { Alert } from '../components/Alerta';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BORDES_DE_UNA_PESTANA } from '../navigation/bordesDeUnaPestana';
@@ -15,10 +14,8 @@ import { space } from '../theme/tokens';
 import { useResponsive } from '../theme/responsive';
 import { useSystemBackHandler } from '../hooks/useSystemBackHandler';
 import { ScreenHeader } from '../components/ui';
-import { GoldButton } from '../components/GoldButton';
 import { ControlSegmentado } from '../components/ControlSegmentado';
 import { ConfirmacionEnLinea } from '../components/ConfirmacionEnLinea';
-import { HojaDesdeAbajo } from '../components/hojaDesdeAbajo/HojaDesdeAbajo';
 import { tacto } from '../utils/tacto';
 import { useReducedMotion } from 'react-native-reanimated';
 import { CierreEnPlan } from '../features/cierre/components/CierreEnPlan';
@@ -36,18 +33,22 @@ import { PlanDelEje } from '../features/objetivos/components/PlanDelEje';
 import { PlanDelMesModal } from '../features/objetivos/components/PlanDelMesModal';
 import { TarjetaDelObjetivo } from '../features/objetivos/components/TarjetasDelPlan';
 import { useAccionesDeHoy } from '../features/objetivos/hooks/useAccionesDeHoy';
+import { HojaDelObjetivo } from '../features/objetivos/components/HojaDelObjetivo';
 import { HojaConfirmarObjetivos } from '../features/objetivos/components/HojaConfirmarObjetivos';
 import { TarjetaRevisaTusObjetivos } from '../features/objetivos/components/TarjetaRevisaTusObjetivos';
 import { useRocasMaestras } from '../features/objetivos/hooks/useRocasMaestras';
-import type { EjeObjetivo, RocaMaestraApi } from '../features/objetivos/types/objetivos.types';
+import type { DefinicionRocaMaestra, EjeObjetivo, RocaMaestraApi } from '../features/objetivos/types/objetivos.types';
 import { EJES, ETIQUETA_CORTA_EJE, ETIQUETA_EJE } from '../features/objetivos/types/objetivos.types';
 import { conPrincipalPrimero, usePrioridadPrincipal } from '../features/objetivos/hooks/usePrioridadPrincipal';
-import { definicionConAvance, lineaObjetivoFijo } from '../features/objetivos/utils/objetivoFijo';
 import { iconoDelEje } from '../features/objetivos/utils/iconoDelEje';
 import { etiquetaDelMes, mesDe, semanaDe } from '../features/objetivos/utils/periodoDelPrograma';
 import { estaPorConfirmar, rocasPorConfirmar, type ObjetivoParaConfirmar } from '../features/objetivos/utils/objetivosPorConfirmar';
 import { ESPACIO_PARA_LANZADOR } from '../features/renasia/components/RenasiaLauncher';
 import { useOcultarBarraAlDesplazar } from '../navigation/barraAlDesplazar/BarraInferior';
+import { useFuncionalidad } from '../features/plataforma/estado/useFuncionalidad';
+import { CLAVES } from '../features/plataforma/utils/clavesDeLaApp';
+import { LineaDeLaMeta, SeparadorDelMes } from '../features/objetivos/components/RutaDelPlan';
+import { etiquetaDelSeparadorDelMes, objetivoCortoDelMes } from '../features/objetivos/utils/rutaDelPlan';
 
 // =========================================================================
 // TIPOS DEL PLAN DE HÁBITOS
@@ -125,12 +126,14 @@ export interface PlanHabit {
  */
 const EJE_POR_DEFECTO: EjeObjetivo = 'CUERPO';
 
-/** Botones en tipo oración y a tamaño de lectura (`GoldButton` va en versales espaciadas por defecto). */
-const TEXTO_DE_BOTON = { fontSize: 15, letterSpacing: 0 } as const;
-
 export default function PlanScreen() {
   const { c, t } = useTheme();
   const { isTablet, horizontalPadding, contentMaxWidth } = useResponsive();
+  /* Spec 058: Plan como ruta de niveles solo si `plan.ruta` está prendida Y disponible para esta persona (nace apagada). Si no, Plan es el de siempre (FR-002). */
+  const planRuta = useFuncionalidad(CLAVES.planRuta);
+  const rutaActiva = planRuta.prendida && planRuta.disponible;
+  /* El engranaje de la cabecera: sube el contador y `PlanDelEje` abre «Planifica tus objetivos». */
+  const [pedidoDeAjustes, setPedidoDeAjustes] = useState(0);
 
   // =========================================================================
   // ESTADOS DE NAVEGACIÓN
@@ -175,20 +178,6 @@ export default function PlanScreen() {
      tiempo no debe mostrar avance inventado, igual que Hoy no muestra un dia que no sabe. */
   // Modal / hoja del objetivo de 90 días
   const [editGoalModalVisible, setEditGoalModalVisible] = useState(false);
-
-  // Formulario Editar Objetivos
-  const [editGoalTitle, setEditGoalTitle] = useState('');
-  const [editGoalCurrentVal, setEditGoalCurrentVal] = useState('');
-  const [editGoalTargetVal, setEditGoalTargetVal] = useState('');
-  /** Unidad de la meta (USD, kg, clientes...). El backend la exige junto con los dos números. */
-  const [editGoalUnidad, setEditGoalUnidad] = useState('');
-  /**
-   * Desde dónde arrancó. **Sin este campo, editar el objetivo borraba el punto de partida** y el
-   * porcentaje volvía a la fórmula vieja: alguien que baja de peso pasaba de 0 % a 100 % por haber
-   * corregido una palabra de su meta (E-166). Solo se escribe al definir el objetivo por primera
-   * vez; después queda fijo como el resto (D-234).
-   */
-  const [editGoalBase, setEditGoalBase] = useState('');
 
   /**
    * «Guardado» en una línea que se va sola, junto al objetivo (2026-10-05). Antes era un diálogo
@@ -280,6 +269,8 @@ export default function PlanScreen() {
   const planMensual = usePlanMensual();
   const mesDelEjeAbierto = planMensual.mesEnCursoDe(ejeAbierto);
   const planDelEjeAbierto = planMensual.porEje.get(ejeAbierto);
+  /* El mes del separador de la ruta: el mismo bloque de cuatro semanas que ya nombra «Planificar mi mes». */
+  const numeroMesDeLaRuta = mesDe(diaPrograma, undefined, resumen?.duracionDias);
   const [editandoMes, setEditandoMes] = useState(false);
   /* «Planificar mi mes» (spec 028): una hoja opcional con los tres meses del programa. `pedidoDeOrganizar` le avisa a `PlanDelEje` que la
      persona tocó su semana ahí adentro: abre «Organizar mi semana» de siempre cuando la hoja ya se fue. */
@@ -352,12 +343,8 @@ export default function PlanScreen() {
       setRevisando(false);
       return true;
     }
-    if (editGoalModalVisible) {
-      setEditGoalModalVisible(false);
-      return true;
-    }
     return false;
-  }, editGoalModalVisible || revisando);
+  }, revisando);
 
   // =========================================================================
   // HANDLERS
@@ -366,15 +353,7 @@ export default function PlanScreen() {
    * Abre el editor del objetivo de 90 días del eje que se está mirando. Prellena con lo guardado; si
    * el aprendiz todavía no lo definió, los campos arrancan vacíos.
    */
-  const openEditGoalModal = (eje: EjeObjetivo = ejeAbierto) => {
-    const roca = rocaDeEje(eje);
-    setEditGoalTitle(roca?.objetivo ?? '');
-    setEditGoalCurrentVal(roca?.avance != null ? String(roca.avance) : '');
-    setEditGoalTargetVal(roca?.meta != null ? String(roca.meta) : '');
-    setEditGoalUnidad(roca?.unidad ?? '');
-    // El punto de partida se muestra tal cual está guardado. Con la roca ya definida es de solo
-    // lectura (D-234), así que no se propone nada: una roca vieja sin él lo muestra vacío.
-    setEditGoalBase(roca?.lineaBase != null ? String(roca.lineaBase) : '');
+  const openEditGoalModal = (_eje: EjeObjetivo = ejeAbierto) => {
     setEditGoalModalVisible(true);
   };
 
@@ -395,110 +374,20 @@ export default function PlanScreen() {
   };
 
   /**
-   * Guarda el objetivo de 90 días contra el backend (`PUT /api/v1/rocks/master/{eje}`).
-   *
-   * La parte medible es opcional pero va entera: si la persona escribió una meta, se le exigen
-   * también el avance y la unidad, porque el backend rechaza media meta con un 400 y es mejor
-   * decírselo acá, en su idioma. Si no escribió ninguna de las tres, se guarda un objetivo
-   * cualitativo, que es perfectamente válido.
+   * Guarda lo que armó `HojaDelObjetivo` con el mismo pedido de siempre (`PUT /api/v1/rocks/master/{eje}`): el objetivo nuevo en tres pasos
+   * o, con el objetivo ya fijo (D-234), solo el avance nuevo. Si el servidor lo rechaza (`409 ROCA_MAESTRA_FIJA`, un 400), su mensaje se
+   * muestra tal cual. Dice si quedó guardado.
    */
-  const guardarObjetivoPrincipal = async () => {
-    if (rocaAbierta) {
-      await guardarAvance(rocaAbierta);
-      return;
-    }
-    const meta = editGoalTargetVal.trim() === '' ? undefined : Number(editGoalTargetVal);
-    const avance = editGoalCurrentVal.trim() === '' ? undefined : Number(editGoalCurrentVal);
-    const unidad = editGoalUnidad.trim() === '' ? undefined : editGoalUnidad.trim();
-    const lineaBase = editGoalBase.trim() === '' ? undefined : Number(editGoalBase);
-    const algunNumero = meta !== undefined || avance !== undefined || unidad !== undefined;
-
-    if (algunNumero) {
-      if (meta === undefined || avance === undefined || unidad === undefined) {
-        Alert.alert(
-          'Falta un dato de la meta',
-          'Para medir tu objetivo hacen falta las tres cosas: cuánto llevas, cuánto quieres llegar y en qué se mide (USD, kg, clientes...). Si no quieres medirlo con un número, deja los tres campos vacíos.'
-        );
-        return;
-      }
-      if (!Number.isFinite(meta) || !Number.isFinite(avance)) {
-        Alert.alert('Número inválido', 'Revisa los valores: tienen que ser números.');
-        return;
-      }
-      /**
-       * **Una meta de CERO es válida** (saldar una deuda, cero cigarrillos) mientras se sepa de dónde
-       * se arrancó. Se rechaza lo mismo que rechaza `MetaCuantitativa`: una meta negativa, y una de
-       * cero sin punto de partida (ahí el porcentaje sería una división por cero).
-       */
-      if (meta < 0) {
-        Alert.alert('Meta inválida', 'La meta no puede ser un número negativo.');
-        return;
-      }
-      if (meta === 0 && lineaBase === undefined) {
-        Alert.alert(
-          'Falta tu punto de partida',
-          'Llegar a cero es una meta válida, pero para medirla hace falta saber desde dónde arrancas. Escribe tu punto de partida.'
-        );
-        return;
-      }
-      if (avance < 0) {
-        Alert.alert('Avance inválido', 'El avance no puede ser negativo.');
-        return;
-      }
-    }
-
-    if (lineaBase !== undefined && (!Number.isFinite(lineaBase) || lineaBase < 0)) {
-      Alert.alert('Punto de partida inválido', 'Tiene que ser un número, y no puede ser negativo.');
-      return;
-    }
-    if (lineaBase !== undefined && meta !== undefined && lineaBase === meta) {
-      Alert.alert(
-        'Punto de partida igual a la meta',
-        'Si arrancas justo en tu meta no hay avance que medir. Revisa los dos números.'
-      );
-      return;
-    }
-    const resultado = await objetivos.definir(ejeAbierto, {
-      objetivo: editGoalTitle.trim(),
-      meta,
-      avance,
-      unidad,
-      lineaBase,
-    });
+  const guardarDesdeLaHoja = async (definicion: DefinicionRocaMaestra): Promise<boolean> => {
+    const eraFijo = objetivoFijo;
+    const resultado = await objetivos.definir(ejeAbierto, definicion);
     if (!resultado.ok) {
       avisarGuardadoFallido(resultado);
-      return;
+      return false;
     }
     setEditGoalModalVisible(false);
-    confirmar(`Tu objetivo de ${plazo} quedó guardado.`);
-  };
-
-  /**
-   * El objetivo ya está definido: se manda lo fijo tal cual está guardado y solo el avance nuevo.
-   * Si el servidor igual lo rechaza (`409 ROCA_MAESTRA_FIJA`), su mensaje se muestra tal cual.
-   */
-  const guardarAvance = async (roca: RocaMaestraApi) => {
-    const pedido = definicionConAvance(roca, editGoalCurrentVal);
-    if (!pedido.ok) {
-      Alert.alert(pedido.titulo, pedido.mensaje);
-      return;
-    }
-    const resultado = await objetivos.definir(ejeAbierto, pedido.definicion);
-    if (!resultado.ok) {
-      avisarGuardadoFallido(resultado);
-      return;
-    }
-    setEditGoalModalVisible(false);
-    confirmar('Tu avance quedó anotado.');
-  };
-
-  const handleSaveGoal = () => {
-    if (!objetivoFijo && !editGoalTitle.trim()) {
-      Alert.alert('Campo requerido', 'Por favor escribe la declaración de tu objetivo.');
-      return;
-    }
-
-    void guardarObjetivoPrincipal();
+    confirmar(eraFijo ? 'Tu avance quedó anotado.' : `Tu objetivo de ${plazo} quedó guardado.`);
+    return true;
   };
 
   // `principalPercent` se eliminó: el porcentaje lo calcula el backend y viaja en la respuesta, para
@@ -524,19 +413,20 @@ export default function PlanScreen() {
       width: isTablet ? ('100%' as const) : undefined,
     },
   ];
-  /** Campo de la hoja del objetivo: borde, fondo y color de texto según si se puede escribir. */
-  const estiloDeCampo = (editable: boolean) => [
-    styles.modalInputText,
-    { borderColor: c.border, backgroundColor: c.cardBgAlt, color: editable ? c.text : c.textSoft },
-  ];
-
   return (
     <PlazoDelObjetivoProvider duracionDias={resumen?.duracionDias} formacion={resumen?.formacion}>
     <SafeAreaView edges={BORDES_DE_UNA_PESTANA} style={{ flex: 1, backgroundColor: c.bg }}>
       {/* Cabecera (2026-10-31, pedido del dueño: «en Plan replica este formato»): «Plan» grande y debajo, en dorado, la dirección
           de los 90 días. La maqueta traía una diana arriba a la derecha: no se dibuja, no tiene una acción clara. */}
-      <ScreenHeader title="Plan" />
-      <Text style={[t.body, { color: c.goldInk, paddingHorizontal: horizontalPadding, marginTop: -2 }]}>{`Tu dirección en ${plazo}`}</Text>
+      {rutaActiva ? (
+        /* Como ruta: «Plan» con el engranaje, sin subtítulo (FR-003). */
+        <ScreenHeader title="Plan" right="settings" onPressRight={() => setPedidoDeAjustes(n => n + 1)} etiquetaRight="Planifica tus objetivos" />
+      ) : (
+        <>
+          <ScreenHeader title="Plan" />
+          <Text style={[t.body, { color: c.goldInk, paddingHorizontal: horizontalPadding, marginTop: -2 }]}>{`Tu dirección en ${plazo}`}</Text>
+        </>
+      )}
 
       <ScrollView
         {...barraAlDesplazar}
@@ -572,6 +462,8 @@ export default function PlanScreen() {
             accessibilityLabel="Eje de tu plan"
           />
 
+          {!rutaActiva ? (
+          <>
           {/* c. El objetivo de 90 días. Los «…» abren la hoja de siempre: escribir el objetivo (si falta) o anotar el avance
               (si ya quedó fijo, D-234). Sin avance que anotar no se dibujan. */}
           <TarjetaDelObjetivo
@@ -584,6 +476,26 @@ export default function PlanScreen() {
           />
 
           <BotonPlanificarMes mesEnCurso={resumen ? etiquetaDelMes(mesDe(diaPrograma, undefined, resumen?.duracionDias), resumen?.duracionDias) : null} onPress={() => setPlanificandoMes(true)} />
+          </>
+          ) : (
+          <>
+          <LineaDeLaMeta
+            roca={rocaAbierta}
+            cargando={objetivos.cargando}
+            error={objetivos.error}
+            plazo={plazo}
+            alTocar={abiertaPorConfirmar ? () => setRevisando(true) : sinAvanceQueAnotar ? undefined : () => openEditGoalModal()}
+          />
+          <SeparadorDelMes
+            etiqueta={
+              resumen
+                ? etiquetaDelSeparadorDelMes(numeroMesDeLaRuta, objetivoCortoDelMes(planDelEjeAbierto?.meses.find(m => m.numeroMes === numeroMesDeLaRuta), planDelEjeAbierto))
+                : null
+            }
+            alTocar={() => setPlanificandoMes(true)}
+          />
+          </>
+          )}
 
           {confirmacion && (
             <ConfirmacionEnLinea key={confirmacion.clave} texto={confirmacion.texto} onTerminar={() => setConfirmacion(null)} />
@@ -604,6 +516,18 @@ export default function PlanScreen() {
             registrarLasAcciones={accionesRef}
             abrirOchentaVeinte={ochentaVeinteAlAbrir}
             alAbrirOchentaVeinte={() => setOchentaVeinteAlAbrir(null)}
+            pedidoDeAjustes={pedidoDeAjustes}
+            metaDelMes={mesDelEjeAbierto?.cifra ?? null}
+            ruta={
+              rutaActiva
+                ? {
+                    numeroMes: numeroMesDeLaRuta,
+                    planDelEje: planDelEjeAbierto,
+                    etiquetaDelMes: resumen ? etiquetaDelMes(numeroMesDeLaRuta, resumen?.duracionDias) : null,
+                    onPlanificarMes: () => setPlanificandoMes(true),
+                  }
+                : undefined
+            }
           />
             </>
           )}
@@ -619,109 +543,17 @@ export default function PlanScreen() {
         alConfirmar={confirmarObjetivos}
       />
 
-      {/* ========================================================================= */}
-      {/* HOJA: EL OBJETIVO DE 90 DÍAS (DEFINIRLO O ANOTAR EL AVANCE)               */}
-      {/* ========================================================================= */}
-      {/* Hoja desde abajo (2026-10-05) en vez de la ventana centrada con «✕ Cerrar»: se cierra
-          arrastrándola, tocando el fondo, con la ✕ o con atrás. Mismo contenido. `grande` porque es
-          un formulario: con el teclado abierto el cuerpo se acorta y el botón queda a la vista. */}
-      <HojaDesdeAbajo
+      {/* HOJA: EL OBJETIVO DE 90 DÍAS en tres pasos, o «Anota tu avance» si ya quedó fijo (spec 058 FR-015). */}
+      <HojaDelObjetivo
         visible={editGoalModalVisible}
         alCerrar={() => setEditGoalModalVisible(false)}
-        titulo={objetivoFijo ? `Tu objetivo de ${plazo}` : `Define tu objetivo de ${plazo}`}
-        subtitulo={ETIQUETA_EJE[ejeAbierto]}
-        tamano="grande"
-        pie={
-          <GoldButton
-            label={objetivoFijo ? 'Guardar avance' : 'Guardar'}
-            onPress={handleSaveGoal}
-            textStyle={TEXTO_DE_BOTON}
-          />
-        }
-      >
-        <ScrollView
-          keyboardShouldPersistTaps="handled"
-          contentContainerStyle={{ gap: 12, paddingHorizontal: 20, paddingTop: 4, paddingBottom: 12 }}
-          showsVerticalScrollIndicator={false}
-        >
-          {objetivoFijo && (
-            <Text style={[t.small, { color: c.textSoft }]}>{lineaObjetivoFijo(plazo)}</Text>
-          )}
-          <View style={{ gap: 6 }}>
-            <Text style={[t.small, styles.etiquetaDeCampo, { color: c.textSoft }]}>Tu objetivo</Text>
-            <TextInput
-              value={editGoalTitle}
-              onChangeText={setEditGoalTitle}
-              editable={!objetivoFijo}
-              placeholder="Escribe tu objetivo aquí"
-              placeholderTextColor={c.tabInactive}
-              multiline
-              style={[estiloDeCampo(!objetivoFijo), { minHeight: 72, textAlignVertical: 'top' }]}
-            />
-          </View>
-
-          {/* Rejilla 2x2: con los campos a tamaño de lectura, cuatro en una fila de teléfono dejan
-              ~48 px de texto útil cada uno. Los ejemplos van en gris tenue y con «Ej.:», para que
-              no se lean como un valor ya escrito (antes «82», «30000» y «USD» en dorado). */}
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
-            {/* PARTISTE DE es lo que hace que el porcentaje sirva en las dos direcciones (E-166). */}
-            <View style={styles.celdaDeCampo}>
-              <Text style={[t.small, styles.etiquetaDeCampo, { color: c.textSoft }]}>Partiste de</Text>
-              <TextInput
-                value={editGoalBase}
-                onChangeText={setEditGoalBase}
-                editable={!objetivoFijo}
-                keyboardType="numeric"
-                placeholder="Ej.: 82"
-                placeholderTextColor={c.tabInactive}
-                style={estiloDeCampo(!objetivoFijo)}
-              />
-            </View>
-            <View style={styles.celdaDeCampo}>
-              <Text style={[t.small, styles.etiquetaDeCampo, { color: c.textSoft }]}>Vas en</Text>
-              <TextInput
-                value={editGoalCurrentVal}
-                onChangeText={setEditGoalCurrentVal}
-                keyboardType="numeric"
-                placeholder="Ej.: 0"
-                placeholderTextColor={c.tabInactive}
-                style={[estiloDeCampo(true), { color: c.goldInk }]}
-              />
-            </View>
-            <View style={styles.celdaDeCampo}>
-              <Text style={[t.small, styles.etiquetaDeCampo, { color: c.textSoft }]}>Meta</Text>
-              <TextInput
-                value={editGoalTargetVal}
-                onChangeText={setEditGoalTargetVal}
-                editable={!objetivoFijo}
-                keyboardType="numeric"
-                placeholder="Ej.: 30000"
-                placeholderTextColor={c.tabInactive}
-                style={estiloDeCampo(!objetivoFijo)}
-              />
-            </View>
-            {/* La unidad no es fija en dólares: kg, horas, clientes. El backend la exige con los números. */}
-            <View style={styles.celdaDeCampo}>
-              <Text style={[t.small, styles.etiquetaDeCampo, { color: c.textSoft }]}>Unidad</Text>
-              <TextInput
-                value={editGoalUnidad}
-                onChangeText={setEditGoalUnidad}
-                editable={!objetivoFijo}
-                placeholder="Ej.: USD"
-                placeholderTextColor={c.tabInactive}
-                maxLength={20}
-                autoCapitalize="none"
-                style={estiloDeCampo(!objetivoFijo)}
-              />
-            </View>
-          </View>
-          {!objetivoFijo && (
-            <Text style={[t.small, { color: c.micro }]}>
-              Si tu objetivo no se mide con un número, deja los tres campos vacíos.
-            </Text>
-          )}
-        </ScrollView>
-      </HojaDesdeAbajo>
+        eje={ejeAbierto}
+        roca={rocaAbierta}
+        plazo={plazo}
+        duracionDias={resumen?.duracionDias}
+        guardando={objetivos.guardando}
+        alGuardar={guardarDesdeLaHoja}
+      />
 
       {/* HOJA: PLANIFICAR MI MES (spec 028): el objetivo de cada mes del programa y sus semanas */}
       <PlanDelMesModal
@@ -768,22 +600,4 @@ const styles = StyleSheet.create({
   },
   /** El eje elegido, su objetivo y lo de la semana: tarjetas una debajo de otra, con aire entre ellas. */
   pantalla: { gap: 14, paddingTop: 12, paddingBottom: 28 },
-  etiquetaDeCampo: {
-    fontFamily: fuentes.media,
-    fontSize: 14,
-  },
-  celdaDeCampo: {
-    flexGrow: 1,
-    flexBasis: '45%',
-    gap: 6,
-  },
-  /* 15 px y 48 px de alto: lo escribe gente de 40 a 60 años en su teléfono (AGENTS.md §4). */
-  modalInputText: {
-    borderWidth: 1,
-    borderRadius: space.radiusSm,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    minHeight: 48,
-    fontSize: 15,
-  },
 });

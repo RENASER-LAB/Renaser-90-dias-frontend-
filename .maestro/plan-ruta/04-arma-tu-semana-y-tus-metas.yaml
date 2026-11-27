@@ -1,0 +1,17 @@
+# PR04 — Semana sin objetivo: el primer nivel es «Arma tu semana» y abre «Plan de la semana» (el asistente de siempre).
+# Precondición: `plan.ruta` prendida y `plan-ruta/datos.sh semana-sin-armar` (Día 1, objetivos de 90 días escritos, semana 1 sin armar).
+# corrido: 2026-11-27
+# cuenta: e2e-ap-web@renaser.test
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "PLAN"
+- extendedWaitUntil:
+    visible: "Arma tu semana.*"
+    timeout: 30000
+- takeScreenshot: pr04-arma-tu-semana
+- tapOn: "Arma tu semana.*"
+- extendedWaitUntil:
+    visible: "Plan de la semana.*"
+    timeout: 15000
+- takeScreenshot: pr04-plan-de-la-semana

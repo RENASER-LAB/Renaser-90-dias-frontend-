@@ -124,5 +124,10 @@ export function cifraEscrita(valor: number, unidad: string, adelante: boolean): 
   const u = unidad.trim();
   if (!u) return numero;
   if (u.startsWith('/')) return `${numero}${u}`;
-  return adelante ? `${u} ${numero}` : `${numero} ${u}`;
+  if (adelante) {
+    // «S/ al mes»: la moneda va delante del número y lo que la acompaña («al mes») detrás: «S/ 2 120 al mes», no «S/ al mes 2 120».
+    const [moneda, ...resto] = u.split(/\s+/);
+    return resto.length > 0 ? `${moneda} ${numero} ${resto.join(' ')}` : `${u} ${numero}`;
+  }
+  return `${numero} ${u}`;
 }

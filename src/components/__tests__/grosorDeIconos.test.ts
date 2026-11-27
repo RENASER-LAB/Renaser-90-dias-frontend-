@@ -56,6 +56,7 @@ const DE_LINEA: IconName[] = [
   'bellOff', // caja de 24, el chip de un día sin aviso en Planificar (spec 008, 2026-10-20)
   'chartNoAxesColumn', // caja de 24, «Tu 80/20» de Plan (2026-10-31)
   'alertTriangle', 'batteryLow', 'calendarClock', 'minimize2', 'handHelping', 'x', // caja de 24, los chips de «Cierra tu día» (2026-11-03)
+  'gift', // caja de 24, el cofre de la ruta de Plan (spec 058, 2026-11-25)
   'chevron', 'arrow', 'filter', 'volume',
 ];
 

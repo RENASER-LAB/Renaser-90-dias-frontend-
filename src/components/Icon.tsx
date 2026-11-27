@@ -23,7 +23,8 @@ export type IconName =
   | 'chartNoAxesColumn'
   | 'ellipsis'
   | 'wallet'
-  | 'alertTriangle' | 'batteryLow' | 'calendarClock' | 'minimize2' | 'handHelping' | 'x';
+  | 'alertTriangle' | 'batteryLow' | 'calendarClock' | 'minimize2' | 'handHelping' | 'x'
+  | 'gift';
 
 /**
  * Grosor del trazo, en píxeles REALES de pantalla, a cualquier tamaño (decisión del dueño,
@@ -1057,6 +1058,16 @@ export function Icon({ name, size = 20, color, strokeWidth }: Props) {
         <Svg width={size} height={size} viewBox="0 0 24 24">
           <Path {...s24} d="M18 6 6 18" />
           <Path {...s24} d="m6 6 12 12" />
+        </Svg>
+      );
+    /* El cofre de la ruta de Plan (spec 058, 2026-11-25): forma de Lucide (ISC, `gift`), caja de 24 y trazo `s24`. */
+    case 'gift':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Rect {...s24} x={3} y={8} width={18} height={4} rx={1} />
+          <Path {...s24} d="M12 8v13" />
+          <Path {...s24} d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7" />
+          <Path {...s24} d="M7.5 8a2.5 2.5 0 0 1 0-5A4.8 8 0 0 1 12 8a4.8 8 0 0 1 4.5-5 2.5 2.5 0 0 1 0 5" />
         </Svg>
       );
     case 'chevron':
