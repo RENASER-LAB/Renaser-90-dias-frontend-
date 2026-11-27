@@ -39,14 +39,14 @@ describe('consentimiento de la IA', () => {
     expect(esConsentimientoVigente('basura')).toBe(false);
   });
 
-  // spec 060 FR-001
+  // spec 060 FR-001, SC-001
   it('el chat con el acompañante no muestra la conversación sin el consentimiento', () => {
     const panel = leer('features/renasia/screens/RenasiaPanel.tsx');
     expect(panel).toMatch(/useConsentimientoDeIa\(\)/);
     expect(panel).toMatch(/TarjetaDeConsentimientoDeIa/);
   });
 
-  // spec 060 FR-002
+  // spec 060 FR-002, SC-001
   it('la voz del orbe espera al consentimiento y el aviso de la voz se monta una vez en el lanzador', () => {
     const voz = leer('features/renasia/hooks/useVozDelOrbe.ts');
     expect(voz).toMatch(/pedirParaVoz\(/);

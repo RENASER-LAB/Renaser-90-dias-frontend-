@@ -3,6 +3,7 @@
 # cuenta: aprendiz
 # corrido: 2026-11-27
 #
+# spec 060 SC-003
 # spec 060 FR-001 — el aviso nombra a Google (Gemini) y los datos; «Ahora no» cierra el panel; «Acepto y continuar» deja ver el chat.
 # spec 060 FR-004 — aceptado, no se vuelve a pedir al abrir el chat otra vez.
 appId: com.renaser.app
