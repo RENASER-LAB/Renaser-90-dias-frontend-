@@ -21,6 +21,7 @@ const mockAvanzarEstado = jest.fn(async (_estado: unknown) => undefined);
 const mockTacto = { seleccion: jest.fn(), error: jest.fn(), logro: jest.fn() };
 let mockAtrasDelSistema: (() => boolean | void) | null = null;
 
+jest.mock('../../../renasia/state/consentimientoDeIa', () => ({ registrarAceptacionDeIa: jest.fn() }));
 jest.mock('../../../../theme/ThemeContext', () => {
   const tokens = jest.requireActual<typeof import('../../../../theme/tokens')>('../../../../theme/tokens');
   return {

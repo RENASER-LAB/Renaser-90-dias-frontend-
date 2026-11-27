@@ -50,6 +50,8 @@ también en el texto (`grep -n "Plan" docs/decisiones/*.md`). Si dos entradas ch
 | Fecha | Tabs | Tipo | Entrada | Archivo | Corregida |
 |---|---|---|---|---|---|
 | 2026-11-25 | Plan | Cambio | Plan como ruta de niveles detrás del interruptor `plan.ruta` (autorización solo para la spec 058, propuesta R1) | [plan.md](plan.md) |  |
+| 2026-11-27 | ninguno | Cambio | Documento `docs/tiendas/notas-y-declaraciones.md`: notas para el revisor de Apple y Google, etiquetas de privacidad, Data safety y lista de verificación antes de cada subida (spec 060, FR-006 a FR-009) | [transversal.md](transversal.md) |  |
+| 2026-11-27 | ninguno | Cambio | Consentimiento de la IA: el aviso nombra a Google (Gemini) y los datos que viajan, en el onboarding y antes del primer chat o de la primera voz con el acompañante (spec 060, Apple 5.1.2(i)); quien marca la casilla del onboarding queda con el aviso aceptado | [ingreso-y-onboarding.md](ingreso-y-onboarding.md) |  |
 | 2026-11-24 | ninguno | Corrección | El permiso de iPhone trae el texto de escritura en Salud (lo exige Apple, error 90683) aunque la app solo lee pasos y distancia (issue #259) | [kilometros-y-carrera.md](kilometros-y-carrera.md) |  |
 | 2026-11-24 | Training | Decisión del dueño | La Pastilla Renacer funciona como un reproductor de música: controles en la pantalla bloqueada y el Centro de control, con el audio en segundo plano (issue #254, norma 2.5.4 de Apple) | [transversal.md](transversal.md) |  |
 | 2026-11-24 | Yo | Cambio | Yo → Preferencias: fila «Salud de Apple» solo en iOS, con el ícono oficial de Apple (autorización del dueño solo para esto; issue #255) | [yo.md](yo.md) |  |

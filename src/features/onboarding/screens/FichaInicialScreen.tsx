@@ -36,6 +36,7 @@ import {
   PasoWhatsapp,
 } from '../components/ChapterIdentidad';
 import { PasoDescanso, PasoMedicacion } from '../components/ChapterSalud';
+import { registrarAceptacionDeIa } from '../../renasia/state/consentimientoDeIa';
 import { ChapterConsentimiento } from '../components/ChapterConsentimiento';
 import { GoldButton } from '../../../components/GoldButton';
 import { tacto } from '../../../utils/tacto';
@@ -336,7 +337,15 @@ export function FichaInicialScreen({
       case 'medicacion':
         return <PasoMedicacion {...salud} />;
       case 'consentimiento':
-        return <ChapterConsentimiento data={formData.consentimiento} onChange={setConsentimiento} plazo={plazo} />;
+        return (
+          <ChapterConsentimiento
+            data={formData.consentimiento}
+            onChange={setConsentimiento}
+            plazo={plazo}
+            // Marcar la casilla acepta el aviso de IA que ella misma trae: el chat no lo pide otra vez (spec 060 FR-031).
+            onAceptaDatos={userId ? () => registrarAceptacionDeIa(userId) : undefined}
+          />
+        );
     }
   };
 

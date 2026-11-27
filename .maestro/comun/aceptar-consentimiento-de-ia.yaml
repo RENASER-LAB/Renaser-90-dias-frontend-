@@ -1,0 +1,9 @@
+# Spec 060: la primera vez que se abre el chat de SER (o se toca el orbe de voz) la app pide aceptar el aviso de IA de Google (Gemini).
+# Los flujos que abren a SER lo aceptan con esto; si ya estaba aceptado en esa cuenta y ese teléfono, no hace nada. Opcional.
+appId: com.renaser.app
+---
+- runFlow:
+    when:
+      visible: "Acepto y continuar"
+    commands:
+      - tapOn: "Acepto y continuar"

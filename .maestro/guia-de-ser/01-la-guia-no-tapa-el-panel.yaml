@@ -2,6 +2,7 @@
 # Precondición: el aprendiz ya eligió su Día 1 pero NO firmó el Pacto ni publicó su primer post (si no, no hay guía).
 # Una cuenta que ya publicó ve «Ya eres parte.» en vez de «Tu primera publicación»: el flujo vale igual, el botón es el mismo.
 # cuenta: aprendiz
+# corrido: 2026-11-27 (la guía puede tardar más de 20 s en llegar tras abrir la app: si el flujo falla en «Volver a la guía de SER», espera a verla y repite)
 #
 # Lo que prueba, en este orden:
 #   1. «Ahora no» deja la guía en su burbuja.
@@ -33,6 +34,7 @@ appId: com.renaser.app
 
 # 2. El panel abierto, y salir y volver a la app.
 - tapOn: "Hablar con SER, tu acompañante.*"
+- runFlow: ../comun/aceptar-consentimiento-de-ia.yaml
 - extendedWaitUntil:
     visible: "Cerrar SER"
     timeout: 15000

@@ -47,6 +47,8 @@ import { AvisoDeMantenimiento } from '../../plataforma/components/AvisoDeManteni
 import { useFuncionalidad } from '../../plataforma/estado/useFuncionalidad';
 import { CLAVES } from '../../plataforma/utils/clavesDeLaApp';
 import { ModalConZonaSegura } from '../../../components/ModalConZonaSegura';
+import { TarjetaDeConsentimientoDeIa } from '../components/ConsentimientoDeIa';
+import { useConsentimientoDeIa } from '../state/consentimientoDeIa';
 
 export interface RenasiaPanelProps {
   /**
@@ -103,6 +105,9 @@ export function RenasiaPanel({ agent, visible, onClose, contexto }: RenasiaPanel
   /* Spec 002: con el chat de SER apagado por Soporte TI (o SER entera, o el circuito de la IA abierto), el panel se
      abre igual y en lugar de la conversación muestra el aviso. No se pide el historial: el servidor respondería 503. */
   const chatDeSer = useFuncionalidad(CLAVES.iaChat);
+  /* Spec 060 FR-001 (Apple 5.1.2(i)): antes del primer mensaje, la persona acepta que Google (Gemini) reciba sus datos. */
+  const consentimiento = useConsentimientoDeIa();
+  const sinConsentimiento = !consentimiento.aceptado;
   /* Spec 002, fase 2: si SER todavía no le toca a esta cuenta (despliegue, rol personalizado), el panel no se abre y,
      si estaba abierto, se cierra solo, sin diálogo. Las entradas (botón flotante, orbe, curso) tampoco se dibujan. */
   const serDisponible = chatDeSer.disponible;
@@ -232,6 +237,9 @@ export function RenasiaPanel({ agent, visible, onClose, contexto }: RenasiaPanel
         </View>
 
         {/* Spec 048 (FR-005): sin señal, SER dice que necesita conexión y vuelve solo. */}
+        {sinConsentimiento ? (
+          consentimiento.listo ? <TarjetaDeConsentimientoDeIa alAceptar={consentimiento.aceptar} alRechazar={onClose} /> : null
+        ) : (
         <SoloConConexion>
         {/*
           `behavior` va en las DOS plataformas desde 2026-09-17. Decia `undefined` en Android
@@ -413,6 +421,7 @@ export function RenasiaPanel({ agent, visible, onClose, contexto }: RenasiaPanel
           </ScrollView>
         )}
         </SoloConConexion>
+        )}
       </SafeAreaView>
 
       <RegistroConFotoModal {...registroConFoto.modal} />
