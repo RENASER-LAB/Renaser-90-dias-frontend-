@@ -32,6 +32,10 @@
         "android.permission.health.READ_STEPS",
         "android.permission.health.READ_DISTANCE"
       ],
+      "blockedPermissions": [
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
+      ],
       "package": "com.renaser.app"
     },
     "web": {
