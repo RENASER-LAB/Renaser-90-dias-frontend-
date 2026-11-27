@@ -988,3 +988,10 @@ Apple rechazó NaSer 1.8.0 porque la app declara audio en segundo plano (`UIBack
 * El mismo modal sirve a la Audioterapia semanal, así que ella también queda con controles del sistema.
 * **No cambian** los cinco tabs, los demás audios (sonidos de hábitos, alarmas, grabación) ni el flujo de preguntas.
 * **Pruebas:** `src/__tests__/reglas/pastillaComoReproductor.test.ts`. Falta probarlo en un dispositivo (pantalla bloqueada y Centro de control). Necesita build nativa (cambia `app.json`).
+
+## Cambio — 2026-11-27 — documento para las consolas de las tiendas (spec 060)
+
+* **Qué es.** `docs/tiendas/notas-y-declaraciones.md` reúne lo que se le dice a Apple y a Google en cada subida: qué es la app, la cuenta de demostración (sin escribir la clave), el widget,
+  EAS Update, los interruptores del servidor, el paso a paso de «Correr con GPS», «Mi ingreso» sin cobro, la Pastilla como reproductor del sistema y Salud de Apple / Health Connect
+  (solo lectura de pasos y distancia); las etiquetas de privacidad y la Data safety; la declaración de red social y el cuestionario de edad; y la lista de verificación previa a la subida.
+* **No cambia** nada de la app: es un documento. No tiene prueba automática (spec 060 FR-006 a FR-009); se contrasta con el código y la política en cada subida.
