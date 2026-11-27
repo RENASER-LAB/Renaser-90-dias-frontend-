@@ -1,0 +1,33 @@
+# PR07 — Agendar acciones de hoy en dos ejes: «Caminar» (Cuerpo, sin hora) y «Vender» (Negocio, con hora de la noche) (spec 058 FR-001).
+# Precondición: `plan.ruta` prendida, objetivos de Cuerpo y Negocio puestos y la semana 1 armada (Plan de la semana) y SIN acciones de hoy.
+# SIN CORRER
+# Ojo: en la build de desarrollo, escribir «rr» (dos erres seguidas) recarga el JS: los textos no las llevan.
+# cuenta: e2e-ap-web@renaser.test
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "PLAN"
+- extendedWaitUntil:
+    visible: "Agendar otro día|Agendar mis acciones"
+    timeout: 30000
+- tapOn: "Agendar otro día|Agendar mis acciones"
+- extendedWaitUntil:
+    visible: "Elige hasta tres por eje. La hora es opcional."
+    timeout: 15000
+- tapOn:
+    text: "Escribe otra acción tuya"
+    index: 0
+- inputText: "Caminar"
+- hideKeyboard
+- tapOn:
+    text: "Agregar"
+    index: 0
+- tapOn:
+    text: "Escribe otra acción tuya"
+    index: 1
+- inputText: "Vender"
+- hideKeyboard
+- tapOn:
+    text: "Agregar"
+    index: 1
+- takeScreenshot: pr07-acciones-elegidas

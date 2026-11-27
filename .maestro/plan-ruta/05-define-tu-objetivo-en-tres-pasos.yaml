@@ -35,8 +35,9 @@ appId: com.renaser.app
 - assertVisible: "Tu objetivo: bajar de 82 a 76 kg en 90 días.*"
 - takeScreenshot: pr05-paso-3
 - tapOn: "Guardar mi objetivo"
+# El aviso «Tu objetivo de 90 días quedó guardado.» dura unos segundos y se pierde: se comprueba el objetivo en la ruta.
 - extendedWaitUntil:
-    visible: "Tu objetivo de 90 días quedó guardado."
+    visible: "Bajar de peso.*"
     timeout: 40000
 # Ya fijo: la misma hoja es «Anota tu avance» con un solo número.
 - scrollUntilVisible:
@@ -54,5 +55,6 @@ appId: com.renaser.app
 - takeScreenshot: pr05-anota-tu-avance
 - tapOn: "Guardar mi avance"
 - extendedWaitUntil:
-    visible: "Tu avance quedó anotado."
+    visible: "25 ?%"
     timeout: 40000
+- takeScreenshot: pr05-avance-en-la-ruta
