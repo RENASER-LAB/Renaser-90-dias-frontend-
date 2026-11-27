@@ -688,3 +688,19 @@ departamento, ciudad y distrito con eso. Toca la Ficha Inicial (onboarding), no 
   `detectarPaisSinInventarLugares` (solo país, `null` sin país, ni un nombre fijo en el código), `sinGeolocalizacionDelNavegador` (la guarda) y `pasosFicha` / `fichaPasoAPaso` (la validación nueva).
   Ninguna lleva marca `// spec NNN FR-NNN`: la spec 026 no tiene un FR de la ubicación de la ficha estándar (el texto que se propone para ella va aparte).
 * **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). No hace falta backend.
+
+## Cambio — 2026-11-27 — consentimiento de la IA antes del primer envío (spec 060)
+
+* **Qué cambia y por qué.** El playbook de cumplimiento de tiendas (`APPLE-5.1.2-AI-NO-CONSENT-MODAL`, Apple 5.1.2(i)) pide un aviso que nombre al proveedor de
+  IA y los datos que le llegan, antes de que salga el primero. El texto del onboarding solo decía «Autorizo el uso responsable de mis datos…» y la política (sección 5)
+  ya nombraba a Google (Gemini API), pero la app no.
+* **Onboarding** (`ChapterConsentimiento`): el texto de la casilla sigue igual y suma que el acompañante funciona con inteligencia artificial de Google (Gemini) y que se
+  le envían los mensajes, la voz de la conversación en vivo y las respuestas del diagnóstico. Misma casilla, mismos campos, sin cambio en el servidor.
+* **Primer uso** (quienes ya pasaron el onboarding y los nuevos): la primera vez que se abre el chat con el acompañante (`RenasiaPanel`, dentro del mismo panel) o se toca el
+  orbe de voz (`useVozDelOrbe`, con una hoja que monta `RenasiaLauncher`) se muestra «Antes de hablar con tu acompañante» con «Acepto y continuar» / «Ahora no». Sin aceptar no
+  se envía nada: «Ahora no» cierra el panel o la hoja y la voz no empieza. La aceptación se guarda **en el teléfono, por cuenta y por versión del texto**
+  (`renaser.ia.consentimiento.<userId>`): sin servidor nuevo; en otro teléfono se vuelve a pedir una vez.
+* **No cambian:** los cinco tabs (la voz se gobierna desde el hook, no desde `HoyScreen`), el panel ni el orbe cuando ya se aceptó, ni lo que viaja a Google.
+* **Una sola vez:** marcar la casilla del onboarding (su texto ya es el aviso) guarda también la aceptación del aviso de IA, con la misma versión (`registrarAceptacionDeIa`,
+  llamada desde `FichaInicialScreen`): quien acaba de pasar el onboarding no ve el consentimiento dos veces. Sin servidor nuevo (spec 060 FR-031).
+* **Pruebas:** Jest `consentimientoDeIa` (spec 060 FR-001 a FR-005 y FR-031); Maestro `consentimiento-de-ia/01` y `ser-al-dia/01` en el emulador (27/11).

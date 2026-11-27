@@ -1,0 +1,37 @@
+# 01 — El aviso de IA de Google (Gemini) sale antes del primer chat con SER y sin aceptarlo no se envía nada (spec 060, Apple 5.1.2(i)).
+# Precondición: una cuenta que todavía no aceptó el aviso en ESE teléfono (cuenta nueva en el emulador, o datos de la app borrados). El aviso se guarda por cuenta.
+# cuenta: aprendiz
+# corrido: 2026-11-27
+#
+# spec 060 FR-001 — el aviso nombra a Google (Gemini) y los datos; «Ahora no» cierra el panel; «Acepto y continuar» deja ver el chat.
+# spec 060 FR-004 — aceptado, no se vuelve a pedir al abrir el chat otra vez.
+appId: com.renaser.app
+---
+- runFlow: ../comun/despejar-capas.yaml
+- tapOn: "Hablar con SER, tu acompañante.*"
+- extendedWaitUntil:
+    visible: "Antes de hablar con tu acompañante"
+    timeout: 15000
+- assertVisible: ".*Google \\(Gemini\\).*"
+- assertNotVisible: "Escríbele a SER…"
+- takeScreenshot: 01a-aviso-de-ia
+# «Ahora no» cierra el panel y no se envía nada.
+- tapOn: "Ahora no"
+- assertNotVisible: "Antes de hablar con tu acompañante"
+# Se vuelve a pedir y, aceptado, aparece el chat.
+- tapOn: "Hablar con SER, tu acompañante.*"
+- extendedWaitUntil:
+    visible: "Antes de hablar con tu acompañante"
+    timeout: 15000
+- tapOn: "Acepto y continuar"
+- extendedWaitUntil:
+    visible: "Cerrar SER"
+    timeout: 15000
+- takeScreenshot: 01b-chat-tras-aceptar
+- tapOn: "Cerrar SER"
+# Aceptado una vez, ya no se pide.
+- tapOn: "Hablar con SER, tu acompañante.*"
+- extendedWaitUntil:
+    visible: "Cerrar SER"
+    timeout: 15000
+- assertNotVisible: "Antes de hablar con tu acompañante"

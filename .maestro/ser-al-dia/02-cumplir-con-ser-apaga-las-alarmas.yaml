@@ -11,6 +11,7 @@ appId: com.renaser.app
 ---
 - runFlow: ../comun/despejar-capas.yaml
 - tapOn: "Hablar con SER, tu acompañante.*"
+- runFlow: ../comun/aceptar-consentimiento-de-ia.yaml
 - extendedWaitUntil:
     visible: "Cerrar SER"
     timeout: 15000

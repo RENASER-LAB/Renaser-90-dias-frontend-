@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { HojaDeConsentimientoDeIa } from './ConsentimientoDeIa';
 import { StyleSheet } from 'react-native';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -110,6 +111,7 @@ export function RenasiaLauncher() {
       )}
 
       <RenasiaPanel agent="COMPANION" visible={visible} onClose={() => setVisible(false)} />
+      <HojaDeConsentimientoDeIa />
     </>
   );
 }

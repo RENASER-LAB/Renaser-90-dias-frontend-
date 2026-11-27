@@ -1,7 +1,7 @@
 # 01 — Un ritual que pide SER se registra ESCRIBIENDO, sin cámara (spec 038; decisión del dueño del 31/10).
 # Precondición: aprendiz con el programa activado y un ritual (RITUAL_MORNING / MIDDAY / NIGHT) PENDIENTE hoy. El backend con la spec 038 (V160) y la IA prendida.
 # cuenta: aprendiz
-# ESCRITO Y SIN CORRER (la IA real no se llamó al escribirlo; el emulador estaba ocupado con la regresión de integración).
+# corrido: 2026-11-27 (el aviso de IA se acepta con comun/aceptar-consentimiento-de-ia)
 #
 # Lo que prueba:
 #   1. «Marca mi ritual de la mañana» deja una tarjeta con «Escribir cómo me siento», NO «Tomar foto».
@@ -11,6 +11,7 @@ appId: com.renaser.app
 ---
 - runFlow: ../comun/despejar-capas.yaml
 - tapOn: "Hablar con SER, tu acompañante.*"
+- runFlow: ../comun/aceptar-consentimiento-de-ia.yaml
 - extendedWaitUntil:
     visible: "Cerrar SER"
     timeout: 15000

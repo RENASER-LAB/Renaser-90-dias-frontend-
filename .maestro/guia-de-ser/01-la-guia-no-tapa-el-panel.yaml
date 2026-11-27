@@ -33,6 +33,7 @@ appId: com.renaser.app
 
 # 2. El panel abierto, y salir y volver a la app.
 - tapOn: "Hablar con SER, tu acompañante.*"
+- runFlow: ../comun/aceptar-consentimiento-de-ia.yaml
 - extendedWaitUntil:
     visible: "Cerrar SER"
     timeout: 15000

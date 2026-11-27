@@ -3,6 +3,7 @@ import { useCallback, useRef, useState } from 'react';
 import { enModoSoloLectura } from '../../../services/http/apiClient';
 import { useFuncionalidad } from '../../plataforma/estado/useFuncionalidad';
 import { CLAVES } from '../../plataforma/utils/clavesDeLaApp';
+import { useConsentimientoDeIa } from '../state/consentimientoDeIa';
 import { useConversacionEnVivo } from './useConversacionEnVivo';
 import { useConversacionPorVoz, type ConversacionPorVoz } from './useConversacionPorVoz';
 
@@ -27,6 +28,7 @@ export const PAUSA_TRAS_FALLO_MS = 2 * 60_000;
  * con `terminar` (mantener presionado el orbe).
  */
 export function useVozDelOrbe(): ConversacionPorVoz {
+  const consentimiento = useConsentimientoDeIa();
   const clasica = useConversacionPorVoz();
   const enVivo = useConversacionEnVivo();
   const [descartadaHastaMs, setDescartadaHastaMs] = useState(0);
@@ -43,7 +45,7 @@ export function useVozDelOrbe(): ConversacionPorVoz {
   const usarEnVivo = enVivo.disponible && !enPausa && vozDeSer.prendida && vozDeSer.disponible && !enModoSoloLectura();
   const enSesion = enVivo.fase !== 'reposo';
 
-  const tocar = useCallback(() => {
+  const tocarConConsentimiento = useCallback(() => {
     if (enSesion || enVivoActivaRef.current) {
       enVivo.tocar();
       return;
@@ -61,6 +63,16 @@ export function useVozDelOrbe(): ConversacionPorVoz {
       clasica.tocar();
     });
   }, [clasica, enSesion, enVivo, usarEnVivo]);
+
+  /* Spec 060 FR-002 (Apple 5.1.2(i)): la primera vez, la voz espera a que la persona acepte que Google (Gemini) reciba
+     su voz y sus datos. Con una sesión ya abierta, tocar sigue siendo «ya terminé», sin preguntar de nuevo. */
+  const tocar = useCallback(() => {
+    if (enSesion || enVivoActivaRef.current || consentimiento.aceptado) {
+      tocarConConsentimiento();
+      return;
+    }
+    consentimiento.pedirParaVoz(tocarConConsentimiento);
+  }, [consentimiento, enSesion, tocarConConsentimiento]);
 
   const terminarEnVivo = enVivo.terminar;
   const terminar = useCallback(() => {

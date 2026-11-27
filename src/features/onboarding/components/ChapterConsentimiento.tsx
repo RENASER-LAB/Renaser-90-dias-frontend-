@@ -7,6 +7,7 @@ import { Icon } from '../../../components/Icon';
 import { Presionable } from '../../../components/Presionable';
 import { tacto } from '../../../utils/tacto';
 import { PLAZO_POR_DEFECTO } from '../../objetivos/utils/nombreDelObjetivo';
+import { TEXTO_DE_DATOS_EN_ONBOARDING } from '../../renasia/utils/consentimientoDeIa';
 import { alPlazo } from '../../formaciones/utils/plazoEnFrases';
 
 interface ChapterConsentimientoProps {
@@ -14,6 +15,8 @@ interface ChapterConsentimientoProps {
   onChange: (data: FichaConsentimientoData) => void;
   /** El plazo del programa de la persona («90 días», «3 meses», «1 año»; `plazoDelObjetivo`). Sin él, el de siempre. */
   plazo?: string;
+  /** Se llama al marcar la casilla: su texto ya es el aviso de IA, así que quien la marca lo acepta (spec 060 FR-031). */
+  onAceptaDatos?: () => void;
 }
 
 /**
@@ -24,7 +27,7 @@ interface ChapterConsentimientoProps {
  * encima del dorado. Antes, marcada, era un cuadrado BLANCO con borde blanco sobre una tarjeta
  * blanca (modo claro): sólo se veía el tilde, flotando.
  */
-export function ChapterConsentimiento({ data, onChange, plazo = PLAZO_POR_DEFECTO }: ChapterConsentimientoProps) {
+export function ChapterConsentimiento({ data, onChange, plazo = PLAZO_POR_DEFECTO, onAceptaDatos }: ChapterConsentimientoProps) {
   const { c, t } = useTheme();
 
   const isChecked = Boolean(data.compromiso90Dias || data.autorizaUsoDatos);
@@ -32,6 +35,7 @@ export function ChapterConsentimiento({ data, onChange, plazo = PLAZO_POR_DEFECT
   const handleToggle = () => {
     const nextVal = !isChecked;
     tacto.seleccion();
+    if (nextVal) onAceptaDatos?.();
     onChange({
       ...data,
       autorizaUsoDatos: nextVal,
@@ -43,7 +47,7 @@ export function ChapterConsentimiento({ data, onChange, plazo = PLAZO_POR_DEFECT
     <View style={styles.container}>
       {/* Texto de Autorización y Tratamiento de Datos */}
       <Text style={[t.body, { color: c.text, fontSize: 15, lineHeight: 23 }]}>
-        Autorizo el uso responsable de mis datos para fines de seguimiento, mejora continua del proceso y envío de información relevante relacionada al acompañamiento dentro del ecosistema RENASER.
+        {TEXTO_DE_DATOS_EN_ONBOARDING}
       </Text>
 
       {/* Tarjeta de Consentimiento y Compromiso: el plazo es el del programa de la persona, no siempre 90 días (issue #103). */}
