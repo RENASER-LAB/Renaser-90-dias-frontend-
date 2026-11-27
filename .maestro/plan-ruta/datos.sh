@@ -7,6 +7,7 @@
 #   datos.sh semana-sin-armar      Día 1, objetivos de 90 días intactos y sin avance, y la semana 1 SIN armar (sin acciones): el primer nivel es «Arma tu semana».
 #   datos.sh sin-objetivos         Día 1 y SIN objetivos de 90 días (borra sus rocas, semanales y diarias): el formulario «Define tu objetivo» arranca desde cero (spec 058 FR-015). `semana-con-acciones` los deja como estaban.
 #   datos.sh semana-sin-revisar    Quita la revisión de la semana (para que el cofre se pueda abrir) sin tocar lo demás.
+#   (todas las que reinician la cuenta borran también su marca de «día cerrado»: entradas_diario tipo EVALUACION_DIA)
 #   datos.sh sql "<consulta>"      una consulta suelta
 set -euo pipefail
 BASE=${E2E_BASE:-renaser_e2e_plan}; CUENTA=${E2E_CORREO:-e2e-ap-web@renaser.test}
@@ -21,6 +22,7 @@ BEGIN;
 UPDATE renaser.participantes_programa SET fecha_inicio=$HOY, dia_programa=1, dia_programa_avanzado_el=$HOY, dias_ajuste_programa=0, programa_completado=false, programa_completado_en=NULL, dia_post_programa=0 WHERE usuario_id=$U;
 UPDATE renaser.rocas_maestras SET avance=linea_base WHERE participante_id=$U AND linea_base IS NOT NULL;
 DELETE FROM renaser.rocas_diarias WHERE participante_id=$U;
+DELETE FROM renaser.entradas_diario WHERE participante_id=$U AND tipo='EVALUACION_DIA';
 DELETE FROM renaser.rocas_semanales WHERE roca_maestra_id IN (SELECT id FROM renaser.rocas_maestras WHERE participante_id=$U);
 INSERT INTO renaser.rocas_semanales (roca_maestra_id, numero_semana, titulo) VALUES ($CUERPO, 1, 'Llegar a 81.4 kg');
 INSERT INTO renaser.rocas_diarias (participante_id, fecha, posicion, titulo, color, puntaje_impacto, eje, roca_semanal_id)
@@ -33,6 +35,7 @@ SQL
   semana-armada) "$0" semana-con-acciones >/dev/null; psql_ -c "DELETE FROM renaser.rocas_diarias WHERE participante_id=$U" ;;
   cierre-del-dia) "$0" semana-con-acciones >/dev/null; psql_ <<SQL
 DELETE FROM renaser.rocas_diarias WHERE participante_id=$U;
+DELETE FROM renaser.entradas_diario WHERE participante_id=$U AND tipo='EVALUACION_DIA';
 INSERT INTO renaser.rocas_diarias (participante_id, fecha, posicion, titulo, color, puntaje_impacto, eje, roca_semanal_id, hora_inicio, completada, completada_en, puntos_otorgados)
 SELECT $U, $HOY, 1, 'Trotar', 'VERDE'::renaser.color_pareto, 5, 'CUERPO'::renaser.eje_objetivo, s.id, '05:00'::time, true, now(), 10 FROM renaser.rocas_semanales s WHERE s.roca_maestra_id=$CUERPO
 UNION ALL SELECT $U, $HOY, 2, 'Vender', 'AMARILLA'::renaser.color_pareto, 5, 'CUERPO'::renaser.eje_objetivo, s.id, '06:00'::time, false, NULL, 0 FROM renaser.rocas_semanales s WHERE s.roca_maestra_id=$CUERPO
@@ -44,6 +47,7 @@ BEGIN;
 UPDATE renaser.participantes_programa SET fecha_inicio=$HOY, dia_programa=1, dia_programa_avanzado_el=$HOY, dias_ajuste_programa=0, programa_completado=false, programa_completado_en=NULL, dia_post_programa=0 WHERE usuario_id=$U;
 UPDATE renaser.rocas_maestras SET avance=linea_base WHERE participante_id=$U AND linea_base IS NOT NULL;
 DELETE FROM renaser.rocas_diarias WHERE participante_id=$U;
+DELETE FROM renaser.entradas_diario WHERE participante_id=$U AND tipo='EVALUACION_DIA';
 DELETE FROM renaser.rocas_semanales WHERE roca_maestra_id IN (SELECT id FROM renaser.rocas_maestras WHERE participante_id=$U);
 COMMIT;
 SQL
@@ -52,6 +56,7 @@ SQL
 BEGIN;
 UPDATE renaser.participantes_programa SET fecha_inicio=$HOY, dia_programa=1, dia_programa_avanzado_el=$HOY, dias_ajuste_programa=0, programa_completado=false, programa_completado_en=NULL, dia_post_programa=0 WHERE usuario_id=$U;
 DELETE FROM renaser.rocas_diarias WHERE participante_id=$U;
+DELETE FROM renaser.entradas_diario WHERE participante_id=$U AND tipo='EVALUACION_DIA';
 DELETE FROM renaser.rocas_semanales WHERE roca_maestra_id IN (SELECT id FROM renaser.rocas_maestras WHERE participante_id=$U);
 DELETE FROM renaser.rocas_maestras WHERE participante_id=$U;
 COMMIT;
