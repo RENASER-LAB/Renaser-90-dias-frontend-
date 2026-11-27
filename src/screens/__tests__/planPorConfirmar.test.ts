@@ -34,7 +34,8 @@ describe('Plan con objetivos por confirmar', () => {
 
   it('el atrás del sistema cierra primero la hoja de revisión', () => {
     expect(PLAN).toMatch(/if \(revisando\) \{\s*setRevisando\(false\);\s*return true;\s*\}/);
-    expect(PLAN).toMatch(/\}, editGoalModalVisible \|\| revisando\);/);
+    // La hoja del objetivo (HojaDelObjetivo, spec 058) cierra con su propio atrás; este solo cuida la de revisión.
+    expect(PLAN).toMatch(/\}, revisando\);/);
   });
 
   it('la hoja solo se dibuja con algo que confirmar (confirmados, desaparece la tarjeta y la hoja)', () => {

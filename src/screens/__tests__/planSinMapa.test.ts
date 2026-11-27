@@ -64,9 +64,8 @@ describe('Plan siempre dibuja el selector de eje y todo lo del eje', () => {
   });
 
   it('hay un solo scroll en Plan', () => {
-    expect((PLAN.match(/<ScrollView/g) ?? []).length).toBe(2); // el de la pantalla y el de la hoja del objetivo
-    const principal = PLAN.slice(0, PLAN.indexOf('<HojaDesdeAbajo'));
-    expect((principal.match(/<ScrollView/g) ?? []).length).toBe(1);
+    // La hoja del objetivo (con su propio scroll) vive desde la spec 058 en HojaDelObjetivo: Plan solo tiene el de la pantalla.
+    expect((PLAN.match(/<ScrollView/g) ?? []).length).toBe(1);
   });
 });
 
@@ -89,8 +88,9 @@ describe('guardar el objetivo sin Mapa', () => {
     expect(PLAN).toMatch(/const avisarGuardadoFallido = \(resultado: \{ mensaje: string \}\) =>/);
     expect(PLAN).toMatch(/Alert\.alert\('No se pudo guardar', resultado\.mensaje\);/);
     expect(PLAN).not.toContain('Hacer mi Mapa');
-    // Los dos guardados (objetivo nuevo y avance) pasan por el mismo aviso.
-    expect((PLAN.match(/avisarGuardadoFallido\(resultado\);/g) ?? []).length).toBe(2);
+    // Los dos guardados (objetivo nuevo y avance) pasan por `guardarDesdeLaHoja`, que usa el mismo aviso.
+    expect((PLAN.match(/avisarGuardadoFallido\(resultado\);/g) ?? []).length).toBe(1);
+    expect(PLAN).toMatch(/alGuardar=\{guardarDesdeLaHoja\}/);
   });
 
   it('con la semana bloqueada, «Escribir mis objetivos» abre el editor del primer eje que no tiene objetivo', () => {
