@@ -2,6 +2,7 @@
 # los niveles con su día y hora, «Organizar mi semana» y, al final, «Lo que viene». Sin la fila de cifras y sin el subtítulo «Tu dirección en …».
 # Precondición: `plan.ruta` prendida; semana armada y acciones agendadas (`plan-por-dia/04a` y `05a`).
 # corrido: 2026-11-27
+# spec 058 FR-009 — «Organizar mi semana» y «Tu 80/20» se ven debajo de la ruta.
 # cuenta: e2e-ap-web@renaser.test
 appId: com.renaser.app
 ---

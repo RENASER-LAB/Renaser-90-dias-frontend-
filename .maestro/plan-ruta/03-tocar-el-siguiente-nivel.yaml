@@ -3,6 +3,7 @@
 # Precondición: `plan.ruta` prendida y los datos de `plan-ruta/datos.sh semana-con-acciones` (semana 1 armada, «Caminar» y «Leer» de hoy, «Ver» mañana) seguidos de
 # `plan-ruta/datos.sh semana-sin-revisar` (el cofre solo se abre con la semana sin revisar). Si «Código Renaser» pide registro, `ya-adentro` lo hace.
 # corrido: 2026-11-27
+# spec 058 FR-005 — tocar el nivel abre la hoja de la acción como hoy.
 # cuenta: e2e-ap-web@renaser.test
 appId: com.renaser.app
 ---

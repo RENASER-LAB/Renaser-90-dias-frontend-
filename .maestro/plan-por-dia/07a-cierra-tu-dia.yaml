@@ -2,6 +2,7 @@
 # cumplió («Vender», una hora que ya pasó); se responde, «Guardar mi cierre» deja «Día cerrado» y «Ver mañana en Plan» lleva a las acciones que vienen.
 # Precondición: pasó la hora de «Vender» (06:00 en los datos) y sigue sin cumplir; «Trotar» y «Llamar» ya cumplidas; el día sin cerrar.
 # corrido: 2026-11-27 (con plan.ruta apagada, spec 058)
+# spec 058 FR-002 — con plan.ruta apagada Plan se ve como hoy: la tarjeta «Cierra tu día» sigue donde estaba.
 # cuenta: e2e-ap-web@renaser.test
 appId: com.renaser.app
 ---
